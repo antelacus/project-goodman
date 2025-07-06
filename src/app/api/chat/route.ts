@@ -1,7 +1,8 @@
 export const runtime = "nodejs";
 import { NextRequest, NextResponse } from "next/server";
 import OpenAI from "openai";
-import { supabaseAdmin, TABLES } from "../../../lib/supabase";
+import fs from "fs";
+import path from "path";
 
 // Initialize OpenAI client
 const openai = new OpenAI({
@@ -35,89 +36,114 @@ type Document = {
   chunks: DocumentChunk[];
 };
 
-// 模拟预设文档数据
-const presetDocuments: Record<string, Document> = {
-  "preset-1": {
-    id: "preset-1",
-    name: "2024年第一季度财务报表.pdf",
-    summary: {
-      document_type: "财务报表",
-      summary: "2024年第一季度财务数据，包含收入、成本、利润等关键指标",
-      key_metrics: ["营业收入", "净利润", "毛利率", "现金流"],
-      time_period: "2024年第一季度"
-    },
-    chunks: [
-      {
-        id: "preset-1-chunk-0",
-        text: "2024年第一季度财务报表显示，公司营业收入达到500万元，同比增长15%。净利润为80万元，毛利率维持在25%的水平。",
-        embedding: [],
-        chunkIndex: 0
-      },
-      {
-        id: "preset-1-chunk-1", 
-        text: "现金流状况良好，经营活动现金流净额为120万元，投资活动现金流为-50万元，筹资活动现金流为-20万元。",
-        embedding: [],
-        chunkIndex: 1
+// 加载本地知识型文档
+function loadLocalKnowledgeDocuments(): Record<string, Document> {
+  try {
+    const documentsDir = path.join(process.cwd(), "data", "documents");
+    if (!fs.existsSync(documentsDir)) {
+      return {};
+    }
+
+    const files = fs.readdirSync(documentsDir).filter(file => file.endsWith('.json'));
+    const documents: Record<string, Document> = {};
+
+    for (const file of files) {
+      try {
+        const filePath = path.join(documentsDir, file);
+        const fileContent = fs.readFileSync(filePath, 'utf-8');
+        const data = JSON.parse(fileContent);
+        
+        // 检查是否是chunks数组格式
+        if (Array.isArray(data) && data.length > 0 && data[0].content && data[0].embedding) {
+          // 这是chunks格式，需要组织成文档
+          const chunksByDocument = new Map();
+          
+          // 按document_id分组chunks
+          data.forEach((chunk: any, index) => {
+            const docId = chunk.document_id || `doc-${index}`;
+            // 使用文件名作为文档名，去掉.json后缀
+            const docName = file.replace('.json', '');
+            
+            if (!chunksByDocument.has(docId)) {
+              chunksByDocument.set(docId, {
+                id: docId,
+                name: docName,
+                type: "knowledge",
+                docCategory: "knowledge",
+                uploadTime: new Date().toISOString(),
+                status: "ready",
+                size: Buffer.byteLength(fileContent, 'utf8'),
+                chunks: []
+              });
+            }
+            
+            chunksByDocument.get(docId).chunks.push({
+              id: `chunk-${docId}-${chunk.chunk_index || index}`,
+              text: chunk.content,
+              embedding: chunk.embedding,
+              chunkIndex: chunk.chunk_index || index
+            });
+          });
+          
+          // 将分组后的文档添加到结果中
+          chunksByDocument.forEach((doc) => {
+            // 生成基于内容的摘要
+            const allText = doc.chunks.map(chunk => chunk.text).join(' ');
+            const summary = {
+              document_type: "知识型文档",
+              summary: allText.substring(0, 300) + (allText.length > 300 ? "..." : ""),
+              key_metrics: ["内容分析", "知识提取", "信息检索"],
+              time_period: "当前版本"
+            };
+            
+            doc.summary = summary;
+            documents[doc.id] = doc;
+          });
+        } else if (data.id && data.name && data.chunks) {
+          // 这是完整的文档格式
+          documents[data.id] = {
+            ...data,
+            type: data.type || "knowledge",
+            docCategory: data.docCategory || "knowledge"
+          };
+        }
+      } catch (error) {
+        console.error(`Error reading file ${file}:`, error);
       }
-    ]
-  },
-  "preset-2": {
-    id: "preset-2",
-    name: "2023年年度资产负债表.xlsx", 
-    summary: {
-      document_type: "资产负债表",
-      summary: "2023年年度资产负债表，显示公司资产、负债和所有者权益状况",
-      key_metrics: ["总资产", "总负债", "所有者权益", "资产负债率"],
-      time_period: "2023年年度"
-    },
-    chunks: [
-      {
-        id: "preset-2-chunk-0",
-        text: "2023年总资产为2000万元，其中流动资产1200万元，非流动资产800万元。总负债为800万元，资产负债率为40%。",
-        embedding: [],
-        chunkIndex: 0
-      },
-      {
-        id: "preset-2-chunk-1",
-        text: "所有者权益为1200万元，其中实收资本800万元，资本公积200万元，盈余公积100万元，未分配利润100万元。",
-        embedding: [],
-        chunkIndex: 1
-      }
-    ]
-  },
-  "preset-3": {
-    id: "preset-3", 
-    name: "应收账款账龄分析表.xlsx",
-    summary: {
-      document_type: "账龄分析表",
-      summary: "应收账款账龄分析，显示不同账龄段的应收账款分布",
-      key_metrics: ["应收账款总额", "30天内", "30-90天", "90天以上"],
-      time_period: "2024年1月"
-    },
-    chunks: [
-      {
-        id: "preset-3-chunk-0",
-        text: "应收账款总额为300万元，其中30天内的应收账款为200万元，占比67%。30-90天的应收账款为60万元，占比20%。",
-        embedding: [],
-        chunkIndex: 0
-      },
-      {
-        id: "preset-3-chunk-1",
-        text: "90天以上的应收账款为40万元，占比13%，需要重点关注催收工作。",
-        embedding: [],
-        chunkIndex: 1
-      }
-    ]
+    }
+
+    return documents;
+  } catch (error) {
+    console.error("Error loading local knowledge documents:", error);
+    return {};
   }
-};
+}
+
+// 简单的相似度计算（余弦相似度）
+function cosineSimilarity(vecA: number[], vecB: number[]): number {
+  if (vecA.length !== vecB.length) return 0;
+  
+  let dotProduct = 0;
+  let normA = 0;
+  let normB = 0;
+  
+  for (let i = 0; i < vecA.length; i++) {
+    dotProduct += vecA[i] * vecB[i];
+    normA += vecA[i] * vecA[i];
+    normB += vecB[i] * vecB[i];
+  }
+  
+  return dotProduct / (Math.sqrt(normA) * Math.sqrt(normB));
+}
 
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-    const { question, documentIds = [], chatHistory = [] }: {
+    const { question, documentIds = [], chatHistory = [], businessDocuments = [] }: {
       question: string;
       documentIds: string[];
       chatHistory: ChatMessage[];
+      businessDocuments?: Document[];
     } = body;
 
     if (!question) {
@@ -127,69 +153,59 @@ export async function POST(req: NextRequest) {
     // 1. 获取相关文档内容
     let relevantContext = "";
     
+    // 处理知识型文档（从本地加载的）
     if (documentIds.length > 0) {
-      // 使用指定的文档进行向量搜索
-      try {
-        // 为问题生成embedding
-        const embeddingResponse = await openai.embeddings.create({
-          model: "text-embedding-3-small",
-          input: question,
-          encoding_format: "float",
-        });
+      const localKnowledgeDocs = loadLocalKnowledgeDocuments();
+      
+      // 为问题生成embedding
+      const embeddingResponse = await openai.embeddings.create({
+        model: "text-embedding-3-small",
+        input: question,
+        encoding_format: "float",
+      });
+      const queryEmbedding = embeddingResponse.data[0].embedding;
 
-        const queryEmbedding = embeddingResponse.data[0].embedding;
+      // 对每个选中的知识型文档进行向量搜索
+      for (const docId of documentIds) {
+        const doc = localKnowledgeDocs[docId];
+        if (doc && doc.chunks) {
+          // 计算每个chunk与问题的相似度
+          const chunkScores = doc.chunks.map(chunk => ({
+            chunk,
+            similarity: cosineSimilarity(queryEmbedding, chunk.embedding)
+          }));
 
-        // 从Supabase进行向量搜索
-        const { data: chunks, error: searchError } = await supabaseAdmin
-          .from(TABLES.DOCUMENT_CHUNKS)
-          .select(`
-            *,
-            documents (
-              id,
-              name,
-              type,
-              doc_category
-            )
-          `)
-          .in('document_id', documentIds)
-          .order(`embedding <-> '[${queryEmbedding.join(',')}]'`, { ascending: true })
-          .limit(10);
+          // 按相似度排序，取前3个最相关的chunk
+          const topChunks = chunkScores
+            .sort((a, b) => b.similarity - a.similarity)
+            .slice(0, 3)
+            .map(item => item.chunk);
 
-        if (searchError) {
-          console.error('Vector search error:', searchError);
-        } else if (chunks && chunks.length > 0) {
-          // 按文档分组
-          const docGroups = new Map();
-          chunks.forEach((chunk: any) => {
-            const docId = chunk.document_id;
-            if (!docGroups.has(docId)) {
-              docGroups.set(docId, {
-                name: chunk.documents.name,
-                type: chunk.documents.type,
-                category: chunk.documents.doc_category,
-                chunks: []
-              });
-            }
-            docGroups.get(docId).chunks.push(chunk.text);
-          });
-
-          // 构建上下文
-          docGroups.forEach((doc: any, docId: string) => {
-            relevantContext += `\n文档: ${doc.name}\n`;
-            relevantContext += `类型: ${doc.type}\n`;
-            relevantContext += `分类: ${doc.category}\n`;
-            relevantContext += `内容: ${doc.chunks.join(" ")}\n`;
-          });
+          if (topChunks.length > 0) {
+            relevantContext += `\n知识文档: ${doc.name}\n`;
+            relevantContext += `类型: ${doc.summary?.document_type || '未知'}\n`;
+            relevantContext += `相关内容: ${topChunks.map(chunk => chunk.text).join(" ")}\n`;
+          }
         }
-      } catch (error) {
-        console.error('Error in vector search:', error);
       }
-    } else {
-      // 使用所有预设文档
-      Object.values(presetDocuments).forEach((doc: Document) => {
-        relevantContext += `\n文档: ${doc.name}\n`;
-        relevantContext += `类型: ${doc.summary.document_type}\n`;
-        relevantContext += `内容: ${doc.chunks.map((chunk: DocumentChunk) => chunk.text).join(" ")}\n`;
+    }
+
+    // 处理业务型文档（用户上传的）
+    if (businessDocuments && businessDocuments.length > 0) {
+      businessDocuments.forEach((doc: Document) => {
+        relevantContext += `\n业务文档: ${doc.name}\n`;
+        relevantContext += `类型: ${doc.summary?.document_type || '未知'}\n`;
+        relevantContext += `内容: ${doc.chunks?.map(chunk => chunk.text).join(" ") || '无内容'}\n`;
+      });
+    }
+
+    // 如果没有指定文档，使用所有本地知识型文档
+    if (documentIds.length === 0 && (!businessDocuments || businessDocuments.length === 0)) {
+      const localKnowledgeDocs = loadLocalKnowledgeDocuments();
+      Object.values(localKnowledgeDocs).forEach((doc: Document) => {
+        relevantContext += `\n知识文档: ${doc.name}\n`;
+        relevantContext += `类型: ${doc.summary?.document_type || '未知'}\n`;
+        relevantContext += `内容: ${doc.chunks?.slice(0, 2).map(chunk => chunk.text).join(" ") || '无内容'}\n`;
       });
     }
 
@@ -199,46 +215,47 @@ export async function POST(req: NextRequest) {
       .map((msg: ChatMessage) => `${msg.role === 'user' ? '用户' : 'AI'}: ${msg.content}`)
       .join('\n');
 
-    // 3. 构建AI提示
-    const prompt = `
-你是一个专业的财务AI助手。基于以下财务文档信息，回答用户的问题。
+    // 3. 构建完整的提示词
+    const systemPrompt = `你是一个专业的财务合规性顾问AI助手。基于提供的财务准则、税务指南等知识型文档，为用户提供准确的合规性分析和建议。
 
-可用文档信息：
+请遵循以下原则：
+1. 基于知识型文档的内容进行分析，确保建议符合相关法规
+2. 结合业务型文档的具体情况，提供针对性的合规建议
+3. 明确指出可能存在的合规风险
+4. 提供具体的改进建议和操作指导
+5. 如果信息不足，请明确指出需要哪些额外信息
+
+相关文档内容：
 ${relevantContext}
 
-${conversationHistory ? `对话历史：\n${conversationHistory}\n` : ''}
+对话历史：
+${conversationHistory}
 
-用户问题：${question}
-
-请提供准确、专业的回答。如果信息不足，请说明需要哪些额外信息。
-回答要简洁明了，重点突出，并尽可能提供具体的数字和指标。
-`;
+请回答用户的问题：`;
 
     // 4. 调用OpenAI API
     const completion = await openai.chat.completions.create({
       model: "gpt-4o",
-      messages: [{ role: "user", content: prompt }],
+      messages: [
+        { role: "system", content: systemPrompt },
+        { role: "user", content: question }
+      ],
       max_tokens: 1000,
       temperature: 0.7,
     });
 
-    const response = completion.choices[0]?.message?.content;
-
-    if (!response) {
-      throw new Error("AI response is empty");
-    }
+    const response = completion.choices[0]?.message?.content || "抱歉，我无法生成回答。";
 
     return NextResponse.json({
       success: true,
       response,
-      timestamp: new Date().toISOString()
+      message: "Chat response generated successfully"
     });
 
-  } catch (err: unknown) {
-    console.error("Chat API Error:", err);
-    const errorMessage = err instanceof Error ? err.message : "未知错误";
+  } catch (error) {
+    console.error("Chat API Error:", error);
     return NextResponse.json(
-      { error: "Failed to process chat request", details: errorMessage },
+      { error: "Failed to generate chat response" },
       { status: 500 }
     );
   }

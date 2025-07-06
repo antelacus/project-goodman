@@ -66,11 +66,10 @@ export const useDocumentStore = create<DocumentStore>((set, get) => ({
   loadDocumentsFromJsonDir: async () => {
     set({ isLoading: true, error: null });
     try {
-      // 这里假设有一个API路由 /api/local-documents 返回所有JSON文档内容
       const res = await fetch("/api/local-documents");
       if (!res.ok) throw new Error("无法加载本地文档");
-      const docs = await res.json();
-      set({ documents: docs, isLoading: false });
+      const data = await res.json();
+      set({ documents: data.documents || [], isLoading: false });
     } catch (error) {
       set({ error: 'Failed to load local documents', isLoading: false });
     }
