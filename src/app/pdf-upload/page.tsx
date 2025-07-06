@@ -44,6 +44,23 @@ export default function PdfUploadPage() {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
+  const extractTextFromPDF = async (file: File): Promise<string> => {
+    const arrayBuffer = await file.arrayBuffer();
+    const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+    let fullText = "";
+    
+    for (let i = 1; i <= pdf.numPages; i++) {
+      const page = await pdf.getPage(i);
+      const textContent = await page.getTextContent();
+      const pageText = textContent.items
+        .map((item: any) => item.str)
+        .join(" ");
+      fullText += pageText + "\n";
+    }
+    
+    return fullText;
+  };
+
   const analyzeText = async (text: string) => {
     setStatus("analyzing");
     setMessage("AI分析中，请稍候...");
@@ -75,19 +92,29 @@ export default function PdfUploadPage() {
   const onDrop = useCallback(async (acceptedFiles: File[]) => {
     const file = acceptedFiles[0];
     if (!file) return;
-    if (!file.name.endsWith('.json')) {
-      alert('请上传预处理后的JSON文档');
+    
+    if (!file.type.includes('pdf')) {
+      alert('请上传PDF文件');
       return;
     }
+
+    setStatus("parsing");
+    setMessage("正在解析PDF...");
+    
     try {
-      const text = await file.text();
-      const doc = JSON.parse(text);
-      addDocument(doc);
-      alert('文档已加载');
+      const text = await extractTextFromPDF(file);
+      if (text.trim().length === 0) {
+        throw new Error("PDF文件无法提取文本内容");
+      }
+      await analyzeText(text);
     } catch (err: unknown) {
-      alert('加载JSON文档失败');
+      console.error("PDF Processing Error:", err);
+      const errorMessage = err instanceof Error ? err.message : "未知错误";
+      setStatus("error");
+      setMessage(`PDF处理失败: ${errorMessage}`);
+      setAnalysisResult(null);
     }
-  }, [addDocument]);
+  }, []);
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
     onDrop,
@@ -107,7 +134,7 @@ export default function PdfUploadPage() {
     <div className="max-w-4xl mx-auto mt-10 p-6">
       <div className="p-6 border rounded-lg shadow-md bg-white">
         <h1 className="text-2xl font-bold mb-4 text-gray-800">智能文档分析</h1>
-        <p className="text-gray-600 mb-6">上传财务文档（如发票、合同），AI将自动提取关键信息。</p>
+        <p className="text-gray-600 mb-6">上传PDF财务文档（如发票、合同），AI将自动提取关键信息。</p>
         <div
           {...getRootProps()}
           className={`w-full p-10 border-2 border-dashed rounded-lg text-center cursor-pointer transition-colors ${
