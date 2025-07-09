@@ -1,8 +1,6 @@
 "use client";
-import React, { useState, useCallback, useRef, useEffect } from "react";
-import { useDocumentStore, Document } from "../../store/documents";
-import DocumentManager from "../../components/DocumentManager";
-import Link from "next/link";
+import React, { useState, useRef, useEffect } from "react";
+import { useDocumentStore } from "../../store/documents";
 import ReactMarkdown from "react-markdown";
 import remarkMath from "remark-math";
 import rehypeKatex from "rehype-katex";
@@ -66,8 +64,6 @@ export default function FinancialAnalysisPage() {
   const loadDocumentsFromJsonDir = useDocumentStore((s) => s.loadDocumentsFromJsonDir);
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
   const [isSending, setIsSending] = useState(false);
-  const [activeTab, setActiveTab] = useState<"documents" | "chat">("documents");
-  const chatEndRef = useRef<HTMLDivElement>(null);
   const [selectedDocuments, setSelectedDocuments] = useState<string[]>([]);
   const knowledgeDocs = documents.filter(doc => doc.docCategory === "knowledge");
   const [modalOpen, setModalOpen] = useState(false);
@@ -76,7 +72,8 @@ export default function FinancialAnalysisPage() {
   const [modalResult, setModalResult] = useState('');
   const [modalError, setModalError] = useState<string | undefined>(undefined);
   const [presetOpen, setPresetOpen] = useState(false);
-  const [streamedContent, setStreamedContent] = useState(""); // 当前逐字输出内容
+  const chatEndRef = useRef<HTMLDivElement>(null);
+  const [streamedContent, setStreamedContent] = useState("");
 
   const scrollToBottom = () => {
     chatEndRef.current?.scrollIntoView({ behavior: "smooth" });

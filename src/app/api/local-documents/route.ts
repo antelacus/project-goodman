@@ -1,17 +1,8 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 import fs from "fs";
 import path from "path";
 
-// 定义chunk的类型
-interface DocumentChunk {
-  content: string;
-  embedding: number[];
-  document_id?: string;
-  document_name?: string;
-  chunk_index?: number;
-}
-
-export async function GET(req: NextRequest) {
+export async function GET() {
   try {
     const documentsDir = path.join(process.cwd(), "data", "documents");
     
@@ -36,8 +27,8 @@ export async function GET(req: NextRequest) {
           const chunksByDocument = new Map();
           
           // 按document_id分组chunks
-          data.forEach((chunk: any, index) => {
-            const docId = chunk.document_id || `doc-${index}`;
+          data.forEach((chunk: { document_id: string; chunk_index: number; content: string; embedding: number[] }) => {
+            const docId = chunk.document_id || `doc-${data.indexOf(chunk)}`;
             // 使用文件名作为文档名，去掉.json后缀
             const docName = file.replace('.json', '');
             
@@ -55,17 +46,17 @@ export async function GET(req: NextRequest) {
             }
             
             chunksByDocument.get(docId).chunks.push({
-              id: `chunk-${docId}-${chunk.chunk_index || index}`,
+              id: `chunk-${docId}-${chunk.chunk_index || data.indexOf(chunk)}`,
               text: chunk.content,
               embedding: chunk.embedding,
-              chunkIndex: chunk.chunk_index || index
+              chunkIndex: chunk.chunk_index || data.indexOf(chunk)
             });
           });
           
           // 将分组后的文档添加到结果中
           chunksByDocument.forEach((doc) => {
             // 生成基于内容的摘要
-            const allText = doc.chunks.map(chunk => chunk.text).join(' ');
+            const allText = doc.chunks.map((chunk: { text: string }) => chunk.text).join(' ');
             const summary = {
               document_type: "知识型文档",
               summary: allText.substring(0, 300) + (allText.length > 300 ? "..." : ""),

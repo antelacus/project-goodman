@@ -56,7 +56,6 @@ const DocumentSelectModal: React.FC<DocumentSelectModalProps> = ({
       if (!file.type.includes("pdf")) throw new Error("仅支持PDF文件");
       // 复用data-extract的processPDF逻辑（此处仅做占位，实际应抽取为util）
       const arrayBuffer = await file.arrayBuffer();
-      // @ts-ignore
       const pdfjsLib = await import("pdfjs-dist/build/pdf");
       pdfjsLib.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.mjs`;
       const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
@@ -64,7 +63,7 @@ const DocumentSelectModal: React.FC<DocumentSelectModalProps> = ({
       for (let i = 1; i <= pdf.numPages; i++) {
         const page = await pdf.getPage(i);
         const textContent = await page.getTextContent();
-        fullText += textContent.items.map((item: any) => ('str' in item ? item.str : '')).join(" ") + "\n";
+        fullText += textContent.items.map((item: { str: string }) => item.str).join(" ") + "\n";
       }
       const newDoc: Document = {
         id: `business-${Date.now()}`,

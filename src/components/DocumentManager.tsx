@@ -21,17 +21,6 @@ export const DocumentManager: React.FC<DocumentManagerProps> = ({ selectedIds = 
     return acc;
   }, {});
 
-  const handleSelect = (id: string) => {
-    let newSelected: string[];
-    if (selected.includes(id)) {
-      newSelected = selected.filter((sid) => sid !== id);
-    } else {
-      newSelected = [...selected, id];
-    }
-    setSelected(newSelected);
-    onSelect?.(newSelected);
-  };
-
   const handleDelete = async (id: string) => {
     removeDocument(id);
     setSelected((prev) => prev.filter((sid) => sid !== id));
