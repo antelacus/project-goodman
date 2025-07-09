@@ -69,7 +69,18 @@ export const useDocumentStore = create<DocumentStore>((set, get) => ({
       const res = await fetch("/api/local-documents");
       if (!res.ok) throw new Error("无法加载本地文档");
       const data = await res.json();
-      set({ documents: data.documents || [], isLoading: false });
+      const knowledgeDocs = (data.documents || []).filter((doc: any) => doc.docCategory === "knowledge");
+      set((state) => {
+        // 只保留业务型文档和未重复的知识型文档
+        const businessDocs = state.documents.filter((doc) => doc.docCategory === "business");
+        // knowledgeDocs去重（以id为主）
+        const existingKnowledgeIds = new Set(businessDocs.map((doc) => doc.id));
+        const mergedKnowledgeDocs = knowledgeDocs.filter((doc: any) => !existingKnowledgeIds.has(doc.id));
+        return {
+          documents: [...businessDocs, ...mergedKnowledgeDocs],
+          isLoading: false
+        };
+      });
     } catch (error) {
       set({ error: 'Failed to load local documents', isLoading: false });
     }

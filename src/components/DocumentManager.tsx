@@ -47,37 +47,26 @@ export const DocumentManager: React.FC<DocumentManagerProps> = ({ selectedIds = 
   const renderDocCard = (doc: Document) => (
     <div
       key={doc.id}
-      className={`p-4 border rounded-lg relative bg-white shadow-sm flex flex-col cursor-pointer transition-all hover:border-blue-400 ${selected.includes(doc.id) ? "border-blue-500 bg-blue-50" : "border-gray-200"}`}
+      className={`flex items-center bg-white rounded-lg shadow-sm px-4 py-3 w-full ${selected.includes(doc.id) ? "border-blue-500 bg-blue-50" : "border-gray-200"}`}
       onClick={() => setPreviewDoc(doc)}
       tabIndex={0}
       aria-label={doc.name}
     >
-      <div className="flex items-center mb-2">
-        <input
-          type="checkbox"
-          checked={selected.includes(doc.id)}
-          onChange={e => { e.stopPropagation(); handleSelect(doc.id); }}
-          className="accent-blue-500 mr-2"
-          onClick={e => e.stopPropagation()}
-        />
-        <span className="text-2xl mr-2">{doc.type === "pdf" ? "📄" : doc.type === "excel" ? "📊" : "📑"}</span>
-        <span className="text-xs text-gray-500 uppercase">{doc.type}</span>
-        <button
-          className="ml-auto text-xs text-red-500 hover:text-red-700 px-2 py-1 rounded focus:outline-none"
-          title="删除文档"
-          onClick={e => { e.stopPropagation(); setDeleteTarget(doc); }}
-        >删除</button>
+      <div className="flex-shrink-0 mr-3">
+        <span className="inline-block align-middle">
+          <svg width="28" height="28" fill="none" viewBox="0 0 24 24"><rect width="24" height="24" rx="4" fill="#F3F4F6"/><path d="M7 7h10v10H7V7z" fill="#A3A3A3"/></svg>
+        </span>
       </div>
-      <div className="font-medium text-gray-800 truncate mb-1">{doc.name}</div>
-      <div className="text-xs text-gray-500 mb-1">{doc.uploadTime} • {Math.round(doc.size/1024)}KB</div>
-      {doc.summary && (
-        <div className="text-xs text-gray-600 mt-1">
-          <div><strong>类型:</strong> {doc.summary.document_type}</div>
-          <div><strong>期间:</strong> {doc.summary.time_period}</div>
-        </div>
-      )}
+      <div className="flex-1 min-w-0">
+        <div className="font-bold text-lg truncate">{doc.name}</div>
+        <div className="text-xs text-gray-500 mt-1">类型: {doc.docCategory === 'knowledge' ? '知识型文档' : '业务型文档'} &nbsp; • &nbsp; {Math.round((doc.size || 0) / 1024)}KB</div>
+        {doc.summary?.time_period && (
+          <div className="text-xs text-gray-500 mt-1">期别: {doc.summary.time_period}</div>
+        )}
+      </div>
       <button
-        className="absolute top-2 right-2 text-xs text-blue-600 underline"
+        className="ml-4 px-3 py-1 bg-gray-100 text-black rounded hover:bg-gray-200 transition-colors text-sm font-medium focus:outline-none border-0 shadow-none underline-none"
+        style={{textDecoration: 'none'}}
         onClick={e => { e.stopPropagation(); setPreviewDoc(doc); }}
       >预览</button>
     </div>
@@ -85,31 +74,24 @@ export const DocumentManager: React.FC<DocumentManagerProps> = ({ selectedIds = 
 
   return (
     <div>
-      {showCategory ? (
-        <div className="space-y-8">
-          {["business", "knowledge"].map((cat) => (
-            <div key={cat}>
-              <div className="flex items-center mb-3">
-                <h3 className="text-lg font-bold text-gray-700">
-                  {cat === "business" ? "业务型文档" : "知识型文档"}
-                  <span className="ml-2 text-xs text-gray-400">({grouped[cat]?.length || 0})</span>
-                </h3>
-                {grouped[cat]?.length > 0 && (
-                  <button
-                    className="ml-4 px-3 py-1 text-xs bg-red-100 text-red-600 rounded hover:bg-red-200"
-                    disabled={selected.length === 0}
-                    onClick={() => setBatchDeleteOpen(true)}
-                  >批量删除</button>
-                )}
-              </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {grouped[cat]?.length ? grouped[cat].map(renderDocCard) : <div className="text-gray-400 col-span-3">暂无文档</div>}
-              </div>
+      {showCategory && (
+        <>
+          <div className="font-bold text-gray-700 mb-2">业务型文档 ({grouped["business"]?.length || 0})</div>
+          {grouped["business"]?.length === 0 ? (
+            <div className="text-gray-400 mb-4">暂无文档</div>
+          ) : (
+            <div className="space-y-4 mb-6">
+              {grouped["business"]?.map(renderDocCard)}
             </div>
-          ))}
-        </div>
-      ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          )}
+          <div className="font-bold text-gray-700 mb-2">知识型文档 ({grouped["knowledge"]?.length || 0})</div>
+          <div className="space-y-4">
+            {grouped["knowledge"]?.map(renderDocCard)}
+          </div>
+        </>
+      )}
+      {!showCategory && (
+        <div className="space-y-4">
           {documents.map(renderDocCard)}
         </div>
       )}
