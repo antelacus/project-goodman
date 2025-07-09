@@ -2,8 +2,6 @@
 import React, { useState, useCallback, useRef, useEffect } from "react";
 import { useDropzone } from "react-dropzone";
 import { useDocumentStore, Document } from "../../store/documents";
-import DocumentManager from "../../components/DocumentManager";
-import Link from "next/link";
 import HighlightLatex from "../../components/HighlightLatex";
 import LatexCalcModal from "../../components/LatexCalcModal";
 import remarkMath from "remark-math";
@@ -29,12 +27,9 @@ type ChatMessage = {
 
 export default function KnowledgeChatPage() {
   const documents = useDocumentStore((s) => s.documents);
-  const isLoading = useDocumentStore((s) => s.isLoading);
   const addDocument = useDocumentStore((s) => s.addDocument);
-  const loadDocumentsFromJsonDir = useDocumentStore((s) => s.loadDocumentsFromJsonDir);
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
   const [isSending, setIsSending] = useState(false);
-  const [isProcessing, setIsProcessing] = useState(false);
   const [selectedKnowledgeDocs, setSelectedKnowledgeDocs] = useState<string[]>([]);
   const [selectedBusinessDocs, setSelectedBusinessDocs] = useState<string[]>([]);
   const chatEndRef = useRef<HTMLDivElement>(null);
@@ -44,7 +39,6 @@ export default function KnowledgeChatPage() {
   const [modalResult, setModalResult] = useState('');
   const [modalError, setModalError] = useState<string | undefined>(undefined);
   const [uploadStatus, setUploadStatus] = useState<'idle' | 'uploading' | 'success' | 'error' | 'unsupported'>('idle');
-  const [streamedContent, setStreamedContent] = useState(""); // 当前逐字输出内容
 
   const scrollToBottom = () => {
     chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -105,7 +99,7 @@ export default function KnowledgeChatPage() {
       const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
       
       fullText += `工作表: ${sheetName}\n`;
-      jsonData.forEach((row: any) => {
+      jsonData.forEach((row: unknown) => {
         if (Array.isArray(row)) {
           fullText += row.join("\t") + "\n";
         }
@@ -125,7 +119,6 @@ export default function KnowledgeChatPage() {
       return;
     }
     setUploadStatus('uploading');
-    setIsProcessing(true);
     try {
       const text = await processFile(file);
       const documentId = `business-${Date.now()}`;
@@ -154,7 +147,6 @@ export default function KnowledgeChatPage() {
       setUploadStatus('error');
       alert("文件处理失败，请重试");
     } finally {
-      setIsProcessing(false);
       setTimeout(() => setUploadStatus('idle'), 2000);
     }
   }, [processFile, addDocument]);
@@ -193,7 +185,6 @@ export default function KnowledgeChatPage() {
       ...prev,
       { role: "assistant", content: "", timestamp: new Date().toISOString(), streaming: true }
     ]);
-    setStreamedContent("");
 
     try {
       // 获取选中的业务型文档内容
@@ -233,7 +224,6 @@ export default function KnowledgeChatPage() {
       const typeInterval = 18; // ms
       function typeNext() {
         idx++;
-        setStreamedContent(aiContent.slice(0, idx));
         setChatMessages(prev => prev.map((m, i) =>
           i === prev.length - 1 && m.role === "assistant" && m.streaming ? { ...m, content: aiContent.slice(0, idx) } : m
         ));
@@ -244,7 +234,6 @@ export default function KnowledgeChatPage() {
           setChatMessages(prev => prev.map((m, i) =>
             i === prev.length - 1 && m.role === "assistant" && m.streaming ? { ...m, streaming: false } : m
           ));
-          setStreamedContent("");
         }
       }
       typeNext();
@@ -294,7 +283,7 @@ export default function KnowledgeChatPage() {
     // 匹配$...$和$$...$$表达式
     const inline = /\$(.+?)\$/g;
     const block = /\$\$(.+?)\$\$/g;
-    let parts: (string | { latex: string })[] = [];
+    const parts: (string | { latex: string })[] = [];
     let lastIdx = 0;
     // 先处理块级
     content.replace(block, (m: string, p1: string, offset: number) => {

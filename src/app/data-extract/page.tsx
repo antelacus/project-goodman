@@ -14,8 +14,6 @@ type AnalysisResult = {
 };
 
 export default function PdfUploadPage() {
-  const [status, setStatus] = useState<"idle" | "parsing" | "analyzing" | "success" | "error">("idle");
-  const [message, setMessage] = useState("");
   const [analysisResult, setAnalysisResult] = useState<AnalysisResult | null>(null);
   const [openCopyMenu, setOpenCopyMenu] = useState<string | null>(null);
   const [copiedState, setCopiedState] = useState<{ key: string; type: string } | null>(null);
@@ -64,7 +62,7 @@ export default function PdfUploadPage() {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  const processPDF = async (file: File): Promise<string> => {
+  const processPDF = useCallback(async (file: File): Promise<string> => {
     if (typeof window === "undefined") return "";
     const pdfjsLib = await import("pdfjs-dist/build/pdf");
     pdfjsLib.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.mjs`;
@@ -82,7 +80,7 @@ export default function PdfUploadPage() {
       }).join(" ") + "\n";
     }
     return fullText;
-  };
+  }, []);
 
   useEffect(() => {
     if (uploadStatus !== 'idle' && uploadStatus !== 'uploading') {
@@ -101,9 +99,6 @@ export default function PdfUploadPage() {
     }
 
     setUploadStatus('uploading');
-    setStatus('parsing');
-    setMessage('正在解析PDF...');
-
     try {
       const text = await processPDF(file);
       if (text.trim().length === 0) {
@@ -128,8 +123,7 @@ export default function PdfUploadPage() {
       setUploadStatus('error');
       console.error('PDF Processing Error:', err);
       const errorMessage = err instanceof Error ? err.message : '未知错误';
-      setStatus('error');
-      setMessage(`PDF处理失败: ${errorMessage}`);
+      // setMessage(`PDF处理失败: ${errorMessage}`); // This line was removed
       setAnalysisResult(null);
     }
   }, [addDocument, processPDF]);
@@ -137,8 +131,6 @@ export default function PdfUploadPage() {
   const handleStartAnalysis = async () => {
     if (!selectedBusinessDoc) return;
     setAnalyzing(true);
-    setStatus('analyzing');
-    setMessage('AI分析中，请稍候...');
     try {
       // 优先用summary.summary
       const text = selectedBusinessDoc.summary?.summary || '';
@@ -154,13 +146,10 @@ export default function PdfUploadPage() {
       }
       const result: AnalysisResult = await res.json();
       setAnalysisResult(result);
-      setStatus('success');
-      setMessage('分析完成！');
     } catch (err: unknown) {
       console.error('AI Analysis Error:', err);
       const errorMessage = err instanceof Error ? err.message : '未知错误';
-      setStatus('error');
-      setMessage(`AI分析失败: ${errorMessage}`);
+      // setMessage(`AI分析失败: ${errorMessage}`); // This line was removed
       setAnalysisResult(null);
     } finally {
       setAnalyzing(false);
@@ -183,14 +172,6 @@ export default function PdfUploadPage() {
     maxFiles: 1,
   });
   
-  const getStatusMessage = () => {
-    if (status === 'idle') return "将PDF文件拖拽到此处，或点击选择文件";
-    if (isDragActive) return "松开即可开始解析...";
-    if (status === 'parsing') return "正在解析PDF...";
-    if (status === 'analyzing') return "AI分析中...";
-    return message;
-  }
-
   return (
     <PageContainer maxWidth="3xl">
       <div className="flex flex-col gap-8">
