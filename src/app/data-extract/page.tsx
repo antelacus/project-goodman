@@ -2,9 +2,6 @@
 import React, { useState, useCallback, useRef, useEffect } from "react";
 import { useDropzone } from "react-dropzone";
 import { useDocumentStore, Document } from "../../store/documents";
-import DocumentManager from "../../components/DocumentManager";
-import Link from "next/link";
-import ChatInputBox from "../../components/ChatInputBox";
 import DocumentSelectModal from "../../components/DocumentSelectModal";
 import PageContainer from "../../components/PageContainer";
 import PageTitle from "../../components/PageTitle";
@@ -27,7 +24,6 @@ export default function PdfUploadPage() {
   const [selectedBusinessId, setSelectedBusinessId] = useState<string | null>(null);
   const [uploadStatus, setUploadStatus] = useState<'idle' | 'uploading' | 'success' | 'error' | 'unsupported'>('idle');
   const [analyzing, setAnalyzing] = useState(false);
-  const [pendingAnalysisDoc, setPendingAnalysisDoc] = useState<Document | null>(null);
   const documents = useDocumentStore((s) => s.documents);
   const businessDocs = documents.filter(doc => doc.docCategory === 'business');
   const selectedBusinessDoc = businessDocs.find(doc => doc.id === selectedBusinessId);
@@ -70,7 +66,6 @@ export default function PdfUploadPage() {
 
   const processPDF = async (file: File): Promise<string> => {
     if (typeof window === "undefined") return "";
-    // @ts-ignore
     const pdfjsLib = await import("pdfjs-dist/build/pdf");
     pdfjsLib.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.mjs`;
     const arrayBuffer = await file.arrayBuffer();
@@ -79,7 +74,7 @@ export default function PdfUploadPage() {
     for (let i = 1; i <= pdf.numPages; i++) {
       const page = await pdf.getPage(i);
       const textContent = await page.getTextContent();
-      fullText += textContent.items.map((item: any) => {
+      fullText += textContent.items.map((item: { str?: string }) => {
         if ('str' in item) {
           return item.str;
         }
@@ -137,7 +132,7 @@ export default function PdfUploadPage() {
       setMessage(`PDF处理失败: ${errorMessage}`);
       setAnalysisResult(null);
     }
-  }, []);
+  }, [addDocument, processPDF]);
 
   const handleStartAnalysis = async () => {
     if (!selectedBusinessDoc) return;

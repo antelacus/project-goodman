@@ -9,7 +9,7 @@ const openai = new OpenAI({
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-    const { text, documentId, fileName } = body;
+    const { text, documentId } = body;
 
     if (!text || !documentId) {
       return NextResponse.json({ error: "Missing required fields" }, { status: 400 });

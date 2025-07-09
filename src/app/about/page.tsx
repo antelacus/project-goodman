@@ -33,7 +33,7 @@ export default function AboutHelpPage() {
         <section className="mb-10">
           <h2 className="text-2xl font-bold mb-4">项目简介</h2>
           <p className="mb-2">Project Goodman 是一款面向财务与合规领域的智能AI助手，支持智能文档分析、财务分析与预测、合规性指导等核心功能，具备专业、现代、统一的前端UI与交互体验。</p>
-          <p className="mb-2">本项目旨在通过三个核心模块全面提升财务工作效率，展示"AI如何改变和提速财务工作"的专业理解。</p>
+          <p className="mb-2">本项目旨在通过三个核心模块全面提升财务工作效率，展示&quot;AI如何改变和提速财务工作&quot;的专业理解。</p>
         </section>
         <section className="mb-10">
           <h2 className="text-xl font-bold mb-3">核心功能</h2>
@@ -60,9 +60,9 @@ export default function AboutHelpPage() {
         <section>
           <h2 className="text-xl font-bold mb-3">常见问题</h2>
           <ul className="list-disc pl-6 space-y-1">
-            <li>如何上传和管理文档？——请前往"文档管理"页面，支持多格式上传、批量选择和属性编辑。</li>
+            <li>如何上传和管理文档？——请前往&quot;文档管理&quot;页面，支持多格式上传、批量选择和属性编辑。</li>
             <li>AI分析结果是否安全？——所有业务型文档仅在前端处理，不做持久化存储，保障隐私。</li>
-            <li>如何体验AI分析与合规性判断？——请分别前往"智能文档分析"、"财务分析与预测"、"合规性指导"页面体验核心功能。</li>
+            <li>如何体验AI分析与合规性判断？——请分别前往&quot;智能文档分析&quot;、&quot;财务分析与预测&quot;、&quot;合规性指导&quot;页面体验核心功能。</li>
           </ul>
         </section>
       </PageContainer>

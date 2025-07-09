@@ -46,7 +46,7 @@ export function renderMarkdownWithLatexHighlight(
   // 匹配$...$和$$...$$表达式
   const inline = /\$(.+?)\$/g;
   const block = /\$\$(.+?)\$\$/g;
-  let parts: (string | { latex: string })[] = [];
+  const parts: (string | { latex: string })[] = [];
   let lastIdx = 0;
   // 先处理块级
   content.replace(block, (m, p1, offset) => {

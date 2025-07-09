@@ -44,7 +44,6 @@ export default function KnowledgeChatPage() {
   const [modalResult, setModalResult] = useState('');
   const [modalError, setModalError] = useState<string | undefined>(undefined);
   const [uploadStatus, setUploadStatus] = useState<'idle' | 'uploading' | 'success' | 'error' | 'unsupported'>('idle');
-  const [presetOpen, setPresetOpen] = useState(false);
   const [streamedContent, setStreamedContent] = useState(""); // 当前逐字输出内容
 
   const scrollToBottom = () => {
@@ -74,7 +73,6 @@ export default function KnowledgeChatPage() {
 
   const processPDF = async (file: File): Promise<string> => {
     if (typeof window === "undefined") return "";
-    // @ts-ignore
     const pdfjsLib = await import("pdfjs-dist/build/pdf");
     pdfjsLib.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.mjs`;
     const arrayBuffer = await file.arrayBuffer();
@@ -84,7 +82,7 @@ export default function KnowledgeChatPage() {
     for (let i = 1; i <= pdf.numPages; i++) {
       const page = await pdf.getPage(i);
       const textContent = await page.getTextContent();
-      fullText += textContent.items.map((item: any) => {
+      fullText += textContent.items.map((item: { str?: string }) => {
         if ('str' in item) {
           return item.str;
         }
@@ -97,7 +95,6 @@ export default function KnowledgeChatPage() {
 
   const processExcel = async (file: File): Promise<string> => {
     if (typeof window === "undefined") return "";
-    // @ts-ignore
     const XLSX = await import("xlsx");
     const arrayBuffer = await file.arrayBuffer();
     const workbook = XLSX.read(arrayBuffer, { type: "array" });
@@ -264,10 +261,6 @@ export default function KnowledgeChatPage() {
     }
   };
 
-  const clearChat = () => {
-    setChatMessages([]);
-  };
-
   // LaTeX解析与校验逻辑
   function parseLatexToMath(latex: string): { expr: string, error?: string } {
     let expr = latex.trim();
@@ -304,7 +297,7 @@ export default function KnowledgeChatPage() {
     let parts: (string | { latex: string })[] = [];
     let lastIdx = 0;
     // 先处理块级
-    content.replace(block, (m, p1, offset) => {
+    content.replace(block, (m: string, p1: string, offset: number) => {
       if (offset > lastIdx) parts.push(content.slice(lastIdx, offset));
       parts.push({ latex: p1 });
       lastIdx = offset + m.length;
@@ -313,7 +306,7 @@ export default function KnowledgeChatPage() {
     content = content.slice(lastIdx);
     lastIdx = 0;
     // 再处理行内
-    content.replace(inline, (m, p1, offset) => {
+    content.replace(inline, (m: string, p1: string, offset: number) => {
       if (offset > lastIdx) parts.push(content.slice(lastIdx, offset));
       parts.push({ latex: p1 });
       lastIdx = offset + m.length;
@@ -364,8 +357,6 @@ export default function KnowledgeChatPage() {
     setSelectedKnowledgeDocs(ids.filter(id => knowledgeDocuments.some(d => d.id === id)));
     setSelectedBusinessDocs(ids.filter(id => businessDocuments.some(d => d.id === id)));
   };
-
-  const canSend = selectedKnowledgeDocs.length > 0 && selectedBusinessDocs.length > 0 && !isSending;
 
   const selectedDocs = [
     ...selectedKnowledgeDocs.map(id => {
