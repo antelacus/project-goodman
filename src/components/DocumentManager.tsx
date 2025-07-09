@@ -3,11 +3,10 @@ import { useDocumentStore, Document } from "../store/documents";
 
 interface DocumentManagerProps {
   selectedIds?: string[];
-  onSelect?: (ids: string[]) => void;
   showCategory?: boolean;
 }
 
-export const DocumentManager: React.FC<DocumentManagerProps> = ({ selectedIds = [], onSelect, showCategory = true }) => {
+export const DocumentManager: React.FC<DocumentManagerProps> = ({ selectedIds = [], showCategory = true }) => {
   const documents = useDocumentStore((s) => s.documents);
   const removeDocument = useDocumentStore((s) => s.removeDocument);
   const [previewDoc, setPreviewDoc] = useState<Document | null>(null);

@@ -7,7 +7,6 @@ import rehypeKatex from "rehype-katex";
 import HighlightLatex from "../../components/HighlightLatex";
 import LatexCalcModal from "../../components/LatexCalcModal";
 import { evaluate } from "mathjs";
-import { getFinancialAnalysisPrompt } from "../../lib/prompts";
 import { financialAnalysisPresets } from "../../lib/presetQuestions";
 import ChatInputBox from "../../components/ChatInputBox";
 import PageContainer from "../../components/PageContainer";
@@ -60,8 +59,6 @@ function parseLatexToMath(latex: string): { expr: string, error?: string } {
 
 export default function FinancialAnalysisPage() {
   const documents = useDocumentStore((s) => s.documents);
-  const isLoading = useDocumentStore((s) => s.isLoading);
-  const loadDocumentsFromJsonDir = useDocumentStore((s) => s.loadDocumentsFromJsonDir);
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
   const [isSending, setIsSending] = useState(false);
   const [selectedDocuments, setSelectedDocuments] = useState<string[]>([]);
@@ -73,7 +70,6 @@ export default function FinancialAnalysisPage() {
   const [modalError, setModalError] = useState<string | undefined>(undefined);
   const [presetOpen, setPresetOpen] = useState(false);
   const chatEndRef = useRef<HTMLDivElement>(null);
-  const [streamedContent, setStreamedContent] = useState("");
 
   const scrollToBottom = () => {
     chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -82,74 +78,6 @@ export default function FinancialAnalysisPage() {
   useEffect(() => {
     scrollToBottom();
   }, [chatMessages]);
-
-  // 只显示知识型文档
-  const knowledgeDocuments = documents.filter(doc => doc.docCategory === "knowledge");
-
-  const sendMessage = async (msg: string) => {
-    if (!msg.trim() || selectedDocuments.length === 0 || isSending) return;
-    const userMessage: ChatMessage = {
-      id: `msg-${Date.now()}`,
-      role: "user",
-      content: msg,
-      timestamp: new Date().toISOString(),
-    };
-    setChatMessages(prev => [...prev, userMessage]);
-    setIsSending(true);
-    // 先插入一条空的 assistant 消息，streaming: true
-    const aiMsgId = `msg-${Date.now() + 1}`;
-    setChatMessages(prev => [
-      ...prev,
-      { id: aiMsgId, role: "assistant", content: "", timestamp: new Date().toISOString(), streaming: true }
-    ]);
-    setStreamedContent("");
-    try {
-      const prompt = getFinancialAnalysisPrompt(selectedDocuments.map(id => knowledgeDocs.find(d => d.id === id)?.name || "").filter(Boolean));
-      const res = await fetch("/api/chat", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          question: `${prompt}\n用户问题：${userMessage.content}`,
-          documentIds: selectedDocuments,
-          chatHistory: chatMessages.slice(-10),
-        }),
-      });
-      if (!res.ok) throw new Error("AI回复失败");
-      const chatResult = await res.json();
-      let aiContent = chatResult.response;
-      aiContent = aiContent.replace(/\[([^\[]+?)\]/g, (m: string, p1: string) => `$$${p1}$$`);
-      // 逐字输出
-      let idx = 0;
-      const typeInterval = 18; // ms
-      function typeNext() {
-        idx++;
-        setStreamedContent(aiContent.slice(0, idx));
-        setChatMessages(prev => prev.map(m =>
-          m.id === aiMsgId ? { ...m, content: aiContent.slice(0, idx) } : m
-        ));
-        if (idx < aiContent.length) {
-          setTimeout(typeNext, typeInterval);
-        } else {
-          // 输出完毕，标记为已完成
-          setChatMessages(prev => prev.map(m =>
-            m.id === aiMsgId ? { ...m, streaming: false } : m
-          ));
-          setStreamedContent("");
-        }
-      }
-      typeNext();
-    } catch (err) {
-      const errorMessage: ChatMessage = {
-        id: `msg-${Date.now() + 2}`,
-        role: "assistant",
-        content: "抱歉，AI服务暂时不可用。",
-        timestamp: new Date().toISOString(),
-      };
-      setChatMessages(prev => [...prev, errorMessage]);
-    } finally {
-      setIsSending(false);
-    }
-  };
 
   // 多选文档切换
   const toggleSelectDocument = (docId: string) => {
@@ -165,7 +93,7 @@ export default function FinancialAnalysisPage() {
     // 匹配$...$和$$...$$表达式
     const inline = /\$(.+?)\$/g;
     const block = /\$\$(.+?)\$\$/g;
-    let parts: (string | { latex: string })[] = [];
+    const parts: (string | { latex: string })[] = [];
     let lastIdx = 0;
     // 先处理块级
     content.replace(block, (m, p1, offset) => {
@@ -232,6 +160,70 @@ export default function FinancialAnalysisPage() {
     return doc ? { id: doc.id, name: doc.name } : null;
   }).filter(Boolean) as { id: string, name: string }[];
 
+  // 发送消息并处理AI回复
+  const sendMessage = async (msg: string) => {
+    if (!msg.trim() || selectedDocuments.length === 0 || isSending) return;
+    const userMessage: ChatMessage = {
+      id: `msg-${Date.now()}`,
+      role: "user",
+      content: msg,
+      timestamp: new Date().toISOString(),
+    };
+    setChatMessages(prev => [...prev, userMessage]);
+    setIsSending(true);
+    // 先插入一条空的 assistant 消息，streaming: true
+    const aiMsgId = `msg-${Date.now() + 1}`;
+    setChatMessages(prev => [
+      ...prev,
+      { id: aiMsgId, role: "assistant", content: "", timestamp: new Date().toISOString(), streaming: true }
+    ]);
+    try {
+      // 构建 prompt
+      const selectedDocsNames = selectedDocuments.map(id => knowledgeDocs.find(d => d.id === id)?.name || "").filter(Boolean);
+      const prompt = `请基于以下知识型文档进行财务分析：${selectedDocsNames.join(", ")}`;
+      const res = await fetch("/api/chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          question: `${prompt}\n用户问题：${userMessage.content}`,
+          documentIds: selectedDocuments,
+          chatHistory: chatMessages.slice(-10),
+        }),
+      });
+      if (!res.ok) throw new Error("AI回复失败");
+      const chatResult = await res.json();
+      let aiContent = chatResult.response;
+      aiContent = aiContent.replace(/\[([^\[]+?)\]/g, (m: string, p1: string) => `$$${p1}$$`);
+      // 逐字输出
+      let idx = 0;
+      const typeInterval = 18; // ms
+      function typeNext() {
+        idx++;
+        setChatMessages(prev => prev.map(m =>
+          m.id === aiMsgId ? { ...m, content: aiContent.slice(0, idx) } : m
+        ));
+        if (idx < aiContent.length) {
+          setTimeout(typeNext, typeInterval);
+        } else {
+          setChatMessages(prev => prev.map(m =>
+            m.id === aiMsgId ? { ...m, streaming: false } : m
+          ));
+        }
+      }
+      typeNext();
+    } catch (err) {
+      const errorMessage: ChatMessage = {
+        id: `msg-${Date.now() + 2}`,
+        role: "assistant",
+        content: "抱歉，AI服务暂时不可用。",
+        timestamp: new Date().toISOString(),
+      };
+      setChatMessages(prev => [...prev, errorMessage]);
+    } finally {
+      setIsSending(false);
+    }
+  };
+
   return (
     <PageContainer maxWidth="3xl">
       <div className="flex flex-col h-[calc(100vh-64px)] gap-0"> {/* 64px 预留顶部导航高度，可根据实际调整 */}
@@ -287,11 +279,11 @@ export default function FinancialAnalysisPage() {
             docCategories={["knowledge"]}
             showUpload={false}
             presetQuestions={financialAnalysisPresets}
-            onSend={sendMessage}
             sendDisabled={selectedDocuments.length === 0 || isSending}
             sendDisabledTip="请选择至少一个知识型文档"
             sendBtnText={isSending ? "发送中..." : "发送"}
             inputPlaceholder="请输入你的财务分析问题..."
+            onSend={sendMessage}
           />
         </div>
         {/* 预设提问弹窗 */}
