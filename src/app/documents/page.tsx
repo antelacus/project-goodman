@@ -276,14 +276,14 @@ export default function DocumentsPage() {
       <div className="flex flex-col gap-8">
         <section className="w-full">
           <PageTitle>文档管理</PageTitle>
-          <p className="text-gray-700 mb-6">统一管理知识型与业务型文档，支持分类、批量选择、属性编辑和重命名。</p>
+          <p className="text-gray-700 mb-6">统一管理数据库文档与待处理文档，支持分类、批量选择、属性编辑和重命名。</p>
           <div className="mt-8">
             {/* 知识型文档 */}
             <div className="mb-12">
-              <div className="text-lg font-bold mb-4">知识型文档</div>
+              <div className="text-lg font-bold mb-4">数据库文档</div>
               {renderHeader("knowledge")}
               {knowledgeDocs.length === 0 ? (
-                <div className="text-gray-400 py-6 text-center">暂无知识型文档</div>
+                <div className="text-gray-400 py-6 text-center">暂无数据库文档</div>
               ) : (
                 knowledgeDocs.map((doc) =>
                   renderRow(
@@ -297,10 +297,10 @@ export default function DocumentsPage() {
             </div>
             {/* 业务型文档 */}
             <div>
-              <div className="text-lg font-bold mb-4">业务型文档</div>
+              <div className="text-lg font-bold mb-4">待处理文档</div>
               {renderHeader("business")}
               {businessDocs.length === 0 ? (
-                <div className="text-gray-400 py-6 text-center">暂无业务型文档</div>
+                <div className="text-gray-400 py-6 text-center">暂无待处理文档</div>
               ) : (
                 businessDocs.map((doc) =>
                   renderRow(

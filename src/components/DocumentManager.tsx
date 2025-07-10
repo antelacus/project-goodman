@@ -64,7 +64,7 @@ export const DocumentManager: React.FC<DocumentManagerProps> = ({ selectedIds = 
     <div>
       {showCategory && (
         <>
-          <div className="font-bold text-gray-700 mb-2">业务型文档 ({grouped["business"]?.length || 0})</div>
+          <div className="font-bold text-gray-700 mb-2">待处理文档 ({grouped["business"]?.length || 0})</div>
           {grouped["business"]?.length === 0 ? (
             <div className="text-gray-400 mb-4">暂无文档</div>
           ) : (
@@ -72,7 +72,7 @@ export const DocumentManager: React.FC<DocumentManagerProps> = ({ selectedIds = 
               {grouped["business"]?.map(renderDocCard)}
             </div>
           )}
-          <div className="font-bold text-gray-700 mb-2">知识型文档 ({grouped["knowledge"]?.length || 0})</div>
+          <div className="font-bold text-gray-700 mb-2">数据库文档 ({grouped["knowledge"]?.length || 0})</div>
           <div className="space-y-4">
             {grouped["knowledge"]?.map(renderDocCard)}
           </div>

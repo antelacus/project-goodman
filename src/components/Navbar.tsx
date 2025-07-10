@@ -5,11 +5,11 @@ import { usePathname } from "next/navigation";
 
 const navItems = [
   { name: "首页", href: "/" },
-  { name: "智能文档分析", href: "/data-extract" },
-  { name: "财务分析与预测", href: "/financial-analysis" },
-  { name: "合规性指导", href: "/guidance-chat" },
+  { name: "财务信息提取", href: "/data-extract" },
+  { name: "财务指标分析", href: "/financial-analysis" },
+  { name: "财务合规指导", href: "/guidance-chat" },
   { name: "文档管理", href: "/documents" },
-  { name: "展示案例", href: "/showcase" },
+  { name: "案例演示", href: "/showcase" },
   { name: "关于/帮助", href: "/about" },
 ];
 

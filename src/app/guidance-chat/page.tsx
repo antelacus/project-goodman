@@ -14,6 +14,7 @@ import ChatInputBox from "../../components/ChatInputBox";
 import PageContainer from "../../components/PageContainer";
 import PageTitle from "../../components/PageTitle";
 import { checkAndIncreaseApiLimit } from "../../lib/rateLimit";
+import Link from "next/link";
 
 // Set up the worker source for pdfjs-dist
 // pdfjsLib.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.mjs`;
@@ -255,13 +256,19 @@ export default function KnowledgeChatPage() {
     <PageContainer maxWidth="3xl">
       <div className="flex flex-col h-[calc(100vh-64px)] gap-0"> {/* 64px 预留顶部导航高度，可根据实际调整 */}
         <section className="w-full flex-1 flex flex-col gap-0">
-          <PageTitle>合规性指导</PageTitle>
-          <p className="text-gray-700 mb-6">本页面可结合知识型和业务型文档，AI自动判断业务处理是否符合相关法规、准则，提供合规性分析和建议。</p>
+          <PageTitle>财务合规指导</PageTitle>
+          <p className="text-gray-700 mb-6">
+          本页面可结合财务数据库文档，使用 AI 回答待处理文档相关财务问题，或判断相关财务处理是否符合法规、准则、制度，并提供合规性分析和建议。<br />
+            仍有疑问？请在
+              <Link href="/about" className="text-blue-600 underline hover:text-blue-800 transition-colors">关于/帮助</Link>
+              页面获取指引，或跳转查看
+            <Link href="/showcase#guidance" className="text-blue-600 underline hover:text-blue-800 transition-colors">演示案例</Link>。
+          </p>
           {/* 对话消息区 */}
           <div className="bg-white rounded-lg p-4 mb-6 flex-1 overflow-y-auto" style={{ minHeight: 320 }}>
             <div className="flex flex-col gap-4">
               {chatMessages.length === 0 && !isSending && (
-                <div className="text-gray-400 text-center mt-10">请在下方输入你的问题</div>
+                <div className="text-gray-400 text-center mt-10">请在选择数据库文档和待处理文档后，输入并发送你的问题。可使用内置的“预设提问”</div>
               )}
               {chatMessages.map((msg, idx) => (
                 <div

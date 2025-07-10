@@ -6,6 +6,7 @@ import DocumentSelectModal from "../../components/DocumentSelectModal";
 import PageContainer from "../../components/PageContainer";
 import PageTitle from "../../components/PageTitle";
 import { checkAndIncreaseApiLimit } from "../../lib/rateLimit";
+import Link from "next/link";
 
 // Set up the worker source for pdfjs-dist
 // pdfjsLib.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.mjs`;
@@ -190,11 +191,18 @@ export default function PdfUploadPage() {
       <div className="flex flex-col gap-8">
         <section className="w-full">
           <div className="mb-6">
-            <PageTitle>智能文档分析</PageTitle>
-            <p className="text-gray-700">上传PDF财务文档（如发票、合同），AI将自动提取关键信息。</p>
+            <PageTitle>财务信息提取</PageTitle>
+            <p className="text-gray-700">
+              上传 PDF 格式财务文档（如发票、合同），AI 将自动提取关键信息，并输出为可以自由复制内容的格式化结果。<br />
+              仍有疑问？请在
+              <Link href="/about" className="text-blue-600 underline hover:text-blue-800 transition-colors">关于/帮助</Link>
+              页面获取指引，或跳转查看
+              <Link href="/showcase#extract" className="text-blue-600 underline hover:text-blue-800 transition-colors">演示案例</Link>
+              。
+            </p>
           </div>
             <div className="mb-6">
-              <div className="font-bold mb-2">第一步：上传需分析的业务型文档</div>
+              <div className="font-bold mb-2">第一步：上传需分析的文档（电子版 PDF 格式，小于1MB）</div>
               <div
                 {...getRootProps()}
                 className={`w-full p-10 border-2 border-dashed rounded-lg text-center cursor-pointer transition-colors ${
@@ -206,7 +214,7 @@ export default function PdfUploadPage() {
               </div>
             </div>
             <div className="mb-6">
-              <div className="font-bold mb-2">第二步：从已上传文档中选择需要提取信息的业务型文档</div>
+              <div className="font-bold mb-2">第二步：从已上传的文档中选择需要提取信息的文档</div>
               {/* 已选文档展示区 */}
               {selectedBusinessDoc ? (
                 <div className="mb-2 p-3 bg-gray-50 rounded border border-gray-200 flex items-center gap-2">
