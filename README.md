@@ -1,5 +1,9 @@
 # Project Goodman - AI 智能财务助手
 
+> **项目已上线体验地址**：
+> 
+> https://project-goodman.vercel.app
+
 ## 项目概述
 
 Project Goodman 是一款面向财务与合规领域的智能AI助手，支持智能文档分析、财务分析与预测、合规性指导等核心功能，具备专业、现代、统一的前端UI与交互体验。
