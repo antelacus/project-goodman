@@ -1,6 +1,5 @@
 "use client";
 import React, { useState, useCallback, useRef, useEffect } from "react";
-import { useDropzone } from "react-dropzone";
 import { useDocumentStore, Document } from "../../store/documents";
 import HighlightLatex from "../../components/HighlightLatex";
 import LatexCalcModal from "../../components/LatexCalcModal";
@@ -14,6 +13,7 @@ import { complianceGuidancePresets } from "../../lib/presetQuestions";
 import ChatInputBox from "../../components/ChatInputBox";
 import PageContainer from "../../components/PageContainer";
 import PageTitle from "../../components/PageTitle";
+import { checkAndIncreaseApiLimit } from "../../lib/rateLimit";
 
 // Set up the worker source for pdfjs-dist
 // pdfjsLib.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.mjs`;
@@ -38,7 +38,6 @@ export default function KnowledgeChatPage() {
   const [modalParsed, setModalParsed] = useState('');
   const [modalResult, setModalResult] = useState('');
   const [modalError, setModalError] = useState<string | undefined>(undefined);
-  const [uploadStatus, setUploadStatus] = useState<'idle' | 'uploading' | 'success' | 'error' | 'unsupported'>('idle');
 
   const scrollToBottom = () => {
     chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -52,123 +51,104 @@ export default function KnowledgeChatPage() {
   const knowledgeDocuments = documents.filter(doc => doc.docCategory === "knowledge");
   const businessDocuments = documents.filter(doc => doc.docCategory === "business");
 
-  // 处理文件上传
-  const processFile = useCallback(async (file: File): Promise<string> => {
-    if (file.type === "application/pdf") {
-      return await processPDF(file);
-    } else if (file.type === "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet") {
-      return await processExcel(file);
-    } else if (file.type === "text/plain" || file.type === "text/csv") {
-      return await file.text();
-    } else {
-      throw new Error("不支持的文件格式");
-    }
-  }, []);
-
-  const processPDF = async (file: File): Promise<string> => {
-    if (typeof window === "undefined") return "";
-    const pdfjsLib = await import("pdfjs-dist/build/pdf");
-    pdfjsLib.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.mjs`;
-    const arrayBuffer = await file.arrayBuffer();
-    const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
-    let fullText = "";
-
-    for (let i = 1; i <= pdf.numPages; i++) {
-      const page = await pdf.getPage(i);
-      const textContent = await page.getTextContent();
-      fullText += textContent.items.map((item: { str?: string }) => {
-        if ('str' in item) {
-          return item.str;
-        }
-        return '';
-      }).join(" ") + "\n";
-    }
-
-    return fullText;
-  };
-
-  const processExcel = async (file: File): Promise<string> => {
-    if (typeof window === "undefined") return "";
-    const XLSX = await import("xlsx");
-    const arrayBuffer = await file.arrayBuffer();
-    const workbook = XLSX.read(arrayBuffer, { type: "array" });
-    let fullText = "";
-
-    workbook.SheetNames.forEach((sheetName: string) => {
-      const worksheet = workbook.Sheets[sheetName];
-      const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
-      
-      fullText += `工作表: ${sheetName}\n`;
-      jsonData.forEach((row: unknown) => {
-        if (Array.isArray(row)) {
-          fullText += row.join("\t") + "\n";
-        }
-      });
-      fullText += "\n";
+  // 高亮并可交互的Markdown渲染
+  function renderMarkdownWithLatexHighlight(content: string) {
+    // 匹配$...$和$$...$$表达式
+    const inline = /\$(.+?)\$/g;
+    const block = /\$\$(.+?)\$\$/g;
+    const parts: (string | { latex: string })[] = [];
+    let lastIdx = 0;
+    // 先处理块级
+    content.replace(block, (m: string, p1: string, offset: number) => {
+      if (offset > lastIdx) parts.push(content.slice(lastIdx, offset));
+      parts.push({ latex: p1 });
+      lastIdx = offset + m.length;
+      return m;
     });
+    content = content.slice(lastIdx);
+    lastIdx = 0;
+    // 再处理行内
+    content.replace(inline, (m: string, p1: string, offset: number) => {
+      if (offset > lastIdx) parts.push(content.slice(lastIdx, offset));
+      parts.push({ latex: p1 });
+      lastIdx = offset + m.length;
+      return m;
+    });
+    if (lastIdx < content.length) parts.push(content.slice(lastIdx));
+    // 渲染
+    return parts.map((part, i) => {
+      if (typeof part === 'string') {
+        return <ReactMarkdown key={i} remarkPlugins={[remarkMath]} rehypePlugins={[rehypeKatex]}>{part}</ReactMarkdown>;
+      } else {
+        return (
+          <HighlightLatex key={i} onClick={() => {
+            setModalLatex(part.latex);
+            const { expr, error } = parseLatexToMath(part.latex);
+            setModalParsed(expr);
+            if (!error) {
+              try {
+                const result = evaluate(expr);
+                // 格式化：保留两位小数，千分位，百分号
+                const resultNum = Number(result);
+                let formatted = isNaN(resultNum)
+                  ? result.toString()
+                  : resultNum.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+                // 若原始表达式含%或*100，自动加%
+                if (/[％%]|\\times\s*100|\*100/.test(part.latex)) {
+                  formatted += '%';
+                }
+                setModalResult(formatted);
+                setModalError(undefined);
+              } catch {
+                setModalResult('');
+                setModalError('计算失败');
+              }
+            } else {
+              setModalResult('');
+              setModalError(error);
+            }
+            setModalOpen(true);
+          }}>{`$${part.latex}$`}</HighlightLatex>
+        );
+      }
+    });
+  }
 
-    return fullText;
-  };
-
-  // 上传业务型文档
-  const onDrop = useCallback(async (acceptedFiles: File[]) => {
-    const file = acceptedFiles[0];
-    if (!file) return;
-    if (!file.type.includes('pdf')) {
-      setUploadStatus('unsupported');
-      return;
-    }
-    setUploadStatus('uploading');
+  // 恢复parseLatexToMath函数定义
+  function parseLatexToMath(latex: string): { expr: string, error?: string } {
+    let expr = latex.trim();
     try {
-      const text = await processFile(file);
-      const documentId = `business-${Date.now()}`;
-      const response = await fetch("/api/process-document", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ text, documentId, fileName: file.name }),
-      });
-      if (!response.ok) throw new Error("文档处理失败");
-      const result = await response.json();
-      const newDocument: Document = {
-        id: documentId,
-        name: file.name,
-        type: 'pdf',
-        docCategory: "business",
-        uploadTime: new Date().toISOString(),
-        status: "ready",
-        size: file.size,
-        summary: result.summary,
-        chunks: result.chunks
-      };
-      addDocument(newDocument);
-      setSelectedBusinessDocs(prev => [...prev, documentId]);
-      setUploadStatus('success');
-    } catch (error) {
-      setUploadStatus('error');
-      alert("文件处理失败，请重试");
-    } finally {
-      setTimeout(() => setUploadStatus('idle'), 2000);
-    }
-  }, [processFile, addDocument]);
-
-  const { getRootProps, getInputProps, isDragActive } = useDropzone({
-    onDrop,
-    accept: { "application/pdf": [".pdf"] },
-    maxFiles: 1,
-  });
-
-  function getUploadStatusMessage() {
-    switch (uploadStatus) {
-      case 'uploading': return '上传中...';
-      case 'unsupported': return '文件类型不支持';
-      case 'success': return '上传完毕';
-      case 'error': return '上传失败';
-      default: return '请在此处上传业务型PDF文件';
+      expr = expr.replace(/\\text\{[^{}]*\}/g, '');
+      expr = expr.replace(/\\left|\\right/g, '');
+      while (/\\frac\{[^{}]+\}\{[^{}]+\}/.test(expr)) {
+        expr = expr.replace(/\\frac\{([^{}]+)\}\{([^{}]+)\}/g, '($1)/($2)');
+      }
+      expr = expr.replace(/\\times/g, '*');
+      expr = expr.replace(/\\div/g, '/');
+      expr = expr.replace(/([\d,.]+)\s*%/g, '($1/100)');
+      expr = expr.replace(/,/g, '');
+      expr = expr.replace(/\$/g, '').replace(/\s+/g, '');
+      if (!/^[-+*/().\d]+$/.test(expr)) {
+        const match = expr.match(/([-+*/().\d]+)/);
+        if (match) {
+          expr = match[1];
+        } else {
+          return { expr, error: '暂不支持自动校验此类表达式' };
+        }
+      }
+      return { expr };
+    } catch {
+      return { expr, error: '解析表达式失败' };
     }
   }
 
+  // 恢复handleSendMessage函数定义
   const handleSendMessage = async (msg: string) => {
     if (!msg.trim() || isSending) return;
+    if (!checkAndIncreaseApiLimit(10)) {
+      alert("今日体验次数已达上限，请明天再试或联系作者获取更多体验权限。");
+      return;
+    }
 
     const userMessage: ChatMessage = {
       role: 'user',
@@ -249,97 +229,6 @@ export default function KnowledgeChatPage() {
       setIsSending(false);
     }
   };
-
-  // LaTeX解析与校验逻辑
-  function parseLatexToMath(latex: string): { expr: string, error?: string } {
-    let expr = latex.trim();
-    try {
-      expr = expr.replace(/\\text\{[^{}]*\}/g, '');
-      expr = expr.replace(/\\left|\\right/g, '');
-      while (/\\frac\{[^{}]+\}\{[^{}]+\}/.test(expr)) {
-        expr = expr.replace(/\\frac\{([^{}]+)\}\{([^{}]+)\}/g, '($1)/($2)');
-      }
-      expr = expr.replace(/\\times/g, '*');
-      expr = expr.replace(/\\div/g, '/');
-      expr = expr.replace(/([\d,.]+)\s*%/g, '($1/100)');
-      expr = expr.replace(/,/g, '');
-      expr = expr.replace(/\$/g, '').replace(/\s+/g, '');
-      if (!/^[-+*/().\d]+$/.test(expr)) {
-        const match = expr.match(/([-+*/().\d]+)/);
-        if (match) {
-          expr = match[1];
-        } else {
-          return { expr, error: '暂不支持自动校验此类表达式' };
-        }
-      }
-      return { expr };
-    } catch {
-      return { expr, error: '解析表达式失败' };
-    }
-  }
-
-  // 高亮并可交互的Markdown渲染
-  function renderMarkdownWithLatexHighlight(content: string) {
-    // 匹配$...$和$$...$$表达式
-    const inline = /\$(.+?)\$/g;
-    const block = /\$\$(.+?)\$\$/g;
-    const parts: (string | { latex: string })[] = [];
-    let lastIdx = 0;
-    // 先处理块级
-    content.replace(block, (m: string, p1: string, offset: number) => {
-      if (offset > lastIdx) parts.push(content.slice(lastIdx, offset));
-      parts.push({ latex: p1 });
-      lastIdx = offset + m.length;
-      return m;
-    });
-    content = content.slice(lastIdx);
-    lastIdx = 0;
-    // 再处理行内
-    content.replace(inline, (m: string, p1: string, offset: number) => {
-      if (offset > lastIdx) parts.push(content.slice(lastIdx, offset));
-      parts.push({ latex: p1 });
-      lastIdx = offset + m.length;
-      return m;
-    });
-    if (lastIdx < content.length) parts.push(content.slice(lastIdx));
-    // 渲染
-    return parts.map((part, i) => {
-      if (typeof part === 'string') {
-        return <ReactMarkdown key={i} remarkPlugins={[remarkMath]} rehypePlugins={[rehypeKatex]}>{part}</ReactMarkdown>;
-      } else {
-        return (
-          <HighlightLatex key={i} onClick={() => {
-            setModalLatex(part.latex);
-            const { expr, error } = parseLatexToMath(part.latex);
-            setModalParsed(expr);
-            if (!error) {
-              try {
-                const result = evaluate(expr);
-                // 格式化：保留两位小数，千分位，百分号
-                const resultNum = Number(result);
-                let formatted = isNaN(resultNum)
-                  ? result.toString()
-                  : resultNum.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-                // 若原始表达式含%或*100，自动加%
-                if (/[％%]|\\times\s*100|\*100/.test(part.latex)) {
-                  formatted += '%';
-                }
-                setModalResult(formatted);
-                setModalError(undefined);
-              } catch {
-                setModalResult('');
-                setModalError('计算失败');
-              }
-            } else {
-              setModalResult('');
-              setModalError(error);
-            }
-            setModalOpen(true);
-          }}>{`$${part.latex}$`}</HighlightLatex>
-        );
-      }
-    });
-  }
 
   const handleSelectDocs = (ids: string[]) => {
     // 按照文档类型分配

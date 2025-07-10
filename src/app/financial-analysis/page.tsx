@@ -11,6 +11,7 @@ import { financialAnalysisPresets } from "../../lib/presetQuestions";
 import ChatInputBox from "../../components/ChatInputBox";
 import PageContainer from "../../components/PageContainer";
 import PageTitle from "../../components/PageTitle";
+import { checkAndIncreaseApiLimit } from "../../lib/rateLimit";
 
 type ChatMessage = {
   id: string;
@@ -163,6 +164,10 @@ export default function FinancialAnalysisPage() {
   // 发送消息并处理AI回复
   const sendMessage = async (msg: string) => {
     if (!msg.trim() || selectedDocuments.length === 0 || isSending) return;
+    if (!checkAndIncreaseApiLimit(10)) {
+      alert("今日体验次数已达上限，请明天再试或联系作者获取更多体验权限。");
+      return;
+    }
     const userMessage: ChatMessage = {
       id: `msg-${Date.now()}`,
       role: "user",

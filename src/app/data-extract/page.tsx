@@ -5,6 +5,7 @@ import { useDocumentStore, Document } from "../../store/documents";
 import DocumentSelectModal from "../../components/DocumentSelectModal";
 import PageContainer from "../../components/PageContainer";
 import PageTitle from "../../components/PageTitle";
+import { checkAndIncreaseApiLimit } from "../../lib/rateLimit";
 
 // Set up the worker source for pdfjs-dist
 // pdfjsLib.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.mjs`;
@@ -92,12 +93,20 @@ export default function PdfUploadPage() {
   const onDrop = useCallback(async (acceptedFiles: File[]) => {
     const file = acceptedFiles[0];
     if (!file) return;
+    if (!checkAndIncreaseApiLimit(10)) {
+      alert("今日体验次数已达上限，请明天再试或联系作者获取更多体验权限。");
+      return;
+    }
 
     if (!file.type.includes('pdf')) {
       setUploadStatus('unsupported');
       return;
     }
-
+    if (file.size > 1048576) {
+      setUploadStatus('error');
+      alert('文件大小不能超过1MB');
+      return;
+    }
     setUploadStatus('uploading');
     try {
       const text = await processPDF(file);
@@ -130,6 +139,10 @@ export default function PdfUploadPage() {
 
   const handleStartAnalysis = async () => {
     if (!selectedBusinessDoc) return;
+    if (!checkAndIncreaseApiLimit(10)) {
+      alert("今日体验次数已达上限，请明天再试或联系作者获取更多体验权限。");
+      return;
+    }
     setAnalyzing(true);
     try {
       // 优先用summary.summary

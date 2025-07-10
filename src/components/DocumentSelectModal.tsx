@@ -50,6 +50,10 @@ const DocumentSelectModal: React.FC<DocumentSelectModalProps> = ({
   const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
+    if (file.size > 1048576) {
+      alert('文件大小不能超过1MB');
+      return;
+    }
     setUploading(true);
     try {
       // 只支持PDF
@@ -96,7 +100,9 @@ const DocumentSelectModal: React.FC<DocumentSelectModalProps> = ({
       display: "flex",
       alignItems: "center",
       justifyContent: "center"
-    }}>
+    }}
+      onClick={onClose}
+    >
       <div style={{
         background: "#fff",
         borderRadius: 8,
@@ -105,7 +111,9 @@ const DocumentSelectModal: React.FC<DocumentSelectModalProps> = ({
         minWidth: 340,
         maxWidth: 480,
         position: "relative"
-      }}>
+      }}
+        onClick={e => e.stopPropagation()}
+      >
         <button onClick={onClose} style={{ position: "absolute", top: 16, right: 16, background: "none", border: "none", fontSize: 20, cursor: "pointer" }}>&times;</button>
         <h3 style={{ fontWeight: 700, fontSize: 18, marginBottom: 16 }}>选择文档</h3>
         <input
@@ -144,8 +152,27 @@ const DocumentSelectModal: React.FC<DocumentSelectModalProps> = ({
         {showUpload && (
           <div className="mb-4">
             <label className="block mb-2 font-medium">补充上传PDF文档</label>
-            <input type="file" accept="application/pdf" onChange={handleUpload} disabled={uploading} />
-            {uploading && <span className="ml-2 text-gray-500">上传中...</span>}
+            <div style={{ position: 'relative', display: 'inline-block' }}>
+              <button
+                type="button"
+                className="border border-black rounded px-4 py-2 font-medium bg-white hover:bg-gray-100 transition-colors focus:outline-none focus:ring-2 focus:ring-black"
+                disabled={uploading}
+                onClick={() => {
+                  // 触发隐藏的 file input
+                  document.getElementById('doc-upload-input')?.click();
+                }}
+              >
+                {uploading ? '上传中...' : '上传文档'}
+              </button>
+              <input
+                id="doc-upload-input"
+                type="file"
+                accept="application/pdf"
+                onChange={handleUpload}
+                disabled={uploading}
+                style={{ display: 'none' }}
+              />
+            </div>
           </div>
         )}
         <button

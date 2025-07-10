@@ -316,8 +316,14 @@ export default function DocumentsPage() {
         </section>
         {/* 预览弹窗 */}
         {previewOpen && previewDoc && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40 backdrop-blur-sm">
-            <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full p-6 relative flex flex-col" style={{ maxHeight: '85vh' }}>
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40 backdrop-blur-sm"
+            onClick={() => setPreviewOpen(false)}
+          >
+            <div
+              className="bg-white rounded-lg shadow-xl max-w-2xl w-full p-6 relative flex flex-col"
+              style={{ maxHeight: '85vh' }}
+              onClick={e => e.stopPropagation()}
+            >
               <button
                 className="absolute top-3 right-3 text-gray-400 hover:text-gray-700 text-2xl z-10"
                 onClick={() => setPreviewOpen(false)}

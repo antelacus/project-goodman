@@ -104,7 +104,7 @@ export async function POST(req: NextRequest) {
     }
 
     const completion = await openai.chat.completions.create({
-      model: "gpt-4o",
+      model: "gpt-4.1",
       messages: [{ role: "user", content: prompt }],
       response_format: useJsonFormat ? { type: "json_object" } : { type: "text" },
       max_tokens: 2000,
