@@ -17,7 +17,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "No text provided for analysis" }, { status: 400 });
     }
 
-    const { prompt, useJsonFormat } = getFinancialAnalysisApiPrompt({ text, analysisType, question });
+    const { prompt, useJsonFormat } = getFinancialAnalysisApiPrompt({ text, question });
 
     const completion = await openai.chat.completions.create({
       model: "gpt-4.1",
