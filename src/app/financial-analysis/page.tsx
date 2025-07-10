@@ -91,9 +91,9 @@ export default function FinancialAnalysisPage() {
 
   // 高亮并可交互的Markdown渲染
   function renderMarkdownWithLatexHighlight(content: string) {
-    // 匹配$...$和$$...$$表达式
-    const inline = /\$(.+?)\$/g;
-    const block = /\$\$(.+?)\$\$/g;
+    // 匹配$...$和$$...$$表达式，支持$符号单独占行
+    const inline = /\$\s*([\s\S]+?)\s*\$/g;
+    const block = /\$\$\s*([\s\S]+?)\s*\$\$/g;
     const parts: (string | { latex: string })[] = [];
     let lastIdx = 0;
     // 先处理块级
