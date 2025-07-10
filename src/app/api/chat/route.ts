@@ -235,7 +235,7 @@ ${conversationHistory}
 
     // 4. 调用OpenAI API
     const completion = await openai.chat.completions.create({
-      model: "gpt-4o",
+      model: "gpt-4.1",
       messages: [
         { role: "system", content: systemPrompt },
         { role: "user", content: question }

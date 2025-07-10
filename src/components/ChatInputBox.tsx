@@ -88,8 +88,8 @@ const ChatInputBox: React.FC<ChatInputBoxProps> = ({
       </div>
       {/* 预设提问弹窗 */}
       {showPreset && (
-        <div style={{position:'fixed',top:0,left:0,width:'100vw',height:'100vh',background:'rgba(0,0,0,0.18)',zIndex:1000,display:'flex',alignItems:'center',justifyContent:'center'}}>
-          <div style={{background:'#fff',borderRadius:8,boxShadow:'0 4px 24px 0 rgba(0,0,0,0.10)',padding:32,minWidth:340,maxWidth:480,position:'relative'}}>
+        <div style={{position:'fixed',top:0,left:0,width:'100vw',height:'100vh',background:'rgba(0,0,0,0.18)',zIndex:1000,display:'flex',alignItems:'center',justifyContent:'center'}} onClick={()=>setShowPreset(false)}>
+          <div style={{background:'#fff',borderRadius:8,boxShadow:'0 4px 24px 0 rgba(0,0,0,0.10)',padding:32,minWidth:340,maxWidth:480,position:'relative'}} onClick={e=>e.stopPropagation()}>
             <button onClick={()=>setShowPreset(false)} style={{position:'absolute',top:16,right:16,background:'none',border:'none',fontSize:20,cursor:'pointer'}}>&times;</button>
             <h3 style={{fontWeight:700,fontSize:18,marginBottom:16}}>常用提问</h3>
             <ul style={{padding:0,margin:0,listStyle:'none'}}>
