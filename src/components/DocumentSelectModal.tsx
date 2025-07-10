@@ -125,7 +125,7 @@ const DocumentSelectModal: React.FC<DocumentSelectModalProps> = ({
         />
         {categories.map(cat => (
           <div key={cat} className="mb-4">
-            <div className="font-bold mb-2 text-gray-700">{cat === "knowledge" ? "知识型文档" : "业务型文档"}</div>
+            <div className="font-bold mb-2 text-gray-700">{cat === "knowledge" ? "数据库文档" : "待处理文档"}</div>
             {filtered(cat).length === 0 ? (
               <div className="text-gray-400 mb-2">暂无文档</div>
             ) : (
@@ -151,7 +151,7 @@ const DocumentSelectModal: React.FC<DocumentSelectModalProps> = ({
         ))}
         {showUpload && (
           <div className="mb-4">
-            <label className="block mb-2 font-medium">补充上传PDF文档</label>
+            <label className="block mb-2 font-medium">补充上传待处理文档（PDF 格式，小于1MB）</label>
             <div style={{ position: 'relative', display: 'inline-block' }}>
               <button
                 type="button"

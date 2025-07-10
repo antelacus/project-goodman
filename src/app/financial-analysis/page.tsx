@@ -12,6 +12,7 @@ import ChatInputBox from "../../components/ChatInputBox";
 import PageContainer from "../../components/PageContainer";
 import PageTitle from "../../components/PageTitle";
 import { checkAndIncreaseApiLimit } from "../../lib/rateLimit";
+import Link from "next/link";
 
 type ChatMessage = {
   id: string;
@@ -233,13 +234,19 @@ export default function FinancialAnalysisPage() {
     <PageContainer maxWidth="3xl">
       <div className="flex flex-col h-[calc(100vh-64px)] gap-0"> {/* 64px 预留顶部导航高度，可根据实际调整 */}
         <section className="w-full flex-1 flex flex-col gap-0">
-          <PageTitle>财务分析与预测</PageTitle>
-          <p className="text-gray-700 mb-6">本页面可基于知识型文档（如会计准则、财务报表等），通过AI智能分析与预测，帮助用户快速获取各类财务指标、趋势和专业建议。</p>
+          <PageTitle>财务指标分析</PageTitle>
+          <p className="text-gray-700 mb-6">
+          本页面可基于财务数据库中的文档（如会计准则、财务报表等），通过 AI 智能分析快速获取各类财务指标、趋势和专业建议。<br />
+          仍有疑问？请在
+              <Link href="/about" className="text-blue-600 underline hover:text-blue-800 transition-colors">关于/帮助</Link>
+              页面获取指引，或跳转查看
+            <Link href="/showcase#analysis" className="text-blue-600 underline hover:text-blue-800 transition-colors">演示案例</Link>。
+          </p>
           {/* 对话消息区 */}
           <div className="bg-white rounded-lg p-4 mb-6 flex-1 overflow-y-auto" style={{ minHeight: 320 }}>
             <div className="flex flex-col gap-4">
               {chatMessages.length === 0 && !isSending && (
-                <div className="text-gray-400 text-center mt-10">请在下方输入你的问题</div>
+                <div className="text-gray-400 text-center mt-10">请在选择财务数据库文档后，输入并发送你的问题，可使用内置的“预设提问”</div>
               )}
               {chatMessages.map((msg, idx) => (
                 <div
