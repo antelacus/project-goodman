@@ -6,10 +6,7 @@ import PageTitle from "../../components/PageTitle";
 
 const links = [
   { icon: <FaGithub className="inline mr-2" />, label: "GitHub", url: "https://github.com/antelacus" },
-  { icon: <FaGlobe className="inline mr-2" />, label: "个人网站", url: "https://www.antelacus.com" },
-  { icon: <FaXTwitter className="inline mr-2" />, label: "X (推特)", url: "https://x.com/antelacus110787/" },
-  { icon: <FaInstagram className="inline mr-2" />, label: "Instagram", url: "https://www.instagram.com/antelacus/" },
-  { icon: <FaEnvelope className="inline mr-2" />, label: "Gmail: antelacus", url: "mailto:antelacus@gmail.com" },
+  { icon: <FaEnvelope className="inline mr-2" />, label: " send email", url: "mailto:me@antelacus.com" },
 ];
 
 export default function AboutHelpPage() {

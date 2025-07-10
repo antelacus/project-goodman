@@ -11,7 +11,7 @@ const openai = new OpenAI({
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-    const { text, analysisType, question } = body;
+    const { text, question } = body;
 
     if (!text) {
       return NextResponse.json({ error: "No text provided for analysis" }, { status: 400 });
