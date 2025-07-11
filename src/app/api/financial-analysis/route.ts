@@ -33,10 +33,10 @@ export async function POST(req: NextRequest) {
     }
 
     // 只返回对话型分析结果
-    return NextResponse.json({ 
-      response: result,
-      type: "chat"
-    });
+      return NextResponse.json({ 
+        response: result,
+        type: "chat"
+      });
 
   } catch (err: unknown) {
     console.error("Financial Analysis API Error:", err);

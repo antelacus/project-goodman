@@ -257,12 +257,14 @@ export default function KnowledgeChatPage() {
       <div className="flex flex-col h-[calc(100vh-64px)] gap-0"> {/* 64px 预留顶部导航高度，可根据实际调整 */}
         <section className="w-full flex-1 flex flex-col gap-0">
           <PageTitle>财务合规指导</PageTitle>
-          <p className="text-gray-700 mb-6">
+          <p className="mb-2 text-gray-700">
           本页面可结合财务数据库文档，使用 AI 回答待处理文档相关财务问题，或判断相关财务处理是否符合法规、准则、制度，并提供合规性分析和建议。<br />
+          </p>
+          <p className="mb-2 text-gray-700">
             仍有疑问？请在
-              <Link href="/about" className="text-blue-600 underline hover:text-blue-800 transition-colors">关于/帮助</Link>
+              <Link href="/about" className="text-yellow-500 underline hover:text-yellow-400 transition-colors">关于/帮助</Link>
               页面获取指引，或跳转查看
-            <Link href="/showcase#guidance" className="text-blue-600 underline hover:text-blue-800 transition-colors">演示案例</Link>。
+            <Link href="/showcase#guidance" className="text-yellow-500 underline hover:text-yellow-400 transition-colors">演示案例</Link>。
           </p>
           {/* 对话消息区 */}
           <div className="bg-white rounded-lg p-4 mb-6 flex-1 overflow-y-auto" style={{ minHeight: 320 }}>

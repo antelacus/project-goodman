@@ -2,6 +2,7 @@
 import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
+import { FaGithub, FaEnvelope } from "react-icons/fa6";
 
 const navItems = [
   { name: "首页", href: "/" },
@@ -11,6 +12,11 @@ const navItems = [
   { name: "文档管理", href: "/documents" },
   { name: "案例演示", href: "/showcase" },
   { name: "关于/帮助", href: "/about" },
+];
+
+const socialLinks = [
+  { icon: <FaGithub className="inline" />, label: "GitHub", url: "https://github.com/antelacus" },
+  { icon: <FaEnvelope className="inline" />, label: "send email", url: "mailto:me@antelacus.com" },
 ];
 
 export default function Navbar() {
@@ -47,6 +53,20 @@ export default function Navbar() {
             );
           })}
         </ul>
+        <div className="flex items-center space-x-4 ml-auto">
+          {socialLinks.map((item) => (
+            <a
+              key={item.label}
+              href={item.url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="p-2 rounded-full hover:bg-neutral-700 transition"
+              title={item.label}
+            >
+              {item.icon}
+            </a>
+          ))}
+        </div>
       </div>
     </nav>
   );
