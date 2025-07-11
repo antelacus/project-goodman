@@ -78,9 +78,15 @@ const DocumentSelectModal: React.FC<DocumentSelectModalProps> = ({
         status: "ready",
         size: file.size,
         summary: { summary: fullText, document_type: '', key_metrics: [], time_period: '' },
-        chunks: [{ id: 'chunk-0', text: fullText, embedding: [], chunkIndex: 0 }], // 修复：将全文内容填充到chunks
+        chunks: [{ id: 'chunk-0', text: fullText, embedding: [], chunkIndex: 0 }],
       };
       useDocumentStore.getState().addDocument(newDoc);
+      // 自动勾选新上传的文档
+      if (mode === "single") {
+        onSelect([newDoc.id]);
+      } else {
+        onSelect([...selectedIds, newDoc.id]);
+      }
     } catch (err) {
       alert("上传失败：" + (err instanceof Error ? err.message : "未知错误"));
     } finally {
