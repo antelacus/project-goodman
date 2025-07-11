@@ -237,12 +237,14 @@ export default function FinancialAnalysisPage() {
       <div className="flex flex-col h-[calc(100vh-64px)] gap-0"> {/* 64px 预留顶部导航高度，可根据实际调整 */}
         <section className="w-full flex-1 flex flex-col gap-0">
           <PageTitle>财务指标分析</PageTitle>
-          <p className="text-gray-700 mb-6">
-          本页面可基于财务数据库中的文档（如会计准则、财务报表等），通过 AI 智能分析快速获取各类财务指标、趋势和专业建议。<br />
-          仍有疑问？请在
-              <Link href="/about" className="text-blue-600 underline hover:text-blue-800 transition-colors">关于/帮助</Link>
+          <p className="mb-2 text-gray-700">
+            本页面可基于财务数据库中的文档（如会计准则、财务报表等），通过 AI 智能分析快速获取各类财务指标、趋势和专业建议。
+          </p>
+          <p className="mb-2 text-gray-700">
+            仍有疑问？请在
+              <Link href="/about" className="text-yellow-500 underline hover:text-yellow-400 transition-colors">关于/帮助</Link>
               页面获取指引，或跳转查看
-            <Link href="/showcase#analysis" className="text-blue-600 underline hover:text-blue-800 transition-colors">演示案例</Link>。
+            <Link href="/showcase#analysis" className="text-yellow-500 underline hover:text-yellow-400 transition-colors">演示案例</Link>。
           </p>
           {/* 对话消息区 */}
           <div className="bg-white rounded-lg p-4 mb-6 flex-1 overflow-y-auto" style={{ minHeight: 320 }}>

@@ -192,13 +192,14 @@ export default function PdfUploadPage() {
         <section className="w-full">
           <div className="mb-6">
             <PageTitle>财务信息提取</PageTitle>
-            <p className="text-gray-700">
-              上传 PDF 格式财务文档（如发票、合同），AI 将自动提取关键信息，并输出为可以自由复制内容的格式化结果。<br />
+            <p className="mb-2 text-gray-700">
+              上传 PDF 格式财务文档（如发票、合同），AI 将自动提取关键信息，并输出为可以自由复制内容的格式化结果。
+            </p>
+            <p className="mb-2 text-gray-700">
               仍有疑问？请在
-              <Link href="/about" className="text-blue-600 underline hover:text-blue-800 transition-colors">关于/帮助</Link>
+              <Link href="/about" className="text-yellow-500 underline hover:text-yellow-400 transition-colors">关于/帮助</Link>
               页面获取指引，或跳转查看
-              <Link href="/showcase#extract" className="text-blue-600 underline hover:text-blue-800 transition-colors">演示案例</Link>
-              。
+              <Link href="/showcase#extract" className="text-yellow-500 underline hover:text-yellow-400 transition-colors">演示案例</Link>。
             </p>
           </div>
             <div className="mb-6">

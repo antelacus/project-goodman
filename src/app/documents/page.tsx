@@ -276,7 +276,11 @@ export default function DocumentsPage() {
       <div className="flex flex-col gap-8">
         <section className="w-full">
           <PageTitle>文档管理</PageTitle>
-          <p className="text-gray-700 mb-6">统一管理数据库文档与待处理文档，支持分类、批量选择、属性编辑和重命名。</p>
+          <p className="text-gray-700 mb-6">
+            统一管理数据库文档与待处理文档，支持分类、批量选择、属性编辑和重命名。<br />
+            <br />
+            (出于演示目的，该功能模块对文档的修改结果不会永久保存，关闭网站所有页面后修改即失效。)
+            </p>
           <div className="mt-8">
             {/* 知识型文档 */}
             <div className="mb-12">
