@@ -189,7 +189,7 @@ export default function FinancialAnalysisPage() {
       const selectedDocsNames = selectedDocuments.map(id => knowledgeDocs.find(d => d.id === id)?.name || "").filter(Boolean);
       // 生成财务分析专用prompt
       const { prompt } = getFinancialAnalysisApiPrompt({ text: '', question: userMessage.content, knowledgeDocNames: selectedDocsNames });
-      const res = await fetch("/api/chat", {
+      const res = await fetch("/api/guidance-chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

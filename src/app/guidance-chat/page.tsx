@@ -169,9 +169,19 @@ export default function KnowledgeChatPage() {
 
     try {
       // 获取选中的业务型文档内容
-      const selectedBusinessDocsData = businessDocuments.filter(doc => 
-        selectedBusinessDocs.includes(doc.id)
-      );
+      const selectedBusinessDocsData = businessDocuments
+        .filter(doc => selectedBusinessDocs.includes(doc.id))
+        .map(doc => {
+          // 保证chunks存在且为数组，且有text字段
+          let chunks = Array.isArray(doc.chunks) && doc.chunks.length > 0
+            ? doc.chunks
+            : (doc.summary?.summary ? [{ id: 'chunk-0', text: doc.summary.summary, embedding: [], chunkIndex: 0 }] : []);
+          return {
+            ...doc,
+            summary: doc.summary || { document_type: '', summary: '', key_metrics: [], time_period: '' },
+            chunks,
+          };
+        });
 
       // 构建与财务分析与预测一致的prompt
       const prompt = getGuidanceChatPrompt(
@@ -179,7 +189,7 @@ export default function KnowledgeChatPage() {
         selectedBusinessDocsData.map(doc => doc.name)
       );
 
-      const response = await fetch("/api/chat", {
+      const response = await fetch("/api/guidance-chat", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

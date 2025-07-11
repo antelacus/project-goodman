@@ -149,7 +149,7 @@ export default function PdfUploadPage() {
       // 优先用summary.summary
       const text = selectedBusinessDoc.summary?.summary || '';
       if (!text.trim()) throw new Error('文档内容为空，无法分析');
-      const res = await fetch('/api/analyze', {
+      const res = await fetch('/api/data-extract', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ text }),
