@@ -32,20 +32,11 @@ export async function POST(req: NextRequest) {
       throw new Error("AI analysis returned no result.");
     }
 
-    // 根据分析类型返回不同格式的结果
-    if (analysisType === "chat") {
-      return NextResponse.json({ 
-        response: result,
-        type: "chat"
-      });
-    } else if (useJsonFormat) {
-      return NextResponse.json(JSON.parse(result));
-    } else {
-      return NextResponse.json({ 
-        analysis: result,
-        type: analysisType
-      });
-    }
+    // 只返回对话型分析结果
+    return NextResponse.json({ 
+      response: result,
+      type: "chat"
+    });
 
   } catch (err: unknown) {
     console.error("Financial Analysis API Error:", err);
