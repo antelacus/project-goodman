@@ -80,4 +80,6 @@ export function getGuidanceChatPrompt(selectedKnowledgeDocNames: string[], selec
 ${knowledgeList}
 ${businessList}
 `;
-} 
+}
+
+export const mainPrompt = process.env.PROMPT_MAIN || "请在 Vercel 环境变量中设置 PROMPT_MAIN"; 
