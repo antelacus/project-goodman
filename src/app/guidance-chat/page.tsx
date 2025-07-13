@@ -8,7 +8,7 @@ import rehypeKatex from "rehype-katex";
 import ReactMarkdown from "react-markdown";
 import { evaluate } from "mathjs";
 import "katex/dist/katex.min.css";
-import { getGuidanceChatPrompt } from "../../lib/prompts";
+
 import { complianceGuidancePresets } from "../../lib/presetQuestions";
 import ChatInputBox from "../../components/ChatInputBox";
 import PageContainer from "../../components/PageContainer";
@@ -183,19 +183,13 @@ export default function KnowledgeChatPage() {
           };
         });
 
-      // 构建与财务分析与预测一致的prompt
-      const prompt = getGuidanceChatPrompt(
-        selectedKnowledgeDocs.map(id => knowledgeDocuments.find(d => d.id === id)?.name || "").filter(Boolean),
-        selectedBusinessDocsData.map(doc => doc.name)
-      );
-
       const response = await fetch("/api/guidance-chat", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          question: `${prompt}\n用户问题：${userMessage.content}`,
+          question: userMessage.content,
           documentIds: selectedKnowledgeDocs,
           chatHistory: chatMessages,
           businessDocuments: selectedBusinessDocsData

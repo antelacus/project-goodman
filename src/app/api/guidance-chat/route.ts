@@ -1,6 +1,7 @@
 export const runtime = "nodejs";
 import { NextRequest, NextResponse } from "next/server";
 import OpenAI from "openai";
+import { getGuidanceChatPrompt } from "../../../lib/prompts";
 import fs from "fs";
 import path from "path";
 
@@ -216,20 +217,24 @@ export async function POST(req: NextRequest) {
       .join('\n');
 
     // 3. 构建完整的提示词
-    const systemPrompt = `你是一个专业的财务合规性顾问AI助手。基于提供的财务准则、税务指南等知识型文档，为用户提供准确的合规性分析和建议。
-
-请遵循以下原则：
-1. 基于知识型文档的内容进行分析，确保建议符合相关法规
-2. 结合业务型文档的具体情况，提供针对性的合规建议
-3. 明确指出可能存在的合规风险
-4. 提供具体的改进建议和操作指导
-5. 如果信息不足，请明确指出需要哪些额外信息
+    const selectedKnowledgeDocNames = documentIds.map(id => {
+      const localKnowledgeDocs = loadLocalKnowledgeDocuments();
+      return localKnowledgeDocs[id]?.name || "";
+    }).filter(Boolean);
+    
+    const selectedBusinessDocNames = businessDocuments?.map(doc => doc.name) || [];
+    
+    const basePrompt = getGuidanceChatPrompt(selectedKnowledgeDocNames, selectedBusinessDocNames);
+    
+    const systemPrompt = `${basePrompt}
 
 相关文档内容：
 ${relevantContext}
 
 对话历史：
 ${conversationHistory}
+
+用户问题：${question}
 
 请回答用户的问题：`;
 

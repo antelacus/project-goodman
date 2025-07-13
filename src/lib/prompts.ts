@@ -31,15 +31,16 @@ ${text}
  * @param params.knowledgeDocNames 选中的知识型文档名称数组
  * @returns prompt字符串及格式要求
  */
-export function getFinancialAnalysisApiPrompt(params: { text: string, question?: string, knowledgeDocNames?: string[] }): { prompt: string, useJsonFormat: boolean } {
+export function getFinancialAnalysisPrompt(params: { text: string, question?: string, knowledgeDocNames?: string[] }): { prompt: string, useJsonFormat: boolean } {
   const { text, question = '', knowledgeDocNames = [] } = params;
   const docList = knowledgeDocNames.length > 0 ? `数据库文档：${knowledgeDocNames.join('，')}` : '';
   const prompt = `你是专业的财务分析与预测AI助手，必须严格基于输入的数据库文档内容为用户提供专业、准确的财务分析、预测和建议。请严格遵循以下要求：
 
 1. 充分引用输入的数据库文档内容，确保所有结论和建议均有据可依。
 2. 如涉及数学计算，必须明确列出所有数学计算过程，并用 $$LaTeX表达式$$（同一行）的方式包裹。
-3. 自动判断用户问题属于分析、预测或其它财务相关类型，灵活调整分析角度。
-4. 如信息不足，请明确指出需要哪些额外信息。
+3. 计算过程和结果中的数字都要保留两位小数，且整数部分都要使用千分位符。
+4. 自动判断用户问题属于分析、预测或其它财务相关类型，灵活调整分析角度。
+5. 如信息不足，请明确指出需要哪些额外信息。
 
 ${docList}
 
@@ -71,9 +72,10 @@ export function getGuidanceChatPrompt(selectedKnowledgeDocNames: string[], selec
 
 1. 必须充分引用输入的数据库文档内容，确保所有合规建议均有据可依。
 2. 如涉及数学计算，必须明确列出所有数学计算过程，并用 $$LaTeX表达式$$（同一行）的方式包裹。
-3. 结合待处理文档的具体情况，提供针对性的合规建议。
-4. 明确指出可能存在的合规风险，并给出具体改进建议。
-5. 如信息不足，请明确指出需要哪些额外信息。
+3. 计算过程和结果中的数字都要保留两位小数，且整数部分都要使用千分位符。
+4. 结合待处理文档的具体情况，提供针对性的合规建议。
+5. 明确指出可能存在的合规风险，并给出具体改进建议。
+6. 如信息不足，请明确指出需要哪些额外信息。
 
 ${knowledgeList}
 ${businessList}

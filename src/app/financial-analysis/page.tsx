@@ -13,7 +13,7 @@ import PageContainer from "../../components/PageContainer";
 import PageTitle from "../../components/PageTitle";
 import { checkAndIncreaseApiLimit } from "../../lib/rateLimit";
 import Link from "next/link";
-import { getFinancialAnalysisApiPrompt } from "../../lib/prompts";
+
 
 type ChatMessage = {
   id: string;
@@ -185,15 +185,11 @@ export default function FinancialAnalysisPage() {
       { id: aiMsgId, role: "assistant", content: "", timestamp: new Date().toISOString(), streaming: true }
     ]);
     try {
-      // 构建 prompt
-      const selectedDocsNames = selectedDocuments.map(id => knowledgeDocs.find(d => d.id === id)?.name || "").filter(Boolean);
-      // 生成财务分析专用prompt
-      const { prompt } = getFinancialAnalysisApiPrompt({ text: '', question: userMessage.content, knowledgeDocNames: selectedDocsNames });
-      const res = await fetch("/api/guidance-chat", {
+      const res = await fetch("/api/financial-analysis", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          question: prompt,
+          question: userMessage.content,
           documentIds: selectedDocuments,
           chatHistory: chatMessages.slice(-10),
         }),
