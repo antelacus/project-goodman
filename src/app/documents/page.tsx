@@ -179,17 +179,21 @@ export default function DocumentsPage() {
     const firstDoc = docs.find(d => selected.includes(d.id));
     return (
       <div className="flex font-semibold border-b border-gray-200 pb-2 text-gray-700">
-        <div className="w-12 flex items-center justify-center">
-          <input
-            type="checkbox"
-            className="w-4 h-4"
-            checked={allSelected}
-            onChange={() => handleSelectAll(type)}
-          />
+        {/* 左侧固定：勾选框+文档名 */}
+        <div className="flex-shrink-0 flex items-center w-32 min-w-[8rem]">
+          <div className="w-12 flex items-center justify-center">
+            <input
+              type="checkbox"
+              className="w-4 h-4"
+              checked={allSelected}
+              onChange={() => handleSelectAll(type)}
+            />
+          </div>
+          <div className="flex-1 min-w-0 pl-4">文档名</div>
         </div>
-        <div className="flex-1 min-w-0 pl-4">文档名</div>
-        <div className="w-20 text-center">预览</div>
-        <div className="w-32 text-center relative">
+        {/* 右侧功能区 */}
+        <div className="w-20 text-center flex-shrink-0">预览</div>
+        <div className="w-32 text-center relative flex-shrink-0">
           {selected.length > 0 ? (
             <EditableCell
               value={firstDoc?.summary?.document_type || ""}
@@ -202,7 +206,7 @@ export default function DocumentsPage() {
             <span>类型</span>
           )}
         </div>
-        <div className="w-32 text-center relative">
+        <div className="w-32 text-center relative flex-shrink-0">
           {selected.length > 0 ? (
             <EditableCell
               value={firstDoc?.summary?.time_period || ""}
@@ -215,7 +219,7 @@ export default function DocumentsPage() {
             <span>期别</span>
           )}
         </div>
-        <div className="w-24 text-center">大小</div>
+        <div className="w-24 text-center flex-shrink-0">大小</div>
       </div>
     );
   };
@@ -231,43 +235,44 @@ export default function DocumentsPage() {
       key={doc.id}
       className={`flex items-center border-b border-gray-200 ${selected ? "bg-gray-50" : ""}`}
     >
-      <div className="w-12 flex items-center justify-center h-full">
-        <input
-          type="checkbox"
-          checked={selected}
-          onChange={() => handleSelect(doc.id, type)}
-          className="w-4 h-4"
-        />
-      </div>
-      {/* 名字 */}
-      <div className="flex-1 min-w-0 h-full flex items-center pl-4">
-        {type === "business" && selected && onlyOneSelected ? (
-          <EditableName
-            value={doc.name}
-            editable={true}
-            onChange={(v) => handleEdit(doc.id, "name", v)}
+      {/* 左侧固定：勾选框+文件名 */}
+      <div className="flex-shrink-0 flex items-center w-32 min-w-[8rem] h-full">
+        <div className="w-12 flex items-center justify-center h-full">
+          <input
+            type="checkbox"
+            checked={selected}
+            onChange={() => handleSelect(doc.id, type)}
+            className="w-4 h-4"
           />
-        ) : (
-          <span>{doc.name}</span>
-        )}
+        </div>
+        <div className="flex-1 min-w-0 h-full flex items-center pl-4">
+          {type === "business" && selected && onlyOneSelected ? (
+            <EditableName
+              value={doc.name}
+              editable={true}
+              onChange={(v) => handleEdit(doc.id, "name", v)}
+            />
+          ) : (
+            <span className="truncate">{doc.name}</span>
+          )}
+        </div>
       </div>
-      {/* 预览按钮 */}
-      <div className="w-20 text-center h-full flex items-center justify-center">
+      {/* 右侧功能区 */}
+      <div className="w-20 text-center h-full flex items-center justify-center flex-shrink-0">
         <button
           className="px-2 py-1 border rounded text-sm bg-white hover:bg-gray-100"
           onClick={() => { setPreviewDoc(doc); setPreviewOpen(true); }}
         >预览</button>
       </div>
-      {/* 类型 */}
-      <div className="w-32 text-center h-full flex items-center justify-center">
+      <div className="w-32 text-center h-full flex items-center justify-center flex-shrink-0">
         <span>{doc.summary?.document_type || "-"}</span>
       </div>
-      {/* 期别 */}
-      <div className="w-32 text-center h-full flex items-center justify-center">
+      <div className="w-32 text-center h-full flex items-center justify-center flex-shrink-0">
         <span>{doc.summary?.time_period || "-"}</span>
       </div>
-      {/* 大小 */}
-      <div className="w-24 text-center h-full flex items-center justify-center">{doc.size ? `${Math.round(doc.size / 1024)} KB` : "-"}</div>
+      <div className="w-24 text-center h-full flex items-center justify-center flex-shrink-0">
+        {doc.size ? `${Math.round(doc.size / 1024)} KB` : "-"}
+      </div>
     </div>
   );
 
@@ -285,36 +290,44 @@ export default function DocumentsPage() {
             {/* 知识型文档 */}
             <div className="mb-12">
               <div className="text-lg font-bold mb-4">数据库文档</div>
-              {renderHeader("knowledge")}
-              {knowledgeDocs.length === 0 ? (
-                <div className="text-gray-400 py-6 text-center">暂无数据库文档</div>
-              ) : (
-                knowledgeDocs.map((doc) =>
-                  renderRow(
-                    doc,
-                    selectedKnowledge.includes(doc.id),
-                    "knowledge",
-                    selectedKnowledge.length === 1
-                  )
-                )
-              )}
+              <div className="overflow-x-auto">
+                <div className="min-w-max">
+                  {renderHeader("knowledge")}
+                  {knowledgeDocs.length === 0 ? (
+                    <div className="text-gray-400 py-6 text-center">暂无数据库文档</div>
+                  ) : (
+                    knowledgeDocs.map((doc) =>
+                      renderRow(
+                        doc,
+                        selectedKnowledge.includes(doc.id),
+                        "knowledge",
+                        selectedKnowledge.length === 1
+                      )
+                    )
+                  )}
+                </div>
+              </div>
             </div>
             {/* 业务型文档 */}
             <div>
               <div className="text-lg font-bold mb-4">待处理文档</div>
-              {renderHeader("business")}
-              {businessDocs.length === 0 ? (
-                <div className="text-gray-400 py-6 text-center">暂无待处理文档</div>
-              ) : (
-                businessDocs.map((doc) =>
-                  renderRow(
-                    doc,
-                    selectedBusiness.includes(doc.id),
-                    "business",
-                    selectedBusiness.length === 1
-                  )
-                )
-              )}
+              <div className="overflow-x-auto">
+                <div className="min-w-max">
+                  {renderHeader("business")}
+                  {businessDocs.length === 0 ? (
+                    <div className="text-gray-400 py-6 text-center">暂无待处理文档</div>
+                  ) : (
+                    businessDocs.map((doc) =>
+                      renderRow(
+                        doc,
+                        selectedBusiness.includes(doc.id),
+                        "business",
+                        selectedBusiness.length === 1
+                      )
+                    )
+                  )}
+                </div>
+              </div>
             </div>
           </div>
         </section>
