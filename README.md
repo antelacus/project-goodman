@@ -4,6 +4,10 @@
 > 
 > https://project-goodman.vercel.app
 
+> **许可证**：
+> 
+> 本项目采用 [GNU Affero General Public License v3.0 (AGPL-3.0)](https://www.gnu.org/licenses/agpl-3.0.html) 开源。
+
 ## 项目概述
 
 Project Goodman 是一款面向财务会计领域的智能 AI 助手，当前已提供财务信息提取、财务指标分析、财务合规指导等3个核心功能，具备专业、现代、统一的前端UI与交互体验。
@@ -247,8 +251,6 @@ npm run dev
 
 ## 许可证
 
-- 本项目自 2024 年 6 月起采用 **GNU Affero General Public License v3.0 (AGPL-3.0)** 协议。
-- 这意味着任何基于本项目的服务端应用也必须开源其源代码。
-- 变更原因：保护项目核心竞争力，防止被闭源商用，同时鼓励社区自由访问和学习。
+- 本项目采用 [GNU Affero General Public License v3.0 (AGPL-3.0)](https://www.gnu.org/licenses/agpl-3.0.html) 开源。
 
 ---
