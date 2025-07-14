@@ -102,32 +102,12 @@ Project Goodman 是一款面向财务会计领域的智能 AI 助手，当前已
 project-goodman/
 ├── data/
 │   ├── documents/                    # 预处理的知识型文档 JSON 文件
-│   │   ├── 2024年度资产负债表.json
-│   │   ├── 增值税法.json
-│   │   └── 数据资源准则.json
 │   └── showcases/                    # 展示案例图片
-│       ├── data-extract/
-│       ├── financial-analysis/
-│       └── guidance-chat/
 ├── public/                           # 静态资源（logo、svg等）
 ├── src/
-│   ├── app/
-│   │   ├── about/                    # 关于/帮助页面
-│   │   ├── api/                      # API 路由
-│   │   │   ├── data-extract/         # 财务信息提取接口
-│   │   │   ├── documents/            # 文档处理相关接口
-│   │   │   ├── financial-analysis/   # 财务指标分析接口
-│   │   │   ├── guidance-chat/        # 财务合规指导接口
-│   │   │   ├── local-documents/      # 本地文档加载
-│   │   │   └── upload/               # 文件上传
-│   │   ├── data-extract/             # 模块一：财务信息提取
-│   │   ├── documents/                # 文档管理页面
-│   │   ├── financial-analysis/       # 模块二：财务指标分析
-│   │   ├── guidance-chat/            # 模块三：财务合规指导
-│   │   ├── showcase/                 # 案例演示页面
-│   │   └── layout.tsx                # 全局布局
+│   ├── app/                          # Next.js 路由与页面
 │   ├── components/                   # 可复用组件
-│   ├── lib/                          # 工具库与AI prompt
+│   ├── lib/                          # 工具库、AI prompt逻辑与本地prompt文件（已被.gitignore保护）
 │   └── store/                        # 状态管理
 ├── package.json
 ├── README.md
@@ -154,16 +134,19 @@ project-goodman/
 - **直观操作**: 拖拽上传、多选文档、实时对话
 - **错误处理**: 友好的错误提示和恢复机制
 - **AI对话优化**: 支持 Markdown 与 LaTeX 公式渲染，所有计算过程和结果高亮、可点击校验
-- **其他细节**: 弹窗自由关闭，文档自动勾选，提供预设提问等细节等待发现👀
+- **其他细节**: 弹窗自由关闭，文档自动勾选，提供预设提问等细节等待发现��
 
 ## 部署指南
 
-### 环境要求
+### 部署指南
+
+#### 环境要求
 - Node.js 18+ 
 - npm 或 yarn
 - OpenAI API Key
+- （可选）自定义AI prompt：编辑 `src/lib/prompts/*.txt` 文件
 
-### 本地开发
+#### 本地开发
 ```bash
 # 克隆项目
 git clone <repository-url>
@@ -176,11 +159,13 @@ npm install
 cp .env.example .env.local
 # 编辑 .env.local，添加你的 OpenAI API Key
 
+# （可选）编辑 src/lib/prompts/*.txt 以自定义AI prompt
+
 # 启动开发服务器
 npm run dev
 ```
 
-### Vercel 部署
+#### Vercel 部署
 1. **准备部署**:
    ```bash
    # 构建项目
@@ -193,19 +178,24 @@ npm run dev
 2. **Vercel 配置**:
    - 连接 GitHub 仓库
    - 设置环境变量 `OPENAI_API_KEY`
+   - （可选）如需自定义AI prompt，将 `src/lib/prompts/*.txt` 内容粘贴到对应的 Vercel 环境变量（如 PROMPT_DATA_EXTRACT）
    - 选择 Next.js 框架
    - 部署到 Vercel
 
 3. **环境变量设置**:
    ```
    OPENAI_API_KEY=your_openai_api_key_here
+   # 如需自定义prompt：
+   PROMPT_DATA_EXTRACT=...（粘贴txt内容，多行或\n均可）
+   PROMPT_FINANCIAL_ANALYSIS=...
+   PROMPT_GUIDANCE_CHAT=...
    ```
 
-### 部署注意事项
-- ✅ 项目已优化为无数据库依赖，完全兼容 Vercel 免费版
-- ✅ 数据库文档已预处理并包含在代码仓库中
-- ✅ 待处理文档仅临时处理，不占用存储空间
-- ✅ API 路由已优化，支持 Vercel 的无状态环境
+#### 部署注意事项
+- ✅ prompt本地txt文件已被.gitignore保护，不会上传到仓库
+- ✅ Vercel环境变量支持多行粘贴，或用\n分隔
+- ✅ 本地优先读取txt文件，Vercel等云端自动fallback到环境变量
+- ✅ 其他说明同上
 
 ## 开发进度
 
