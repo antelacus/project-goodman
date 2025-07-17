@@ -266,7 +266,7 @@ export default function KnowledgeChatPage() {
           </p>
           <p className="mb-2 text-gray-700">
             仍有疑问？请在
-              <Link href="/about" className="text-yellow-500 underline hover:text-yellow-400 transition-colors">关于/帮助</Link>
+              <Link href="/about#faq" className="text-yellow-500 underline hover:text-yellow-400 transition-colors">关于/帮助</Link>
               页面获取指引，或跳转查看
             <Link href="/showcase#guidance" className="text-yellow-500 underline hover:text-yellow-400 transition-colors">演示案例</Link>。
           </p>
