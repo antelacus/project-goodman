@@ -168,29 +168,29 @@ export default function HomePage() {
 
       {/* TECH FEATURES */}
       <section className="bg-white rounded-lg p-8 mt-20 w-full">
-        <h3 className="text-2xl font-bold mb-6 text-center">技术特性</h3>
-        <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
-          <div className="text-center">
-            <div className="text-2xl mb-2">🤖</div>
-            <h4 className="font-semibold mb-2">AI 驱动</h4>
-            <p className="text-sm text-gray-700">响应准确，基于 OpenAI GPT-4.1 技术</p>
+          <h3 className="text-2xl font-bold mb-6 text-center">技术特性</h3>
+          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
+            <div className="text-center">
+              <div className="text-2xl mb-2">🤖</div>
+              <h4 className="font-semibold mb-2">AI 驱动</h4>
+              <p className="text-sm text-gray-700">响应准确，基于 OpenAI GPT-4.1 技术</p>
+            </div>
+            <div className="text-center">
+              <div className="text-2xl mb-2">📁</div>
+              <h4 className="font-semibold mb-2">本地知识库</h4>
+              <p className="text-sm text-gray-700">避免幻觉，引用会计准则、法律法规</p>
+            </div>
+            <div className="text-center">
+              <div className="text-2xl mb-2">⚡</div>
+              <h4 className="font-semibold mb-2">扩展性强</h4>
+              <p className="text-sm text-gray-700">功能灵活，根据业务需求随时调整</p>
+            </div>
+            <div className="text-center">
+              <div className="text-2xl mb-2">🦢</div>
+              <h4 className="font-semibold mb-2">简单易用</h4>
+              <p className="text-sm text-gray-700">指引清晰，上手快速便捷</p>
+            </div>
           </div>
-          <div className="text-center">
-            <div className="text-2xl mb-2">📁</div>
-            <h4 className="font-semibold mb-2">本地知识库</h4>
-            <p className="text-sm text-gray-700">避免幻觉，引用会计准则、法律法规</p>
-          </div>
-          <div className="text-center">
-            <div className="text-2xl mb-2">⚡</div>
-            <h4 className="font-semibold mb-2">扩展性强</h4>
-            <p className="text-sm text-gray-700">功能灵活，根据业务需求随时调整</p>
-          </div>
-          <div className="text-center">
-            <div className="text-2xl mb-2">🦢</div>
-            <h4 className="font-semibold mb-2">简单易用</h4>
-            <p className="text-sm text-gray-700">指引清晰，上手快速便捷</p>
-          </div>
-        </div>
       </section>
 
       {/* FINAL CTA */}
