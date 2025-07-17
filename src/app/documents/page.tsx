@@ -180,7 +180,7 @@ export default function DocumentsPage() {
     return (
       <div className="flex font-semibold border-b border-gray-200 pb-2 text-gray-700">
         {/* 左侧固定：勾选框+文档名 */}
-        <div className="flex-shrink-0 flex items-center w-32 min-w-[8rem]">
+        <div className="flex-shrink-0 flex items-center w-60 min-w-[16rem]">
           <div className="w-12 flex items-center justify-center">
             <input
               type="checkbox"
@@ -236,7 +236,7 @@ export default function DocumentsPage() {
       className={`flex items-center border-b border-gray-200 ${selected ? "bg-gray-50" : ""}`}
     >
       {/* 左侧固定：勾选框+文件名 */}
-      <div className="flex-shrink-0 flex items-center w-32 min-w-[8rem] h-full">
+      <div className="flex-shrink-0 flex items-center w-60 min-w-[16rem] h-full">
         <div className="w-12 flex items-center justify-center h-full">
           <input
             type="checkbox"
@@ -253,7 +253,7 @@ export default function DocumentsPage() {
               onChange={(v) => handleEdit(doc.id, "name", v)}
             />
           ) : (
-            <span className="truncate">{doc.name}</span>
+            <span className="whitespace-nowrap overflow-hidden text-ellipsis max-w-[20rem]">{doc.name}</span>
           )}
         </div>
       </div>
