@@ -1,246 +1,120 @@
-# Project Goodman - AI 智能财务助手
+# <img src="public/logo.png" alt="Project Goodman Logo" width="120" align="left" />
 
-> **项目体验地址**：
-> 
-> https://project-goodman.vercel.app
+# Project Goodman · AI 智能财务助手
 
-> **许可证**：
-> 
-> 本项目采用 [GNU Affero General Public License v3.0 (AGPL-3.0)](https://www.gnu.org/licenses/agpl-3.0.html) 开源。
+> 让财务工作流全自动、零压力
 
-## 项目概述
+[在线体验 Demo](https://goodman.antelacus.com)｜[License: AGPL-3.0](https://www.gnu.org/licenses/agpl-3.0.html)
 
-Project Goodman 是一款面向财务会计领域的智能 AI 助手，当前已提供财务信息提取、财务指标分析、财务合规指导等3个核心功能，具备专业、现代、统一的前端UI与交互体验。
+---
 
-## 开发目的
+## 功能概览
 
-**财务会计需要被 AI 重塑**。对于财会领域的所有工作，AI 均可以提供巨大的帮助。本项目旨在通过开发 AI 财会助手，来展示作者对“ AI 如何改变和提速财务工作”的理解。
+| 模块 | 描述 | 典型场景 |
+|------|------|-----------|
+| **财务信息提取** | 上传 PDF 文档，AI 自动抽取关键信息并生成结构化结果 | 合同、发票、报表 |
+| **财务指标分析** | 基于数据库文档，AI 对话式计算财务指标 | 财报分析、趋势预测 |
+| **财务合规指导** | 结合法规+业务文档，判断处理是否合规并给出建议 | 税务筹划、风险识别 |
 
-## 功能模块
+<details>
+<summary>📸 项目截图（点击展开）</summary>
 
-### 模块一：财务信息提取 (`/data-extract`)
-**功能描述**: 自动提取和分析财务文档中的关键信息
+| 首页 | 信息提取 | 指标分析 | 合规指导 |
+|------|----------|----------|----------|
+| ![](data/showcases/homepage-screenshot.png) | ![](data/showcases/data-extract-screenshot.png) | ![](data/showcases/financial-analysis-screenshot.png) | ![](data/showcases/guidance-chat-screenshot.png) |
 
-**核心功能**:
-- ✅ 支持PDF格式的业务型文档上传
-- ✅ 自动提取PDF文本内容
-- ✅ AI智能分析文档内容
-- ✅ 生成结构化分析结果
-- ✅ 支持复制分析结果
+</details>
 
-**适用场景**: 发票、合同、财务报表等PDF文档的快速信息提取
+---
 
-### 模块二：财务指标分析 (`/financial-analysis`)
-**功能描述**: 基于数据库文档进行财务分析和指标计算
+## 快速开始
 
-**核心功能**:
-- ✅ 展示预加载的数据库文档（受当前技术栈约束）
-- ✅ 支持多选数据库文档用于分析
-- ✅ AI智能对话，基于选中文档提供财务分析
-- ✅ 向量相似度搜索，精准匹配相关内容
-- ✅ 实时对话历史记录
-
-**适用场景**: 财务准则咨询、税务政策分析、合规性检查
-
-### 模块三：财务合规指导 (`/knowledge-chat`)
-**功能描述**: 结合数据库文档和上传的待处理文档进行合规性分析和指导
-
-**核心功能**:
-- ✅ 展示预加载的数据库文档（受当前技术栈约束）
-- ✅ 支持上传待处理文档，一次使用，不会永久存储（受当前技术栈约束）
-- ✅ 智能文档处理（文本提取、向量化、摘要生成）
-- ✅ AI 合规性分析和建议
-- ✅ 多文档联合分析
-
-**适用场景**: 财务合规性检查、税务筹划建议、风险识别
-
-### 文档管理模块
-**功能描述**: 统一存储项目所需用到的所有文档
-
-**核心功能**:
-- ✅ 支持"数据库"文档与"待处理"文档分类
-- ✅ 页面复选框可多选文档
-- ✅ 文档选择区与各功能模块的文档列表实时同步
-- ✅ 上传新文档后，所有页面文档列表自动刷新
-
-## 使用说明
-
-### 快速开始
-1. 访问项目首页
-2. 选择需要使用的模块
-3. 按照模块指引进行操作
-4. 与 AI 助手进行交互
-
-### 模块选择指南
-- **文档信息提取** → 模块一
-- **财务准则咨询** → 模块二  
-- **合规性分析** → 模块三
-
-### 最佳实践
-- 上传清晰的 PDF 文档以获得最佳分析结果
-- 选择相关的数据库文档以获得更准确的回答
-- 提供具体的问题描述以获得更有针对性的建议
-
-## 技术栈
-
-- **前端框架**: Next.js 15.3.3, React 19
-- **AI 服务**: OpenAI GPT-4.1, OpenAI Embeddings
-- **文档处理**: pdfjs-dist, xlsx
-- **状态管理**: Zustand
-- **样式**: Tailwind CSS 4
-- **部署**: Vercel (兼容免费版)
-
-## 项目架构
-
-### 数据方案
-- **数据库文档**: 预处理的财务准则、税务指南等，存储在 `data/documents/` 目录
-- **待处理文档**: 用户上传的财务报表、合同等，前端临时处理，不持久化存储
-- **无数据库依赖**: 完全兼容 Vercel 免费版的无状态环境
-
-### 目录结构
-```
-project-goodman/
-├── data/
-│   ├── documents/                    # 预处理的知识型文档 JSON 文件
-│   └── showcases/                    # 展示案例图片
-├── public/                           # 静态资源（logo、svg等）
-├── src/
-│   ├── app/                          # Next.js 路由与页面
-│   ├── components/                   # 可复用组件
-│   ├── lib/                          # 工具库、AI prompt逻辑与本地prompt文件（已被.gitignore保护）
-│   └── store/                        # 状态管理
-├── package.json
-├── README.md
-└── ...
-```
-
-## 技术优势
-
-### AI 能力
-- **GPT-4.1 模型**: 最新的大语言模型，提供高质量回答
-- **向量嵌入**: 使用 OpenAI Embeddings 进行语义搜索
-- **相似度计算**: 余弦相似度算法，精准匹配相关内容
-- **上下文理解**: 支持多轮对话和文档上下文
-
-### 文档处理
-- **智能分块**: 自动将文档分割为可处理的 chunks
-- **向量化存储**: 预处理的文档包含 embedding 向量
-- **实时处理**: 上传文档即时处理和分析
-
-### 用户体验
-- **响应式设计**: 适配桌面和移动设备
-- **分步工作流**: 功能页面采用分步引导，步骤标题、提示清晰
-- **实时反馈**: 加载状态、处理进度提示
-- **直观操作**: 拖拽上传、多选文档、实时对话
-- **错误处理**: 友好的错误提示和恢复机制
-- **AI对话优化**: 支持 Markdown 与 LaTeX 公式渲染，所有计算过程和结果高亮、可点击校验
-- **其他细节**: 弹窗自由关闭，文档自动勾选，提供预设提问等细节等待发现��
-
-## 部署指南
-
-### 部署指南
-
-#### 环境要求
-- Node.js 18+ 
-- npm 或 yarn
-- OpenAI API Key
-- （可选）自定义AI prompt：编辑 `src/lib/prompts/*.txt` 文件
-
-#### 本地开发
 ```bash
-# 克隆项目
-git clone <repository-url>
+git clone https://github.com/antelacus/project-goodman.git
 cd project-goodman
 
 # 安装依赖
-npm install
+npm install   # 或 pnpm / yarn
 
 # 配置环境变量
 cp .env.example .env.local
-# 编辑 .env.local，添加你的 OpenAI API Key
+# 在 .env.local 中填入你的 OPENAI_API_KEY
 
-# （可选）编辑 src/lib/prompts/*.txt 以自定义AI prompt
-
-# 启动开发服务器
+# 本地运行开发服务器
 npm run dev
 ```
 
-#### Vercel 部署
-1. **准备部署**:
-   ```bash
-   # 构建项目
-   npm run build
-   
-   # 检查构建结果
-   npm run start
-   ```
+访问 <http://localhost:3000> 即可体验。
 
-2. **Vercel 配置**:
-   - 连接 GitHub 仓库
-   - 设置环境变量 `OPENAI_API_KEY`
-   - （可选）如需自定义AI prompt，将 `src/lib/prompts/*.txt` 内容粘贴到对应的 Vercel 环境变量（如 PROMPT_DATA_EXTRACT）
-   - 选择 Next.js 框架
-   - 部署到 Vercel
+### Vercel 一键部署
+1. Fork 本仓库并关联 Vercel
+2. 在 Vercel Dashboard 设置 `OPENAI_API_KEY` 环境变量
+3. 选择 **Next.js** 框架，点击 Deploy
 
-3. **环境变量设置**:
-   ```
-   OPENAI_API_KEY=your_openai_api_key_here
-   # 如需自定义prompt：
-   PROMPT_DATA_EXTRACT=...（粘贴txt内容，多行或\n均可）
-   PROMPT_FINANCIAL_ANALYSIS=...
-   PROMPT_GUIDANCE_CHAT=...
-   ```
+---
 
-#### 部署注意事项
-- ✅ prompt本地txt文件已被.gitignore保护，不会上传到仓库
-- ✅ Vercel环境变量支持多行粘贴，或用\n分隔
-- ✅ 本地优先读取txt文件，Vercel等云端自动fallback到环境变量
-- ✅ 其他说明同上
+## 亮点特性
 
-## 开发进度
+- 🧠 **GPT-4.1** + OpenAI Embeddings，语义搜索精准匹配
+- 📄 **零后端依赖**：文档解析与向量检索均在前端完成，兼容 Vercel 免费额度
+- ⚡ **实时预览 & 复制**：分析结果一键复制，公式高亮可点击校验
+- 🧩 **模块化架构**：易于接入自有 LLM / Embedding 服务
+- 📱 **响应式 UI**：Tailwind CSS 4 打造现代财务应用体验
 
-### ✅ 已完成功能
-- [x] 三个核心模块的基础功能
-- [x] 数据库文档预处理
-- [x] 文档上传和管理系统
-- [x] 响应式用户界面和整体UI构建
-- [x] AI 对话UI构建
-- [x] AI 对话prompt构建
-- [x] AI 对话和文档向量搜索实现
-- [x] AI 对话中Markdown和LaTeX公式渲染
-- [x] AI 对话中数学计算校验
-- [x] 进度提示、状态管理和错误处理
-- [x] 案例展示构建
-- [x] Vercel部署展示网站
+---
 
-### 🔄 修复&优化
-- [ ] UI/UX 优化
-- [ ] prompt优化
-- [ ] “财务信息提取”升级为财务信息处理工作流，增加更多信息应用途径
-- [ ] “财务指标分析”支持更专业和更长流程的财务分析
-- [ ] “财务合规指导”增加更多数据库文档
+## 技术栈
 
+| 类别 | 选型 |
+|------|------|
+| 前端框架 | Next.js 15 · React 19 |
+| 状态管理 | Zustand |
+| 样式 | Tailwind CSS 4 |
+| AI 服务 | OpenAI GPT-4.1 · Embeddings |
+| 文档处理 | pdfjs-dist · xlsx |
+| 部署 | Vercel Serverless |
 
-### 📋 计划中
-- [ ] 升级后端数据库，这将支持：
-   - [ ] 用户/登录
-   - [ ] 用户权限管理
-   - [ ] 自定义prompt
-   - [ ] 更多文档格式支持
-   - [ ] 数据库文档上传和管理
-   - [ ] 数据导出功能
-- [ ] 高级分析功能
-- [ ] 语言切换
-- [ ] 更多厂商API支持
+---
 
+## 目录结构摘要
 
+```mermaid
+graph TD
+  A(project-goodman) --> B(src/app)
+  B --> C[核心路由 /data-extract /financial-analysis /guidance-chat] 
+  B --> D[组件 Components] 
+  B --> E[lib 工具与 prompt 模板] 
+  A --> F[data/documents] 
+  A --> G[public 静态资源] 
+```
+
+---
+
+## Roadmap
+
+- [x] MVP 三大核心功能
+- [ ] 多模型适配 & 企业 SSO
+- [ ] 自定义指标公式编辑器
+- [ ] 团队协作 & 审计追踪
+
+---
 
 ## 贡献指南
 
-欢迎提交 Issue 和 Pull Request 来改进项目。
+欢迎 Issue / PR！在提交之前请确保：
 
-## 许可证
-
-- 本项目采用 [GNU Affero General Public License v3.0 (AGPL-3.0)](https://www.gnu.org/licenses/agpl-3.0.html) 开源。
+1. 运行 `npm run lint` 通过 ESLint 检查
+2. `npm run test` 通过单元测试（如有）
+3. 遵循 [Conventional Commits](https://www.conventionalcommits.org/zh-hans/v1.0.0/) 提交信息
 
 ---
+
+## License
+
+[AGPL-3.0](https://www.gnu.org/licenses/agpl-3.0.html)
+
+---
+
+## 联系方式
+
+若有合作或招聘意向，请联系：**me@antelacus.com**
