@@ -33,6 +33,7 @@ interface DocumentStore {
   addDocument: (doc: Document) => void;
   updateDocument: (id: string, update: Partial<Document>) => void;
   removeDocument: (id: string) => void;
+  deleteDocument: (id: string) => Promise<void>;
   setDocuments: (docs: Document[]) => void;
   getDocumentsByCategory: (category: "knowledge" | "business") => Document[];
   clear: () => void;
@@ -55,14 +56,28 @@ export const useDocumentStore = create<DocumentStore>((set, get) => ({
   removeDocument: (id) => set((state) => ({
     documents: state.documents.filter((doc) => doc.id !== id),
   })),
-  
+
+  deleteDocument: async (id) => {
+    try {
+      const res = await fetch(`/api/documents?id=${id}`, { method: 'DELETE' });
+      if (!res.ok) throw new Error('Failed to delete document');
+      set((state) => ({
+        documents: state.documents.filter((doc) => doc.id !== id),
+      }));
+    } catch (error) {
+      console.error('Error deleting document:', error);
+      set({ error: 'Failed to delete document' });
+      throw error;
+    }
+  },
+
   setDocuments: (docs) => set(() => ({ documents: docs })),
   
   getDocumentsByCategory: (category) => get().documents.filter((doc) => doc.docCategory === category),
   
   clear: () => set(() => ({ documents: [] })),
-  
-  // 加载本地data/documents目录下所有JSON文档
+
+  // 从Supabase数据库加载所有知识型文档
   loadDocumentsFromJsonDir: async () => {
     set({ isLoading: true, error: null });
     try {

@@ -2,8 +2,7 @@ export const runtime = "nodejs";
 import { NextRequest, NextResponse } from "next/server";
 import OpenAI from "openai";
 import { getGuidanceChatPrompt } from "../../../lib/prompts";
-import fs from "fs";
-import path from "path";
+import { createServerSupabaseClient } from "../../../lib/supabase";
 
 // Initialize OpenAI client
 const openai = new OpenAI({
@@ -37,106 +36,6 @@ type Document = {
   chunks: DocumentChunk[];
 };
 
-// 加载本地知识型文档
-function loadLocalKnowledgeDocuments(): Record<string, Document> {
-  try {
-    const documentsDir = path.join(process.cwd(), "data", "documents");
-    if (!fs.existsSync(documentsDir)) {
-      return {};
-    }
-
-    const files = fs.readdirSync(documentsDir).filter(file => file.endsWith('.json'));
-    const documents: Record<string, Document> = {};
-
-    for (const file of files) {
-      try {
-        const filePath = path.join(documentsDir, file);
-        const fileContent = fs.readFileSync(filePath, 'utf-8');
-        const data = JSON.parse(fileContent);
-        
-        // 检查是否是chunks数组格式
-        if (Array.isArray(data) && data.length > 0 && data[0].content && data[0].embedding) {
-          // 这是chunks格式，需要组织成文档
-          const chunksByDocument = new Map();
-          
-          // 按document_id分组chunks
-          data.forEach((chunk: { document_id: string; chunk_index: number; content: string; embedding: number[] }) => {
-            const docId = chunk.document_id || `doc-${data.indexOf(chunk)}`;
-            // 使用文件名作为文档名，去掉.json后缀
-            const docName = file.replace('.json', '');
-            
-            if (!chunksByDocument.has(docId)) {
-              chunksByDocument.set(docId, {
-                id: docId,
-                name: docName,
-                type: "knowledge",
-                docCategory: "knowledge",
-                uploadTime: new Date().toISOString(),
-                status: "ready",
-                size: Buffer.byteLength(fileContent, 'utf8'),
-                chunks: []
-              });
-            }
-            
-            chunksByDocument.get(docId).chunks.push({
-              id: `chunk-${docId}-${chunk.chunk_index || data.indexOf(chunk)}`,
-              text: chunk.content,
-              embedding: chunk.embedding,
-              chunkIndex: chunk.chunk_index || data.indexOf(chunk)
-            });
-          });
-          
-          // 将分组后的文档添加到结果中
-          chunksByDocument.forEach((doc) => {
-            // 生成基于内容的摘要
-            const allText = doc.chunks.map((chunk: { text: string }) => chunk.text).join(' ');
-            const summary = {
-              document_type: "知识型文档",
-              summary: allText.substring(0, 300) + (allText.length > 300 ? "..." : ""),
-              key_metrics: ["内容分析", "知识提取", "信息检索"],
-              time_period: "当前版本"
-            };
-            
-            doc.summary = summary;
-            documents[doc.id] = doc;
-          });
-        } else if (data.id && data.name && data.chunks) {
-          // 这是完整的文档格式
-          documents[data.id] = {
-            ...data,
-            type: data.type || "knowledge",
-            docCategory: data.docCategory || "knowledge"
-          };
-        }
-      } catch (error) {
-        console.error(`Error reading file ${file}:`, error);
-      }
-    }
-
-    return documents;
-  } catch (error) {
-    console.error("Error loading local knowledge documents:", error);
-    return {};
-  }
-}
-
-// 简单的相似度计算（余弦相似度）
-function cosineSimilarity(vecA: number[], vecB: number[]): number {
-  if (vecA.length !== vecB.length) return 0;
-  
-  let dotProduct = 0;
-  let normA = 0;
-  let normB = 0;
-  
-  for (let i = 0; i < vecA.length; i++) {
-    dotProduct += vecA[i] * vecB[i];
-    normA += vecA[i] * vecA[i];
-    normB += vecB[i] * vecB[i];
-  }
-  
-  return dotProduct / (Math.sqrt(normA) * Math.sqrt(normB));
-}
-
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
@@ -151,63 +50,112 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Question is required" }, { status: 400 });
     }
 
+    // Initialize Supabase client
+    const supabase = createServerSupabaseClient();
+
     // 1. 获取相关文档内容
     let relevantContext = "";
-    
-    // 处理知识型文档（从本地加载的）
+
+    // 为问题生成embedding（用于知识型文档的向量搜索）
+    const embeddingResponse = await openai.embeddings.create({
+      model: "text-embedding-3-small",
+      input: question,
+      encoding_format: "float",
+    });
+    const queryEmbedding = embeddingResponse.data[0].embedding;
+
+    // 处理知识型文档（从Supabase加载并进行向量搜索）
+    let selectedKnowledgeDocNames: string[] = [];
+
     if (documentIds.length > 0) {
-      const localKnowledgeDocs = loadLocalKnowledgeDocuments();
-      
-      // 为问题生成embedding
-      const embeddingResponse = await openai.embeddings.create({
-        model: "text-embedding-3-small",
-        input: question,
-        encoding_format: "float",
-      });
-      const queryEmbedding = embeddingResponse.data[0].embedding;
+      // 使用Supabase的向量搜索功能
+      const { data: similarChunks, error: searchError } = await supabase.rpc(
+        'match_documents',
+        // @ts-ignore - Supabase type inference issue
+        {
+          query_embedding: queryEmbedding,
+          match_count: 3,
+          filter_doc_ids: documentIds,
+        }
+      );
 
-      // 对每个选中的知识型文档进行向量搜索
-      for (const docId of documentIds) {
-        const doc = localKnowledgeDocs[docId];
-        if (doc && doc.chunks) {
-          // 计算每个chunk与问题的相似度
-          const chunkScores = doc.chunks.map(chunk => ({
-            chunk,
-            similarity: cosineSimilarity(queryEmbedding, chunk.embedding)
-          }));
+      if (searchError) {
+        console.error('Vector search error:', searchError);
+        throw new Error(`Vector search failed: ${searchError.message}`);
+      }
 
-          // 按相似度排序，取前3个最相关的chunk
-          const topChunks = chunkScores
-            .sort((a, b) => b.similarity - a.similarity)
-            .slice(0, 3)
-            .map(item => item.chunk);
+      if (similarChunks && (similarChunks as any[]).length > 0) {
+        // 获取文档信息
+        const { data: documents, error: docsError } = await supabase
+          .from('documents')
+          .select('id, name, summary')
+          .in('id', documentIds);
 
-          if (topChunks.length > 0) {
-            relevantContext += `\n知识文档: ${doc.name}\n`;
-            relevantContext += `类型: ${doc.summary?.document_type || '未知'}\n`;
-            relevantContext += `相关内容: ${topChunks.map(chunk => chunk.text).join(" ")}\n`;
+        if (docsError) {
+          console.error('Error fetching documents:', docsError);
+        }
+
+        // 创建文档ID到名称和摘要的映射
+        const docIdToName = new Map(
+          ((documents || []) as any[]).map(doc => [doc.id, doc.name])
+        );
+        const docIdToSummary = new Map(
+          ((documents || []) as any[]).map(doc => [doc.id, doc.summary])
+        );
+
+        // 按文档分组chunks
+        const chunksByDocument = new Map<string, any[]>();
+        for (const chunk of (similarChunks as any[])) {
+          if (!chunksByDocument.has(chunk.document_id)) {
+            chunksByDocument.set(chunk.document_id, []);
           }
+          chunksByDocument.get(chunk.document_id)!.push(chunk);
+        }
+
+        // 构建上下文文本
+        for (const [docId, chunks] of chunksByDocument) {
+          const docName = docIdToName.get(docId) || 'Unknown';
+          const summary = docIdToSummary.get(docId) as any;
+          selectedKnowledgeDocNames.push(docName);
+
+          relevantContext += `\n知识文档: ${docName}\n`;
+          relevantContext += `类型: ${summary?.document_type || '未知'}\n`;
+          relevantContext += `相关内容: ${chunks.map(chunk => chunk.content).join(" ")}\n`;
         }
       }
     }
 
     // 处理业务型文档（用户上传的）
+    let selectedBusinessDocNames: string[] = [];
+
     if (businessDocuments && businessDocuments.length > 0) {
       businessDocuments.forEach((doc: Document) => {
+        selectedBusinessDocNames.push(doc.name);
         relevantContext += `\n业务文档: ${doc.name}\n`;
         relevantContext += `类型: ${doc.summary?.document_type || '未知'}\n`;
         relevantContext += `内容: ${doc.chunks?.map(chunk => chunk.text).join(" ") || '无内容'}\n`;
       });
     }
 
-    // 如果没有指定文档，使用所有本地知识型文档
+    // 如果没有指定任何文档，加载所有知识型文档的概要
     if (documentIds.length === 0 && (!businessDocuments || businessDocuments.length === 0)) {
-      const localKnowledgeDocs = loadLocalKnowledgeDocuments();
-      Object.values(localKnowledgeDocs).forEach((doc: Document) => {
-        relevantContext += `\n知识文档: ${doc.name}\n`;
-        relevantContext += `类型: ${doc.summary?.document_type || '未知'}\n`;
-        relevantContext += `内容: ${doc.chunks?.slice(0, 2).map(chunk => chunk.text).join(" ") || '无内容'}\n`;
-      });
+      const { data: allKnowledgeDocs, error: allDocsError } = await supabase
+        .from('documents')
+        .select('id, name, summary')
+        .eq('doc_category', 'knowledge')
+        .limit(10);
+
+      if (allDocsError) {
+        console.error('Error fetching all knowledge documents:', allDocsError);
+      } else if (allKnowledgeDocs && (allKnowledgeDocs as any[]).length > 0) {
+        for (const doc of (allKnowledgeDocs as any[])) {
+          selectedKnowledgeDocNames.push(doc.name);
+          relevantContext += `\n知识文档: ${doc.name}\n`;
+          const summary = doc.summary as any;
+          relevantContext += `类型: ${summary?.document_type || '未知'}\n`;
+          relevantContext += `摘要: ${summary?.summary || '无摘要'}\n`;
+        }
+      }
     }
 
     // 2. 构建对话上下文
@@ -217,15 +165,8 @@ export async function POST(req: NextRequest) {
       .join('\n');
 
     // 3. 构建完整的提示词
-    const selectedKnowledgeDocNames = documentIds.map(id => {
-      const localKnowledgeDocs = loadLocalKnowledgeDocuments();
-      return localKnowledgeDocs[id]?.name || "";
-    }).filter(Boolean);
-    
-    const selectedBusinessDocNames = businessDocuments?.map(doc => doc.name) || [];
-    
     const basePrompt = getGuidanceChatPrompt(selectedKnowledgeDocNames, selectedBusinessDocNames);
-    
+
     const systemPrompt = `${basePrompt}
 
 相关文档内容：
@@ -259,9 +200,10 @@ ${conversationHistory}
 
   } catch (error) {
     console.error("Chat API Error:", error);
+    const errorMessage = error instanceof Error ? error.message : "Unknown error";
     return NextResponse.json(
-      { error: "Failed to generate chat response" },
+      { error: "Failed to generate chat response", details: errorMessage },
       { status: 500 }
     );
   }
-} 
+}

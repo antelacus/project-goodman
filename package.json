@@ -7,9 +7,12 @@
     "dev": "next dev --turbopack",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "migrate-data": "tsx scripts/migrate-to-supabase.ts",
+    "migrate-data:dry-run": "tsx scripts/migrate-to-supabase.ts --dry-run"
   },
   "dependencies": {
+    "@supabase/supabase-js": "^2.80.0",
     "@types/xlsx": "^0.0.35",
     "katex": "^0.16.22",
     "mathjs": "^14.5.3",
@@ -35,6 +38,7 @@
     "eslint": "^9",
     "eslint-config-next": "15.3.3",
     "tailwindcss": "^4",
+    "tsx": "^4.20.6",
     "typescript": "^5"
   }
 }
