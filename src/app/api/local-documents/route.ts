@@ -1,94 +1,74 @@
 import { NextResponse } from "next/server";
-import fs from "fs";
-import path from "path";
+import { createServerSupabaseClient } from "../../../lib/supabase";
 
 export async function GET() {
   try {
-    const documentsDir = path.join(process.cwd(), "data", "documents");
-    
-    // 检查目录是否存在
-    if (!fs.existsSync(documentsDir)) {
+    const supabase = createServerSupabaseClient();
+
+    // 获取所有知识型文档
+    const { data: documents, error: docsError } = await supabase
+      .from('documents')
+      .select('*')
+      .eq('doc_category', 'knowledge')
+      .order('created_at', { ascending: false });
+
+    if (docsError) {
+      console.error('Error fetching knowledge documents:', docsError);
+      throw docsError;
+    }
+
+    if (!documents || documents.length === 0) {
       return NextResponse.json({ documents: [] });
     }
 
-    // 读取目录中的所有JSON文件
-    const files = fs.readdirSync(documentsDir).filter(file => file.endsWith('.json'));
-    const documents = [];
+    // 获取所有知识型文档的chunks
+    const documentIds = (documents as any[]).map(doc => doc.id);
+    const { data: chunks, error: chunksError } = await supabase
+      .from('document_chunks')
+      .select('*')
+      .in('document_id', documentIds)
+      .order('chunk_index', { ascending: true });
 
-    for (const file of files) {
-      try {
-        const filePath = path.join(documentsDir, file);
-        const fileContent = fs.readFileSync(filePath, 'utf-8');
-        const data = JSON.parse(fileContent);
-        
-        // 检查是否是chunks数组格式
-        if (Array.isArray(data) && data.length > 0 && data[0].content && data[0].embedding) {
-          // 这是chunks格式，需要组织成文档
-          const chunksByDocument = new Map();
-          
-          // 按document_id分组chunks
-          data.forEach((chunk: { document_id: string; chunk_index: number; content: string; embedding: number[] }) => {
-            const docId = chunk.document_id || `doc-${data.indexOf(chunk)}`;
-            // 使用文件名作为文档名，去掉.json后缀
-            const docName = file.replace('.json', '');
-            
-            if (!chunksByDocument.has(docId)) {
-              chunksByDocument.set(docId, {
-                id: docId,
-                name: docName,
-                type: "knowledge",
-                docCategory: "knowledge",
-                uploadTime: new Date().toISOString(),
-                status: "ready",
-                size: Buffer.byteLength(fileContent, 'utf8'),
-                chunks: []
-              });
-            }
-            
-            chunksByDocument.get(docId).chunks.push({
-              id: `chunk-${docId}-${chunk.chunk_index || data.indexOf(chunk)}`,
-              text: chunk.content,
-              embedding: chunk.embedding,
-              chunkIndex: chunk.chunk_index || data.indexOf(chunk)
-            });
-          });
-          
-          // 将分组后的文档添加到结果中
-          chunksByDocument.forEach((doc) => {
-            // 生成基于内容的摘要
-            const allText = doc.chunks.map((chunk: { text: string }) => chunk.text).join(' ');
-            const summary = {
-              document_type: "知识型文档",
-              summary: allText.substring(0, 300) + (allText.length > 300 ? "..." : ""),
-              key_metrics: ["内容分析", "知识提取", "信息检索"],
-              time_period: "当前版本"
-            };
-            
-            doc.summary = summary;
-            documents.push(doc);
-          });
-        } else if (data.id && data.name) {
-          // 这是完整的文档格式
-          documents.push({
-            ...data,
-            type: data.type || "knowledge",
-            docCategory: data.docCategory || "knowledge",
-            uploadTime: data.uploadTime || new Date().toISOString(),
-            status: "ready",
-            size: Buffer.byteLength(fileContent, 'utf8')
-          });
-        }
-      } catch (error) {
-        console.error(`Error reading file ${file}:`, error);
-      }
+    if (chunksError) {
+      console.error('Error fetching document chunks:', chunksError);
+      throw chunksError;
     }
 
-    return NextResponse.json({ documents });
+    // 将chunks按文档分组
+    const chunksByDocId = new Map<string, any[]>();
+    ((chunks || []) as any[]).forEach(chunk => {
+      if (!chunksByDocId.has(chunk.document_id)) {
+        chunksByDocId.set(chunk.document_id, []);
+      }
+      chunksByDocId.get(chunk.document_id)!.push({
+        id: chunk.id,
+        text: chunk.content,
+        embedding: chunk.embedding,
+        chunkIndex: chunk.chunk_index,
+      });
+    });
+
+    // 组合文档和chunks
+    const formattedDocuments = (documents as any[]).map(doc => ({
+      id: doc.id,
+      name: doc.name,
+      type: doc.doc_type || "knowledge",
+      docCategory: doc.doc_category,
+      uploadTime: doc.upload_time,
+      status: doc.status,
+      size: doc.size,
+      summary: doc.summary,
+      chunks: chunksByDocId.get(doc.id) || [],
+    }));
+
+    return NextResponse.json({ documents: formattedDocuments });
+
   } catch (error) {
-    console.error("Error loading local documents:", error);
+    console.error("Error loading documents from Supabase:", error);
+    const errorMessage = error instanceof Error ? error.message : "Unknown error";
     return NextResponse.json(
-      { error: "Failed to load local documents" },
+      { error: "Failed to load documents", details: errorMessage },
       { status: 500 }
     );
   }
-} 
+}
