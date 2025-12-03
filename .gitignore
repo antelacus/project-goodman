@@ -34,6 +34,7 @@ yarn-error.log*
 .env*
 
 # prompt files (sensitive business content)
+# prompt files (sensitive business content)
 src/lib/prompts/*.txt
 
 # vercel
@@ -42,3 +43,17 @@ src/lib/prompts/*.txt
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# test files and debug outputs
+test-*.ts
+test_*.ts
+test_*.json
+verify-*.ts
+verify-*.js
+quick-*.ts
+check-*.ts
+debug_*.txt
+debug_*.xlsx
+
+# knowledge files (local reference only)
+knowledge_files/

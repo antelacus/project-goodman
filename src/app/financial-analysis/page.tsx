@@ -1,77 +1,62 @@
 "use client";
 import React, { useState, useRef, useEffect } from "react";
-import { useDocumentStore } from "../../store/documents";
-import ReactMarkdown from "react-markdown";
-import remarkMath from "remark-math";
-import rehypeKatex from "rehype-katex";
-import HighlightLatex from "../../components/HighlightLatex";
-import LatexCalcModal from "../../components/LatexCalcModal";
-import { evaluate } from "mathjs";
-import { financialAnalysisPresets } from "../../lib/presetQuestions";
-import ChatInputBox from "../../components/ChatInputBox";
 import PageContainer from "../../components/PageContainer";
 import PageTitle from "../../components/PageTitle";
 import { checkAndIncreaseApiLimit } from "../../lib/rateLimit";
 import Link from "next/link";
-
+import DocumentSelectModal from "../../components/DocumentSelectModal";
+import { Document } from "../../store/documents";
+import RichTextRenderer from "../../components/RichTextRenderer";
 
 type ChatMessage = {
   id: string;
   role: "user" | "assistant";
   content: string;
   timestamp: string;
-  streaming?: boolean; // 新增，标记AI回复是否正在逐字输出
+  responseData?: FinancialAnalysisResponse;
 };
 
-function parseLatexToMath(latex: string): { expr: string, error?: string } {
-  let expr = latex.trim();
-  try {
-    // 去除\text{...}
-    expr = expr.replace(/\\text\{[^{}]*\}/g, '');
-    // 去除\left和\right
-    expr = expr.replace(/\\left|\\right/g, '');
-    // 递归处理嵌套\frac
-    while (/\\frac\{[^{}]+\}\{[^{}]+\}/.test(expr)) {
-      expr = expr.replace(/\\frac\{([^{}]+)\}\{([^{}]+)\}/g, '($1)/($2)');
-    }
-    // 替换\times为*
-    expr = expr.replace(/\\times/g, '*');
-    // 替换\div为/
-    expr = expr.replace(/\\div/g, '/');
-    // 替换百分号
-    expr = expr.replace(/([\d,.]+)\s*%/g, '($1/100)');
-    // 去除千分号逗号
-    expr = expr.replace(/,/g, '');
-    // 去除$和多余空格
-    expr = expr.replace(/\$/g, '').replace(/\s+/g, '');
-    // 只允许数字、运算符、括号
-    if (!/^[-+*/().\d]+$/.test(expr)) {
-      // 尝试只提取第一个合法算式（支持括号嵌套）
-      const match = expr.match(/([-+*/().\d]+)/);
-      if (match) {
-        expr = match[1];
-      } else {
-        return { expr, error: '暂不支持自动校验此类表达式' };
-      }
-    }
-    return { expr };
-  } catch {
-    return { expr, error: '解析表达式失败' };
-  }
-}
+type FinancialAnalysisResponse = {
+  type: "calculation_result" | "insufficient_data" | "low_confidence" | "no_function";
+  answer?: string;
+  calculation?: {
+    functionUsed: string;
+    functionDisplayName: string;
+    formula: string;
+    inputs: {
+      [paramName: string]: {
+        value: number;
+        unit: string;
+        source: string;
+      };
+    };
+    result: {
+      value: number;
+      formatted: string;
+      unit: string;
+    };
+    steps: string[];
+  };
+  confidence: number;
+  sourceDocuments?: Array<{
+    id: string;
+    name: string;
+    year: string;
+    period: string;
+  }>;
+  missingData?: string[];
+  suggestion?: string;
+};
+
+// Replaced by Document type from store
 
 export default function FinancialAnalysisPage() {
-  const documents = useDocumentStore((s) => s.documents);
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
   const [isSending, setIsSending] = useState(false);
-  const [selectedDocuments, setSelectedDocuments] = useState<string[]>([]);
-  const knowledgeDocs = documents.filter(doc => doc.docCategory === "knowledge");
-  const [modalOpen, setModalOpen] = useState(false);
-  const [modalLatex, setModalLatex] = useState('');
-  const [modalParsed, setModalParsed] = useState('');
-  const [modalResult, setModalResult] = useState('');
-  const [modalError, setModalError] = useState<string | undefined>(undefined);
-  const [presetOpen, setPresetOpen] = useState(false);
+  const [inputMessage, setInputMessage] = useState("");
+  const [availableDocuments, setAvailableDocuments] = useState<Document[]>([]);
+  const [selectedDocIds, setSelectedDocIds] = useState<string[]>([]);
+  const [showDocModal, setShowDocModal] = useState(false);
   const chatEndRef = useRef<HTMLDivElement>(null);
 
   const scrollToBottom = () => {
@@ -79,147 +64,113 @@ export default function FinancialAnalysisPage() {
   };
 
   useEffect(() => {
-    scrollToBottom();
+    if (chatMessages.length > 0) {
+      scrollToBottom();
+    }
   }, [chatMessages]);
 
-  // 多选文档切换
-  const toggleSelectDocument = (docId: string) => {
-    setSelectedDocuments((prev) =>
-      prev.includes(docId)
-        ? prev.filter((id) => id !== docId)
-        : [...prev, docId]
-    );
-  };
-
-  // 高亮并可交互的Markdown渲染
-  function renderMarkdownWithLatexHighlight(content: string) {
-    // 匹配$...$和$$...$$表达式，支持$符号单独占行
-    const inline = /\$\s*([\s\S]+?)\s*\$/g;
-    const block = /\$\$\s*([\s\S]+?)\s*\$\$/g;
-    const parts: (string | { latex: string })[] = [];
-    let lastIdx = 0;
-    // 先处理块级
-    content.replace(block, (m, p1, offset) => {
-      if (offset > lastIdx) parts.push(content.slice(lastIdx, offset));
-      parts.push({ latex: p1 });
-      lastIdx = offset + m.length;
-      return m;
-    });
-    content = content.slice(lastIdx);
-    lastIdx = 0;
-    // 再处理行内
-    content.replace(inline, (m, p1, offset) => {
-      if (offset > lastIdx) parts.push(content.slice(lastIdx, offset));
-      parts.push({ latex: p1 });
-      lastIdx = offset + m.length;
-      return m;
-    });
-    if (lastIdx < content.length) parts.push(content.slice(lastIdx));
-    // 渲染
-    return parts.map((part, i) => {
-      if (typeof part === 'string') {
-        return <ReactMarkdown key={i} remarkPlugins={[remarkMath]} rehypePlugins={[rehypeKatex]}>{part}</ReactMarkdown>;
-      } else {
-        return (
-          <HighlightLatex key={i} onClick={() => {
-            setModalLatex(part.latex);
-            const { expr, error } = parseLatexToMath(part.latex);
-            setModalParsed(expr);
-            if (!error) {
-              try {
-                const result = evaluate(expr);
-                // 格式化：保留两位小数，千分位，百分号
-                const resultNum = Number(result);
-                let formatted = isNaN(resultNum)
-                  ? result.toString()
-                  : resultNum.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-                // 若原始表达式含%或*100，自动加%
-                if (/[%]|\\times\s*100|\*100/.test(part.latex)) {
-                  formatted += '%';
-                }
-                setModalResult(formatted);
-                setModalError(undefined);
-              } catch {
-                setModalResult('');
-                setModalError('计算失败');
-              }
-            } else {
-              setModalResult('');
-              setModalError(error);
-            }
-            setModalOpen(true);
-          }}>{`$${part.latex}$`}</HighlightLatex>
-        );
-      }
-    });
-  }
-
+  // Load available documents on mount
   useEffect(() => {
-    window.scrollTo(0, 0);
+    loadAvailableDocuments();
   }, []);
 
-  const selectedDocs = selectedDocuments.map(id => {
-    const doc = knowledgeDocs.find(d => d.id === id);
-    return doc ? { id: doc.id, name: doc.name } : null;
-  }).filter(Boolean) as { id: string, name: string }[];
+  const loadAvailableDocuments = async () => {
+    try {
+      // Remove category filter to show all financial documents (business & knowledge)
+      const res = await fetch("/api/documents?type=balance_sheet,income_statement,cash_flow");
+      if (res.ok) {
+        const data = await res.json();
+        const docs: Document[] = data.documents.map((doc: any) => ({
+          id: doc.id,
+          name: doc.name,
+          type: 'excel', // Default to excel for financial reports
+          docCategory: 'knowledge', // Force to knowledge for modal compatibility
+          uploadTime: doc.created_at || new Date().toISOString(),
+          status: doc.is_structured ? "ready" : "processing",
+          size: 0,
+          summary: {
+            document_type: 'financial_report',
+            summary: '',
+            key_metrics: [],
+            time_period: `${doc.year || ''} ${doc.period || ''}`
+          }
+        }));
+        // Only show ready documents
+        const readyDocs = docs.filter(d => d.status === 'ready');
+        setAvailableDocuments(readyDocs);
+        // Default select all? Or none? User said "Select at least one". Let's leave empty and let user select.
+      }
+    } catch (err) {
+      console.error("Failed to load documents:", err);
+    }
+  };
 
-  // 发送消息并处理AI回复
+  // Preset questions based on common financial metrics
+  const presetQuestions = [
+    "2024年的资产负债率是多少？",
+    "计算流动比率",
+    "公司的净资产收益率(ROE)是多少？",
+    "营业收入增长率如何？",
+    "分析公司的偿债能力",
+    "计算销售毛利率",
+  ];
+
   const sendMessage = async (msg: string) => {
-    if (!msg.trim() || selectedDocuments.length === 0 || isSending) return;
+    if (!msg.trim() || isSending) return;
+
+    if (selectedDocIds.length === 0) {
+      alert("请先选择需要分析的文档");
+      setShowDocModal(true);
+      return;
+    }
+
     if (!checkAndIncreaseApiLimit(10)) {
       alert("今日体验次数已达上限，请明天再试或联系作者获取更多体验权限。");
       return;
     }
+
     const userMessage: ChatMessage = {
       id: `msg-${Date.now()}`,
       role: "user",
       content: msg,
       timestamp: new Date().toISOString(),
     };
+
     setChatMessages(prev => [...prev, userMessage]);
+    setInputMessage("");
     setIsSending(true);
-    // 先插入一条空的 assistant 消息，streaming: true
-    const aiMsgId = `msg-${Date.now() + 1}`;
-    setChatMessages(prev => [
-      ...prev,
-      { id: aiMsgId, role: "assistant", content: "", timestamp: new Date().toISOString(), streaming: true }
-    ]);
+
     try {
-      const res = await fetch("/api/financial-analysis", {
+      const res = await fetch("/api/financial-analysis-v2", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          question: userMessage.content,
-          documentIds: selectedDocuments,
-          chatHistory: chatMessages.slice(-10),
+          question: msg,
+          documentIds: selectedDocIds,
         }),
       });
-      if (!res.ok) throw new Error("AI回复失败");
-      const chatResult = await res.json();
-      let aiContent = chatResult.response;
-      aiContent = aiContent.replace(/\[([^\[]+?)\]/g, (m: string, p1: string) => `$$${p1}$$`);
-      // 逐字输出
-      let idx = 0;
-      const typeInterval = 18; // ms
-      function typeNext() {
-        idx++;
-        setChatMessages(prev => prev.map(m =>
-          m.id === aiMsgId ? { ...m, content: aiContent.slice(0, idx) } : m
-        ));
-        if (idx < aiContent.length) {
-          setTimeout(typeNext, typeInterval);
-        } else {
-          setChatMessages(prev => prev.map(m =>
-            m.id === aiMsgId ? { ...m, streaming: false } : m
-          ));
-        }
+
+      if (!res.ok) {
+        throw new Error("AI回复失败");
       }
-      typeNext();
+
+      const responseData: FinancialAnalysisResponse = await res.json();
+
+      const aiMessage: ChatMessage = {
+        id: `msg-${Date.now() + 1}`,
+        role: "assistant",
+        content: responseData.answer || "抱歉，我无法处理这个问题。",
+        timestamp: new Date().toISOString(),
+        responseData,
+      };
+
+      setChatMessages(prev => [...prev, aiMessage]);
     } catch (err) {
+      console.error("Error sending message:", err);
       const errorMessage: ChatMessage = {
         id: `msg-${Date.now() + 2}`,
         role: "assistant",
-        content: "抱歉，AI服务暂时不可用。",
+        content: "抱歉，AI服务暂时不可用，请稍后重试。",
         timestamp: new Date().toISOString(),
       };
       setChatMessages(prev => [...prev, errorMessage]);
@@ -228,94 +179,317 @@ export default function FinancialAnalysisPage() {
     }
   };
 
-  return (
-    <PageContainer maxWidth="3xl">
-      <div className="flex flex-col h-[calc(100vh-64px)] gap-0"> {/* 64px 预留顶部导航高度，可根据实际调整 */}
-        <section className="w-full flex-1 flex flex-col gap-0">
-          <PageTitle>财务指标分析</PageTitle>
-          <p className="mb-2 text-gray-700">
-            本页面可基于财务数据库中的文档（如会计准则、财务报表等），通过 AI 智能分析快速获取各类财务指标、趋势和专业建议。
-          </p>
-          <p className="mb-2 text-gray-700">
-            仍有疑问？请在
-              <Link href="/about#faq" className="text-yellow-500 underline hover:text-yellow-400 transition-colors">关于/帮助</Link>
-              页面获取指引，或跳转查看
-            <Link href="/showcase#analysis" className="text-yellow-500 underline hover:text-yellow-400 transition-colors">演示案例</Link>。
-          </p>
-          {/* 对话消息区 */}
-          <div className="bg-white rounded-lg p-4 mb-6 flex-1 overflow-y-auto" style={{ minHeight: 320 }}>
-            <div className="flex flex-col gap-4">
-              {chatMessages.length === 0 && !isSending && (
-                <div className="text-gray-400 text-center mt-10">请在选择财务数据库文档后，输入并发送你的问题，可使用内置的“预设提问”</div>
-              )}
-              {chatMessages.map((msg, idx) => (
-                <div
-                  key={idx}
-                  className={
-                    msg.role === "user"
-                      ? "self-end bg-gray-100 text-black rounded px-4 py-2 max-w-[80%]"
-                      : "w-full bg-white text-black px-0 py-2"
-                  }
-                  style={msg.role === "assistant" ? { width: "100%" } : {}}
-                >
-                  {msg.role === "assistant"
-                    ? (msg.streaming
-                        ? <span style={{ whiteSpace: "pre-wrap" }}>{msg.content}</span>
-                        : renderMarkdownWithLatexHighlight(msg.content)
-                      )
-                    : <span>{msg.content}</span>
-                  }
-                </div>
-              ))}
-              {isSending && (
-                <div className="w-full text-center text-gray-400">回答中...</div>
-              )}
-              <div ref={chatEndRef} />
-            </div>
-          </div>
-          <LatexCalcModal
-            open={modalOpen}
-            onClose={() => setModalOpen(false)}
-            latex={modalLatex}
-            parsedExpr={modalParsed}
-            calcResult={modalResult}
-            error={modalError}
-          />
-        </section>
-        {/* 输入区吸底 */}
-        <div className="sticky bottom-0 bg-white pt-2 pb-4 z-10 border-t border-gray-200">
-          <ChatInputBox
-            selectedDocs={selectedDocs}
-            onSelectDocs={setSelectedDocuments}
-            docSelectMode="multiple"
-            docCategories={["knowledge"]}
-            showUpload={false}
-            presetQuestions={financialAnalysisPresets}
-            sendDisabled={selectedDocuments.length === 0 || isSending}
-            sendDisabledTip="请选择至少一个知识型文档"
-            sendBtnText={isSending ? "发送中..." : "发送"}
-            inputPlaceholder="请输入你的财务分析问题..."
-            onSend={sendMessage}
-          />
+  const [showPresetMenu, setShowPresetMenu] = useState(false);
+  const inputRef = useRef<HTMLInputElement>(null);
+  const menuRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
+        setShowPresetMenu(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  const insertTextAtCursor = (text: string) => {
+    if (inputRef.current) {
+      const input = inputRef.current;
+      const start = input.selectionStart || 0;
+      const end = input.selectionEnd || 0;
+      const currentValue = input.value;
+      const newValue = currentValue.substring(0, start) + text + currentValue.substring(end);
+
+      setInputMessage(newValue);
+
+      // Restore focus and move cursor to end of inserted text
+      setTimeout(() => {
+        input.focus();
+        const newCursorPos = start + text.length;
+        input.setSelectionRange(newCursorPos, newCursorPos);
+      }, 0);
+    } else {
+      setInputMessage(prev => prev + text);
+    }
+  };
+
+  const handlePresetClick = (question: string) => {
+    insertTextAtCursor(question);
+    setShowPresetMenu(false);
+  };
+
+  const renderCalculationCard = (calculation: FinancialAnalysisResponse["calculation"], msgId: string) => {
+    if (!calculation) return null;
+
+    return (
+      <div id={`calc-card-${msgId}`} className="mt-4 p-4 bg-blue-50 border-l-4 border-blue-500 rounded transition-all duration-300">
+        <div className="mb-3">
+          <div className="text-lg font-bold text-blue-900">{calculation.functionDisplayName}</div>
+          <div className="text-sm text-gray-600 mt-1">{calculation.formula}</div>
         </div>
-        {/* 预设提问弹窗 */}
-        {presetOpen && (
-          <div style={{position:'fixed',top:0,left:0,width:'100vw',height:'100vh',background:'rgba(0,0,0,0.18)',zIndex:1000,display:'flex',alignItems:'center',justifyContent:'center'}}>
-            <div style={{background:'#fff',borderRadius:8,boxShadow:'0 4px 24px 0 rgba(0,0,0,0.10)',padding:32,minWidth:340,maxWidth:480,position:'relative'}}>
-              <button onClick={()=>setPresetOpen(false)} style={{position:'absolute',top:16,right:16,background:'none',border:'none',fontSize:20,cursor:'pointer'}}>&times;</button>
-              <h3 style={{fontWeight:700,fontSize:18,marginBottom:16}}>常用财务分析提问</h3>
-              <ul style={{padding:0,margin:0,listStyle:'none'}}>
-                {financialAnalysisPresets.map((q,i)=>(
-                  <li key={i} style={{marginBottom:12}}>
-                    <button style={{background:'#f3f4f6',border:'none',borderRadius:4,padding:'8px 12px',width:'100%',textAlign:'left',cursor:'pointer'}}
-                      onClick={()=>{setPresetOpen(false);}}>{q}</button>
-                  </li>
-                ))}
-              </ul>
+
+        <div className="mb-3">
+          <div className="text-sm font-semibold text-gray-700 mb-2">计算步骤:</div>
+          <ol className="list-decimal list-inside space-y-1">
+            {calculation.steps.map((step, idx) => (
+              <li key={idx} className="text-sm text-gray-700">{step}</li>
+            ))}
+          </ol>
+        </div>
+
+        <div className="mb-3">
+          <div className="text-sm font-semibold text-gray-700 mb-2">输入数据:</div>
+          <div className="space-y-1">
+            {Object.entries(calculation.inputs).map(([key, value]) => (
+              <div key={key} className="text-sm text-gray-700">
+                <span className="font-medium">{key}:</span> {value.value.toLocaleString()} {value.unit}
+                <span className="text-gray-500 text-xs ml-2">({value.source})</span>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <div className="p-3 bg-white border border-blue-300 rounded">
+          <div className="text-sm text-gray-600">计算结果</div>
+          <div className="text-2xl font-bold text-blue-600">
+            {calculation.result.formatted}
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  const renderSourceDocuments = (sources: FinancialAnalysisResponse["sourceDocuments"], msgId: string) => {
+    if (!sources || sources.length === 0) return null;
+
+    return (
+      <div id={`source-list-${msgId}`} className="mt-3 p-3 bg-gray-50 rounded transition-all duration-300">
+        <div className="text-xs font-semibold text-gray-600 mb-2">📄 数据来源:</div>
+        <div className="space-y-1">
+          {sources.map((doc, idx) => (
+            <div key={idx} className="text-xs text-gray-700">
+              • {doc.name} ({doc.year} - {doc.period})
             </div>
+          ))}
+        </div>
+      </div>
+    );
+  };
+
+  const renderMissingData = (missingData?: string[], suggestion?: string) => {
+    if (!missingData || missingData.length === 0) return null;
+
+    return (
+      <div className="mt-4 p-4 bg-yellow-50 border-l-4 border-yellow-500 rounded">
+        <div className="text-sm font-semibold text-yellow-900 mb-2">⚠️ 缺少必要数据:</div>
+        <ul className="list-disc list-inside space-y-1">
+          {missingData.map((item, idx) => (
+            <li key={idx} className="text-sm text-yellow-800">{item}</li>
+          ))}
+        </ul>
+        {suggestion && (
+          <div className="mt-3 text-sm text-yellow-700 bg-yellow-100 p-2 rounded">
+            💡 {suggestion}
           </div>
         )}
       </div>
+    );
+  };
+
+  const renderAssistantMessage = (msg: ChatMessage) => {
+    const { content, responseData } = msg;
+
+    return (
+      <div className="w-full">
+        <div className="bg-gray-100 rounded-lg p-4">
+          <RichTextRenderer
+            content={content}
+            onCalculationClick={(_metric) => {
+              // Find the calculation card and scroll to it
+              const calcCard = document.getElementById(`calc-card-${msg.id}`);
+              if (calcCard) {
+                calcCard.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                calcCard.classList.add('ring-2', 'ring-yellow-400');
+                setTimeout(() => calcCard.classList.remove('ring-2', 'ring-yellow-400'), 2000);
+              }
+            }}
+            onSourceClick={(_docName) => {
+              // Find the source list and scroll to it
+              const sourceList = document.getElementById(`source-list-${msg.id}`);
+              if (sourceList) {
+                sourceList.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                sourceList.classList.add('ring-2', 'ring-yellow-400');
+                setTimeout(() => sourceList.classList.remove('ring-2', 'ring-yellow-400'), 2000);
+              }
+            }}
+          />
+
+          {responseData?.type === "calculation_result" && (
+            <>
+              {renderCalculationCard(responseData.calculation, msg.id)}
+              {renderSourceDocuments(responseData.sourceDocuments, msg.id)}
+            </>
+          )}
+
+          {responseData?.type === "insufficient_data" && (
+            <>
+              {renderMissingData(responseData.missingData, responseData.suggestion)}
+            </>
+          )}
+
+          {responseData && responseData.confidence !== undefined && (
+            <div className="mt-3 text-xs text-gray-500">
+              置信度: {(responseData.confidence * 100).toFixed(0)}%
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  };
+
+  return (
+    <PageContainer maxWidth="4xl">
+      <div className="flex flex-col h-[calc(100vh-110px)] gap-0">
+        {/* Header Section */}
+        <section className="w-full">
+          <PageTitle>财务指标分析</PageTitle>
+          <p className="mb-2 text-gray-700">
+            使用AI智能分析系统，基于数据库中的财务报表自动计算财务指标。系统会自动提取所需数据，执行精确计算，并提供详细的步骤说明。
+          </p>
+          <p className="mb-4 text-gray-700">
+            仍有疑问？请在
+            <Link href="/about#faq" className="text-yellow-500 underline hover:text-yellow-400 transition-colors ml-1">关于/帮助</Link>
+            页面获取指引，或跳转查看
+            <Link href="/showcase#analysis" className="text-yellow-500 underline hover:text-yellow-400 transition-colors ml-1">演示案例</Link>。
+          </p>
+
+          {/* Document Selection Modal */}
+          <DocumentSelectModal
+            open={showDocModal}
+            onClose={() => setShowDocModal(false)}
+            mode="multiple"
+            categories={['knowledge']}
+            selectedIds={selectedDocIds}
+            onSelect={setSelectedDocIds}
+            documents={availableDocuments}
+            showUpload={false}
+          />
+        </section>
+
+        {/* Chat Messages Area */}
+        <div className="flex-1 overflow-y-auto bg-white rounded-lg p-4 mb-4" style={{ minHeight: 320 }}>
+          <div className="flex flex-col gap-4">
+            {chatMessages.length === 0 && !isSending && (
+              <div className="text-gray-400 text-center mt-10">
+                {selectedDocIds.length === 0
+                  ? "请先点击左下角按钮选择需要分析的文档..."
+                  : "请输入您的财务分析问题，例如询问某个财务指标，或使用下方的预设问题快速开始。"}
+              </div>
+            )}
+
+            {chatMessages.map((msg) => (
+              <div
+                key={msg.id}
+                className={
+                  msg.role === "user"
+                    ? "self-end bg-yellow-100 text-black rounded-lg px-4 py-2 max-w-[70%]"
+                    : "w-full"
+                }
+              >
+                {msg.role === "assistant" ? (
+                  renderAssistantMessage(msg)
+                ) : (
+                  <span className="whitespace-pre-wrap">{msg.content}</span>
+                )}
+              </div>
+            ))}
+
+            {isSending && (
+              <div className="w-full text-center">
+                <div className="inline-block bg-gray-100 rounded-lg px-6 py-3">
+                  <span className="text-gray-600">正在分析计算...</span>
+                  <span className="ml-2 animate-pulse">💡</span>
+                </div>
+              </div>
+            )}
+
+            <div ref={chatEndRef} />
+          </div>
+        </div>
+
+        {/* Input Area - Sticky Bottom */}
+        <div className="sticky bottom-0 bg-white pt-2 pb-4 border-t border-gray-200">
+          {/* Input Box */}
+          <div className="flex gap-2 relative">
+            <button
+              onClick={() => setShowDocModal(true)}
+              className="px-3 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg border border-gray-300 transition-colors flex items-center gap-2"
+              title="选择分析文档"
+            >
+              <span className="text-sm hidden sm:inline">文档选择</span>
+              {selectedDocIds.length > 0 && (
+                <span className="bg-yellow-500 text-white text-xs px-1.5 py-0.5 rounded-full">
+                  {selectedDocIds.length}
+                </span>
+              )}
+            </button>
+
+            {/* Preset Questions Button */}
+            <div className="relative" ref={menuRef}>
+              <button
+                onClick={() => setShowPresetMenu(!showPresetMenu)}
+                className="h-full px-3 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg border border-gray-300 transition-colors flex items-center gap-2"
+                title="常用指标"
+              >
+                <span className="text-sm hidden sm:inline">预设问题</span>
+              </button>
+
+              {showPresetMenu && (
+                <div className="absolute bottom-full left-0 mb-2 w-64 bg-white border border-gray-200 rounded-lg shadow-lg z-10 overflow-hidden">
+                  <div className="p-2 text-xs font-semibold text-gray-500 border-b border-gray-100 bg-gray-50">
+                    点击插入问题
+                  </div>
+                  <div className="max-h-60 overflow-y-auto">
+                    {presetQuestions.map((q, idx) => (
+                      <button
+                        key={idx}
+                        onClick={() => handlePresetClick(q)}
+                        className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-yellow-50 hover:text-yellow-700 transition-colors border-b border-gray-50 last:border-0"
+                      >
+                        {q}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            <input
+              ref={inputRef}
+              type="text"
+              value={inputMessage}
+              onChange={(e) => setInputMessage(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && !e.shiftKey) {
+                  e.preventDefault();
+                  sendMessage(inputMessage);
+                }
+              }}
+              placeholder={selectedDocIds.length === 0 ? "请先选择待分析文档..." : "请输入您的财务分析问题..."}
+              disabled={isSending || selectedDocIds.length === 0}
+              className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-500 disabled:bg-gray-100 disabled:cursor-not-allowed"
+            />
+            <button
+              onClick={() => sendMessage(inputMessage)}
+              disabled={isSending || !inputMessage.trim() || selectedDocIds.length === 0}
+              className="px-6 py-2 bg-yellow-500 hover:bg-yellow-600 text-white font-semibold rounded-lg transition-colors disabled:bg-gray-300 disabled:cursor-not-allowed"
+            >
+              {isSending ? "发送中..." : "发送"}
+            </button>
+          </div>
+        </div>
+      </div>
     </PageContainer>
   );
-} 
+}

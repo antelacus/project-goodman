@@ -1,13 +1,39 @@
 "use client";
-import React, { useState } from "react";
+import React, { useState, useCallback, useEffect } from "react";
 import { useDocumentStore, Document } from "../../store/documents";
 import PageContainer from "../../components/PageContainer";
 import PageTitle from "../../components/PageTitle";
+import { useAdminAuth } from "../../components/AdminPasswordTrigger";
+import { useDropzone } from "react-dropzone";
+import {
+  DOC_TYPE_OPTIONS,
+  PERIOD_OPTIONS as PERIOD_OPTIONS_DATA,
+  formatDocType,
+  formatPeriod,
+} from "../../lib/document-constants";
+import {
+  isImage,
+  isPdf,
+  isExcel,
+  getFileExtension,
+} from "../../lib/storage-helpers";
 
-const KNOWLEDGE_TYPES = ["会计准则", "财务报表", "法律法规", "规章制度"];
-const BUSINESS_TYPES = ["发票", "合同", "记账凭证"];
-const YEARS = Array.from({ length: 20 }, (_, i) => `${2025 - i}`);
-const PERIOD_OPTIONS = ["长期有效", ...YEARS];
+// Generate year options (last 20 years)
+const YEAR_OPTIONS = Array.from({ length: 20 }, (_, i) => `${2025 - i}`);
+
+// Period options for dropdown (from constants)
+const PERIOD_SELECT_OPTIONS = PERIOD_OPTIONS_DATA;
+
+// Admin supported formats for database upload
+const ADMIN_SUPPORTED_FORMATS = {
+  "application/pdf": [".pdf"],
+  "image/png": [".png"],
+  "image/jpeg": [".jpg", ".jpeg"],
+  "image/webp": [".webp"],
+  "image/gif": [".gif"],
+  "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": [".xlsx"],
+};
+const MAX_FILE_SIZE = 2 * 1024 * 1024; // 2MB
 
 function EditableCell({
   value,
@@ -28,7 +54,10 @@ function EditableCell({
     if (options.includes(value) && value !== placeholder) setHasSelected(true);
   }, [value, options, placeholder]);
   const showPlaceholder = !hasSelected;
-  return editable ? (
+
+  if (!editable) return <span>{value || "-"}</span>;
+
+  return (
     <div className="relative">
       <button
         className={`px-2 py-1 border rounded text-sm bg-white hover:bg-gray-50 min-w-[80px] ${showPlaceholder ? "text-gray-400" : "text-black"}`}
@@ -57,8 +86,6 @@ function EditableCell({
         </div>
       )}
     </div>
-  ) : (
-    <span>{value}</span>
   );
 }
 
@@ -76,9 +103,12 @@ function EditableName({
   const baseName = match ? match[1] : value;
   const ext = match && match[2] ? match[2] : "";
   const [input, setInput] = useState(baseName);
-  React.useEffect(() => setInput(baseName), [value]);
+  React.useEffect(() => setInput(baseName), [baseName]);
   React.useEffect(() => { if (editable) setInput(baseName); }, [editable, baseName]);
-  return editable ? (
+
+  if (!editable) return <span className="whitespace-nowrap overflow-hidden text-ellipsis max-w-[20rem]">{value}</span>;
+
+  return (
     <div className="flex items-center">
       <input
         className="border px-2 py-1 rounded text-sm focus:outline-none focus:ring w-40"
@@ -96,16 +126,30 @@ function EditableName({
       />
       {ext && <span className="ml-1 text-gray-500 select-none">{ext}</span>}
     </div>
-  ) : (
-    <span>{value}</span>
   );
 }
 
 export default function DocumentsPage() {
   const documents = useDocumentStore((s) => s.documents);
   const updateDocument = useDocumentStore((s) => s.updateDocument);
+  const deleteDocument = useDocumentStore((s) => s.deleteDocument);
   const knowledgeDocs = documents.filter((d) => d.docCategory === "knowledge");
   const businessDocs = documents.filter((d) => d.docCategory === "business");
+
+  // Admin Auth
+  const { triggerRef, isAuthenticated, logout, modal } = useAdminAuth();
+
+  // Upload State
+  const [uploadStatus, setUploadStatus] = useState<'idle' | 'uploading' | 'success' | 'error' | 'unsupported' | 'too_large'>('idle');
+  const [currentFileName, setCurrentFileName] = useState<string | null>(null);
+  const [documentType, setDocumentType] = useState<string>('balance_sheet');
+  const [uploadYear, setUploadYear] = useState<string>(new Date().getFullYear().toString());
+  const [uploadPeriod, setUploadPeriod] = useState<string>('Q4');
+  const [columnMapping, setColumnMapping] = useState({
+    name: '',
+    periodEnd: '',
+    periodStart: ''
+  });
 
   // 选择状态
   const [selectedKnowledge, setSelectedKnowledge] = useState<string[]>([]);
@@ -113,6 +157,27 @@ export default function DocumentsPage() {
   // 预览弹窗
   const [previewDoc, setPreviewDoc] = useState<Document | null>(null);
   const [previewOpen, setPreviewOpen] = useState(false);
+  const [previewSignedUrl, setPreviewSignedUrl] = useState<string | null>(null);
+  const [previewLoading, setPreviewLoading] = useState(false);
+
+  // Fetch signed URL when preview opens
+  useEffect(() => {
+    if (previewOpen && previewDoc?.fileUrl) {
+      setPreviewLoading(true);
+      setPreviewSignedUrl(null);
+      fetch(`/api/documents/preview-url?fileUrl=${encodeURIComponent(previewDoc.fileUrl)}`)
+        .then(res => res.json())
+        .then(data => {
+          if (data.signedUrl) {
+            setPreviewSignedUrl(data.signedUrl);
+          }
+        })
+        .catch(err => console.error('Failed to get preview URL:', err))
+        .finally(() => setPreviewLoading(false));
+    } else {
+      setPreviewSignedUrl(null);
+    }
+  }, [previewOpen, previewDoc?.fileUrl]);
 
   // 全选
   const allKnowledgeSelected = knowledgeDocs.length > 0 && selectedKnowledge.length === knowledgeDocs.length;
@@ -142,62 +207,226 @@ export default function DocumentsPage() {
     }
   };
 
-  // 编辑属性
-  const handleEdit = (id: string, field: "type" | "period" | "name", value: string) => {
+  // 编辑属性 - 使用 PATCH API
+  const handleEdit = async (id: string, field: "docType" | "period" | "year" | "name", value: string) => {
     const doc = documents.find((d) => d.id === id);
     if (!doc) return;
-    if (field === "type") {
-      updateDocument(id, {
-        summary: {
-          document_type: value,
-          summary: doc.summary?.summary || "",
-          key_metrics: doc.summary?.key_metrics || [],
-          time_period: doc.summary?.time_period || ""
-        },
-      });
+
+    // Build updates object based on field
+    const updates: Record<string, string | null> = {};
+    if (field === "docType") {
+      updates.doc_type = value || null;
     } else if (field === "period") {
-      updateDocument(id, {
-        summary: {
-          document_type: doc.summary?.document_type || "",
-          summary: doc.summary?.summary || "",
-          key_metrics: doc.summary?.key_metrics || [],
-          time_period: value
-        },
-      });
+      updates.period = value || null;
+    } else if (field === "year") {
+      updates.year = value || null;
     } else if (field === "name") {
-      updateDocument(id, { name: value });
+      updates.name = value;
+    }
+
+    // Get admin password from session storage or prompt
+    const adminPassword = sessionStorage.getItem('adminPassword') || prompt('请输入管理员密码：');
+    if (!adminPassword) return;
+
+    try {
+      const response = await fetch('/api/documents', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ documentId: id, adminPassword, updates }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || '更新失败');
+      }
+
+      // Update local state
+      if (field === "docType") {
+        updateDocument(id, { docType: value || null });
+      } else if (field === "period") {
+        updateDocument(id, { period: value || null });
+      } else if (field === "year") {
+        updateDocument(id, { year: value || null });
+      } else if (field === "name") {
+        updateDocument(id, { name: value });
+      }
+    } catch (err) {
+      console.error('Update error:', err);
+      alert(`更新失败: ${err instanceof Error ? err.message : '未知错误'}`);
     }
   };
+
+  // 删除文档
+  const handleDelete = async (type: "knowledge" | "business") => {
+    const selected = type === "knowledge" ? selectedKnowledge : selectedBusiness;
+    if (selected.length === 0) return;
+
+    if (!confirm(`确定要删除选中的 ${selected.length} 个文档吗？`)) return;
+
+    for (const id of selected) {
+      await deleteDocument(id);
+    }
+
+    if (type === "knowledge") setSelectedKnowledge([]);
+    else setSelectedBusiness([]);
+  };
+
+  // Upload Logic
+  const convertToBase64 = (file: File): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => {
+        const result = reader.result as string;
+        const base64 = result.split(',')[1];
+        resolve(base64);
+      };
+      reader.onerror = () => reject(new Error('文件读取失败'));
+      reader.readAsDataURL(file);
+    });
+  };
+
+  const uploadToDatabase = useCallback(async (file: File) => {
+    try {
+      const base64Data = await convertToBase64(file);
+      const adminPassword = prompt('请输入管理员密码以上传到数据库：');
+      if (!adminPassword) {
+        setUploadStatus('error');
+        alert('需要管理员密码才能上传到数据库');
+        return;
+      }
+
+      const isFinancialStatement = documentType === 'balance_sheet' || documentType === 'income_statement' || documentType === 'cash_flow';
+
+      const response = await fetch('/api/admin/upload-database-document', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          documentText: base64Data,
+          fileName: file.name,
+          documentType,
+          year: isFinancialStatement ? uploadYear : undefined,
+          period: isFinancialStatement ? uploadPeriod : undefined,
+          columnMapping: isFinancialStatement ? columnMapping : undefined,
+          adminPassword,
+          metadata: {
+            size: file.size,
+            uploadTime: new Date().toISOString(),
+          }
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || '上传失败');
+      }
+
+      const result = await response.json();
+      setUploadStatus('success');
+      alert(`文档已成功上传到数据库！\n文档ID: ${result.documentId}\n处理时间: ${result.processingTime}ms`);
+      // Refresh documents list logic would go here if not using realtime/optimistic updates
+      // For now, we rely on the user refreshing or the store updating if we added that logic
+      window.location.reload();
+    } catch (err: unknown) {
+      setUploadStatus('error');
+      console.error('Database Upload Error:', err);
+      const errorMessage = err instanceof Error ? err.message : '未知错误';
+      alert(`数据库上传失败: ${errorMessage}`);
+    }
+  }, [documentType, uploadYear, uploadPeriod, columnMapping]);
+
+  const onDrop = useCallback(async (acceptedFiles: File[]) => {
+    const file = acceptedFiles[0];
+    if (!file) return;
+
+    if (file.size > MAX_FILE_SIZE) {
+      setUploadStatus('too_large');
+      return;
+    }
+
+    setUploadStatus('uploading');
+    setCurrentFileName(file.name);
+
+    await uploadToDatabase(file);
+  }, [uploadToDatabase]);
+
+  const { getRootProps, getInputProps, isDragActive } = useDropzone({
+    onDrop,
+    accept: ADMIN_SUPPORTED_FORMATS,
+    maxFiles: 1,
+    maxSize: MAX_FILE_SIZE,
+    onDropRejected: (fileRejections) => {
+      const rejection = fileRejections[0];
+      if (rejection?.errors[0]?.code === 'file-too-large') {
+        setUploadStatus('too_large');
+      } else {
+        setUploadStatus('unsupported');
+      }
+    }
+  });
+
+  const getUploadStatusMessage = () => {
+    switch (uploadStatus) {
+      case 'uploading': return '上传中...';
+      case 'unsupported': return '文件格式不支持';
+      case 'too_large': return '文件大小超过 2MB';
+      case 'success': return '上传成功';
+      case 'error': return '上传失败';
+      default: return '点击或拖拽上传文件到数据库';
+    }
+  };
+
+  const getStatusColor = () => {
+    switch (uploadStatus) {
+      case 'success': return 'text-green-600';
+      case 'error':
+      case 'unsupported':
+      case 'too_large': return 'text-red-600';
+      case 'uploading': return 'text-blue-600';
+      default: return 'text-gray-500';
+    }
+  };
+
+  useEffect(() => {
+    if (uploadStatus !== 'idle' && uploadStatus !== 'uploading') {
+      const timer = setTimeout(() => setUploadStatus('idle'), 3000);
+      return () => clearTimeout(timer);
+    }
+  }, [uploadStatus]);
+
 
   // 属性行下拉编辑（直接在表头显示）
   const renderHeader = (type: "knowledge" | "business") => {
     const selected = type === "knowledge" ? selectedKnowledge : selectedBusiness;
     const docs = type === "knowledge" ? knowledgeDocs : businessDocs;
     const allSelected = type === "knowledge" ? allKnowledgeSelected : allBusinessSelected;
-    const handleTypeChange = (v: string) => selected.forEach(id => handleEdit(id, "type", v));
+    const handleTypeChange = (v: string) => selected.forEach(id => handleEdit(id, "docType", v));
+    const handleYearChange = (v: string) => selected.forEach(id => handleEdit(id, "year", v));
     const handlePeriodChange = (v: string) => selected.forEach(id => handleEdit(id, "period", v));
     const firstDoc = docs.find(d => selected.includes(d.id));
+
     return (
-      <div className="flex font-semibold border-b border-gray-200 pb-2 text-gray-700">
+      <div className="flex font-semibold border-b border-gray-200 pb-2 text-gray-700 items-center text-sm">
         {/* 左侧固定：勾选框+文档名 */}
-        <div className="flex-shrink-0 flex items-center w-60 min-w-[16rem]">
-          <div className="w-12 flex items-center justify-center">
-            <input
-              type="checkbox"
-              className="w-4 h-4"
-              checked={allSelected}
-              onChange={() => handleSelectAll(type)}
-            />
-          </div>
-          <div className="flex-1 min-w-0 pl-4">文档名</div>
+        <div className="flex-shrink-0 flex items-center w-72 min-w-[18rem]">
+          {isAuthenticated && (
+            <div className="w-10 flex items-center justify-center">
+              <input
+                type="checkbox"
+                className="w-4 h-4"
+                checked={allSelected}
+                onChange={() => handleSelectAll(type)}
+              />
+            </div>
+          )}
+          <div className={`flex-1 min-w-0 ${isAuthenticated ? 'pl-2' : 'pl-4'}`}>文档名</div>
         </div>
         {/* 右侧功能区 */}
-        <div className="w-20 text-center flex-shrink-0">预览</div>
-        <div className="w-32 text-center relative flex-shrink-0">
-          {selected.length > 0 ? (
+        <div className="w-16 text-center flex-shrink-0">预览</div>
+        <div className="w-28 text-center relative flex-shrink-0">
+          {isAuthenticated && selected.length > 0 ? (
             <EditableCell
-              value={firstDoc?.summary?.document_type || ""}
-              options={type === "knowledge" ? KNOWLEDGE_TYPES : BUSINESS_TYPES}
+              value={firstDoc?.docType || ""}
+              options={DOC_TYPE_OPTIONS.map(o => o.value)}
               editable={true}
               onChange={handleTypeChange}
               placeholder="选择类型"
@@ -206,22 +435,59 @@ export default function DocumentsPage() {
             <span>类型</span>
           )}
         </div>
-        <div className="w-32 text-center relative flex-shrink-0">
-          {selected.length > 0 ? (
+        <div className="w-20 text-center relative flex-shrink-0">
+          {isAuthenticated && selected.length > 0 ? (
             <EditableCell
-              value={firstDoc?.summary?.time_period || ""}
-              options={PERIOD_OPTIONS}
+              value={firstDoc?.year || ""}
+              options={YEAR_OPTIONS}
               editable={true}
-              onChange={handlePeriodChange}
-              placeholder="选择期别"
+              onChange={handleYearChange}
+              placeholder="年份"
             />
           ) : (
-            <span>期别</span>
+            <span>年份</span>
           )}
         </div>
-        <div className="w-24 text-center flex-shrink-0">大小</div>
+        <div className="w-24 text-center relative flex-shrink-0">
+          {isAuthenticated && selected.length > 0 ? (
+            <EditableCell
+              value={firstDoc?.period || ""}
+              options={PERIOD_SELECT_OPTIONS.map(o => o.value)}
+              editable={true}
+              onChange={handlePeriodChange}
+              placeholder="期间"
+            />
+          ) : (
+            <span>期间</span>
+          )}
+        </div>
+        <div className="w-32 text-center flex-shrink-0">上传时间</div>
+        <div className="w-20 text-center flex-shrink-0">大小</div>
+        {isAuthenticated && (
+          <div className="w-16 text-center flex-shrink-0">
+            {selected.length > 0 && (
+              <button
+                onClick={() => handleDelete(type)}
+                className="text-red-500 hover:text-red-700 text-sm"
+              >
+                删除
+              </button>
+            )}
+          </div>
+        )}
       </div>
     );
+  };
+
+  // Format upload time for display
+  const formatUploadTime = (time: string | undefined) => {
+    if (!time) return "-";
+    try {
+      const date = new Date(time);
+      return date.toLocaleDateString('zh-CN', { year: 'numeric', month: '2-digit', day: '2-digit' });
+    } catch {
+      return "-";
+    }
   };
 
   // 渲染表格行
@@ -233,59 +499,205 @@ export default function DocumentsPage() {
   ) => (
     <div
       key={doc.id}
-      className={`flex items-center border-b border-gray-200 ${selected ? "bg-gray-50" : ""}`}
+      className={`flex items-center border-b border-gray-200 py-2 text-sm ${selected ? "bg-gray-50" : ""}`}
     >
       {/* 左侧固定：勾选框+文件名 */}
-      <div className="flex-shrink-0 flex items-center w-60 min-w-[16rem] h-full">
-        <div className="w-12 flex items-center justify-center h-full">
-          <input
-            type="checkbox"
-            checked={selected}
-            onChange={() => handleSelect(doc.id, type)}
-            className="w-4 h-4"
-          />
-        </div>
-        <div className="flex-1 min-w-0 h-full flex items-center pl-4">
-          {type === "business" && selected && onlyOneSelected ? (
+      <div className="flex-shrink-0 flex items-center w-72 min-w-[18rem] h-full">
+        {isAuthenticated && (
+          <div className="w-10 flex items-center justify-center h-full">
+            <input
+              type="checkbox"
+              checked={selected}
+              onChange={() => handleSelect(doc.id, type)}
+              className="w-4 h-4"
+            />
+          </div>
+        )}
+        <div className={`flex-1 min-w-0 h-full flex items-center ${isAuthenticated ? 'pl-2' : 'pl-4'}`}>
+          {isAuthenticated && selected && onlyOneSelected ? (
             <EditableName
               value={doc.name}
               editable={true}
               onChange={(v) => handleEdit(doc.id, "name", v)}
             />
           ) : (
-            <span className="whitespace-nowrap overflow-hidden text-ellipsis max-w-[20rem]">{doc.name}</span>
+            <span className="whitespace-nowrap overflow-hidden text-ellipsis max-w-[16rem]" title={doc.name}>{doc.name}</span>
           )}
         </div>
       </div>
       {/* 右侧功能区 */}
-      <div className="w-20 text-center h-full flex items-center justify-center flex-shrink-0">
+      <div className="w-16 text-center h-full flex items-center justify-center flex-shrink-0">
         <button
-          className="px-2 py-1 border rounded text-sm bg-white hover:bg-gray-100"
+          className="px-2 py-1 border rounded text-xs bg-white hover:bg-gray-100"
           onClick={() => { setPreviewDoc(doc); setPreviewOpen(true); }}
         >预览</button>
       </div>
-      <div className="w-32 text-center h-full flex items-center justify-center flex-shrink-0">
-        <span>{doc.summary?.document_type || "-"}</span>
+      <div className="w-28 text-center h-full flex items-center justify-center flex-shrink-0">
+        <span>{formatDocType(doc.docType)}</span>
       </div>
-      <div className="w-32 text-center h-full flex items-center justify-center flex-shrink-0">
-        <span>{doc.summary?.time_period || "-"}</span>
+      <div className="w-20 text-center h-full flex items-center justify-center flex-shrink-0">
+        <span>{doc.year || "-"}</span>
       </div>
       <div className="w-24 text-center h-full flex items-center justify-center flex-shrink-0">
+        <span>{formatPeriod(doc.period)}</span>
+      </div>
+      <div className="w-32 text-center h-full flex items-center justify-center flex-shrink-0 text-gray-500">
+        {formatUploadTime(doc.uploadTime)}
+      </div>
+      <div className="w-20 text-center h-full flex items-center justify-center flex-shrink-0">
         {doc.size ? `${Math.round(doc.size / 1024)} KB` : "-"}
       </div>
+      {isAuthenticated && (
+        <div className="w-16 text-center h-full flex items-center justify-center flex-shrink-0">
+          {/* Placeholder for alignment with header delete button */}
+        </div>
+      )}
     </div>
   );
 
   return (
-    <PageContainer maxWidth="3xl">
+    <PageContainer maxWidth="4xl">
+      {modal}
       <div className="flex flex-col gap-8">
         <section className="w-full">
-          <PageTitle>文档管理</PageTitle>
+          <PageTitle className="flex items-center gap-3">
+            <span ref={triggerRef} className="cursor-pointer select-none">文档管理</span>
+            {isAuthenticated && (
+              <span className="text-sm px-3 py-1 bg-yellow-100 text-yellow-800 rounded-full font-medium">
+                管理员模式
+              </span>
+            )}
+          </PageTitle>
           <p className="text-gray-700 mb-6">
-            统一管理数据库文档与待处理文档，支持分类、批量选择、属性编辑和重命名。<br />
-            <br />
-            (出于演示目的，该功能模块对文档的修改结果不会永久保存，关闭网站所有页面后修改即失效。)
-            </p>
+            统一管理数据库文档与待处理文档。
+            {!isAuthenticated && "（如需管理文档，请联系管理员）"}
+            {isAuthenticated && "（您可以上传、删除、重命名及修改文档属性）"}
+          </p>
+
+          {/* Admin Upload Section */}
+          {isAuthenticated && (
+            <div className="mb-8 p-6 bg-yellow-50 border border-yellow-200 rounded-lg">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="font-bold text-lg">上传文档到数据库</h3>
+                <button
+                  onClick={logout}
+                  className="text-sm px-3 py-1 bg-gray-200 hover:bg-gray-300 rounded transition-colors"
+                >
+                  退出管理员模式
+                </button>
+              </div>
+
+              <div className="mb-4">
+                <label className="font-medium mb-2 block">文档类型：</label>
+                <select
+                  value={documentType}
+                  onChange={(e) => setDocumentType(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:border-yellow-500"
+                >
+                  <optgroup label="财务报表">
+                    <option value="balance_sheet">资产负债表</option>
+                    <option value="income_statement">利润表</option>
+                    <option value="cash_flow">现金流量表</option>
+                  </optgroup>
+                  <optgroup label="法规准则">
+                    <option value="regulation">法律法规</option>
+                    <option value="accounting_standard">会计准则</option>
+                    <option value="policy">规章制度</option>
+                  </optgroup>
+                  <optgroup label="其他">
+                    <option value="general">其他文档</option>
+                  </optgroup>
+                </select>
+              </div>
+
+              {/* Year/Period and Column Mapping (only for financial statements) */}
+              {(documentType === 'balance_sheet' || documentType === 'income_statement' || documentType === 'cash_flow') && (
+                <div className="space-y-4 mb-4">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="font-medium mb-2 block">年份：</label>
+                      <select
+                        value={uploadYear}
+                        onChange={(e) => setUploadYear(e.target.value)}
+                        className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:border-yellow-500"
+                      >
+                        {YEAR_OPTIONS.map(year => (
+                          <option key={year} value={year}>{year}年</option>
+                        ))}
+                      </select>
+                    </div>
+                    <div>
+                      <label className="font-medium mb-2 block">期间：</label>
+                      <select
+                        value={uploadPeriod}
+                        onChange={(e) => setUploadPeriod(e.target.value)}
+                        className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:border-yellow-500"
+                      >
+                        {PERIOD_SELECT_OPTIONS.map(opt => (
+                          <option key={opt.value} value={opt.value}>{opt.label}</option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+
+                  <div className="p-4 bg-gray-50 rounded border border-gray-200">
+                    <h4 className="font-bold mb-3 text-sm text-gray-700">Excel 列映射 (请输入列号，如 A, B, C)</h4>
+                    <div className="grid grid-cols-3 gap-4">
+                      <div>
+                        <label className="text-xs font-medium mb-1 block text-gray-600">科目名称列</label>
+                        <input
+                          type="text"
+                          placeholder="例如: A"
+                          value={columnMapping.name}
+                          onChange={(e) => setColumnMapping({ ...columnMapping, name: e.target.value.toUpperCase() })}
+                          className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:border-yellow-500 uppercase"
+                        />
+                      </div>
+                      <div>
+                        <label className="text-xs font-medium mb-1 block text-gray-600">期末余额列</label>
+                        <input
+                          type="text"
+                          placeholder="例如: B"
+                          value={columnMapping.periodEnd}
+                          onChange={(e) => setColumnMapping({ ...columnMapping, periodEnd: e.target.value.toUpperCase() })}
+                          className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:border-yellow-500 uppercase"
+                        />
+                      </div>
+                      <div>
+                        <label className="text-xs font-medium mb-1 block text-gray-600">期初余额列</label>
+                        <input
+                          type="text"
+                          placeholder="例如: C"
+                          value={columnMapping.periodStart}
+                          onChange={(e) => setColumnMapping({ ...columnMapping, periodStart: e.target.value.toUpperCase() })}
+                          className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:border-yellow-500 uppercase"
+                        />
+                      </div>
+                    </div>
+                    <p className="text-xs text-gray-500 mt-2">
+                      * 请确保 Excel 文件中对应列包含正确的数据。系统将根据这些列提取财务数据。
+                    </p>
+                  </div>
+                </div>
+              )}
+
+              <div
+                {...getRootProps()}
+                className={`w-full p-10 border-2 border-dashed rounded-lg text-center cursor-pointer transition-colors ${isDragActive ? "border-black bg-gray-50" : "border-gray-300 hover:border-black"
+                  }`}
+              >
+                <input {...getInputProps()} />
+                <p className={`${getStatusColor()} font-medium`}>{getUploadStatusMessage()}</p>
+                {currentFileName && uploadStatus === 'success' && (
+                  <p className="text-sm text-gray-500 mt-1">{currentFileName}</p>
+                )}
+              </div>
+              <p className="text-sm text-gray-500 mt-2">
+                支持格式：PDF、PNG、JPG、JPEG、WEBP、GIF、Excel(.xlsx)（最大 2MB，仅限单个工作表）
+              </p>
+            </div>
+          )}
+
           <div className="mt-8">
             {/* 知识型文档 */}
             <div className="mb-12">
@@ -337,8 +749,8 @@ export default function DocumentsPage() {
             onClick={() => setPreviewOpen(false)}
           >
             <div
-              className="bg-white rounded-lg shadow-xl max-w-2xl w-full p-6 relative flex flex-col"
-              style={{ maxHeight: '85vh' }}
+              className="bg-white rounded-lg shadow-xl max-w-4xl w-full p-6 relative flex flex-col"
+              style={{ maxHeight: '90vh' }}
               onClick={e => e.stopPropagation()}
             >
               <button
@@ -347,21 +759,98 @@ export default function DocumentsPage() {
                 aria-label="关闭"
               >×</button>
               <h3 className="text-xl font-bold mb-3 text-gray-800 flex-shrink-0">{previewDoc.name}</h3>
-              {previewDoc.summary && (
-                <div className="mb-4 text-sm text-gray-700 border-b pb-3 flex-shrink-0">
-                  <p><strong>类型:</strong> {previewDoc.summary.document_type}</p>
-                  <p><strong>期间:</strong> {previewDoc.summary.time_period}</p>
-                  <p><strong>关键指标:</strong> {previewDoc.summary.key_metrics?.join('，')}</p>
+
+              {/* Document metadata */}
+              <div className="mb-4 text-sm text-gray-700 border-b pb-3 flex-shrink-0">
+                <div className="flex flex-wrap gap-4">
+                  <p><strong>类型:</strong> {formatDocType(previewDoc.docType)}</p>
+                  {previewDoc.year && <p><strong>年份:</strong> {previewDoc.year}</p>}
+                  {previewDoc.period && <p><strong>期间:</strong> {formatPeriod(previewDoc.period)}</p>}
+                </div>
+                {previewDoc.summary?.key_metrics && previewDoc.summary.key_metrics.length > 0 && (
+                  <p className="mt-1"><strong>关键指标:</strong> {previewDoc.summary.key_metrics.join('，')}</p>
+                )}
+                {previewDoc.summary?.summary && (
                   <p className="mt-2"><strong>摘要:</strong> {previewDoc.summary.summary}</p>
-                </div>
-              )}
-              <div className="mt-2 flex-grow overflow-y-auto">
-                <p className="text-sm text-gray-600 mb-2 font-semibold">完整内容预览：</p>
-                <div className="bg-gray-50 rounded p-4 text-sm whitespace-pre-wrap">
-                  {previewDoc.chunks && previewDoc.chunks.length > 0
-                    ? previewDoc.chunks.map(chunk => chunk.text).join('\n\n')
-                    : "无内容可预览。"}
-                </div>
+                )}
+              </div>
+
+              {/* File preview area */}
+              <div className="flex-grow overflow-hidden flex flex-col min-h-0">
+                {previewLoading ? (
+                  <div className="flex items-center justify-center h-64 bg-gray-50 rounded">
+                    <div className="text-gray-500">加载中...</div>
+                  </div>
+                ) : previewSignedUrl && previewDoc.fileUrl ? (
+                  // Original file preview
+                  <div className="flex-grow overflow-hidden">
+                    {isPdf(previewDoc.name) && (
+                      <iframe
+                        src={previewSignedUrl}
+                        className="w-full h-full min-h-[500px] rounded border"
+                        title="PDF Preview"
+                      />
+                    )}
+                    {isImage(previewDoc.name) && (
+                      <div className="flex items-center justify-center h-full bg-gray-50 rounded p-4">
+                        <img
+                          src={previewSignedUrl}
+                          alt={previewDoc.name}
+                          className="max-w-full max-h-[500px] object-contain"
+                        />
+                      </div>
+                    )}
+                    {isExcel(previewDoc.name) && (
+                      <div className="bg-gray-50 rounded p-4">
+                        <p className="text-sm text-gray-600 mb-2">
+                          Excel 文件不支持直接预览。
+                          <a
+                            href={previewSignedUrl}
+                            download={previewDoc.name}
+                            className="ml-2 text-blue-600 hover:underline"
+                          >
+                            点击下载
+                          </a>
+                        </p>
+                        {/* Fallback to text content */}
+                        {previewDoc.chunks && previewDoc.chunks.length > 0 && (
+                          <div className="mt-4">
+                            <p className="text-sm text-gray-600 mb-2 font-semibold">提取的文本内容：</p>
+                            <div className="bg-white rounded p-4 text-sm whitespace-pre-wrap max-h-[400px] overflow-y-auto border">
+                              {previewDoc.chunks.map(chunk => chunk.text).join('\n\n')}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                    {!isPdf(previewDoc.name) && !isImage(previewDoc.name) && !isExcel(previewDoc.name) && (
+                      <div className="bg-gray-50 rounded p-4">
+                        <p className="text-sm text-gray-600 mb-2">
+                          不支持此文件类型的预览。
+                          <a
+                            href={previewSignedUrl}
+                            download={previewDoc.name}
+                            className="ml-2 text-blue-600 hover:underline"
+                          >
+                            点击下载
+                          </a>
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  // Text content fallback
+                  <div className="flex-grow overflow-y-auto">
+                    {!previewDoc.fileUrl && (
+                      <p className="text-sm text-gray-500 mb-2 italic">原始文件不可用，显示提取的文本内容：</p>
+                    )}
+                    <div className="bg-gray-50 rounded p-4 text-sm whitespace-pre-wrap">
+                      {previewDoc.chunks && previewDoc.chunks.length > 0
+                        ? previewDoc.chunks.map(chunk => chunk.text).join('\n\n')
+                        : "无内容可预览。"}
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
           </div>
@@ -369,4 +858,4 @@ export default function DocumentsPage() {
       </div>
     </PageContainer>
   );
-} 
+}

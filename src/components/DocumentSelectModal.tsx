@@ -9,6 +9,7 @@ interface DocumentSelectModalProps {
   selectedIds: string[];
   onSelect: (ids: string[]) => void;
   showUpload?: boolean;
+  documents?: Document[];
 }
 
 const DocumentSelectModal: React.FC<DocumentSelectModalProps> = ({
@@ -19,8 +20,10 @@ const DocumentSelectModal: React.FC<DocumentSelectModalProps> = ({
   selectedIds,
   onSelect,
   showUpload = false,
+  documents: customDocuments,
 }) => {
-  const documents = useDocumentStore((s) => s.documents);
+  const storeDocuments = useDocumentStore((s) => s.documents);
+  const documents = customDocuments || storeDocuments;
   const [search, setSearch] = useState("");
   const [uploading, setUploading] = useState(false);
 
@@ -50,47 +53,71 @@ const DocumentSelectModal: React.FC<DocumentSelectModalProps> = ({
   const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    if (file.size > 1048576) {
-      alert('文件大小不能超过1MB');
+
+    // 2MB limit matching the API
+    if (file.size > 2 * 1024 * 1024) {
+      alert('文件大小不能超过2MB');
       return;
     }
+
     setUploading(true);
     try {
-      // 只支持PDF
-      if (!file.type.includes("pdf")) throw new Error("仅支持PDF文件");
-      // 复用data-extract的processPDF逻辑（此处仅做占位，实际应抽取为util）
+      // Convert to Base64
       const arrayBuffer = await file.arrayBuffer();
-      const pdfjsLib = await import("pdfjs-dist/build/pdf");
-      pdfjsLib.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.mjs`;
-      const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
-      let fullText = "";
-      for (let i = 1; i <= pdf.numPages; i++) {
-        const page = await pdf.getPage(i);
-        const textContent = await page.getTextContent();
-        fullText += textContent.items.map((item: { str: string }) => item.str).join(" ") + "\n";
+      const base64String = Buffer.from(arrayBuffer).toString('base64');
+
+      const response = await fetch('/api/documents/upload-temp', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          fileData: base64String,
+          fileName: file.name,
+          fileType: file.type,
+          source: 'guidance-chat'  // Use guidance-chat to allow all supported file types
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || '上传失败');
       }
+
+      const result = await response.json();
+
       const newDoc: Document = {
-        id: `business-${Date.now()}`,
+        id: result.documentId,
         name: file.name,
-        type: "pdf",
-        docCategory: "business",
+        type: file.name.endsWith('.pdf') ? 'pdf' : 'knowledge', // Simplified type mapping
+        docCategory: "business", // Uploads are always business/temp
         uploadTime: new Date().toISOString(),
         status: "ready",
         size: file.size,
-        summary: { summary: fullText, document_type: '', key_metrics: [], time_period: '' },
-        chunks: [{ id: 'chunk-0', text: fullText, embedding: [], chunkIndex: 0 }],
+        is_temp: true,
+        summary: {
+          summary: result.textPreview || 'Temporary document',
+          document_type: 'temp_upload',
+          key_metrics: [],
+          time_period: ''
+        },
       };
+
       useDocumentStore.getState().addDocument(newDoc);
-      // 自动勾选新上传的文档
+
+      // Auto-select the new document
       if (mode === "single") {
         onSelect([newDoc.id]);
       } else {
         onSelect([...selectedIds, newDoc.id]);
       }
     } catch (err) {
+      console.error("Upload error:", err);
       alert("上传失败：" + (err instanceof Error ? err.message : "未知错误"));
     } finally {
       setUploading(false);
+      // Reset input value to allow uploading the same file again if needed
+      e.target.value = '';
     }
   };
 
@@ -173,7 +200,7 @@ const DocumentSelectModal: React.FC<DocumentSelectModalProps> = ({
               <input
                 id="doc-upload-input"
                 type="file"
-                accept="application/pdf"
+                accept=".pdf,.png,.jpg,.jpeg,.webp,.gif,.txt,.md"
                 onChange={handleUpload}
                 disabled={uploading}
                 style={{ display: 'none' }}

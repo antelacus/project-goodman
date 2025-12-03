@@ -1,332 +1,510 @@
 "use client";
-import React, { useState, useCallback, useRef, useEffect } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import { useDocumentStore, Document } from "../../store/documents";
-import HighlightLatex from "../../components/HighlightLatex";
-import LatexCalcModal from "../../components/LatexCalcModal";
-import remarkMath from "remark-math";
-import rehypeKatex from "rehype-katex";
-import ReactMarkdown from "react-markdown";
-import { evaluate } from "mathjs";
-import "katex/dist/katex.min.css";
-
-import { complianceGuidancePresets } from "../../lib/presetQuestions";
-import ChatInputBox from "../../components/ChatInputBox";
 import PageContainer from "../../components/PageContainer";
 import PageTitle from "../../components/PageTitle";
 import { checkAndIncreaseApiLimit } from "../../lib/rateLimit";
 import Link from "next/link";
-
-// Set up the worker source for pdfjs-dist
-// pdfjsLib.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.mjs`;
+import RichTextRenderer from "../../components/RichTextRenderer";
+import DocumentSelectModal from "../../components/DocumentSelectModal";
 
 type ChatMessage = {
+  id: string;
   role: 'user' | 'assistant';
   content: string;
   timestamp: string;
-  streaming?: boolean; // 新增，标记AI回复是否正在逐字输出
+  responseData?: GuidanceResponse;
 };
 
-export default function KnowledgeChatPage() {
-  const documents = useDocumentStore((s) => s.documents);
-  const addDocument = useDocumentStore((s) => s.addDocument);
+type Citation = {
+  regulation: string;
+  article: string;
+  content: string;
+  relevance: number;
+};
+
+type RelatedArticle = {
+  regulation: string;
+  article: string;
+  summary: string;
+};
+
+type GuidanceResponse = {
+  type: 'guidance' | 'not_found' | 'low_confidence';
+  guidance?: string;
+  citations: Citation[];
+  confidence: number;
+  relatedArticles?: RelatedArticle[];
+  warnings?: string[];
+};
+
+// Preset questions
+const presetQuestions = [
+  "公司销售软件产品，应该适用什么增值税税率？",
+  "关于数据资源入表，有哪些会计准则规定？",
+  "小规模纳税人和一般纳税人的区别是什么？",
+  "企业所得税的基本税率是多少？",
+  "增值税专用发票和普通发票的区别？",
+  "固定资产折旧的会计处理方法有哪些？"
+];
+
+const CitationCard = ({ citation, id }: { citation: Citation; id?: string }) => {
+  const [expanded, setExpanded] = useState(false);
+  const relevancePercent = (citation.relevance * 100).toFixed(0);
+  const relevanceColor = citation.relevance >= 0.8 ? 'text-green-600' : citation.relevance >= 0.6 ? 'text-yellow-600' : 'text-gray-600';
+
+  return (
+    <div id={id} className="border border-gray-300 rounded-lg p-3 bg-gray-50 transition-all duration-300">
+      <div className="flex items-start justify-between mb-2">
+        <div className="flex items-center gap-2">
+          <span className="text-sm font-semibold text-blue-700">📖 {citation.regulation}</span>
+          <span className="text-sm text-gray-600">{citation.article}</span>
+        </div>
+        <span className={`text-xs ${relevanceColor} font-medium`}>
+          相关度: {relevancePercent}%
+        </span>
+      </div>
+
+      {expanded && (
+        <div className="mt-2 text-sm text-gray-700 bg-white p-3 rounded border border-gray-200">
+          {citation.content}
+        </div>
+      )}
+
+      <button
+        onClick={() => setExpanded(!expanded)}
+        className="mt-2 text-xs text-blue-600 hover:text-blue-800 underline"
+      >
+        {expanded ? "收起条款内容" : "展开查看条款内容"}
+      </button>
+    </div>
+  );
+};
+
+export default function GuidanceChatPage() {
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
-  const [isSending, setIsSending] = useState(false);
-  const [selectedKnowledgeDocs, setSelectedKnowledgeDocs] = useState<string[]>([]);
-  const [selectedBusinessDocs, setSelectedBusinessDocs] = useState<string[]>([]);
+  const [input, setInput] = useState("");
+  const [loading, setLoading] = useState(false);
   const chatEndRef = useRef<HTMLDivElement>(null);
-  const [modalOpen, setModalOpen] = useState(false);
-  const [modalLatex, setModalLatex] = useState('');
-  const [modalParsed, setModalParsed] = useState('');
-  const [modalResult, setModalResult] = useState('');
-  const [modalError, setModalError] = useState<string | undefined>(undefined);
+
+  // Document Selection State
+  const [availableDocuments, setAvailableDocuments] = useState<Document[]>([]);
+  const [selectedDocIds, setSelectedDocIds] = useState<string[]>([]);
+  const [showDocModal, setShowDocModal] = useState(false);
+  const [showPresetMenu, setShowPresetMenu] = useState(false);
+  const inputRef = useRef<HTMLInputElement>(null);
+  const menuRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
+        setShowPresetMenu(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  // Subscribe to store updates for new uploads
+  const storeDocuments = useDocumentStore((s) => s.documents);
 
   const scrollToBottom = () => {
     chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
   };
 
   useEffect(() => {
-    scrollToBottom();
+    if (chatMessages.length > 0) {
+      scrollToBottom();
+    }
   }, [chatMessages]);
 
-  // 获取知识型文档
-  const knowledgeDocuments = documents.filter(doc => doc.docCategory === "knowledge");
-  const businessDocuments = documents.filter(doc => doc.docCategory === "business");
+  // Load documents on mount
+  useEffect(() => {
+    loadAvailableDocuments();
+  }, []);
 
-  // 高亮并可交互的Markdown渲染
-  function renderMarkdownWithLatexHighlight(content: string) {
-    // 匹配$...$和$$...$$表达式，支持$符号单独占行
-    const inline = /\$\s*([\s\S]+?)\s*\$/g;
-    const block = /\$\$\s*([\s\S]+?)\s*\$\$/g;
-    const parts: (string | { latex: string })[] = [];
-    let lastIdx = 0;
-    // 先处理块级
-    content.replace(block, (m: string, p1: string, offset: number) => {
-      if (offset > lastIdx) parts.push(content.slice(lastIdx, offset));
-      parts.push({ latex: p1 });
-      lastIdx = offset + m.length;
-      return m;
-    });
-    content = content.slice(lastIdx);
-    lastIdx = 0;
-    // 再处理行内
-    content.replace(inline, (m: string, p1: string, offset: number) => {
-      if (offset > lastIdx) parts.push(content.slice(lastIdx, offset));
-      parts.push({ latex: p1 });
-      lastIdx = offset + m.length;
-      return m;
-    });
-    if (lastIdx < content.length) parts.push(content.slice(lastIdx));
-    // 渲染
-    return parts.map((part, i) => {
-      if (typeof part === 'string') {
-        return <ReactMarkdown key={i} remarkPlugins={[remarkMath]} rehypePlugins={[rehypeKatex]}>{part}</ReactMarkdown>;
-      } else {
-        return (
-          <HighlightLatex key={i} onClick={() => {
-            setModalLatex(part.latex);
-            const { expr, error } = parseLatexToMath(part.latex);
-            setModalParsed(expr);
-            if (!error) {
-              try {
-                const result = evaluate(expr);
-                // 格式化：保留两位小数，千分位，百分号
-                const resultNum = Number(result);
-                let formatted = isNaN(resultNum)
-                  ? result.toString()
-                  : resultNum.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-                // 若原始表达式含%或*100，自动加%
-                if (/[％%]|\\times\s*100|\*100/.test(part.latex)) {
-                  formatted += '%';
-                }
-                setModalResult(formatted);
-                setModalError(undefined);
-              } catch {
-                setModalResult('');
-                setModalError('计算失败');
-              }
-            } else {
-              setModalResult('');
-              setModalError(error);
-            }
-            setModalOpen(true);
-          }}>{`$${part.latex}$`}</HighlightLatex>
-        );
-      }
-    });
-  }
-
-  // 恢复parseLatexToMath函数定义
-  function parseLatexToMath(latex: string): { expr: string, error?: string } {
-    let expr = latex.trim();
-    try {
-      expr = expr.replace(/\\text\{[^{}]*\}/g, '');
-      expr = expr.replace(/\\left|\\right/g, '');
-      while (/\\frac\{[^{}]+\}\{[^{}]+\}/.test(expr)) {
-        expr = expr.replace(/\\frac\{([^{}]+)\}\{([^{}]+)\}/g, '($1)/($2)');
-      }
-      expr = expr.replace(/\\times/g, '*');
-      expr = expr.replace(/\\div/g, '/');
-      expr = expr.replace(/([\d,.]+)\s*%/g, '($1/100)');
-      expr = expr.replace(/,/g, '');
-      expr = expr.replace(/\$/g, '').replace(/\s+/g, '');
-      if (!/^[-+*/().\d]+$/.test(expr)) {
-        const match = expr.match(/([-+*/().\d]+)/);
-        if (match) {
-          expr = match[1];
-        } else {
-          return { expr, error: '暂不支持自动校验此类表达式' };
-        }
-      }
-      return { expr };
-    } catch {
-      return { expr, error: '解析表达式失败' };
+  // Sync store documents with local state when store changes (e.g. after upload)
+  useEffect(() => {
+    // Merge store documents (which might have new uploads) with fetched documents
+    // This is a simple way to ensure new uploads appear in the list
+    if (storeDocuments.length > 0) {
+      setAvailableDocuments(prev => {
+        const prevIds = new Set(prev.map(d => d.id));
+        const newDocs = storeDocuments.filter(d => !prevIds.has(d.id));
+        return [...prev, ...newDocs];
+      });
     }
-  }
+  }, [storeDocuments]);
 
-  // 恢复handleSendMessage函数定义
-  const handleSendMessage = async (msg: string) => {
-    if (!msg.trim() || isSending) return;
+  const loadAvailableDocuments = async () => {
+    try {
+      // Fetch all documents (knowledge + business)
+      // We don't filter by type strictly here, relying on docCategory
+      const res = await fetch("/api/documents");
+      if (res.ok) {
+        const data = await res.json();
+        const docs: Document[] = data.documents.map((doc: any) => ({
+          id: doc.id,
+          name: doc.name,
+          type: doc.type || 'unknown',
+          docCategory: doc.doc_category || 'business',
+          uploadTime: doc.created_at || new Date().toISOString(),
+          status: "ready",
+          size: 0,
+          summary: {
+            document_type: doc.type,
+            summary: '',
+            key_metrics: [],
+            time_period: ''
+          }
+        }));
+        setAvailableDocuments(docs);
+      }
+    } catch (err) {
+      console.error("Failed to load documents:", err);
+    }
+  };
+
+  const insertTextAtCursor = (text: string) => {
+    if (inputRef.current) {
+      const input = inputRef.current;
+      const start = input.selectionStart || 0;
+      const end = input.selectionEnd || 0;
+      const currentValue = input.value;
+      const newValue = currentValue.substring(0, start) + text + currentValue.substring(end);
+
+      setInput(newValue);
+
+      // Restore focus and move cursor to end of inserted text
+      setTimeout(() => {
+        input.focus();
+        const newCursorPos = start + text.length;
+        input.setSelectionRange(newCursorPos, newCursorPos);
+      }, 0);
+    } else {
+      setInput(prev => prev + text);
+    }
+  };
+
+  const handleSendMessage = async (message: string) => {
+    if (!message.trim() || loading) return;
+
+    // Validation: Must select at least one knowledge document
+    const selectedDocs = availableDocuments.filter(d => selectedDocIds.includes(d.id));
+    const hasKnowledgeDoc = selectedDocs.some(d => d.docCategory === 'knowledge');
+
+    if (!hasKnowledgeDoc) {
+      alert("请至少选择一个法规库文档（数据库文档）作为分析依据");
+      setShowDocModal(true);
+      return;
+    }
+
     if (!checkAndIncreaseApiLimit(10)) {
       alert("今日体验次数已达上限，请明天再试或联系作者获取更多体验权限。");
       return;
     }
 
     const userMessage: ChatMessage = {
+      id: `msg-${Date.now()}`,
       role: 'user',
-      content: msg,
+      content: message,
       timestamp: new Date().toISOString()
     };
 
     setChatMessages(prev => [...prev, userMessage]);
-    setIsSending(true);
-
-    // 先插入一条空的 assistant 消息，streaming: true
-    const aiMsgId = `msg-${Date.now() + 1}`;
-    setChatMessages(prev => [
-      ...prev,
-      { role: "assistant", content: "", timestamp: new Date().toISOString(), streaming: true }
-    ]);
+    setInput("");
+    setLoading(true);
 
     try {
-      // 获取选中的业务型文档内容
-      const selectedBusinessDocsData = businessDocuments
-        .filter(doc => selectedBusinessDocs.includes(doc.id))
-        .map(doc => {
-          // 保证chunks存在且为数组，且有text字段
-          let chunks = Array.isArray(doc.chunks) && doc.chunks.length > 0
-            ? doc.chunks
-            : (doc.summary?.summary ? [{ id: 'chunk-0', text: doc.summary.summary, embedding: [], chunkIndex: 0 }] : []);
-          return {
-            ...doc,
-            summary: doc.summary || { document_type: '', summary: '', key_metrics: [], time_period: '' },
-            chunks,
-          };
-        });
-
-      const response = await fetch("/api/guidance-chat", {
+      const response = await fetch("/api/guidance-chat-v2", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          question: userMessage.content,
-          documentIds: selectedKnowledgeDocs,
-          chatHistory: chatMessages,
-          businessDocuments: selectedBusinessDocsData
+          question: message,
+          documentIds: selectedDocIds,
         }),
       });
 
       if (!response.ok) {
-        throw new Error("Failed to get response");
+        throw new Error("Failed to fetch response");
       }
 
-      const data = await response.json();
-      // 自动将[ ... ]替换为$$...$$
-      let aiContent = data.response;
-      aiContent = aiContent.replace(/\[([^\[]+?)\]/g, (m: string, p1: string) => `$$${p1}$$`);
-      // 逐字输出
-      let idx = 0;
-      const typeInterval = 18; // ms
-      function typeNext() {
-        idx++;
-        setChatMessages(prev => prev.map((m, i) =>
-          i === prev.length - 1 && m.role === "assistant" && m.streaming ? { ...m, content: aiContent.slice(0, idx) } : m
-        ));
-        if (idx < aiContent.length) {
-          setTimeout(typeNext, typeInterval);
-        } else {
-          // 输出完毕，标记为已完成
-          setChatMessages(prev => prev.map((m, i) =>
-            i === prev.length - 1 && m.role === "assistant" && m.streaming ? { ...m, streaming: false } : m
-          ));
-        }
-      }
-      typeNext();
+      const data: GuidanceResponse = await response.json();
+
+      const assistantMessage: ChatMessage = {
+        id: `msg-${Date.now() + 1}`,
+        role: 'assistant',
+        content: data.guidance || "抱歉，我无法回答这个问题。",
+        timestamp: new Date().toISOString(),
+        responseData: data
+      };
+
+      setChatMessages(prev => [...prev, assistantMessage]);
     } catch (error) {
       console.error("Error sending message:", error);
       const errorMessage: ChatMessage = {
+        id: `msg-${Date.now() + 2}`,
         role: 'assistant',
-        content: "抱歉，我遇到了一个错误。请稍后再试。",
+        content: "抱歉，处理您的问题时遇到了错误。请稍后再试。",
         timestamp: new Date().toISOString()
       };
       setChatMessages(prev => [...prev, errorMessage]);
     } finally {
-      setIsSending(false);
+      setLoading(false);
     }
   };
 
-  const handleSelectDocs = (ids: string[]) => {
-    // 按照文档类型分配
-    setSelectedKnowledgeDocs(ids.filter(id => knowledgeDocuments.some(d => d.id === id)));
-    setSelectedBusinessDocs(ids.filter(id => businessDocuments.some(d => d.id === id)));
+  const handlePresetQuestion = (question: string) => {
+    insertTextAtCursor(question);
+    setShowPresetMenu(false);
   };
 
-  const selectedDocs = [
-    ...selectedKnowledgeDocs.map(id => {
-      const doc = knowledgeDocuments.find(d => d.id === id);
-      return doc ? { id: doc.id, name: doc.name } : null;
-    }),
-    ...selectedBusinessDocs.map(id => {
-      const doc = businessDocuments.find(d => d.id === id);
-      return doc ? { id: doc.id, name: doc.name } : null;
-    })
-  ].filter(Boolean) as { id: string, name: string }[];
 
-  useEffect(() => {
-    window.scrollTo(0, 0);
-  }, []);
 
-  return (
-    <PageContainer maxWidth="3xl">
-      <div className="flex flex-col h-[calc(100vh-64px)] gap-0"> {/* 64px 预留顶部导航高度，可根据实际调整 */}
-        <section className="w-full flex-1 flex flex-col gap-0">
-          <PageTitle>财务合规指导</PageTitle>
-          <p className="mb-2 text-gray-700">
-          本页面可结合财务数据库文档，使用 AI 回答待处理文档相关财务问题，或判断相关财务处理是否符合法规、准则、制度，并提供合规性分析和建议。<br />
-          </p>
-          <p className="mb-2 text-gray-700">
-            仍有疑问？请在
-              <Link href="/about#faq" className="text-yellow-500 underline hover:text-yellow-400 transition-colors">关于/帮助</Link>
-              页面获取指引，或跳转查看
-            <Link href="/showcase#guidance" className="text-yellow-500 underline hover:text-yellow-400 transition-colors">演示案例</Link>。
-          </p>
-          {/* 对话消息区 */}
-          <div className="bg-white rounded-lg p-4 mb-6 flex-1 overflow-y-auto" style={{ minHeight: 320 }}>
-            <div className="flex flex-col gap-4">
-              {chatMessages.length === 0 && !isSending && (
-                <div className="text-gray-400 text-center mt-10">请在选择数据库文档和待处理文档后，输入并发送你的问题。可使用内置的“预设提问”</div>
-              )}
-              {chatMessages.map((msg, idx) => (
-                <div
-                  key={idx}
-                  className={
-                    msg.role === "user"
-                      ? "self-end bg-gray-100 text-black rounded px-4 py-2 max-w-[80%]"
-                      : "w-full bg-white text-black px-0 py-2"
-                  }
-                  style={msg.role === "assistant" ? { width: "100%" } : {}}
-                >
-                  {msg.role === "assistant"
-                    ? (msg.streaming
-                        ? <span style={{ whiteSpace: "pre-wrap" }}>{msg.content}</span>
-                        : renderMarkdownWithLatexHighlight(msg.content)
-                      )
-                    : <span>{msg.content}</span>
-                  }
+  const renderAssistantMessage = (msg: ChatMessage) => {
+    const data = msg.responseData;
+
+    if (!data) {
+      return <div className="text-gray-700 whitespace-pre-wrap">{msg.content}</div>;
+    }
+
+    return (
+      <div className="w-full space-y-4">
+        {data.guidance && (
+          <RichTextRenderer
+            content={data.guidance}
+            onCitationClick={(index) => {
+              const citationCard = document.getElementById(`citation-card-${msg.id}-${index}`);
+              if (citationCard) {
+                citationCard.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                citationCard.classList.add('ring-2', 'ring-yellow-400');
+                setTimeout(() => citationCard.classList.remove('ring-2', 'ring-yellow-400'), 2000);
+              }
+            }}
+          />
+        )}
+
+        {data.type === 'not_found' && (
+          <div className="bg-yellow-50 border border-yellow-300 rounded-lg p-4">
+            <div className="flex items-start gap-2">
+              <span className="text-yellow-600 text-lg">⚠️</span>
+              <div className="flex-1">
+                <div className="font-semibold text-yellow-800 mb-1">未找到相关法规</div>
+                <div className="text-sm text-yellow-700">
+                  我在选定的文档库中未找到与您的问题直接相关的规定。
                 </div>
-              ))}
-              {isSending && (
-                <div className="w-full text-center text-gray-400">回答中...</div>
-              )}
-              <div ref={chatEndRef} />
+              </div>
             </div>
           </div>
-          <LatexCalcModal
-            open={modalOpen}
-            onClose={() => setModalOpen(false)}
-            latex={modalLatex}
-            parsedExpr={modalParsed}
-            calcResult={modalResult}
-            error={modalError}
+        )}
+
+        {data.citations && data.citations.length > 0 && (
+          <div className="space-y-2">
+            <div className="font-semibold text-gray-800 flex items-center gap-2">
+              <span>📚</span>
+              <span>参考依据 ({data.citations.length})</span>
+            </div>
+            {data.citations.map((citation, idx) => (
+              <CitationCard
+                key={idx}
+                citation={citation}
+                id={`citation-card-${msg.id}-${idx + 1}`}
+              />
+            ))}
+          </div>
+        )}
+
+        {data.warnings && data.warnings.length > 0 && (
+          <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+            <div className="font-semibold text-red-800 mb-2 flex items-center gap-2">
+              <span>⚠️</span>
+              <span>重要提示</span>
+            </div>
+            <ul className="text-sm text-red-700 space-y-1">
+              {data.warnings.map((warning, idx) => (
+                <li key={idx} className="flex items-start gap-2">
+                  <span className="mt-0.5">•</span>
+                  <span>{warning}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+
+        {data.relatedArticles && data.relatedArticles.length > 0 && (
+          <div className="border-t border-gray-200 pt-4">
+            <div className="font-semibold text-gray-700 mb-2 flex items-center gap-2">
+              <span>🔗</span>
+              <span>相关条款</span>
+            </div>
+            <div className="space-y-2">
+              {data.relatedArticles.map((article, idx) => (
+                <div key={idx} className="text-sm bg-blue-50 border border-blue-200 rounded p-3">
+                  <div className="font-medium text-blue-800">
+                    {article.regulation} {article.article}
+                  </div>
+                  <div className="text-gray-600 mt-1">{article.summary}</div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        <div className="text-xs text-gray-500 bg-gray-50 border border-gray-200 rounded p-3 mt-4">
+          <div className="font-semibold mb-1">免责声明</div>
+          <div>
+            本建议基于现有法规库，仅供参考。具体情况可能涉及更复杂的法律问题，建议咨询专业税务或法务顾问以获取针对性建议。
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  return (
+    <PageContainer maxWidth="4xl">
+      <div className="flex flex-col h-[calc(100vh-110px)] gap-0">
+        <section className="w-full">
+          <PageTitle>财务合规指导</PageTitle>
+          <p className="mb-2 text-gray-700">
+            基于税务法规和会计准则，提供专业的合规性分析和建议。请选择相关法规库文档，并可上传业务文档进行对照分析。
+          </p>
+          <p className="mb-4 text-gray-700">
+            仍有疑问？请在
+            <Link href="/about#faq" className="text-yellow-500 underline hover:text-yellow-400 transition-colors ml-1">关于/帮助</Link>
+            页面获取指引，或跳转查看
+            <Link href="/showcase#guidance" className="text-yellow-500 underline hover:text-yellow-400 transition-colors ml-1">演示案例</Link>。
+          </p>
+
+          <DocumentSelectModal
+            open={showDocModal}
+            onClose={() => setShowDocModal(false)}
+            mode="multiple"
+            categories={['knowledge', 'business']}
+            selectedIds={selectedDocIds}
+            onSelect={setSelectedDocIds}
+            documents={availableDocuments}
+            showUpload={true}
           />
         </section>
-        {/* 输入区吸底 */}
-        <div className="sticky bottom-0 bg-white pt-2 pb-4 z-10 border-t border-gray-200">
-          <ChatInputBox
-            selectedDocs={selectedDocs}
-            onSelectDocs={handleSelectDocs}
-            docSelectMode="multiple"
-            docCategories={["knowledge", "business"]}
-            showUpload={true}
-            presetQuestions={complianceGuidancePresets}
-            onSend={handleSendMessage}
-            sendDisabled={selectedKnowledgeDocs.length === 0 || selectedBusinessDocs.length === 0 || isSending}
-            sendDisabledTip="请选择至少一个知识型和业务型文档"
-            sendBtnText={isSending ? "发送中..." : "发送"}
-            inputPlaceholder="请输入你的合规性问题..."
-          />
+
+        {/* Chat Messages Area */}
+        <div className="flex-1 overflow-y-auto bg-white rounded-lg p-4 mb-4" style={{ minHeight: 320 }}>
+          <div className="flex flex-col gap-4">
+            {chatMessages.length === 0 && !loading && (
+              <div className="text-gray-400 text-center mt-10">
+                {selectedDocIds.length === 0
+                  ? "请先点击左下角按钮选择法规库文档..."
+                  : "请输入您的合规性问题，或使用下方的预设问题快速开始"}
+              </div>
+            )}
+
+            {chatMessages.map((msg, idx) => (
+              <div
+                key={idx}
+                className={
+                  msg.role === "user"
+                    ? "self-end bg-yellow-100 text-black rounded-lg px-4 py-3 max-w-[80%]"
+                    : "w-full"
+                }
+              >
+                {msg.role === "assistant"
+                  ? (
+                    <div className="bg-gray-100 rounded-lg p-4">
+                      {renderAssistantMessage(msg)}
+                    </div>
+                  )
+                  : <span className="whitespace-pre-wrap">{msg.content}</span>
+                }
+              </div>
+            ))}
+
+            {loading && (
+              <div className="w-full text-center">
+                <div className="inline-flex items-center gap-2 bg-gray-100 rounded-full px-4 py-2">
+                  <div className="animate-spin h-4 w-4 border-2 border-yellow-500 border-t-transparent rounded-full"></div>
+                  <span className="text-sm text-gray-600">正在分析法规...</span>
+                </div>
+              </div>
+            )}
+
+            <div ref={chatEndRef} />
+          </div>
+        </div>
+
+        {/* Input Area - Sticky Bottom */}
+        <div className="sticky bottom-0 bg-white pt-2 pb-4 border-t border-gray-200">
+          {/* Input Box */}
+          <div className="flex gap-2 relative">
+            <button
+              onClick={() => setShowDocModal(true)}
+              className="px-3 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg border border-gray-300 transition-colors flex items-center gap-2"
+              title="选择法规/文档"
+            >
+              <span className="text-sm hidden sm:inline">文档选择</span>
+              {selectedDocIds.length > 0 && (
+                <span className="bg-yellow-500 text-white text-xs px-1.5 py-0.5 rounded-full">
+                  {selectedDocIds.length}
+                </span>
+              )}
+            </button>
+
+            {/* Preset Questions Button */}
+            <div className="relative" ref={menuRef}>
+              <button
+                onClick={() => setShowPresetMenu(!showPresetMenu)}
+                className="h-full px-3 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg border border-gray-300 transition-colors flex items-center gap-2"
+                title="常见问题"
+              >
+                <span className="text-sm hidden sm:inline">预设问题</span>
+              </button>
+
+              {showPresetMenu && (
+                <div className="absolute bottom-full left-0 mb-2 w-64 bg-white border border-gray-200 rounded-lg shadow-lg z-10 overflow-hidden">
+                  <div className="p-2 text-xs font-semibold text-gray-500 border-b border-gray-100 bg-gray-50">
+                    点击插入问题
+                  </div>
+                  <div className="max-h-60 overflow-y-auto">
+                    {presetQuestions.map((q, idx) => (
+                      <button
+                        key={idx}
+                        onClick={() => handlePresetQuestion(q)}
+                        className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-yellow-50 hover:text-yellow-700 transition-colors border-b border-gray-50 last:border-0"
+                      >
+                        {q}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            <input
+              ref={inputRef}
+              type="text"
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && !e.shiftKey && !loading) {
+                  e.preventDefault();
+                  handleSendMessage(input);
+                }
+              }}
+              placeholder={selectedDocIds.length === 0 ? "请先选择法规库文档..." : "请输入您的合规性问题..."}
+              disabled={loading || selectedDocIds.length === 0}
+              className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-500 disabled:bg-gray-100 disabled:cursor-not-allowed"
+            />
+            <button
+              onClick={() => handleSendMessage(input)}
+              disabled={loading || !input.trim() || selectedDocIds.length === 0}
+              className="px-6 py-2 bg-yellow-500 hover:bg-yellow-600 text-white font-semibold rounded-lg transition-colors disabled:bg-gray-300 disabled:cursor-not-allowed"
+            >
+              {loading ? "发送中..." : "发送"}
+            </button>
+          </div>
         </div>
       </div>
     </PageContainer>
   );
-} 
+}
