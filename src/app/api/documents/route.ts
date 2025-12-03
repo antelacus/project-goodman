@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import OpenAI from "openai";
 import { createServerSupabaseClient } from "../../../lib/supabase";
+import { verifyAdminPassword } from "../../../lib/admin-auth";
+import { deleteDocumentFiles } from "../../../lib/storage-helpers";
 
 // Initialize OpenAI client
 const openai = new OpenAI({
@@ -157,16 +159,22 @@ export async function GET(req: NextRequest) {
   try {
     const { searchParams } = new URL(req.url);
     const docCategory = searchParams.get('category');
+    const docTypes = searchParams.get('type'); // comma-separated types
 
     const supabase = createServerSupabaseClient();
 
     let query = supabase
       .from('documents')
-      .select('id, name, doc_category, doc_type, upload_time, status, size, summary')
+      .select('id, name, doc_category, doc_type, upload_time, status, size, summary, year, period, is_structured, file_url')
       .order('upload_time', { ascending: false });
 
     if (docCategory) {
       query = query.eq('doc_category', docCategory);
+    }
+
+    if (docTypes) {
+      const types = docTypes.split(',').map(t => t.trim());
+      query = query.in('doc_type', types);
     }
 
     const { data: documents, error } = await query;
@@ -202,7 +210,21 @@ export async function DELETE(req: NextRequest) {
 
     const supabase = createServerSupabaseClient();
 
-    // Delete document (chunks will be deleted automatically due to CASCADE)
+    // Delete files from storage (non-fatal if fails)
+    try {
+      await deleteDocumentFiles(documentId);
+    } catch (storageError) {
+      console.error("Storage delete error (non-fatal):", storageError);
+    }
+
+    // Delete related data explicitly to ensure cleanup (even if DB CASCADE is missing)
+    await Promise.all([
+      supabase.from('financial_data').delete().eq('document_id', documentId),
+      supabase.from('structured_regulations').delete().eq('document_id', documentId),
+      supabase.from('document_chunks').delete().eq('document_id', documentId)
+    ]);
+
+    // Delete document
     const { error } = await supabase
       .from('documents')
       .delete()
@@ -222,6 +244,122 @@ export async function DELETE(req: NextRequest) {
     const errorMessage = err instanceof Error ? err.message : "未知错误";
     return NextResponse.json(
       { error: "Failed to delete document", details: errorMessage },
+      { status: 500 }
+    );
+  }
+}
+
+// PATCH方法：更新文档属性（管理员）
+export async function PATCH(req: NextRequest) {
+  try {
+    const body = await req.json();
+    const { documentId, adminPassword, updates } = body;
+
+    // Validate required fields
+    if (!documentId) {
+      return NextResponse.json(
+        { error: "Document ID is required" },
+        { status: 400 }
+      );
+    }
+
+    if (!adminPassword) {
+      return NextResponse.json(
+        { error: "Admin password is required" },
+        { status: 400 }
+      );
+    }
+
+    // Verify admin password
+    const isValidPassword = await verifyAdminPassword(adminPassword);
+    if (!isValidPassword) {
+      return NextResponse.json(
+        { error: "Invalid admin password" },
+        { status: 401 }
+      );
+    }
+
+    // Validate updates object
+    if (!updates || typeof updates !== 'object') {
+      return NextResponse.json(
+        { error: "Updates object is required" },
+        { status: 400 }
+      );
+    }
+
+    // Only allow specific fields to be updated
+    const allowedFields = ['name', 'doc_type', 'year', 'period'];
+    const updateData: Record<string, any> = {};
+
+    for (const field of allowedFields) {
+      if (field in updates) {
+        // Validate field values
+        if (field === 'name' && updates.name) {
+          if (typeof updates.name !== 'string' || updates.name.trim().length === 0) {
+            return NextResponse.json(
+              { error: "Name must be a non-empty string" },
+              { status: 400 }
+            );
+          }
+          updateData.name = updates.name.trim();
+        } else if (field === 'doc_type') {
+          // Allow null or valid string
+          updateData.doc_type = updates.doc_type || null;
+        } else if (field === 'year') {
+          // Validate year format (4 digits or null)
+          if (updates.year && !/^\d{4}$/.test(updates.year)) {
+            return NextResponse.json(
+              { error: "Year must be a 4-digit string (e.g., '2024')" },
+              { status: 400 }
+            );
+          }
+          updateData.year = updates.year || null;
+        } else if (field === 'period') {
+          // Allow null or valid string
+          updateData.period = updates.period || null;
+        }
+      }
+    }
+
+    if (Object.keys(updateData).length === 0) {
+      return NextResponse.json(
+        { error: "No valid fields to update" },
+        { status: 400 }
+      );
+    }
+
+    const supabase = createServerSupabaseClient();
+
+    // Update document using raw query to avoid type issues
+    const { data, error } = await (supabase
+      .from('documents') as any)
+      .update(updateData)
+      .eq('id', documentId)
+      .select('id, name, doc_type, year, period')
+      .single();
+
+    if (error) {
+      throw error;
+    }
+
+    if (!data) {
+      return NextResponse.json(
+        { error: "Document not found" },
+        { status: 404 }
+      );
+    }
+
+    return NextResponse.json({
+      success: true,
+      message: "Document updated successfully",
+      document: data
+    });
+
+  } catch (err: unknown) {
+    console.error("Document Update Error:", err);
+    const errorMessage = err instanceof Error ? err.message : "未知错误";
+    return NextResponse.json(
+      { error: "Failed to update document", details: errorMessage },
       { status: 500 }
     );
   }

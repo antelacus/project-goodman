@@ -111,16 +111,14 @@ export default function Navbar() {
         {menuOpen && (
           <div className="fixed inset-0 z-50 flex justify-end">
             {/* 遮罩层 - 半透明，点击可关闭 */}
-            <div 
-              className={`fixed inset-0 bg-black transition-opacity duration-300 ${
-                isClosing ? 'opacity-0' : isOpening ? 'opacity-0' : 'opacity-50'
-              }`}
+            <div
+              className={`fixed inset-0 bg-black transition-opacity duration-300 ${isClosing ? 'opacity-0' : isOpening ? 'opacity-0' : 'opacity-50'
+                }`}
               onClick={handleCloseMenu}
             />
             {/* 右侧菜单 */}
-            <div className={`relative bg-[#222] w-64 max-w-[80vw] h-full shadow-lg transform transition-transform duration-300 ease-in-out ${
-              isClosing ? 'translate-x-full' : isOpening ? 'translate-x-full' : 'translate-x-0'
-            }`}>
+            <div className={`relative bg-[#222] w-64 max-w-[80vw] h-full shadow-lg transform transition-transform duration-300 ease-in-out ${isClosing ? 'translate-x-full' : isOpening ? 'translate-x-full' : 'translate-x-0'
+              }`}>
               <button
                 className="absolute top-4 right-4 p-2 focus:outline-none text-white hover:text-yellow-300"
                 aria-label="关闭菜单"

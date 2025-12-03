@@ -5,11 +5,10 @@ export async function GET() {
   try {
     const supabase = createServerSupabaseClient();
 
-    // 获取所有知识型文档
+    // 获取所有文档（知识型和业务型）
     const { data: documents, error: docsError } = await supabase
       .from('documents')
       .select('*')
-      .eq('doc_category', 'knowledge')
       .order('created_at', { ascending: false });
 
     if (docsError) {
@@ -54,6 +53,10 @@ export async function GET() {
       name: doc.name,
       type: doc.doc_type || "knowledge",
       docCategory: doc.doc_category,
+      docType: doc.doc_type,        // Database column (source of truth)
+      year: doc.year,               // Database column (source of truth)
+      period: doc.period,           // Database column (source of truth)
+      fileUrl: doc.file_url,        // Storage path for original file
       uploadTime: doc.upload_time,
       status: doc.status,
       size: doc.size,

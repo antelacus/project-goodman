@@ -19,11 +19,16 @@ export type Document = {
   name: string;
   type: "pdf" | "excel" | "txt" | "csv" | "knowledge" | "business";
   docCategory: "knowledge" | "business";
+  docType?: string | null;      // Database column (source of truth)
+  year?: string | null;          // Database column (source of truth)
+  period?: string | null;        // Database column (source of truth)
+  fileUrl?: string | null;       // Storage path for original file
   uploadTime: string;
   status: "processing" | "ready" | "error";
   size: number;
   summary?: DocumentSummary;
   chunks?: DocumentChunk[];
+  is_temp?: boolean;
 };
 
 interface DocumentStore {
@@ -44,15 +49,15 @@ export const useDocumentStore = create<DocumentStore>((set, get) => ({
   documents: [],
   isLoading: false,
   error: null,
-  
+
   addDocument: (doc) => set((state) => ({ documents: [...state.documents, doc] })),
-  
+
   updateDocument: (id, update) => set((state) => ({
     documents: state.documents.map((doc) =>
       doc.id === id ? { ...doc, ...update } : doc
     ),
   })),
-  
+
   removeDocument: (id) => set((state) => ({
     documents: state.documents.filter((doc) => doc.id !== id),
   })),
@@ -72,32 +77,31 @@ export const useDocumentStore = create<DocumentStore>((set, get) => ({
   },
 
   setDocuments: (docs) => set(() => ({ documents: docs })),
-  
-  getDocumentsByCategory: (category) => get().documents.filter((doc) => doc.docCategory === category),
-  
+
+  getDocumentsByCategory: (category) => get().documents.filter((doc) => {
+    if (category === "business") {
+      // Business category includes both persistent business docs and temp docs
+      return doc.docCategory === "business" || doc.is_temp;
+    }
+    return doc.docCategory === category;
+  }),
+
   clear: () => set(() => ({ documents: [] })),
 
-  // 从Supabase数据库加载所有知识型文档
+  // 从Supabase数据库加载所有文档
   loadDocumentsFromJsonDir: async () => {
     set({ isLoading: true, error: null });
     try {
       const res = await fetch("/api/local-documents");
-      if (!res.ok) throw new Error("无法加载本地文档");
+      if (!res.ok) throw new Error("无法加载文档");
       const data = await res.json();
-      const knowledgeDocs = (data.documents || []).filter((doc: { docCategory: string; id: string }) => doc.docCategory === "knowledge");
-      set((state) => {
-        // 只保留业务型文档和未重复的知识型文档
-        const businessDocs = state.documents.filter((doc) => doc.docCategory === "business");
-        // knowledgeDocs去重（以id为主）
-        const existingKnowledgeIds = new Set(businessDocs.map((doc) => doc.id));
-        const mergedKnowledgeDocs = knowledgeDocs.filter((doc: { id: string }) => !existingKnowledgeIds.has(doc.id));
-        return {
-          documents: [...businessDocs, ...mergedKnowledgeDocs],
-          isLoading: false
-        };
+      const allDocs = data.documents || [];
+      set({
+        documents: allDocs,
+        isLoading: false
       });
     } catch (error) {
-      set({ error: 'Failed to load local documents', isLoading: false });
+      set({ error: 'Failed to load documents', isLoading: false });
     }
   },
 })); 
