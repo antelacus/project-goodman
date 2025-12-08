@@ -115,7 +115,7 @@ async function extractTextFromFile(
   } else if (ext === 'pdf') {
     // PDF file - use OpenAI Responses API
     const response = await openaiClient.responses.create({
-      model: "gpt-4.1-mini",
+      model: "gpt-5-mini",
       input: [{
         role: "user",
         content: [
@@ -133,7 +133,7 @@ async function extractTextFromFile(
     // Image file - use Vision API
     const mimeType = ext === 'jpg' ? 'image/jpeg' : `image/${ext}`;
     const response = await openaiClient.chat.completions.create({
-      model: "gpt-4.1-mini",
+      model: "gpt-5-mini",
       messages: [{
         role: "user",
         content: [
@@ -147,7 +147,7 @@ async function extractTextFromFile(
           }
         ]
       }],
-      max_tokens: 4096
+      max_completion_tokens: 4096
     });
     return response.choices[0]?.message?.content || '';
   } else if (ext === 'txt') {

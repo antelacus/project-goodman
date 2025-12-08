@@ -38,5 +38,3 @@ Always respond in Chinese (Simplified). Be concise but friendly. If suggesting a
 {CONVERSATION_HISTORY}
 
 User: {USER_MESSAGE}
-
-Your response:

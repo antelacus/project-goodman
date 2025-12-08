@@ -24,7 +24,7 @@ interface AdminSession {
  * const { triggerRef, isAuthenticated, logout } = useAdminAuth();
  *
  * return (
- *   <div ref={triggerRef}>📄 Click me 3 times</div>
+ *   <div ref={triggerRef}>[icon] Click me 3 times</div>
  *   {isAuthenticated && <AdminPanel />}
  * );
  * ```

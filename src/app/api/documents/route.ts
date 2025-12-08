@@ -29,7 +29,7 @@ export async function POST(req: NextRequest) {
     for (let i = 0; i < chunks.length; i++) {
       const chunk = chunks[i];
       const embeddingResponse = await openai.embeddings.create({
-        model: "text-embedding-3-small",
+        model: "gpt-5-mini",
         input: chunk,
         encoding_format: "float",
       });
@@ -64,10 +64,10 @@ export async function POST(req: NextRequest) {
     `;
 
     const summaryResponse = await openai.chat.completions.create({
-      model: "gpt-4.1",
+      model: "gpt-5-mini",
       messages: [{ role: "user", content: summaryPrompt }],
       response_format: { type: "json_object" },
-      max_tokens: 500,
+      max_completion_tokens: 1000,
     });
 
     const summary = JSON.parse(summaryResponse.choices[0]?.message?.content || "{}");

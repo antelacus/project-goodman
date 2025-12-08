@@ -3,6 +3,7 @@ import ReactMarkdown from 'react-markdown';
 import remarkMath from 'remark-math';
 import rehypeKatex from 'rehype-katex';
 import 'katex/dist/katex.min.css';
+import { FiFileText } from 'react-icons/fi';
 
 interface RichTextRendererProps {
     content: string;
@@ -92,7 +93,7 @@ const RichTextRenderer: React.FC<RichTextRendererProps> = ({
                                     className="inline-flex items-center gap-1 px-1.5 py-0.5 mx-1 text-xs font-medium text-gray-600 bg-gray-100 border border-gray-200 rounded hover:bg-gray-200 transition-colors cursor-pointer align-baseline"
                                     title="点击查看来源文档"
                                 >
-                                    <span>📄</span>
+                                    <FiFileText className="inline" />
                                     <span>{children}</span>
                                 </button>
                             );

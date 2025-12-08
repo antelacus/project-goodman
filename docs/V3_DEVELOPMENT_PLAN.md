@@ -10,6 +10,7 @@ This document captures ideas and plans for Version 3 development. These features
 2. [Intelligent Document System](#2-intelligent-document-system)
 3. [VPS Migration](#3-vps-migration)
 4. [Security Enhancements](#4-security-enhancements)
+5. [LangGraph Migration](#5-langgraph-migration)
 
 ---
 
@@ -548,6 +549,530 @@ If migrating to VPS (Section 3), security enhancements become easier:
 2. **V3.1**: Password hashing + Session tokens
 3. **V3.2**: Security headers + Audit logging
 4. **V3.3**: Database function fixes + File validation
+
+---
+
+## 5. LangGraph Migration
+
+### Overview
+
+Migrate the AI orchestration layer from manual tool-calling patterns to LangGraph's StateGraph framework. This enables better state management, conversation memory, agentic loops, streaming, and improved testability.
+
+### Background (2025-12-05)
+
+Analysis of the current codebase revealed that the existing architecture already exhibits agent-like patterns that map naturally to LangGraph:
+
+| Current Pattern | LangGraph Equivalent |
+|-----------------|---------------------|
+| Manual tool execution loops | `ToolNode` (automatic) |
+| Step-wise state (route → query → calculate → score → explain) | `StateGraph` nodes + edges |
+| Conditional logic (sufficient data? confidence passed?) | Conditional edges |
+| Per-request state | Graph `State` with annotations |
+
+### Benefits of Migration
+
+1. **Conversation Memory** — Currently only landing-chat has history; LangGraph makes this trivial across all modules
+2. **Agentic Loops** — Enable retry/refinement patterns (e.g., "try another metric if first fails")
+3. **Streaming Responses** — Send intermediate results to the UI as the graph executes
+4. **Better Error Recovery** — Define explicit error edges instead of try-catch everywhere
+5. **Observability** — LangGraph's debugging/tracing tools visualize graph execution
+6. **Cleaner Code** — Replace 500+ line route files with declarative graphs
+
+### Current Architecture Analysis
+
+#### Tightly Coupled Areas Identified
+
+**Financial Analysis** (`/api/financial-analysis/route.ts` - 623 lines):
+- Lines 265-277: LLM function selection baked into route handler
+- Lines 299-447: Dynamic metric retrieval logic interleaved with main flow
+- Lines 464-580: Data validation, calculation, and formatting mixed together
+- Lines 582-602: LLM explanation generation separated from calculation context
+
+**Guidance Chat** (`/api/guidance-chat/route.ts` - 509 lines):
+- Lines 98-245: Hybrid search (keyword + vector) tightly integrated
+- Lines 255-378: Tool calling for financial metrics baked into LLM prompt flow
+- Lines 383-425: Related articles retrieval separate from citations
+
+**Landing Chat** (`/api/landing-chat/route.ts` - 224 lines):
+- Lines 54-123: Keywords hardcoded, routing logic opaque
+- Lines 128-157: Question suggestions hardcoded per module
+- Lines 175-190: LLM call for reply
+
+#### Implicit Workflows Identified
+
+**Financial Analysis (5 steps)**:
+```
+Route Question → Query Data → Validate Inputs → Execute Calculation → Score Confidence → Generate Explanation
+```
+
+**Guidance Chat (5 steps)**:
+```
+Hybrid Search → Generate Guidance → Execute Tools (optional) → Find Related → Score Confidence
+```
+
+**Landing Chat (4 steps)**:
+```
+Generate Reply → Analyze Intent → Route to Module → Generate Suggestions
+```
+
+---
+
+### Preparatory Refactoring (Before Adding LangGraph)
+
+These refactors can be done incrementally while V2 is in production, making the eventual LangGraph migration straightforward.
+
+#### Phase A: Extract Explicit State Types (Priority: Critical)
+
+**Why**: LangGraph uses explicit state objects with annotations. Currently state is scattered across variables.
+
+**Create**: `src/lib/types/workflow-states.ts`
+
+```typescript
+// Financial Analysis State
+export interface FinancialAnalysisState {
+  // Input
+  question: string;
+  year?: string;
+  period?: string;
+  documentIds?: string[];
+
+  // Step 1: Function Selection
+  selectedFunction?: PresetFunction;
+  functionConfidence?: number;
+
+  // Step 2: Data Query
+  queriedMetrics?: string[];
+  financialData?: any[];
+
+  // Step 3: Validation
+  missingMetrics?: string[];
+  dataQuality?: number;
+
+  // Step 4: Calculation
+  calculation?: CalculationResult;
+  rawResult?: ExecutionResult;
+
+  // Step 5: Confidence
+  confidenceScore?: ConfidenceScore;
+
+  // Step 6: Explanation
+  explanation?: string;
+  sourceDocuments?: SourceDocument[];
+
+  // Error handling
+  error?: string;
+  errorType?: 'no_function' | 'insufficient_data' | 'low_confidence' | 'calculation_error';
+}
+
+// Guidance State
+export interface GuidanceState {
+  question: string;
+  uploadedDocument?: DocumentUpload;
+  documentIds: string[];
+
+  // Step 1: Search
+  citations?: Citation[];
+  semanticSimilarity?: number;
+
+  // Step 2: LLM Generation
+  guidance?: string;
+  toolCallsExecuted?: ToolCallResult[];
+
+  // Step 3: Related Articles
+  relatedArticles?: RelatedArticle[];
+
+  // Step 4: Confidence
+  confidenceScore?: ConfidenceScore;
+
+  // Metadata
+  warnings?: string[];
+  searchDocIds?: string[];
+  error?: string;
+}
+
+// Landing Chat State
+export interface LandingChatState {
+  message: string;
+  conversationHistory: ChatMessage[];
+
+  // Step 1: Reply Generation
+  reply?: string;
+  llmConfidence?: number;
+
+  // Step 2: Intent Analysis
+  userIntent?: string;
+  intentClarity?: number;
+
+  // Step 3: Module Routing
+  suggestedModule?: ModuleInfo;
+  routingConfidence?: number;
+
+  // Step 4: Suggestions
+  suggestedQuestions?: string[];
+
+  // Step 5: Confidence
+  overallConfidence?: ConfidenceScore;
+  error?: string;
+}
+```
+
+---
+
+#### Phase B: Extract Workflow Steps as Pure Functions (Priority: High)
+
+**Why**: LangGraph nodes are functions that take state and return state. Extract logic now.
+
+**Create directory structure**:
+```
+src/workflows/
+├── financial-analysis/
+│   ├── steps/
+│   │   ├── select-function.ts      // LLM picks the function
+│   │   ├── query-data.ts           // Fetch from Supabase
+│   │   ├── validate-inputs.ts      // Check completeness
+│   │   ├── execute-calculation.ts  // Run preset function
+│   │   ├── score-confidence.ts     // Multi-metric scoring
+│   │   └── generate-explanation.ts // LLM explanation
+│   └── index.ts                    // Orchestration (thin wrapper)
+├── guidance-chat/
+│   ├── steps/
+│   │   ├── hybrid-search.ts        // Keyword + vector search
+│   │   ├── generate-guidance.ts    // LLM with context
+│   │   ├── execute-tools.ts        // Tool execution
+│   │   └── find-related.ts         // Related articles
+│   └── index.ts
+└── landing-chat/
+    ├── steps/
+    │   ├── generate-reply.ts       // LLM conversational
+    │   ├── analyze-intent.ts       // Intent extraction
+    │   └── route-module.ts         // Module selection
+    └── index.ts
+```
+
+**Example step function** (LangGraph-ready pattern):
+
+```typescript
+// src/workflows/financial-analysis/steps/select-function.ts
+import { FinancialAnalysisState } from '@/lib/types/workflow-states';
+import { presetFunctions, findPresetFunction } from '@/lib/preset-functions';
+
+export async function selectFunction(
+  state: FinancialAnalysisState
+): Promise<FinancialAnalysisState> {
+  const completion = await openai.chat.completions.create({
+    model: 'gpt-4o',
+    messages: [
+      { role: 'system', content: systemPrompt },
+      { role: 'user', content: state.question }
+    ],
+    tools: functionDefinitions,
+    tool_choice: 'auto',
+    temperature: 0.1,
+  });
+
+  const toolCall = completion.choices[0].message.tool_calls?.[0];
+
+  if (!toolCall) {
+    return {
+      ...state,
+      errorType: 'no_function',
+      error: '无法识别适合的计算功能',
+    };
+  }
+
+  return {
+    ...state,
+    selectedFunction: findPresetFunction(toolCall.function.name),
+    functionConfidence: 0.9,
+  };
+}
+```
+
+---
+
+#### Phase C: Centralize Tool Definitions (Priority: Medium)
+
+**Why**: LangGraph's `ToolNode` uses a tool registry. Centralize now.
+
+**Create**: `src/lib/tools/index.ts`
+
+```typescript
+import { executeFunction } from '@/lib/preset-functions';
+
+// Tool definitions for OpenAI function calling
+export const TOOLS = {
+  financialAnalysis: [
+    {
+      type: 'function' as const,
+      function: {
+        name: 'calculate_preset_function',
+        description: '执行预设的财务计算功能，如流动比率、ROE等',
+        parameters: {
+          type: 'object',
+          properties: {
+            function_name: { type: 'string', description: '功能名称' },
+            year: { type: 'string', description: '财务年份' },
+            period: { type: 'string', description: '会计期间' },
+          },
+          required: ['function_name'],
+        },
+      },
+    },
+    {
+      type: 'function' as const,
+      function: {
+        name: 'get_financial_metric',
+        description: '从数据库获取特定财务指标',
+        parameters: {
+          type: 'object',
+          properties: {
+            metric_name: { type: 'string', description: '指标名称' },
+            year: { type: 'string' },
+            period: { type: 'string' },
+          },
+          required: ['metric_name'],
+        },
+      },
+    },
+  ],
+
+  guidanceChat: [
+    {
+      type: 'function' as const,
+      function: {
+        name: 'calculate_financial_metric',
+        description: '计算财务指标（在合规指导中需要计算时使用）',
+        parameters: {
+          type: 'object',
+          properties: {
+            metric_name: { type: 'string' },
+            inputs: { type: 'object' },
+          },
+          required: ['metric_name', 'inputs'],
+        },
+      },
+    },
+  ],
+};
+
+// Tool executor registry (maps tool names to implementations)
+export const TOOL_EXECUTORS: Record<string, (args: any) => Promise<any>> = {
+  calculate_preset_function: async (args) => executeFunction(args.function_name, args.inputs),
+  get_financial_metric: async (args) => queryFinancialMetric(args.metric_name, args.year, args.period),
+  calculate_financial_metric: async (args) => executeFunction(args.metric_name, args.inputs),
+};
+```
+
+**Also extract routing keywords**: `src/lib/routing/keywords.ts`
+
+```typescript
+export const ROUTING_KEYWORDS = {
+  'data-extract': ['提取', '读取', 'pdf', 'excel', '解析', '上传', '文档分析'],
+  'financial-analysis': ['计算', '分析', '指标', '比率', 'roe', 'roa', '净利润率', '周转率'],
+  'guidance-chat': ['税', '合规', '法规', '政策', '增值税', '企业所得税', '会计准则']
+};
+
+export const MODULE_SUGGESTIONS: Record<string, string[]> = {
+  'data-extract': ['我该如何上传文档？', '支持哪些文档格式？'],
+  'financial-analysis': ['可以计算哪些财务指标？', '需要上传什么类型的文档？'],
+  'guidance-chat': ['你可以回答哪些税务问题？', '有哪些会计准则可以查询？']
+};
+```
+
+---
+
+#### Phase D: Consolidate Types (Priority: Medium)
+
+**Move scattered types to central location**:
+
+```
+src/lib/types/
+├── index.ts                    // Re-export everything
+├── workflow-states.ts          // State objects (from Phase A)
+├── financial-analysis.ts       // Request/Response types
+├── guidance-chat.ts            // Request/Response types
+├── landing-chat.ts             // Chat message types
+└── common.ts                   // Shared types (ConfidenceScore, etc.)
+```
+
+---
+
+#### Phase E: Create Error Type Hierarchy (Priority: Low)
+
+**Create**: `src/lib/errors/workflow-errors.ts`
+
+```typescript
+export enum WorkflowErrorType {
+  INPUT_VALIDATION = 'input_validation',
+  NO_FUNCTION = 'no_function',
+  INSUFFICIENT_DATA = 'insufficient_data',
+  LOW_CONFIDENCE = 'low_confidence',
+  LLM_ERROR = 'llm_error',
+  DATABASE_ERROR = 'database_error',
+}
+
+export class WorkflowError extends Error {
+  constructor(
+    public type: WorkflowErrorType,
+    public userMessage: string,  // 中文用户提示
+    message: string,
+    public suggestion?: string
+  ) {
+    super(message);
+    this.name = 'WorkflowError';
+  }
+}
+
+// Usage in workflow steps
+export function handleWorkflowError(error: unknown): WorkflowError {
+  if (error instanceof WorkflowError) return error;
+
+  return new WorkflowError(
+    WorkflowErrorType.LLM_ERROR,
+    '处理请求时出错，请稍后重试',
+    error instanceof Error ? error.message : 'Unknown error'
+  );
+}
+```
+
+---
+
+### Post-Refactoring: Thin Route Handlers
+
+After preparatory refactoring, route handlers become simple orchestrators:
+
+```typescript
+// src/app/api/financial-analysis/route.ts (after refactoring)
+// ~50 lines instead of 623
+
+import { FinancialAnalysisState } from '@/lib/types/workflow-states';
+import { selectFunction } from '@/workflows/financial-analysis/steps/select-function';
+import { queryData } from '@/workflows/financial-analysis/steps/query-data';
+import { validateInputs } from '@/workflows/financial-analysis/steps/validate-inputs';
+import { executeCalculation } from '@/workflows/financial-analysis/steps/execute-calculation';
+import { scoreConfidence } from '@/workflows/financial-analysis/steps/score-confidence';
+import { generateExplanation } from '@/workflows/financial-analysis/steps/generate-explanation';
+
+export async function POST(request: Request) {
+  const body = await request.json();
+
+  // Initialize state
+  let state: FinancialAnalysisState = {
+    question: body.question,
+    documentIds: body.documentIds,
+    year: body.year,
+    period: body.period,
+  };
+
+  // Run workflow (easily replaced with LangGraph later)
+  state = await selectFunction(state);
+  if (state.error) return errorResponse(state);
+
+  state = await queryData(state);
+  state = await validateInputs(state);
+  if (state.error) return errorResponse(state);
+
+  state = await executeCalculation(state);
+  state = await scoreConfidence(state);
+  state = await generateExplanation(state);
+
+  return NextResponse.json(buildResponse(state));
+}
+```
+
+---
+
+### LangGraph Implementation (Future)
+
+Once preparatory refactoring is complete, adding LangGraph is straightforward:
+
+```typescript
+// src/workflows/financial-analysis/graph.ts
+import { StateGraph, END } from '@langchain/langgraph';
+import { FinancialAnalysisState } from '@/lib/types/workflow-states';
+import { selectFunction } from './steps/select-function';
+import { queryData } from './steps/query-data';
+import { validateInputs } from './steps/validate-inputs';
+import { executeCalculation } from './steps/execute-calculation';
+import { scoreConfidence } from './steps/score-confidence';
+import { generateExplanation } from './steps/generate-explanation';
+
+// Define the graph
+const financialAnalysisGraph = new StateGraph<FinancialAnalysisState>({
+  channels: {
+    question: { value: (a, b) => b ?? a },
+    selectedFunction: { value: (a, b) => b ?? a },
+    financialData: { value: (a, b) => b ?? a },
+    // ... other state channels
+  }
+})
+  .addNode("select_function", selectFunction)
+  .addNode("query_data", queryData)
+  .addNode("validate_inputs", validateInputs)
+  .addNode("execute_calculation", executeCalculation)
+  .addNode("score_confidence", scoreConfidence)
+  .addNode("generate_explanation", generateExplanation)
+  .addNode("handle_error", handleError)
+
+  // Define edges
+  .addEdge("__start__", "select_function")
+  .addConditionalEdges(
+    "select_function",
+    (state) => state.error ? "error" : "continue",
+    { error: "handle_error", continue: "query_data" }
+  )
+  .addEdge("query_data", "validate_inputs")
+  .addConditionalEdges(
+    "validate_inputs",
+    (state) => state.error ? "error" : "continue",
+    { error: "handle_error", continue: "execute_calculation" }
+  )
+  .addEdge("execute_calculation", "score_confidence")
+  .addEdge("score_confidence", "generate_explanation")
+  .addEdge("generate_explanation", END)
+  .addEdge("handle_error", END);
+
+export const financialAnalysisExecutor = financialAnalysisGraph.compile();
+
+// Usage in route handler
+const result = await financialAnalysisExecutor.invoke({
+  question: body.question,
+  documentIds: body.documentIds,
+});
+```
+
+---
+
+### Implementation Priority
+
+| Phase | Task | Effort | Impact | LangGraph Benefit |
+|-------|------|--------|--------|-------------------|
+| **A** | Extract state types | Low | High | Direct mapping to StateGraph annotations |
+| **B** | Extract step functions | Medium | Very High | Become graph nodes directly |
+| **C** | Centralize tools | Low | High | Plug into ToolNode |
+| **D** | Consolidate types | Low | Medium | Cleaner imports |
+| **E** | Error hierarchy | Low | Medium | Use conditional edges for error paths |
+
+### Suggested Order
+
+1. **Phase A** first (creates foundation for everything else)
+2. **Phase B** next (biggest impact, enables testing)
+3. **Phase C + D** can be done together (quick wins)
+4. **Phase E** last (lowest priority)
+
+### Dependencies
+
+- No external dependencies for preparatory refactoring
+- LangGraph migration requires: `@langchain/langgraph`, `@langchain/core`
+- Optional: `@langchain/openai` (or continue using `openai` directly)
+
+### Integration with Other V3 Features
+
+| V3 Feature | LangGraph Benefit |
+|------------|-------------------|
+| **Intelligent Document System** | Add document search as a graph node; enable retry if first search fails |
+| **Management Financial System** | Complex multi-step calculations benefit from explicit state graph |
+| **VPS Migration** | LangGraph's streaming works better with persistent connections |
 
 ---
 

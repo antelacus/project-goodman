@@ -3,6 +3,8 @@ import React, { useRef, useState, useEffect } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import PageContainer from "../components/PageContainer";
+import { FiCpu, FiFolder, FiZap, FiFeather, FiTrendingUp, FiCheckCircle } from "react-icons/fi";
+import { FaFileInvoiceDollar } from "react-icons/fa";
 
 export default function HomePage() {
     const featureRef = useRef<HTMLDivElement | null>(null);
@@ -12,30 +14,33 @@ export default function HomePage() {
     const closeChoice = () => setShowChoice(false);
 
     const ChoiceOverlay = () => (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" onClick={closeChoice}>
-            <div className="bg-white rounded-lg p-8 w-full max-w-md" onClick={(e) => e.stopPropagation()}>
-                <h4 className="text-xl font-bold mb-4 text-center">选择你想开始的功能</h4>
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 animate-in fade-in duration-200" onClick={closeChoice}>
+            <div className="bg-white rounded-xl p-8 w-full max-w-md shadow-2xl scale-100 animate-in zoom-in-95 duration-200" onClick={(e) => e.stopPropagation()}>
+                <h4 className="text-xl font-bold mb-6 text-center text-gray-900">选择你想开始的功能</h4>
                 <div className="flex flex-col gap-4">
                     <Link
                         href="/data-extract"
-                        className="border-2 border-yellow-500 text-yellow-600 hover:bg-yellow-500 hover:text-black font-semibold py-3 rounded-lg text-center transition-colors shadow-sm hover:shadow-md"
+                        className="group flex items-center justify-center gap-3 border border-yellow-500/30 bg-yellow-50 hover:bg-yellow-500 hover:text-black hover:border-yellow-500 text-yellow-700 font-semibold py-4 rounded-lg transition-all shadow-sm hover:shadow-md"
                     >
+                        <FaFileInvoiceDollar className="text-lg group-hover:scale-110 transition-transform" />
                         财务信息提取
                     </Link>
                     <Link
                         href="/financial-analysis"
-                        className="border-2 border-yellow-500 text-yellow-600 hover:bg-yellow-500 hover:text-black font-semibold py-3 rounded-lg text-center transition-colors shadow-sm hover:shadow-md"
+                        className="group flex items-center justify-center gap-3 border border-yellow-500/30 bg-yellow-50 hover:bg-yellow-500 hover:text-black hover:border-yellow-500 text-yellow-700 font-semibold py-4 rounded-lg transition-all shadow-sm hover:shadow-md"
                     >
+                        <FiTrendingUp className="text-lg group-hover:scale-110 transition-transform" />
                         财务指标分析
                     </Link>
                     <Link
                         href="/guidance-chat"
-                        className="border-2 border-yellow-500 text-yellow-600 hover:bg-yellow-500 hover:text-black font-semibold py-3 rounded-lg text-center transition-colors shadow-sm hover:shadow-md"
+                        className="group flex items-center justify-center gap-3 border border-yellow-500/30 bg-yellow-50 hover:bg-yellow-500 hover:text-black hover:border-yellow-500 text-yellow-700 font-semibold py-4 rounded-lg transition-all shadow-sm hover:shadow-md"
                     >
+                        <FiCheckCircle className="text-lg group-hover:scale-110 transition-transform" />
                         财务合规指导
                     </Link>
                 </div>
-                <button className="mt-6 w-full text-sm text-gray-500 hover:text-gray-700" onClick={closeChoice}>取消</button>
+                <button className="mt-6 w-full text-sm text-gray-500 hover:text-gray-900 transition-colors" onClick={closeChoice}>取消</button>
             </div>
         </div>
     );
@@ -57,151 +62,172 @@ export default function HomePage() {
     }, [highlight]);
 
     return (
-        <PageContainer maxWidth="7xl">
-            {/* HERO SECTION */}
-            <section className="flex flex-col items-center justify-center min-h-[60vh] text-center">
-                <Image src="/logo.png" alt="Project Goodman Logo" width={260} height={260} priority />
-                <h1 className="mt-6 text-4xl md:text-4xl font-extrabold text-black">
-                    新一代财务 AI 合作伙伴
-                </h1>
-                <p className="mt-3 text-xl font-semibold text-gray-900 italic">
-                    Goodman is the new kind of accounting.
-                </p>
-                <p className="max-w-2xl mt-4 text-lg md:text-xl text-gray-700">
-                    专为财务领域打造，集信息提取、指标分析与合规指导于一体的智能助手。
-                </p>
-                <div className="flex flex-col sm:flex-row gap-4 mt-8">
-                    <Link
-                        href="#core-modules"
-                        onClick={handleExperienceClick}
-                        className="bg-yellow-500 hover:bg-yellow-600 text-black font-semibold py-3 px-8 rounded shadow transition-colors"
-                    >
-                        立即体验
-                    </Link>
-                    <Link
-                        href="https://github.com/antelacus/project-goodman"
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="border border-yellow-500 text-yellow-500 hover:bg-yellow-500 hover:text-black font-semibold py-3 px-8 rounded transition-colors"
-                    >
-                        Star on GitHub
-                    </Link>
-                </div>
-            </section>
+        <div className="flex flex-col min-h-screen">
+            <div className="bg-dot-pattern absolute inset-0 -z-10 h-[60vh] mask-image-gradient" />
 
-            {/* CORE MODULES */}
-            <section id="core-modules" ref={featureRef} className="mt-12">
-                <h2 className="text-2xl font-bold mb-8 text-center">三大核心能力</h2>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-8 w-full">
-                    {/* 模块一 */}
-                    <Link
-                        href="/data-extract"
-                        className={`bg-white rounded-lg p-6 flex flex-col items-center transition-all duration-300 group cursor-pointer ${highlight ? "ring-4 ring-yellow-400 scale-[1.03]" : "shadow"
-                            } hover:ring-4 hover:ring-yellow-400 hover:shadow-lg`}
+            <PageContainer maxWidth="7xl">
+                {/* HERO SECTION */}
+                <section className="flex flex-col items-center justify-center min-h-[70vh] text-center animate-in fade-in slide-in-from-bottom-4 duration-700">
+                    <div className="relative">
+                        <div className="absolute -inset-1 rounded-full bg-yellow-400/20 blur-xl"></div>
+                        <Image src="/logo.png" alt="Project Goodman Logo" width={260} height={260} priority className="relative" />
+                    </div>
+                    <h1 className="mt-8 text-5xl md:text-6xl font-extrabold text-gray-900 tracking-tight leading-tight">
+                        新一代财务 <span className="text-yellow-500">AI</span> 合作伙伴
+                    </h1>
+                    <p className="mt-4 text-2xl font-serif text-gray-800 italic opacity-90">
+                        Goodman is the new kind of accounting.
+                    </p>
+                    <p className="max-w-2xl mt-6 text-lg text-gray-600 leading-relaxed">
+                        专为财务领域打造，集信息提取、指标分析与合规指导于一体的智能助手。
+                    </p>
+                    <div className="flex flex-col sm:flex-row gap-4 mt-10">
+                        <Link
+                            href="#core-modules"
+                            onClick={handleExperienceClick}
+                            className="bg-yellow-500 hover:bg-yellow-400 text-black font-bold py-4 px-10 rounded-full shadow-lg hover:shadow-yellow-500/30 transition-all transform hover:-translate-y-1"
+                        >
+                            立即体验
+                        </Link>
+                    </div>
+                </section>
+
+                {/* CORE MODULES */}
+                <section id="core-modules" ref={featureRef} className="py-20">
+                    <div className="text-center mb-12">
+                        <h2 className="text-3xl font-bold text-gray-900">三大核心能力</h2>
+                        <div className="w-16 h-1 bg-yellow-500 mx-auto mt-4 rounded-full"></div>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-8 w-full">
+                        {/* 模块一 */}
+                        <Link
+                            href="/data-extract"
+                            className={`bg-white border border-gray-100 rounded-2xl p-8 flex flex-col items-center transition-all duration-300 group cursor-pointer ${highlight ? "ring-4 ring-yellow-400 scale-[1.02]" : "shadow-sm hover:shadow-xl hover:-translate-y-2"
+                                }`}
+                        >
+                            <div className="w-14 h-14 bg-yellow-100 rounded-full flex items-center justify-center mb-6 text-yellow-600 text-2xl group-hover:bg-yellow-500 group-hover:text-white transition-colors">
+                                <FaFileInvoiceDollar />
+                            </div>
+                            <h3 className="text-xl font-bold text-gray-900 mb-3">
+                                财务信息提取
+                            </h3>
+                            <p className="text-gray-600 text-base mb-6 text-center leading-relaxed">上传财务文档，AI 自动提取关键信息。</p>
+                            <ul className="text-gray-500 text-sm list-disc pl-5 space-y-2">
+                                <li>支持发票、合同等文件</li>
+                                <li>自动结构化关键信息</li>
+                                <li>便捷灵活复制信息</li>
+                            </ul>
+                        </Link>
+                        {/* 模块二 */}
+                        <Link
+                            href="/financial-analysis"
+                            className={`bg-white border border-gray-100 rounded-2xl p-8 flex flex-col items-center transition-all duration-300 group cursor-pointer ${highlight ? "ring-4 ring-yellow-400 scale-[1.02]" : "shadow-sm hover:shadow-xl hover:-translate-y-2"
+                                }`}
+                        >
+                            <div className="w-14 h-14 bg-yellow-100 rounded-full flex items-center justify-center mb-6 text-yellow-600 text-2xl group-hover:bg-yellow-500 group-hover:text-white transition-colors">
+                                <FiTrendingUp />
+                            </div>
+                            <h3 className="text-xl font-bold text-gray-900 mb-3">
+                                财务指标分析
+                            </h3>
+                            <p className="text-gray-600 text-base mb-6 text-center leading-relaxed">基于财务报表，AI 智能分析财务指标。</p>
+                            <ul className="text-gray-500 text-sm list-disc pl-5 space-y-2">
+                                <li>多文档智能分析</li>
+                                <li>财务指标自动计算</li>
+                                <li>支持校验 AI 计算结果</li>
+                            </ul>
+                        </Link>
+                        {/* 模块三 */}
+                        <Link
+                            href="/guidance-chat"
+                            className={`bg-white border border-gray-100 rounded-2xl p-8 flex flex-col items-center transition-all duration-300 group cursor-pointer ${highlight ? "ring-4 ring-yellow-400 scale-[1.02]" : "shadow-sm hover:shadow-xl hover:-translate-y-2"
+                                }`}
+                        >
+                            <div className="w-14 h-14 bg-yellow-100 rounded-full flex items-center justify-center mb-6 text-yellow-600 text-2xl group-hover:bg-yellow-500 group-hover:text-white transition-colors">
+                                <FiCheckCircle />
+                            </div>
+                            <h3 className="text-xl font-bold text-gray-900 mb-3">
+                                财务合规指导
+                            </h3>
+                            <p className="text-gray-600 text-base mb-6 text-center leading-relaxed">结合准则法规，AI 判断业务合规性。</p>
+                            <ul className="text-gray-500 text-sm list-disc pl-5 space-y-2">
+                                <li>法规/准则自由匹配</li>
+                                <li>多文档联合分析</li>
+                                <li>合规性建议输出</li>
+                            </ul>
+                        </Link>
+                    </div>
+                </section>
+
+                {/* WHY GOODMAN */}
+                <section className="bg-gray-50 rounded-3xl p-10 md:p-16 mt-20">
+                    <h2 className="text-3xl font-bold mb-10 text-center">为什么选择 Goodman？</h2>
+                    <div className="grid md:grid-cols-3 gap-10">
+                        <div className="flex flex-col items-center text-center">
+                            <div className="mb-4 p-3 bg-white rounded-lg shadow-sm">
+                                <FiCheckCircle className="text-3xl text-green-500" />
+                            </div>
+                            <h3 className="text-lg font-bold mb-3 text-gray-900">专业可信</h3>
+                            <p className="text-sm text-gray-600 leading-relaxed max-w-xs">引用最新会计准则与法规，严谨可靠，杜绝虚假信息。</p>
+                        </div>
+                        <div className="flex flex-col items-center text-center">
+                            <div className="mb-4 p-3 bg-white rounded-lg shadow-sm">
+                                <FiZap className="text-3xl text-yellow-500" />
+                            </div>
+                            <h3 className="text-lg font-bold mb-3 text-gray-900">极致效率</h3>
+                            <p className="text-sm text-gray-600 leading-relaxed max-w-xs">从上传到结果仅需数秒，支持批量处理，大幅提升工作效率。</p>
+                        </div>
+                        <div className="flex flex-col items-center text-center">
+                            <div className="mb-4 p-3 bg-white rounded-lg shadow-sm">
+                                <FiCpu className="text-3xl text-blue-500" />
+                            </div>
+                            <h3 className="text-lg font-bold mb-3 text-gray-900">轻松集成</h3>
+                            <p className="text-sm text-gray-600 leading-relaxed max-w-xs">Serverless 架构，可轻松托管至 Vercel 或部署在企业私有云。</p>
+                        </div>
+                    </div>
+                </section>
+
+                {/* TECH FEATURES */}
+                <section className="py-20 w-full">
+                    <h3 className="text-2xl font-bold mb-10 text-center text-gray-800">技术特性</h3>
+                    <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8">
+                        <div className="text-center p-6 rounded-xl hover:bg-gray-50 transition-colors">
+                            <div className="text-4xl mb-4 text-gray-400 flex justify-center"><FiCpu /></div>
+                            <h4 className="font-bold text-gray-900 mb-2">AI 驱动</h4>
+                            <p className="text-sm text-gray-500">基于 OpenAI gpt-5-mini 技术</p>
+                        </div>
+                        <div className="text-center p-6 rounded-xl hover:bg-gray-50 transition-colors">
+                            <div className="text-4xl mb-4 text-gray-400 flex justify-center"><FiFolder /></div>
+                            <h4 className="font-bold text-gray-900 mb-2">本地知识库</h4>
+                            <p className="text-sm text-gray-500">引用会计准则、法律法规</p>
+                        </div>
+                        <div className="text-center p-6 rounded-xl hover:bg-gray-50 transition-colors">
+                            <div className="text-4xl mb-4 text-gray-400 flex justify-center"><FiZap /></div>
+                            <h4 className="font-bold text-gray-900 mb-2">扩展性强</h4>
+                            <p className="text-sm text-gray-500">根据业务需求随时调整</p>
+                        </div>
+                        <div className="text-center p-6 rounded-xl hover:bg-gray-50 transition-colors">
+                            <div className="text-4xl mb-4 text-gray-400 flex justify-center"><FiFeather /></div>
+                            <h4 className="font-bold text-gray-900 mb-2">简单易用</h4>
+                            <p className="text-sm text-gray-500">指引清晰，上手快速便捷</p>
+                        </div>
+                    </div>
+                </section>
+
+                {/* FINAL CTA */}
+                <section className="flex flex-col items-center text-center mt-10 mb-20 bg-yellow-50/50 rounded-3xl p-16">
+                    <h3 className="text-3xl font-extrabold mb-8 text-gray-900">准备好让财务工作更 smart 吗？</h3>
+                    <button
+                        onClick={() => setShowChoice(true)}
+                        className="bg-yellow-500 hover:bg-yellow-600 text-black font-bold py-4 px-12 rounded-full shadow-lg hover:shadow-yellow-500/30 transition-all transform hover:-translate-y-1"
                     >
-                        <h3 className="text-xl font-bold text-black group-hover:text-yellow-500 mb-2">
-                            财务信息提取
-                        </h3>
-                        <p className="text-gray-600 text-sm mb-2">上传财务文档，AI 自动提取关键信息。</p>
-                        <ul className="text-gray-500 text-xs list-disc pl-5">
-                            <li>支持发票、合同等文件</li>
-                            <li>自动结构化关键信息</li>
-                            <li>便捷灵活复制信息</li>
-                        </ul>
-                    </Link>
-                    {/* 模块二 */}
-                    <Link
-                        href="/financial-analysis"
-                        className={`bg-white rounded-lg p-6 flex flex-col items-center transition-all duration-300 group cursor-pointer ${highlight ? "ring-4 ring-yellow-400 scale-[1.03]" : "shadow"
-                            } hover:ring-4 hover:ring-yellow-400 hover:shadow-lg`}
-                    >
-                        <h3 className="text-xl font-bold text-black group-hover:text-yellow-500 mb-2">
-                            财务指标分析
-                        </h3>
-                        <p className="text-gray-600 text-sm mb-2">基于财务报表，AI 智能分析财务指标。</p>
-                        <ul className="text-gray-500 text-xs list-disc pl-5">
-                            <li>多文档智能分析</li>
-                            <li>财务指标自动计算</li>
-                            <li>支持校验 AI 计算结果</li>
-                        </ul>
-                    </Link>
-                    {/* 模块三 */}
-                    <Link
-                        href="/guidance-chat"
-                        className={`bg-white rounded-lg p-6 flex flex-col items-center transition-all duration-300 group cursor-pointer ${highlight ? "ring-4 ring-yellow-400 scale-[1.03]" : "shadow"
-                            } hover:ring-4 hover:ring-yellow-400 hover:shadow-lg`}
-                    >
-                        <h3 className="text-xl font-bold text-black group-hover:text-yellow-500 mb-2">
-                            财务合规指导
-                        </h3>
-                        <p className="text-gray-600 text-sm mb-2">结合准则法规，AI 判断业务合规性。</p>
-                        <ul className="text-gray-500 text-xs list-disc pl-5">
-                            <li>法规/准则自由匹配</li>
-                            <li>多文档联合分析</li>
-                            <li>合规性建议输出</li>
-                        </ul>
-                    </Link>
-                </div>
-            </section>
+                        立即开始
+                    </button>
+                </section>
 
-            {/* WHY GOODMAN */}
-            <section className="bg-white rounded-lg p-8 mt-20">
-                <h2 className="text-2xl font-bold mb-6 text-center">为什么选择 Goodman？</h2>
-                <div className="grid md:grid-cols-3 gap-6">
-                    <div>
-                        <h3 className="font-semibold mb-2">专业可信</h3>
-                        <p className="text-sm text-gray-700">引用最新会计准则与法规，严谨可靠。</p>
-                    </div>
-                    <div>
-                        <h3 className="font-semibold mb-2">极致效率</h3>
-                        <p className="text-sm text-gray-700">从上传到结果，仅需数秒，支持批量处理。</p>
-                    </div>
-                    <div>
-                        <h3 className="font-semibold mb-2">轻松集成</h3>
-                        <p className="text-sm text-gray-700">无后端依赖，可托管至 Vercel 或企业私有云。</p>
-                    </div>
-                </div>
-            </section>
-
-            {/* TECH FEATURES */}
-            <section className="bg-white rounded-lg p-8 mt-20 w-full">
-                <h3 className="text-2xl font-bold mb-6 text-center">技术特性</h3>
-                <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
-                    <div className="text-center">
-                        <div className="text-2xl mb-2">🤖</div>
-                        <h4 className="font-semibold mb-2">AI 驱动</h4>
-                        <p className="text-sm text-gray-700">响应准确，基于 OpenAI GPT-4.1 技术</p>
-                    </div>
-                    <div className="text-center">
-                        <div className="text-2xl mb-2">📁</div>
-                        <h4 className="font-semibold mb-2">本地知识库</h4>
-                        <p className="text-sm text-gray-700">避免幻觉，引用会计准则、法律法规</p>
-                    </div>
-                    <div className="text-center">
-                        <div className="text-2xl mb-2">⚡</div>
-                        <h4 className="font-semibold mb-2">扩展性强</h4>
-                        <p className="text-sm text-gray-700">功能灵活，根据业务需求随时调整</p>
-                    </div>
-                    <div className="text-center">
-                        <div className="text-2xl mb-2">🦢</div>
-                        <h4 className="font-semibold mb-2">简单易用</h4>
-                        <p className="text-sm text-gray-700">指引清晰，上手快速便捷</p>
-                    </div>
-                </div>
-            </section>
-
-            {/* FINAL CTA */}
-            <section className="flex flex-col items-center text-center mt-24 mb-16">
-                <h3 className="text-3xl font-extrabold mb-6">准备好让财务工作更 smart 吗？</h3>
-                <button
-                    onClick={() => setShowChoice(true)}
-                    className="bg-yellow-500 hover:bg-yellow-600 text-black font-semibold py-4 px-10 rounded shadow transition-colors"
-                >
-                    立即开始
-                </button>
-            </section>
-
-            {showChoice && <ChoiceOverlay />}
-        </PageContainer>
+                {showChoice && <ChoiceOverlay />}
+            </PageContainer>
+        </div>
     );
 }

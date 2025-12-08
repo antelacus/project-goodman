@@ -53,7 +53,7 @@ async function extractTextFromFile(
     // For PDF, Images, and DOCX, use OpenAI
     // Note: OpenAI 'responses' API supports PDF/Images.
     // For DOCX, we might need to use a different approach or rely on 'responses' if it supports it (it doesn't officially support DOCX yet in all endpoints, but let's check).
-    // Actually, standard 'chat.completions' with 'gpt-4o' supports many file types via attachments in some contexts, but via API we usually use 'vision' for images.
+    // Actually, standard 'chat.completions' with 'GPT-5-mini' supports many file types via attachments in some contexts, but via API we usually use 'vision' for images.
     // For PDF, we used 'responses' API in previous code.
     // For DOCX, since we don't have a parser, we will try to use the 'responses' API if it accepts it, OR fallback to a simple "extract text from XML" if we can't use OpenAI.
     // WAIT: The user approved using OpenAI. Let's use the 'responses' API for PDF.
@@ -77,7 +77,7 @@ async function extractTextFromFile(
 
     if (fileType === SUPPORTED_PDF_TYPE || fileName.endsWith('.pdf')) {
         const response = await openai.responses.create({
-            model: "gpt-4.1-mini",
+            model: "gpt-5-mini",
             input: [{
                 role: "user",
                 content: [
@@ -95,7 +95,7 @@ async function extractTextFromFile(
 
     if (SUPPORTED_IMAGE_TYPES.includes(fileType)) {
         const response = await openai.chat.completions.create({
-            model: "gpt-4.1-mini",
+            model: "gpt-5-mini",
             messages: [{
                 role: "user",
                 content: [
@@ -117,7 +117,7 @@ async function extractTextFromFile(
     if (fileType === SUPPORTED_DOCX_TYPE || fileName.endsWith('.docx')) {
         try {
             const response = await openai.responses.create({
-                model: "gpt-4.1-mini",
+                model: "gpt-5-mini",
                 input: [{
                     role: "user",
                     content: [

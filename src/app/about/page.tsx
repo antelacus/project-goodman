@@ -2,8 +2,9 @@
 import React from "react";
 import PageContainer from "../../components/PageContainer";
 import Image from "next/image";
+import Link from "next/link";
 
-export default function AboutHelpPage() {
+export default function AboutPage() {
   return (
     <PageContainer maxWidth="3xl">
       {/* HERO */}
@@ -11,78 +12,120 @@ export default function AboutHelpPage() {
         <Image src="/logo.png" alt="Goodman Logo" width={80} height={80} />
         <h1 className="mt-4 text-3xl md:text-4xl font-extrabold text-black">Accounting Meets AI</h1>
         <p className="mt-4 max-w-xl text-gray-700">
-          让财务工作流<span className="font-semibold">全自动、零压力</span>。
-          Goodman 不仅是一款<strong className="text-black">可直接部署的财务 AI 产品</strong>，更是作者在 AI + Accounting 领域思考的<strong className="text-black">综合展示</strong>。
+          Goodman 是一款<strong className="text-black">面向财务场景的 AI 应用</strong>，
+          也是作者在 AI + Accounting 领域的<strong className="text-black">综合能力展示</strong>。
         </p>
       </section>
 
-      {/* VALUE PROPS */}
+      {/* PROJECT VISION */}
       <section className="mb-12">
-        <h2 className="text-xl font-bold mb-4">为什么选择 Goodman？</h2>
-        <ul className="list-disc pl-6 space-y-2 text-gray-700">
-          <li><span className="font-semibold text-black">精准专业</span>：嵌入最新会计准则与法规，给出可信建议。大幅度避免 AI 幻觉和错误回答。</li>
-          <li><span className="font-semibold text-black">易于扩展</span>：模块化架构，可轻松接入企业自有 Embedding / LLM 服务，快速适配已有工作流。</li>
-          <li><span className="font-semibold text-black">极速高效</span>：前端即可完成 PDF 解析与 AI 推理，秒级出结果。</li>
-          <li><span className="font-semibold text-black">无痛部署</span>：零后端依赖，Vercel 一键部署，支持企业私有化。</li>
-        </ul>
+        <h2 className="text-xl font-bold mb-4">项目愿景</h2>
+        <p className="text-gray-700 mb-4">
+          财务工作中存在大量重复性、规则性的任务：从报表中提取数据、计算财务指标、查阅法规条款……
+          这些工作耗时且容易出错，却又是专业判断的基础。
+        </p>
+        <p className="text-gray-700 mb-4">
+          Goodman 的目标是：<span className="font-semibold text-black">让 AI 处理繁琐的数据工作，让财务人专注于专业判断</span>。
+        </p>
+        <p className="text-gray-700">
+          这不仅是一个产品原型，更是对"AI 如何真正赋能财务工作"这一命题的实践探索。
+        </p>
       </section>
 
-      {/* TECH STACK */}
+      {/* CORE CAPABILITIES */}
+      <section className="mb-12">
+        <h2 className="text-xl font-bold mb-4">核心能力</h2>
+        <div className="grid md:grid-cols-3 gap-6">
+          <div className="p-4 bg-white rounded-lg shadow">
+            <h3 className="font-semibold text-black mb-2">财务信息提取</h3>
+            <p className="text-sm text-gray-700">上传发票、合同等文档，AI 自动识别并结构化关键信息。</p>
+          </div>
+          <div className="p-4 bg-white rounded-lg shadow">
+            <h3 className="font-semibold text-black mb-2">财务指标分析</h3>
+            <p className="text-sm text-gray-700">基于财务报表数据，自动计算财务指标并生成分析报告。</p>
+          </div>
+          <div className="p-4 bg-white rounded-lg shadow">
+            <h3 className="font-semibold text-black mb-2">财务合规指导</h3>
+            <p className="text-sm text-gray-700">结合会计准则与法规，提供业务合规性判断与建议。</p>
+          </div>
+        </div>
+      </section>
+
+      {/* TECH HIGHLIGHTS */}
       <section className="mb-12">
         <h2 className="text-xl font-bold mb-4">技术亮点</h2>
         <ul className="list-disc pl-6 space-y-2 text-gray-700">
-          <li>前端框架：Next.js 15, React 19, Zustand, Tailwind CSS 4</li>
-          <li>AI 服务：OpenAI GPT-4.1 &amp; Embeddings，可替换为企业自有模型</li>
-          <li>文档处理：pdfjs-dist, xlsx，支持表格解析与公式计算</li>
-          <li>部署：Vercel Serverless，无数据库依赖，免费额度即可运行</li>
+          <li><span className="font-semibold text-black">双重存储架构</span>：结构化数据库 + 向量检索，兼顾精确查询与语义搜索</li>
+          <li><span className="font-semibold text-black">确定性计算</span>：数学运算由代码执行而非 AI 生成，确保计算结果准确可验证</li>
+          <li><span className="font-semibold text-black">混合检索</span>：关键词匹配 + 语义相似度，提升法规条款检索的准确率</li>
+          <li><span className="font-semibold text-black">现代技术栈</span>：Next.js 15、React 19、Supabase (PostgreSQL + pgvector)、OpenAI gpt-5-mini</li>
         </ul>
-      </section>
-
-      {/* FAQ */}
-      <section id="faq" className="mb-12 scroll-mt-24">
-        <h2 className="text-xl font-bold mb-4">常见问题</h2>
-        <div className="space-y-4">
-          <details className="p-4 bg-white rounded-lg shadow">
-            <summary className="font-semibold cursor-pointer select-none">我无法获得 AI 回答？</summary>
-            <p className="mt-2 text-gray-700">该项目目前使用 OpenAI API 以提供最佳体验，请调整网络环境。未来将支持更多 AI 服务。</p>
-          </details>
-          <details className="p-4 bg-white rounded-lg shadow">
-            <summary className="font-semibold cursor-pointer select-none">为什么不能上传我要用数据库文档？</summary>
-            <p className="mt-2 text-gray-700">该项目目前受技术条件限制（免费版Vercel，无后端数据库），暂无法上传更多数据库文档。未来将支持。</p>
-          </details>
-          <details className="p-4 bg-white rounded-lg shadow">
-            <summary className="font-semibold cursor-pointer select-none">我上传的文档是否会泄露？</summary>
-            <p className="mt-2 text-gray-700">所有上传文档仅在前端处理，目前无持久化存储，保障隐私。可参见项目代码。</p>
-          </details>
-          <details className="p-4 bg-white rounded-lg shadow">
-            <summary className="font-semibold cursor-pointer select-none">AI 的回答可信吗？</summary>
-            <p className="mt-2 text-gray-700">通常来说可信，但受限于当前 AI 模型技术原理，无法保证 100% 正确。请谨慎甄别后使用。</p>
-          </details>
-          <details className="p-4 bg-white rounded-lg shadow">
-            <summary className="font-semibold cursor-pointer select-none">我想要新功能，能否实现？</summary>
-            <p className="mt-2 text-gray-700">请使用右上角联系方式联系作者。作者长期从事财务会计领域工作，理解财会人的痛点。</p>
-          </details>
-        </div>
       </section>
 
       {/* AUTHOR INTRO */}
       <section className="mb-12">
-        <h2 className="text-xl font-bold mb-4">作者 &amp; 职业价值</h2>
+        <h2 className="text-xl font-bold mb-4">关于作者</h2>
         <p className="mb-4 text-gray-700">
-          你好！我是 <span className="font-semibold text-black">Jason</span>，一名拥有 <span className="font-semibold">财务审计 + 财务数字化</span> 背景的开发者。
+          你好！我是 <span className="font-semibold text-black">Jason</span>，一名拥有<span className="font-semibold">财务审计 + 财务数字化</span>背景的从业者。
         </p>
-        <ul className="list-disc pl-6 space-y-2 text-gray-700">
-          <li><span className="font-semibold text-black">财务</span>：四大会计师事务所背景，深懂财务流程与合规痛点。</li>
-          <li><span className="font-semibold text-black">AI</span>：AI 爱好者，对 AI 在财务领域的应用有浓厚兴趣。</li>
-          <li><span className="font-semibold text-black">营销</span>：主导 SaaS 产品从 0 → 1 上线，擅长产品定位与增长。</li>
+        <div className="grid md:grid-cols-2 gap-4">
+          <div className="p-4 bg-gray-50 rounded-lg">
+            <h3 className="font-semibold text-black mb-2">专业背景</h3>
+            <ul className="text-sm text-gray-700 space-y-1">
+              <li>• 四大会计师事务所审计经验</li>
+              <li>• 企业财务数字化项目经历</li>
+              <li>• 深谙财务流程与合规痛点</li>
+            </ul>
+          </div>
+          <div className="p-4 bg-gray-50 rounded-lg">
+            <h3 className="font-semibold text-black mb-2">技术能力</h3>
+            <ul className="text-sm text-gray-700 space-y-1">
+              <li>• 全栈开发：TypeScript、React、Node.js</li>
+              <li>• AI 应用：Prompt Engineering、RAG、Agent</li>
+              <li>• 数据分析：Python、SQL、机器学习</li>
+            </ul>
+          </div>
+        </div>
+      </section>
+
+      {/* WHY THIS PROJECT */}
+      <section className="mb-12">
+        <h2 className="text-xl font-bold mb-4">为什么做这个项目？</h2>
+        <p className="text-gray-700 mb-4">
+          在财务领域工作多年，我深知两个事实：
+        </p>
+        <ul className="list-disc pl-6 space-y-2 text-gray-700 mb-4">
+          <li>财务人花费大量时间在<span className="font-semibold">数据搬运</span>而非<span className="font-semibold">专业判断</span>上</li>
+          <li>通用 AI 工具难以直接应用于财务场景——<span className="font-semibold">准确性</span>和<span className="font-semibold">可追溯性</span>是刚性要求</li>
         </ul>
+        <p className="text-gray-700">
+          Goodman 是我对这一问题的回答：构建一个真正理解财务场景、输出可信可验证的 AI 助手。
+        </p>
       </section>
 
       {/* CONTACT CTA */}
-      <section className="flex flex-col items-center text-center mb-20">
-        <h2 className="text-2xl font-extrabold mb-4">想要把 AI 带入财务团队？</h2>
-        <p className="max-w-md text-gray-700 mb-6">不论您是对该项目还是对作者感兴趣，均欢迎通过导航栏的社交账号或邮箱联系作者，一起探讨未来可能性！</p>
+      <section className="flex flex-col items-center text-center mb-20 p-8 bg-yellow-50 rounded-lg">
+        <h2 className="text-2xl font-extrabold mb-4">期待与您交流</h2>
+        <p className="max-w-md text-gray-700 mb-6">
+          无论您是对项目感兴趣、寻求合作机会，还是想探讨 AI 在财务领域的应用，都欢迎通过邮箱与我联系。
+        </p>
+        <a
+          href="mailto:me@antelacus.com"
+          className="bg-yellow-500 hover:bg-yellow-600 text-black font-semibold py-3 px-8 rounded shadow transition-colors"
+        >
+          联系作者
+        </a>
+      </section>
+
+      {/* LINK TO HELP */}
+      <section className="text-center mb-8">
+        <p className="text-gray-600">
+          需要了解如何使用 Goodman？请访问
+          <Link href="/help" className="text-yellow-600 hover:text-yellow-700 font-semibold ml-1">
+            使用指南
+          </Link>
+        </p>
       </section>
     </PageContainer>
   );
-} 
+}
