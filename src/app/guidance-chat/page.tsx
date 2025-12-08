@@ -7,6 +7,8 @@ import { checkAndIncreaseApiLimit } from "../../lib/rateLimit";
 import Link from "next/link";
 import RichTextRenderer from "../../components/RichTextRenderer";
 import DocumentSelectModal from "../../components/DocumentSelectModal";
+import ChatInputArea from "../../components/ChatInputArea";
+import { FiAlertTriangle, FiBarChart2, FiLink, FiBookOpen } from "react-icons/fi";
 
 type ChatMessage = {
   id: string;
@@ -29,6 +31,18 @@ type RelatedArticle = {
   summary: string;
 };
 
+type CalculationDetail = {
+  functionName: string;
+  functionDisplayName: string;
+  formula: string;
+  inputs: Record<string, { value: number; unit: string; source: string }>;
+  result: {
+    value: number;
+    formatted: string;
+  };
+  description?: string;
+};
+
 type GuidanceResponse = {
   type: 'guidance' | 'not_found' | 'low_confidence';
   guidance?: string;
@@ -36,6 +50,7 @@ type GuidanceResponse = {
   confidence: number;
   relatedArticles?: RelatedArticle[];
   warnings?: string[];
+  calculations?: CalculationDetail[];
 };
 
 // Preset questions
@@ -81,6 +96,38 @@ const CitationCard = ({ citation, id }: { citation: Citation; id?: string }) => 
   );
 };
 
+const CalculationCard = ({ calculation, id }: { calculation: CalculationDetail; id?: string }) => {
+  return (
+    <div id={id} className="p-4 bg-blue-50 border-l-4 border-blue-500 rounded transition-all duration-300">
+      <div className="mb-3">
+        <div className="text-lg font-bold text-blue-900">
+          {calculation.description || calculation.functionDisplayName}
+        </div>
+        <div className="text-sm text-gray-600 mt-1">{calculation.formula}</div>
+      </div>
+
+      <div className="mb-3">
+        <div className="text-sm font-semibold text-gray-700 mb-2">输入数据:</div>
+        <div className="space-y-1">
+          {Object.entries(calculation.inputs).map(([key, value]) => (
+            <div key={key} className="text-sm text-gray-700">
+              <span className="font-medium">{key}:</span> {value.value.toLocaleString()} {value.unit}
+              <span className="text-gray-500 text-xs ml-2">({value.source})</span>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <div className="p-3 bg-white border border-blue-300 rounded">
+        <div className="text-sm text-gray-600">计算结果</div>
+        <div className="text-2xl font-bold text-blue-600">
+          {calculation.result.formatted}
+        </div>
+      </div>
+    </div>
+  );
+};
+
 export default function GuidanceChatPage() {
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState("");
@@ -91,19 +138,8 @@ export default function GuidanceChatPage() {
   const [availableDocuments, setAvailableDocuments] = useState<Document[]>([]);
   const [selectedDocIds, setSelectedDocIds] = useState<string[]>([]);
   const [showDocModal, setShowDocModal] = useState(false);
-  const [showPresetMenu, setShowPresetMenu] = useState(false);
-  const inputRef = useRef<HTMLInputElement>(null);
-  const menuRef = useRef<HTMLDivElement>(null);
 
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
-        setShowPresetMenu(false);
-      }
-    };
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, []);
+
 
   // Subscribe to store updates for new uploads
   const storeDocuments = useDocumentStore((s) => s.documents);
@@ -165,26 +201,7 @@ export default function GuidanceChatPage() {
     }
   };
 
-  const insertTextAtCursor = (text: string) => {
-    if (inputRef.current) {
-      const input = inputRef.current;
-      const start = input.selectionStart || 0;
-      const end = input.selectionEnd || 0;
-      const currentValue = input.value;
-      const newValue = currentValue.substring(0, start) + text + currentValue.substring(end);
 
-      setInput(newValue);
-
-      // Restore focus and move cursor to end of inserted text
-      setTimeout(() => {
-        input.focus();
-        const newCursorPos = start + text.length;
-        input.setSelectionRange(newCursorPos, newCursorPos);
-      }, 0);
-    } else {
-      setInput(prev => prev + text);
-    }
-  };
 
   const handleSendMessage = async (message: string) => {
     if (!message.trim() || loading) return;
@@ -216,7 +233,7 @@ export default function GuidanceChatPage() {
     setLoading(true);
 
     try {
-      const response = await fetch("/api/guidance-chat-v2", {
+      const response = await fetch("/api/guidance-chat", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -256,10 +273,7 @@ export default function GuidanceChatPage() {
     }
   };
 
-  const handlePresetQuestion = (question: string) => {
-    insertTextAtCursor(question);
-    setShowPresetMenu(false);
-  };
+
 
 
 
@@ -289,7 +303,7 @@ export default function GuidanceChatPage() {
         {data.type === 'not_found' && (
           <div className="bg-yellow-50 border border-yellow-300 rounded-lg p-4">
             <div className="flex items-start gap-2">
-              <span className="text-yellow-600 text-lg">⚠️</span>
+              <FiAlertTriangle className="text-yellow-600 text-lg" />
               <div className="flex-1">
                 <div className="font-semibold text-yellow-800 mb-1">未找到相关法规</div>
                 <div className="text-sm text-yellow-700">
@@ -303,7 +317,7 @@ export default function GuidanceChatPage() {
         {data.citations && data.citations.length > 0 && (
           <div className="space-y-2">
             <div className="font-semibold text-gray-800 flex items-center gap-2">
-              <span>📚</span>
+              <FiBookOpen />
               <span>参考依据 ({data.citations.length})</span>
             </div>
             {data.citations.map((citation, idx) => (
@@ -316,10 +330,26 @@ export default function GuidanceChatPage() {
           </div>
         )}
 
+        {data.calculations && data.calculations.length > 0 && (
+          <div className="space-y-3">
+            <div className="font-semibold text-gray-800 flex items-center gap-2">
+              <FiBarChart2 />
+              <span>计算过程 ({data.calculations.length})</span>
+            </div>
+            {data.calculations.map((calc, idx) => (
+              <CalculationCard
+                key={idx}
+                calculation={calc}
+                id={`calc-card-${msg.id}-${idx}`}
+              />
+            ))}
+          </div>
+        )}
+
         {data.warnings && data.warnings.length > 0 && (
           <div className="bg-red-50 border border-red-200 rounded-lg p-4">
             <div className="font-semibold text-red-800 mb-2 flex items-center gap-2">
-              <span>⚠️</span>
+              <FiAlertTriangle />
               <span>重要提示</span>
             </div>
             <ul className="text-sm text-red-700 space-y-1">
@@ -336,7 +366,7 @@ export default function GuidanceChatPage() {
         {data.relatedArticles && data.relatedArticles.length > 0 && (
           <div className="border-t border-gray-200 pt-4">
             <div className="font-semibold text-gray-700 mb-2 flex items-center gap-2">
-              <span>🔗</span>
+              <FiLink />
               <span>相关条款</span>
             </div>
             <div className="space-y-2">
@@ -433,77 +463,37 @@ export default function GuidanceChatPage() {
           </div>
         </div>
 
-        {/* Input Area - Sticky Bottom */}
-        <div className="sticky bottom-0 bg-white pt-2 pb-4 border-t border-gray-200">
-          {/* Input Box */}
-          <div className="flex gap-2 relative">
-            <button
-              onClick={() => setShowDocModal(true)}
-              className="px-3 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg border border-gray-300 transition-colors flex items-center gap-2"
-              title="选择法规/文档"
-            >
-              <span className="text-sm hidden sm:inline">文档选择</span>
-              {selectedDocIds.length > 0 && (
-                <span className="bg-yellow-500 text-white text-xs px-1.5 py-0.5 rounded-full">
-                  {selectedDocIds.length}
-                </span>
-              )}
-            </button>
-
-            {/* Preset Questions Button */}
-            <div className="relative" ref={menuRef}>
-              <button
-                onClick={() => setShowPresetMenu(!showPresetMenu)}
-                className="h-full px-3 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg border border-gray-300 transition-colors flex items-center gap-2"
-                title="常见问题"
-              >
-                <span className="text-sm hidden sm:inline">预设问题</span>
-              </button>
-
-              {showPresetMenu && (
-                <div className="absolute bottom-full left-0 mb-2 w-64 bg-white border border-gray-200 rounded-lg shadow-lg z-10 overflow-hidden">
-                  <div className="p-2 text-xs font-semibold text-gray-500 border-b border-gray-100 bg-gray-50">
-                    点击插入问题
-                  </div>
-                  <div className="max-h-60 overflow-y-auto">
-                    {presetQuestions.map((q, idx) => (
-                      <button
-                        key={idx}
-                        onClick={() => handlePresetQuestion(q)}
-                        className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-yellow-50 hover:text-yellow-700 transition-colors border-b border-gray-50 last:border-0"
-                      >
-                        {q}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              )}
-            </div>
-
-            <input
-              ref={inputRef}
-              type="text"
-              value={input}
-              onChange={(e) => setInput(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter" && !e.shiftKey && !loading) {
-                  e.preventDefault();
-                  handleSendMessage(input);
-                }
-              }}
-              placeholder={selectedDocIds.length === 0 ? "请先选择法规库文档..." : "请输入您的合规性问题..."}
-              disabled={loading || selectedDocIds.length === 0}
-              className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-500 disabled:bg-gray-100 disabled:cursor-not-allowed"
-            />
-            <button
-              onClick={() => handleSendMessage(input)}
-              disabled={loading || !input.trim() || selectedDocIds.length === 0}
-              className="px-6 py-2 bg-yellow-500 hover:bg-yellow-600 text-white font-semibold rounded-lg transition-colors disabled:bg-gray-300 disabled:cursor-not-allowed"
-            >
-              {loading ? "发送中..." : "发送"}
-            </button>
-          </div>
-        </div>
+        {/* Input Area */}
+        <ChatInputArea
+          input={input}
+          setInput={setInput}
+          onSend={handleSendMessage}
+          loading={loading}
+          disabled={selectedDocIds.length === 0}
+          placeholder={selectedDocIds.length === 0 ? "请先选择法规库文档..." : "请输入您的合规性问题..."}
+          onDocumentSelect={() => setShowDocModal(true)}
+          selectedDocCount={selectedDocIds.length}
+          presetQuestions={presetQuestions}
+          onPresetSelect={(q) => {
+            // We need to implement a way to set input or send directly
+            // ChatInputArea handles text insertion internal to itself via refs if we moved logic there?
+            // Actually ChatInputArea takes onPresetSelect and we want it to insert text.
+            // But ChatInputArea has the textarea ref.
+            // Let's look at ChatInputArea again.
+            // It calls onPresetSelect? No, it handles handlePresetClick internally and calls setInput.
+            // Wait, ChatInputArea in my design handles the click and calls insertTextAtCursor which calls setInput.
+            // The prop onPresetSelect is actually not used in the internal logic I wrote?
+            // Let's check ChatInputArea.tsx content I just wrote.
+            // `handlePresetClick` calls `insertTextAtCursor` which calls `setInput`.
+            // It does NOT call `onPresetSelect` prop. 
+            // So I don't need to pass a complex logic here, just a dummy or remove the prop from interface if unused?
+            // Currently defined interface has `onPresetSelect`.
+            // I should probably update ChatInputArea to use the prop or remove it.
+            // Ideally the parent might want to know? Or maybe just for tracking.
+            // For now let's pass a no-op or simple log.
+            console.log("Preset selected:", q);
+          }}
+        />
       </div>
     </PageContainer>
   );

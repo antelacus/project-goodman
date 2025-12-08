@@ -2,7 +2,7 @@
 import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
-import { FaGithub, FaEnvelope } from "react-icons/fa6";
+import { FaEnvelope } from "react-icons/fa6";
 import { useState } from "react";
 
 const navItems = [
@@ -11,12 +11,12 @@ const navItems = [
   { name: "财务指标分析", href: "/financial-analysis" },
   { name: "财务合规指导", href: "/guidance-chat" },
   { name: "文档管理", href: "/documents" },
-  { name: "案例演示", href: "/showcase" },
-  { name: "关于/帮助", href: "/about" },
+  { name: "使用指南", href: "/help" },
+  { name: "关于", href: "/about" },
 ];
 
 const socialLinks = [
-  { icon: <FaGithub className="inline" />, label: "GitHub", url: "https://github.com/antelacus" },
+
   { icon: <FaEnvelope className="inline" />, label: "send email", url: "mailto:me@antelacus.com" },
 ];
 

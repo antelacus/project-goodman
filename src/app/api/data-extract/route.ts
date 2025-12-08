@@ -64,7 +64,7 @@ export async function POST(req: NextRequest) {
     if (SUPPORTED_IMAGE_TYPES.includes(fileType)) {
       // Image processing with Vision API
       const response = await openai.chat.completions.create({
-        model: "gpt-4.1-mini",
+        model: "gpt-5-mini",
         messages: [{
           role: "user",
           content: [
@@ -79,7 +79,7 @@ export async function POST(req: NextRequest) {
           ]
         }],
         response_format: { type: "json_object" },
-        max_tokens: 4096
+        max_completion_tokens: 4096
       });
 
       result = response.choices[0]?.message?.content;
@@ -87,7 +87,7 @@ export async function POST(req: NextRequest) {
       // PDF processing using Responses API with file input
       // Chat completions API doesn't support PDF, must use responses API
       const response = await openai.responses.create({
-        model: "gpt-4.1-mini",
+        model: "gpt-5-mini",
         input: [
           {
             role: "user",
@@ -129,7 +129,7 @@ export async function POST(req: NextRequest) {
 
       // Send to LLM for structured extraction
       const response = await openai.chat.completions.create({
-        model: "gpt-4.1-mini",
+        model: "gpt-5-mini",
         messages: [{
           role: "user",
           content: `${prompt}\n\n以下是Excel表格内容（制表符分隔）：\n\n${textContent}`

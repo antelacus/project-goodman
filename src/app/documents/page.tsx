@@ -570,7 +570,6 @@ export default function DocumentsPage() {
           </PageTitle>
           <p className="text-gray-700 mb-6">
             统一管理数据库文档与待处理文档。
-            {!isAuthenticated && "（如需管理文档，请联系管理员）"}
             {isAuthenticated && "（您可以上传、删除、重命名及修改文档属性）"}
           </p>
 
@@ -803,19 +802,10 @@ export default function DocumentsPage() {
                     {isExcel(previewDoc.name) && (
                       <div className="bg-gray-50 rounded p-4">
                         <p className="text-sm text-gray-600 mb-2">
-                          Excel 文件不支持直接预览。
-                          <a
-                            href={previewSignedUrl}
-                            download={previewDoc.name}
-                            className="ml-2 text-blue-600 hover:underline"
-                          >
-                            点击下载
-                          </a>
+                          Excel 文件不支持直接预览，以下为提取的文本内容：
                         </p>
-                        {/* Fallback to text content */}
                         {previewDoc.chunks && previewDoc.chunks.length > 0 && (
-                          <div className="mt-4">
-                            <p className="text-sm text-gray-600 mb-2 font-semibold">提取的文本内容：</p>
+                          <div className="mt-2">
                             <div className="bg-white rounded p-4 text-sm whitespace-pre-wrap max-h-[400px] overflow-y-auto border">
                               {previewDoc.chunks.map(chunk => chunk.text).join('\n\n')}
                             </div>
@@ -827,14 +817,15 @@ export default function DocumentsPage() {
                       <div className="bg-gray-50 rounded p-4">
                         <p className="text-sm text-gray-600 mb-2">
                           不支持此文件类型的预览。
-                          <a
-                            href={previewSignedUrl}
-                            download={previewDoc.name}
-                            className="ml-2 text-blue-600 hover:underline"
-                          >
-                            点击下载
-                          </a>
                         </p>
+                        {previewDoc.chunks && previewDoc.chunks.length > 0 && (
+                          <div className="mt-2">
+                            <p className="text-sm text-gray-600 mb-2">提取的文本内容：</p>
+                            <div className="bg-white rounded p-4 text-sm whitespace-pre-wrap max-h-[400px] overflow-y-auto border">
+                              {previewDoc.chunks.map(chunk => chunk.text).join('\n\n')}
+                            </div>
+                          </div>
+                        )}
                       </div>
                     )}
                   </div>

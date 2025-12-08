@@ -4,7 +4,7 @@
  * To test:
  * 1. Run: npm run dev
  * 2. Visit: http://localhost:3000/test-admin
- * 3. Triple-click the 📄 icon
+ * 3. Triple-click the file icon
  * 4. Enter admin password (from .env.local)
  * 5. Verify authentication works
  */
@@ -13,6 +13,7 @@
 
 import { useAdminAuth, getAdminToken, isAdminAuthenticated } from '../../components/AdminPasswordTrigger';
 import { useState } from 'react';
+import { FiCheckCircle, FiXCircle, FiFileText } from 'react-icons/fi';
 
 export default function TestAdminTrigger() {
   const { triggerRef, isAuthenticated, logout, modal } = useAdminAuth();
@@ -87,12 +88,12 @@ export default function TestAdminTrigger() {
       const data = await response.json();
 
       if (data.success) {
-        setUploadStatus(`✅ 上传成功！提取了 ${data.structuredData?.metrics?.length || 0} 个指标`);
+        setUploadStatus(`[SUCCESS] 上传成功！提取了 ${data.structuredData?.metrics?.length || 0} 个指标`);
       } else {
-        setUploadStatus(`❌ 上传失败：${data.message || '未知错误'}`);
+        setUploadStatus(`[ERROR] 上传失败：${data.message || '未知错误'}`);
       }
     } catch (error) {
-      setUploadStatus(`❌ 请求失败：${error}`);
+      setUploadStatus(`[ERROR] 请求失败：${error}`);
       console.error('Upload test error:', error);
     }
   };
@@ -116,7 +117,7 @@ export default function TestAdminTrigger() {
             ref={triggerRef}
             className="inline-block text-4xl cursor-pointer hover:scale-110 transition-transform p-4 bg-white rounded-lg shadow"
           >
-            📄
+            <FiFileText />
           </div>
         </div>
 
@@ -135,7 +136,7 @@ export default function TestAdminTrigger() {
                     : 'bg-red-100 text-red-800'
                 }`}
               >
-                {isAuthenticated ? '✅ 已认证' : '❌ 未认证'}
+                {isAuthenticated ? <><FiCheckCircle className="inline mr-1" />已认证</> : <><FiXCircle className="inline mr-1" />未认证</>}
               </span>
             </div>
 
@@ -198,7 +199,7 @@ export default function TestAdminTrigger() {
             测试说明
           </h2>
           <ol className="list-decimal list-inside space-y-2 text-sm text-gray-700">
-            <li>快速点击 📄 图标三次（500ms 内）</li>
+            <li>快速点击文件图标三次（500ms 内）</li>
             <li>应该会弹出管理员密码输入框</li>
             <li>输入密码（来自 .env.local 的 ADMIN_PASSWORD）</li>
             <li>点击"解锁"按钮</li>

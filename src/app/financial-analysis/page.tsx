@@ -7,6 +7,9 @@ import Link from "next/link";
 import DocumentSelectModal from "../../components/DocumentSelectModal";
 import { Document } from "../../store/documents";
 import RichTextRenderer from "../../components/RichTextRenderer";
+import { FiAlertTriangle, FiLoader, FiFileText } from "react-icons/fi";
+import ChatInputArea from "../../components/ChatInputArea";
+import { HiOutlineLightBulb } from "react-icons/hi";
 
 type ChatMessage = {
   id: string;
@@ -141,7 +144,7 @@ export default function FinancialAnalysisPage() {
     setIsSending(true);
 
     try {
-      const res = await fetch("/api/financial-analysis-v2", {
+      const res = await fetch("/api/financial-analysis", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -179,45 +182,9 @@ export default function FinancialAnalysisPage() {
     }
   };
 
-  const [showPresetMenu, setShowPresetMenu] = useState(false);
-  const inputRef = useRef<HTMLInputElement>(null);
-  const menuRef = useRef<HTMLDivElement>(null);
 
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
-        setShowPresetMenu(false);
-      }
-    };
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, []);
 
-  const insertTextAtCursor = (text: string) => {
-    if (inputRef.current) {
-      const input = inputRef.current;
-      const start = input.selectionStart || 0;
-      const end = input.selectionEnd || 0;
-      const currentValue = input.value;
-      const newValue = currentValue.substring(0, start) + text + currentValue.substring(end);
 
-      setInputMessage(newValue);
-
-      // Restore focus and move cursor to end of inserted text
-      setTimeout(() => {
-        input.focus();
-        const newCursorPos = start + text.length;
-        input.setSelectionRange(newCursorPos, newCursorPos);
-      }, 0);
-    } else {
-      setInputMessage(prev => prev + text);
-    }
-  };
-
-  const handlePresetClick = (question: string) => {
-    insertTextAtCursor(question);
-    setShowPresetMenu(false);
-  };
 
   const renderCalculationCard = (calculation: FinancialAnalysisResponse["calculation"], msgId: string) => {
     if (!calculation) return null;
@@ -265,7 +232,7 @@ export default function FinancialAnalysisPage() {
 
     return (
       <div id={`source-list-${msgId}`} className="mt-3 p-3 bg-gray-50 rounded transition-all duration-300">
-        <div className="text-xs font-semibold text-gray-600 mb-2">📄 数据来源:</div>
+        <div className="text-xs font-semibold text-gray-600 mb-2 flex items-center gap-1"><FiFileText className="inline" /> 数据来源:</div>
         <div className="space-y-1">
           {sources.map((doc, idx) => (
             <div key={idx} className="text-xs text-gray-700">
@@ -282,7 +249,7 @@ export default function FinancialAnalysisPage() {
 
     return (
       <div className="mt-4 p-4 bg-yellow-50 border-l-4 border-yellow-500 rounded">
-        <div className="text-sm font-semibold text-yellow-900 mb-2">⚠️ 缺少必要数据:</div>
+        <div className="text-sm font-semibold text-yellow-900 mb-2 flex items-center gap-1"><FiAlertTriangle className="inline" /> 缺少必要数据:</div>
         <ul className="list-disc list-inside space-y-1">
           {missingData.map((item, idx) => (
             <li key={idx} className="text-sm text-yellow-800">{item}</li>
@@ -290,7 +257,7 @@ export default function FinancialAnalysisPage() {
         </ul>
         {suggestion && (
           <div className="mt-3 text-sm text-yellow-700 bg-yellow-100 p-2 rounded">
-            💡 {suggestion}
+            <HiOutlineLightBulb className="inline mr-1" />{suggestion}
           </div>
         )}
       </div>
@@ -409,7 +376,7 @@ export default function FinancialAnalysisPage() {
               <div className="w-full text-center">
                 <div className="inline-block bg-gray-100 rounded-lg px-6 py-3">
                   <span className="text-gray-600">正在分析计算...</span>
-                  <span className="ml-2 animate-pulse">💡</span>
+                  <FiLoader className="ml-2 animate-spin inline" />
                 </div>
               </div>
             )}
@@ -418,77 +385,19 @@ export default function FinancialAnalysisPage() {
           </div>
         </div>
 
-        {/* Input Area - Sticky Bottom */}
-        <div className="sticky bottom-0 bg-white pt-2 pb-4 border-t border-gray-200">
-          {/* Input Box */}
-          <div className="flex gap-2 relative">
-            <button
-              onClick={() => setShowDocModal(true)}
-              className="px-3 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg border border-gray-300 transition-colors flex items-center gap-2"
-              title="选择分析文档"
-            >
-              <span className="text-sm hidden sm:inline">文档选择</span>
-              {selectedDocIds.length > 0 && (
-                <span className="bg-yellow-500 text-white text-xs px-1.5 py-0.5 rounded-full">
-                  {selectedDocIds.length}
-                </span>
-              )}
-            </button>
-
-            {/* Preset Questions Button */}
-            <div className="relative" ref={menuRef}>
-              <button
-                onClick={() => setShowPresetMenu(!showPresetMenu)}
-                className="h-full px-3 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg border border-gray-300 transition-colors flex items-center gap-2"
-                title="常用指标"
-              >
-                <span className="text-sm hidden sm:inline">预设问题</span>
-              </button>
-
-              {showPresetMenu && (
-                <div className="absolute bottom-full left-0 mb-2 w-64 bg-white border border-gray-200 rounded-lg shadow-lg z-10 overflow-hidden">
-                  <div className="p-2 text-xs font-semibold text-gray-500 border-b border-gray-100 bg-gray-50">
-                    点击插入问题
-                  </div>
-                  <div className="max-h-60 overflow-y-auto">
-                    {presetQuestions.map((q, idx) => (
-                      <button
-                        key={idx}
-                        onClick={() => handlePresetClick(q)}
-                        className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-yellow-50 hover:text-yellow-700 transition-colors border-b border-gray-50 last:border-0"
-                      >
-                        {q}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              )}
-            </div>
-
-            <input
-              ref={inputRef}
-              type="text"
-              value={inputMessage}
-              onChange={(e) => setInputMessage(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter" && !e.shiftKey) {
-                  e.preventDefault();
-                  sendMessage(inputMessage);
-                }
-              }}
-              placeholder={selectedDocIds.length === 0 ? "请先选择待分析文档..." : "请输入您的财务分析问题..."}
-              disabled={isSending || selectedDocIds.length === 0}
-              className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-500 disabled:bg-gray-100 disabled:cursor-not-allowed"
-            />
-            <button
-              onClick={() => sendMessage(inputMessage)}
-              disabled={isSending || !inputMessage.trim() || selectedDocIds.length === 0}
-              className="px-6 py-2 bg-yellow-500 hover:bg-yellow-600 text-white font-semibold rounded-lg transition-colors disabled:bg-gray-300 disabled:cursor-not-allowed"
-            >
-              {isSending ? "发送中..." : "发送"}
-            </button>
-          </div>
-        </div>
+        {/* Input Area */}
+        <ChatInputArea
+          input={inputMessage}
+          setInput={setInputMessage}
+          onSend={sendMessage}
+          loading={isSending}
+          disabled={selectedDocIds.length === 0}
+          placeholder={selectedDocIds.length === 0 ? "请先选择待分析文档..." : "请输入您的财务分析问题..."}
+          onDocumentSelect={() => setShowDocModal(true)}
+          selectedDocCount={selectedDocIds.length}
+          presetQuestions={presetQuestions}
+          onPresetSelect={(q) => console.log('Preset click tracked:', q)}
+        />
       </div>
     </PageContainer>
   );

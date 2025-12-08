@@ -176,7 +176,7 @@ export async function POST(req: NextRequest) {
 
     // Call OpenAI API for conversational response
     const completion = await openai.chat.completions.create({
-      model: "gpt-4.1",
+      model: "gpt-5-mini",
       messages: [
         { role: "system", content: systemPrompt },
         ...conversationHistory.slice(-5).map(msg => ({
@@ -185,8 +185,8 @@ export async function POST(req: NextRequest) {
         })),
         { role: "user", content: message }
       ],
-      max_tokens: 500,
-      temperature: 0.7,
+      max_completion_tokens: 1000,
+
     });
 
     const reply = completion.choices[0]?.message?.content || "抱歉，我无法回答您的问题。";
