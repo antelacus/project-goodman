@@ -70,6 +70,37 @@ interface FinancialAnalysisResponse {
 }
 
 /**
+ * Query business context from business_info documents
+ */
+async function queryBusinessContext(): Promise<string> {
+  const supabase = createServerSupabaseClient();
+
+  // Query document chunks from business_info documents
+  const { data: chunks, error } = await supabase
+    .from('document_chunks')
+    .select(`
+      content,
+      documents!inner(id, name, doc_type)
+    `)
+    .eq('documents.doc_type', 'business_info')
+    .order('chunk_index', { ascending: true })
+    .limit(10); // Limit to avoid too much context
+
+  if (error) {
+    console.error('Error querying business context:', error);
+    return '';
+  }
+
+  if (!chunks || chunks.length === 0) {
+    return '';
+  }
+
+  // Combine chunks into context
+  const contextParts = chunks.map((chunk: any) => chunk.content);
+  return contextParts.join('\n\n');
+}
+
+/**
  * Query financial data from Supabase
  */
 async function queryFinancialData(
@@ -253,6 +284,12 @@ export async function POST(request: NextRequest) {
       .map((f: PresetFunction) => `- ${f.displayName} (${f.name}): ${f.interpretation || ''}`)
       .join('\n');
 
+    // Query business context
+    const businessContext = await queryBusinessContext();
+    if (businessContext) {
+      console.log(`[Financial Analysis] Found business context: ${businessContext.length} chars`);
+    }
+
     // Build system prompt
     const metricList = getAllMetricNames().join('\n');
     const systemPrompt = getFinancialAnalysisPrompt({
@@ -260,6 +297,7 @@ export async function POST(request: NextRequest) {
       availableDocuments: '从数据库查询',
       context: '',
       metricList: metricList,
+      businessContext: businessContext,
     });
 
     // Step 1: Use OpenAI function calling to identify which function to use

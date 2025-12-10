@@ -9,16 +9,24 @@
  * Document type labels (database value -> display label)
  */
 export const DOC_TYPE_LABELS: Record<string, string> = {
+  // 财务报表
   'balance_sheet': '资产负债表',
   'income_statement': '利润表',
   'cash_flow': '现金流量表',
+  'financial_report': '财务报告',
+  // 财务信息
+  'account_detail': '科目明细',
+  // 法规准则
   'regulation': '法律法规',
   'accounting_standard': '会计准则',
   'policy': '规章制度',
+  // 其他信息
+  'business_info': '业务情况',
+  'general': '其他文档',
+  // 业务文档 (临时)
   'contract': '合同',
   'invoice': '发票',
   'voucher': '记账凭证',
-  'general': '其他文档',
 };
 
 /**
@@ -106,12 +114,54 @@ export function getPeriodValue(label: string): string | null {
 }
 
 /**
- * Check if a document type is a financial statement
+ * Check if a document type is a financial statement (structured extraction)
  */
 export function isFinancialStatement(docType: string | null | undefined): boolean {
   if (!docType) return false;
   return ['balance_sheet', 'income_statement', 'cash_flow'].includes(docType);
 }
+
+/**
+ * Check if a document type is a financial report (vector only, no structured extraction)
+ */
+export function isFinancialReport(docType: string | null | undefined): boolean {
+  if (!docType) return false;
+  return docType === 'financial_report';
+}
+
+/**
+ * Check if a document type requires year/period selection
+ */
+export function requiresYearPeriod(docType: string | null | undefined): boolean {
+  if (!docType) return false;
+  return ['balance_sheet', 'income_statement', 'cash_flow', 'financial_report'].includes(docType);
+}
+
+/**
+ * Check if a document type is business info (for AI context enhancement)
+ */
+export function isBusinessInfo(docType: string | null | undefined): boolean {
+  if (!docType) return false;
+  return docType === 'business_info';
+}
+
+/**
+ * Document types that are not uploadable yet
+ */
+export const NON_UPLOADABLE_TYPES = ['account_detail'];
+
+/**
+ * Check if a document type is uploadable
+ */
+export function isUploadable(docType: string | null | undefined): boolean {
+  if (!docType) return false;
+  return !NON_UPLOADABLE_TYPES.includes(docType);
+}
+
+/**
+ * Document types that only accept PDF format
+ */
+export const PDF_ONLY_TYPES = ['financial_report', 'business_info'];
 
 /**
  * Check if a document type is a regulation/policy

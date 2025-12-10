@@ -68,6 +68,15 @@ Always cite like this:
 
 {RETRIEVED_REGULATIONS}
 
+## Business Context Documents:
+
+The system may provide business context information (业务情况) describing the company's operations, business model, industry position, and operational details. When this context is available, use it to:
+1. Provide more relevant compliance advice tailored to the company's specific situation
+2. Consider industry-specific regulations and requirements
+3. Give more practical recommendations based on the company's actual business operations
+
+{BUSINESS_CONTEXT}
+
 ## User Context:
 
 Document (if uploaded): {UPLOADED_DOCUMENT}

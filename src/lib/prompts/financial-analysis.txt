@@ -53,6 +53,15 @@ You (CORRECT): *Call debt_to_asset_ratio function*
 
 {AVAILABLE_DOCUMENTS}
 
+## Business Context Documents:
+
+The system may also provide business context information (业务情况) that describes the company's operations, business model, industry position, and other non-financial information. When this context is available, use it to:
+1. Provide more relevant interpretations of financial metrics
+2. Explain how business factors might influence the numbers
+3. Give more contextualized recommendations
+
+{BUSINESS_CONTEXT}
+
 ## How to Respond:
 
 ### If you can calculate:

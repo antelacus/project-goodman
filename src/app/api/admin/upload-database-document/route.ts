@@ -113,22 +113,62 @@ async function extractTextFromFile(
       throw new Error(`Excel parsing failed: ${err instanceof Error ? err.message : 'Unknown error'}`);
     }
   } else if (ext === 'pdf') {
-    // PDF file - use OpenAI Responses API
-    const response = await openaiClient.responses.create({
-      model: "gpt-5-mini",
-      input: [{
-        role: "user",
-        content: [
-          { type: "input_text", text: "请完整提取这个PDF文档中的所有文本内容，保持原有的结构和格式。只返回文本内容，不要添加任何额外的解释。" },
-          {
-            type: "input_file",
-            filename: fileName,
-            file_data: `data:application/pdf;base64,${fileData}`
-          }
-        ]
-      }]
-    });
-    return response.output_text || '';
+    // PDF file - use unpdf for direct text extraction (serverless-friendly, no worker needed)
+    try {
+      const buffer = Buffer.from(fileData, 'base64');
+      console.log(`[extractTextFromFile] PDF buffer created, size: ${buffer.length} bytes`);
+
+      // Use unpdf which is designed for serverless environments
+      const { extractText } = await import('unpdf');
+      const result = await extractText(new Uint8Array(buffer));
+      // unpdf returns text as array of strings (one per page), join them
+      const textContent = Array.isArray(result.text) ? result.text.join('\n\n') : result.text;
+
+      console.log(`[extractTextFromFile] PDF text extracted directly, length: ${textContent.length} chars, pages: ${result.totalPages}`);
+
+      if (textContent.trim().length > 100) {
+        // Successfully extracted text directly
+        return textContent;
+      }
+
+      // If direct extraction yielded little text, it might be a scanned PDF
+      // Fall back to OpenAI Vision API
+      console.log(`[extractTextFromFile] PDF text too short, falling back to Vision API...`);
+      const response = await openaiClient.responses.create({
+        model: "gpt-5-mini",
+        input: [{
+          role: "user",
+          content: [
+            { type: "input_text", text: "请完整提取这个PDF文档中的所有文本内容，保持原有的结构和格式。只返回文本内容，不要添加任何额外的解释。" },
+            {
+              type: "input_file",
+              filename: fileName,
+              file_data: `data:application/pdf;base64,${fileData}`
+            }
+          ]
+        }]
+      });
+      return response.output_text || '';
+    } catch (pdfError) {
+      console.error(`[extractTextFromFile] PDF parse error:`, pdfError);
+      // Fall back to OpenAI if pdf-parse fails
+      console.log(`[extractTextFromFile] Falling back to Vision API due to error...`);
+      const response = await openaiClient.responses.create({
+        model: "gpt-5-mini",
+        input: [{
+          role: "user",
+          content: [
+            { type: "input_text", text: "请完整提取这个PDF文档中的所有文本内容，保持原有的结构和格式。只返回文本内容，不要添加任何额外的解释。" },
+            {
+              type: "input_file",
+              filename: fileName,
+              file_data: `data:application/pdf;base64,${fileData}`
+            }
+          ]
+        }]
+      });
+      return response.output_text || '';
+    }
   } else if (['png', 'jpg', 'jpeg', 'webp', 'gif'].includes(ext || '')) {
     // Image file - use Vision API
     const mimeType = ext === 'jpg' ? 'image/jpeg' : `image/${ext}`;
@@ -250,6 +290,7 @@ export async function POST(request: NextRequest) {
     console.log(`[Admin Upload] Starting structured extraction for: ${fileName}`);
     const extractionResult: ExtractionResult = await performStructuredExtraction(
       extractedText,
+      fileName,
       documentType
     );
 
@@ -454,23 +495,34 @@ export async function POST(request: NextRequest) {
         validationReports // Return validation results to frontend
       });
     }
-    else if (documentType === "regulation") {
-      // Store regulation articles
+    else if (documentType === "regulation" || documentType === "accounting_standard" || documentType === "policy") {
+      // Store regulation/standard/policy articles
       const regulationResult = extractionResult as RegulationExtractionResult;
-      const articlesCount = await storeRegulationArticles(
-        supabase,
-        documentId,
-        regulationResult,
-        fileName
-      );
 
-      console.log(`[Admin Upload] Stored ${articlesCount} regulation articles`);
+      // Check if articles exist before processing
+      if (regulationResult.articles && regulationResult.articles.length > 0) {
+        const articlesCount = await storeRegulationArticles(
+          supabase,
+          documentId,
+          regulationResult,
+          fileName
+        );
 
-      structuredDataSummary.articles = regulationResult.articles.map((a) => ({
-        number: a.articleNumber,
-        title: a.title || "",
-        content: a.content,
-      }));
+        console.log(`[Admin Upload] Stored ${articlesCount} regulation articles for type: ${documentType}`);
+
+        structuredDataSummary.articles = regulationResult.articles.map((a) => ({
+          number: a.articleNumber,
+          title: a.title || "",
+          content: a.content,
+        }));
+      } else {
+        console.log(`[Admin Upload] No articles extracted for ${documentType}, storing as vector-only`);
+      }
+    }
+    // Vector-only document types (no structured extraction needed)
+    else if (documentType === "financial_report" || documentType === "business_info" || documentType === "general") {
+      console.log(`[Admin Upload] Vector-only storage for document type: ${documentType}`);
+      // No additional structured extraction - document is already chunked and embedded above
     }
 
     // Calculate processing time

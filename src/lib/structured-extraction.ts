@@ -25,9 +25,15 @@ export type DocumentType =
   | 'balance_sheet'      // 资产负债表
   | 'income_statement'   // 利润表
   | 'cash_flow'          // 现金流量表
+  | 'financial_report'   // 财务报告 (PDF with structured text/tables, vector only)
+  | 'account_detail'     // 科目明细 (not uploadable yet)
   | 'regulation'         // 法规
+  | 'accounting_standard' // 会计准则
+  | 'policy'             // 规章制度
+  | 'business_info'      // 业务情况 (company operations info, vector only)
   | 'contract'           // 合同
   | 'invoice'            // 发票
+  | 'voucher'            // 记账凭证
   | 'general';           // 通用文档
 
 /**
@@ -126,7 +132,7 @@ export interface ContractExtractionResult {
  * General extraction result for unclassified documents
  */
 export interface GeneralExtractionResult {
-  documentType: 'general' | 'invoice';
+  documentType: 'general' | 'invoice' | 'voucher' | 'financial_report' | 'account_detail' | 'accounting_standard' | 'policy' | 'business_info';
   extractedData: Record<string, any>;
   summary: string;
   confidence: number;
@@ -227,9 +233,15 @@ export function classifyDocumentType(
     balance_sheet: 0,
     income_statement: 0,
     cash_flow: 0,
+    financial_report: 0,
+    account_detail: 0,
     regulation: 0,
+    accounting_standard: 0,
+    policy: 0,
+    business_info: 0,
     contract: 0,
     invoice: 0,
+    voucher: 0,
     general: 0,
   };
 
@@ -610,12 +622,18 @@ export async function performStructuredExtraction(
       return extractFinancialDocument(text, detectedType, fileName);
 
     case 'regulation':
+    case 'accounting_standard':
+    case 'policy':
       return extractRegulationDocument(text, fileName);
 
     case 'contract':
       return extractContractDocument(text, fileName);
 
     case 'invoice':
+    case 'voucher':
+    case 'financial_report':
+    case 'account_detail':
+    case 'business_info':
     case 'general':
     default:
       return extractGeneralDocument(text, detectedType, fileName);
@@ -742,7 +760,7 @@ function extractContractDocument(
  */
 function extractGeneralDocument(
   text: string,
-  documentType: 'general' | 'invoice',
+  documentType: 'general' | 'invoice' | 'voucher' | 'financial_report' | 'account_detail' | 'accounting_standard' | 'policy' | 'business_info',
   fileName?: string
 ): GeneralExtractionResult {
   // Basic key-value extraction for general documents
