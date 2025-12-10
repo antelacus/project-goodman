@@ -67,6 +67,35 @@ interface GuidanceResponse {
 }
 
 /**
+ * Query business context from business_info documents
+ */
+async function queryBusinessContext(supabase: any): Promise<string> {
+  // Query document chunks from business_info documents
+  const { data: chunks, error } = await supabase
+    .from('document_chunks')
+    .select(`
+      content,
+      documents!inner(id, name, doc_type)
+    `)
+    .eq('documents.doc_type', 'business_info')
+    .order('chunk_index', { ascending: true })
+    .limit(10); // Limit to avoid too much context
+
+  if (error) {
+    console.error('Error querying business context:', error);
+    return '';
+  }
+
+  if (!chunks || chunks.length === 0) {
+    return '';
+  }
+
+  // Combine chunks into context
+  const contextParts = chunks.map((chunk: any) => chunk.content);
+  return contextParts.join('\n\n');
+}
+
+/**
  * Extract keywords from question using simple Chinese tokenization
  */
 function extractKeywords(text: string): string[] {
@@ -336,7 +365,8 @@ async function generateGuidance(
   question: string,
   citations: Citation[],
   documentIds: string[],
-  supabase: any
+  supabase: any,
+  businessContext: string = ''
 ): Promise<{ guidance: string; warnings: string[]; calculations: CalculationDetail[] }> {
   // Track all calculations performed
   const calculations: CalculationDetail[] = [];
@@ -354,6 +384,7 @@ async function generateGuidance(
   const prompt = getGuidanceChatPrompt({
     retrievedRegulations: citationsText || '未找到相关文档',
     uploadedDocument: '', // We no longer pass full text, relying on retrieved chunks in citations
+    businessContext: businessContext, // Include business context if available
   });
 
   // Add question to the prompt
@@ -815,6 +846,12 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    // Query business context
+    const businessContext = await queryBusinessContext(supabase);
+    if (businessContext) {
+      console.log(`[Guidance Chat] Found business context: ${businessContext.length} chars`);
+    }
+
     // Perform hybrid search
     const citations = await performHybridSearch(
       question,
@@ -836,7 +873,8 @@ export async function POST(request: NextRequest) {
       question,
       citations,
       searchDocIds,
-      supabase
+      supabase,
+      businessContext
     );
 
     // Find related articles (only for regulations)

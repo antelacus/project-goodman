@@ -10,6 +10,11 @@ import {
   PERIOD_OPTIONS as PERIOD_OPTIONS_DATA,
   formatDocType,
   formatPeriod,
+  requiresYearPeriod,
+  isFinancialStatement,
+  isUploadable,
+  PDF_ONLY_TYPES,
+  NON_UPLOADABLE_TYPES,
 } from "../../lib/document-constants";
 import {
   isImage,
@@ -24,7 +29,7 @@ const YEAR_OPTIONS = Array.from({ length: 20 }, (_, i) => `${2025 - i}`);
 // Period options for dropdown (from constants)
 const PERIOD_SELECT_OPTIONS = PERIOD_OPTIONS_DATA;
 
-// Admin supported formats for database upload
+// Admin supported formats for database upload (no size limit for admin)
 const ADMIN_SUPPORTED_FORMATS = {
   "application/pdf": [".pdf"],
   "image/png": [".png"],
@@ -33,7 +38,6 @@ const ADMIN_SUPPORTED_FORMATS = {
   "image/gif": [".gif"],
   "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": [".xlsx"],
 };
-const MAX_FILE_SIZE = 2 * 1024 * 1024; // 2MB
 
 function EditableCell({
   value,
@@ -140,7 +144,7 @@ export default function DocumentsPage() {
   const { triggerRef, isAuthenticated, logout, modal } = useAdminAuth();
 
   // Upload State
-  const [uploadStatus, setUploadStatus] = useState<'idle' | 'uploading' | 'success' | 'error' | 'unsupported' | 'too_large'>('idle');
+  const [uploadStatus, setUploadStatus] = useState<'idle' | 'uploading' | 'success' | 'error' | 'unsupported'>('idle');
   const [currentFileName, setCurrentFileName] = useState<string | null>(null);
   const [documentType, setDocumentType] = useState<string>('balance_sheet');
   const [uploadYear, setUploadYear] = useState<string>(new Date().getFullYear().toString());
@@ -287,6 +291,21 @@ export default function DocumentsPage() {
 
   const uploadToDatabase = useCallback(async (file: File) => {
     try {
+      // Check if document type is uploadable
+      if (!isUploadable(documentType)) {
+        setUploadStatus('error');
+        alert('此文档类型暂不支持上传');
+        return;
+      }
+
+      // Check PDF-only restriction
+      const fileExt = file.name.toLowerCase().split('.').pop();
+      if (PDF_ONLY_TYPES.includes(documentType) && fileExt !== 'pdf') {
+        setUploadStatus('unsupported');
+        alert('此文档类型仅支持 PDF 格式');
+        return;
+      }
+
       const base64Data = await convertToBase64(file);
       const adminPassword = prompt('请输入管理员密码以上传到数据库：');
       if (!adminPassword) {
@@ -295,7 +314,10 @@ export default function DocumentsPage() {
         return;
       }
 
-      const isFinancialStatement = documentType === 'balance_sheet' || documentType === 'income_statement' || documentType === 'cash_flow';
+      // Determine if year/period should be sent
+      const needsYearPeriod = requiresYearPeriod(documentType);
+      // Column mapping only for structured financial statements
+      const needsColumnMapping = isFinancialStatement(documentType);
 
       const response = await fetch('/api/admin/upload-database-document', {
         method: 'POST',
@@ -304,9 +326,9 @@ export default function DocumentsPage() {
           documentText: base64Data,
           fileName: file.name,
           documentType,
-          year: isFinancialStatement ? uploadYear : undefined,
-          period: isFinancialStatement ? uploadPeriod : undefined,
-          columnMapping: isFinancialStatement ? columnMapping : undefined,
+          year: needsYearPeriod ? uploadYear : undefined,
+          period: needsYearPeriod ? uploadPeriod : undefined,
+          columnMapping: needsColumnMapping ? columnMapping : undefined,
           adminPassword,
           metadata: {
             size: file.size,
@@ -338,11 +360,7 @@ export default function DocumentsPage() {
     const file = acceptedFiles[0];
     if (!file) return;
 
-    if (file.size > MAX_FILE_SIZE) {
-      setUploadStatus('too_large');
-      return;
-    }
-
+    // No size limit for admin database uploads
     setUploadStatus('uploading');
     setCurrentFileName(file.name);
 
@@ -353,14 +371,9 @@ export default function DocumentsPage() {
     onDrop,
     accept: ADMIN_SUPPORTED_FORMATS,
     maxFiles: 1,
-    maxSize: MAX_FILE_SIZE,
-    onDropRejected: (fileRejections) => {
-      const rejection = fileRejections[0];
-      if (rejection?.errors[0]?.code === 'file-too-large') {
-        setUploadStatus('too_large');
-      } else {
-        setUploadStatus('unsupported');
-      }
+    // No maxSize for admin uploads
+    onDropRejected: () => {
+      setUploadStatus('unsupported');
     }
   });
 
@@ -368,7 +381,6 @@ export default function DocumentsPage() {
     switch (uploadStatus) {
       case 'uploading': return '上传中...';
       case 'unsupported': return '文件格式不支持';
-      case 'too_large': return '文件大小超过 2MB';
       case 'success': return '上传成功';
       case 'error': return '上传失败';
       default: return '点击或拖拽上传文件到数据库';
@@ -379,8 +391,7 @@ export default function DocumentsPage() {
     switch (uploadStatus) {
       case 'success': return 'text-green-600';
       case 'error':
-      case 'unsupported':
-      case 'too_large': return 'text-red-600';
+      case 'unsupported': return 'text-red-600';
       case 'uploading': return 'text-blue-600';
       default: return 'text-gray-500';
     }
@@ -597,20 +608,25 @@ export default function DocumentsPage() {
                     <option value="balance_sheet">资产负债表</option>
                     <option value="income_statement">利润表</option>
                     <option value="cash_flow">现金流量表</option>
+                    <option value="financial_report">财务报告</option>
+                  </optgroup>
+                  <optgroup label="财务信息">
+                    <option value="account_detail" disabled>科目明细（暂不可上传）</option>
                   </optgroup>
                   <optgroup label="法规准则">
                     <option value="regulation">法律法规</option>
                     <option value="accounting_standard">会计准则</option>
                     <option value="policy">规章制度</option>
                   </optgroup>
-                  <optgroup label="其他">
+                  <optgroup label="其他信息">
+                    <option value="business_info">业务情况</option>
                     <option value="general">其他文档</option>
                   </optgroup>
                 </select>
               </div>
 
-              {/* Year/Period and Column Mapping (only for financial statements) */}
-              {(documentType === 'balance_sheet' || documentType === 'income_statement' || documentType === 'cash_flow') && (
+              {/* Year/Period selection (for financial statements and financial reports) */}
+              {requiresYearPeriod(documentType) && (
                 <div className="space-y-4 mb-4">
                   <div className="grid grid-cols-2 gap-4">
                     <div>
@@ -639,44 +655,54 @@ export default function DocumentsPage() {
                     </div>
                   </div>
 
-                  <div className="p-4 bg-gray-50 rounded border border-gray-200">
-                    <h4 className="font-bold mb-3 text-sm text-gray-700">Excel 列映射 (请输入列号，如 A, B, C)</h4>
-                    <div className="grid grid-cols-3 gap-4">
-                      <div>
-                        <label className="text-xs font-medium mb-1 block text-gray-600">科目名称列</label>
-                        <input
-                          type="text"
-                          placeholder="例如: A"
-                          value={columnMapping.name}
-                          onChange={(e) => setColumnMapping({ ...columnMapping, name: e.target.value.toUpperCase() })}
-                          className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:border-yellow-500 uppercase"
-                        />
+                  {/* Column Mapping (only for structured financial statements, not financial_report) */}
+                  {isFinancialStatement(documentType) && (
+                    <div className="p-4 bg-gray-50 rounded border border-gray-200">
+                      <h4 className="font-bold mb-3 text-sm text-gray-700">Excel 列映射 (请输入列号，如 A, B, C)</h4>
+                      <div className="grid grid-cols-3 gap-4">
+                        <div>
+                          <label className="text-xs font-medium mb-1 block text-gray-600">科目名称列</label>
+                          <input
+                            type="text"
+                            placeholder="例如: A"
+                            value={columnMapping.name}
+                            onChange={(e) => setColumnMapping({ ...columnMapping, name: e.target.value.toUpperCase() })}
+                            className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:border-yellow-500 uppercase"
+                          />
+                        </div>
+                        <div>
+                          <label className="text-xs font-medium mb-1 block text-gray-600">期末余额列</label>
+                          <input
+                            type="text"
+                            placeholder="例如: B"
+                            value={columnMapping.periodEnd}
+                            onChange={(e) => setColumnMapping({ ...columnMapping, periodEnd: e.target.value.toUpperCase() })}
+                            className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:border-yellow-500 uppercase"
+                          />
+                        </div>
+                        <div>
+                          <label className="text-xs font-medium mb-1 block text-gray-600">期初余额列</label>
+                          <input
+                            type="text"
+                            placeholder="例如: C"
+                            value={columnMapping.periodStart}
+                            onChange={(e) => setColumnMapping({ ...columnMapping, periodStart: e.target.value.toUpperCase() })}
+                            className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:border-yellow-500 uppercase"
+                          />
+                        </div>
                       </div>
-                      <div>
-                        <label className="text-xs font-medium mb-1 block text-gray-600">期末余额列</label>
-                        <input
-                          type="text"
-                          placeholder="例如: B"
-                          value={columnMapping.periodEnd}
-                          onChange={(e) => setColumnMapping({ ...columnMapping, periodEnd: e.target.value.toUpperCase() })}
-                          className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:border-yellow-500 uppercase"
-                        />
-                      </div>
-                      <div>
-                        <label className="text-xs font-medium mb-1 block text-gray-600">期初余额列</label>
-                        <input
-                          type="text"
-                          placeholder="例如: C"
-                          value={columnMapping.periodStart}
-                          onChange={(e) => setColumnMapping({ ...columnMapping, periodStart: e.target.value.toUpperCase() })}
-                          className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:border-yellow-500 uppercase"
-                        />
-                      </div>
+                      <p className="text-xs text-gray-500 mt-2">
+                        * 请确保 Excel 文件中对应列包含正确的数据。系统将根据这些列提取财务数据。
+                      </p>
                     </div>
-                    <p className="text-xs text-gray-500 mt-2">
-                      * 请确保 Excel 文件中对应列包含正确的数据。系统将根据这些列提取财务数据。
-                    </p>
-                  </div>
+                  )}
+                </div>
+              )}
+
+              {/* PDF-only notice for certain document types */}
+              {PDF_ONLY_TYPES.includes(documentType) && (
+                <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded text-sm text-blue-700">
+                  <strong>提示：</strong>此文档类型仅支持 PDF 格式上传。
                 </div>
               )}
 
@@ -692,7 +718,7 @@ export default function DocumentsPage() {
                 )}
               </div>
               <p className="text-sm text-gray-500 mt-2">
-                支持格式：PDF、PNG、JPG、JPEG、WEBP、GIF、Excel(.xlsx)（最大 2MB，仅限单个工作表）
+                支持格式：PDF、PNG、JPG、JPEG、WEBP、GIF、Excel(.xlsx)（Excel 仅限单个工作表）
               </p>
             </div>
           )}

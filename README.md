@@ -253,13 +253,7 @@ project-goodman/
 
 ### V3 开发（规划中）
 
-- [ ] 迁移至 LangGraph 框架
-- [ ] 自定义指标公式编辑器
-- [ ] 多模型适配（Claude, Gemini, 国产大模型）
-- [ ] 企业 SSO & RBAC
-- [ ] 团队协作 & 审计追踪
-- [ ] 高级可视化（图表、趋势分析）
-- [ ] 服务端速率限制
+见V3_DEVELOPMENT_PLAN.md
 
 ---
 

@@ -802,6 +802,83 @@ ROE: 15.00%
 
 ---
 
+## V2 维护：文档类型扩展 (2025-12-09)
+
+### 任务 55：文档上传界面增强
+
+**目标**: 扩展管理员文档上传界面，支持更多文档类型和更精细的分类。
+
+**所做更改**:
+
+#### 1. 新增文档类型
+
+| 类别 | doc_type | 中文名称 | 处理方式 | 备注 |
+|------|----------|----------|----------|------|
+| 财务报表 | `financial_report` | 财务报告 | 向量存储 | 仅支持 PDF，需指定年份/期间 |
+| 财务信息 | `account_detail` | 科目明细 | - | 暂不可上传 |
+| 其他信息 | `business_info` | 业务情况 | 向量存储 | 仅支持 PDF，增强 AI 上下文 |
+
+#### 2. UI 界面调整
+
+**新的文档类型分组**:
+```
+财务报表
+├── 资产负债表 (balance_sheet)
+├── 利润表 (income_statement)
+├── 现金流量表 (cash_flow)
+└── 财务报告 (financial_report) [NEW]
+
+财务信息 [NEW CATEGORY]
+└── 科目明细 (account_detail) [显示但不可上传]
+
+法规准则
+├── 法律法规 (regulation)
+├── 会计准则 (accounting_standard)
+└── 规章制度 (policy)
+
+其他信息 [RENAMED from 其他]
+├── 业务情况 (business_info) [NEW]
+└── 其他文档 (general)
+```
+
+**格式限制**:
+- `financial_report` 和 `business_info` 仅支持 PDF 格式
+- 其他类型支持 PDF、图片、Excel 等
+
+#### 3. AI 上下文增强
+
+**业务情况 (business_info) 文档**:
+- 在财务分析和合规指导模块中自动搜索并注入
+- 帮助 AI 提供更贴近企业实际情况的分析和建议
+
+**修改的 API**:
+- `/api/financial-analysis/route.ts` - 添加 `queryBusinessContext()` 函数
+- `/api/guidance-chat/route.ts` - 添加 `queryBusinessContext()` 函数
+
+**修改的提示词**:
+- `src/lib/prompts/financial-analysis.txt` - 添加 `{BUSINESS_CONTEXT}` 占位符
+- `src/lib/prompts/guidance-chat.txt` - 添加 `{BUSINESS_CONTEXT}` 占位符
+
+#### 4. 修改的文件
+
+| 文件 | 变更 |
+|------|------|
+| `src/lib/document-constants.ts` | 新增文档类型、辅助函数 |
+| `src/lib/structured-extraction.ts` | 更新 DocumentType 类型 |
+| `src/app/documents/page.tsx` | UI 分组、PDF限制、年份/期间选择 |
+| `src/app/api/admin/upload-database-document/route.ts` | 支持新类型的处理逻辑 |
+| `src/app/api/financial-analysis/route.ts` | 业务上下文查询 |
+| `src/app/api/guidance-chat/route.ts` | 业务上下文查询 |
+| `src/lib/prompts.ts` | 新增 businessContext 参数 |
+| `src/lib/prompts/financial-analysis.txt` | 业务上下文说明 |
+| `src/lib/prompts/guidance-chat.txt` | 业务上下文说明 |
+
+#### 5. 测试结果
+
+- **npm run build**: ✅ 成功
+
+---
+
 *创建时间: 2025-11-12*
-*最后更新: 2025-12-03*
+*最后更新: 2025-12-09*
 *参考: PHASE2_DESIGN.md 获取详细规格*

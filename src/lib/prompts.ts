@@ -50,6 +50,8 @@ export function getLandingPagePrompt(conversationHistory: Array<{ role: 'user' |
  * @param params.presetFunctionsList 预设函数列表
  * @param params.availableDocuments 可用文档列表
  * @param params.context 对话上下文
+ * @param params.metricList 标准财务指标列表
+ * @param params.businessContext 业务情况上下文（可选）
  * @returns prompt字符串
  */
 export function getFinancialAnalysisPrompt(params: {
@@ -57,8 +59,9 @@ export function getFinancialAnalysisPrompt(params: {
   availableDocuments: string;
   context: string;
   metricList: string;
+  businessContext?: string;
 }): string {
-  const { presetFunctionsList, availableDocuments, context, metricList } = params;
+  const { presetFunctionsList, availableDocuments, context, metricList, businessContext = '' } = params;
 
   const promptTemplate = readPromptFile('financial-analysis.txt');
 
@@ -67,7 +70,8 @@ export function getFinancialAnalysisPrompt(params: {
     .replace(/{PRESET_FUNCTIONS_LIST}/g, presetFunctionsList)
     .replace(/{AVAILABLE_DOCUMENTS}/g, availableDocuments)
     .replace(/{CONTEXT}/g, context)
-    .replace(/{METRIC_LIST}/g, metricList);
+    .replace(/{METRIC_LIST}/g, metricList)
+    .replace(/{BUSINESS_CONTEXT}/g, businessContext || '暂无业务情况信息。');
 }
 
 // 合规指导模块 prompt
@@ -75,18 +79,21 @@ export function getFinancialAnalysisPrompt(params: {
  * 生成合规指导的系统提示词（使用混合搜索架构）。
  * @param params.retrievedRegulations 检索到的法规内容
  * @param params.uploadedDocument 用户上传的文档内容（可选）
+ * @param params.businessContext 业务情况上下文（可选）
  * @returns prompt字符串
  */
 export function getGuidanceChatPrompt(params: {
   retrievedRegulations: string;
   uploadedDocument?: string;
+  businessContext?: string;
 }): string {
-  const { retrievedRegulations, uploadedDocument = '' } = params;
+  const { retrievedRegulations, uploadedDocument = '', businessContext = '' } = params;
 
   const promptTemplate = readPromptFile('guidance-chat.txt');
 
   return promptTemplate
     .replace(/\r\n/g, '\n')
     .replace(/{RETRIEVED_REGULATIONS}/g, retrievedRegulations)
-    .replace(/{UPLOADED_DOCUMENT}/g, uploadedDocument);
+    .replace(/{UPLOADED_DOCUMENT}/g, uploadedDocument)
+    .replace(/{BUSINESS_CONTEXT}/g, businessContext || '暂无业务情况信息。');
 }
