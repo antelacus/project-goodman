@@ -30,7 +30,24 @@ We follow a phase-gated approach where each phase requires approval before proce
 - Identify dependencies and potential risks
 - Consider user experience and business value
 
-**Deliverable**: Shared understanding of the requirement
+**Deliverable**: PRD or Requirement Declaration (see guidelines below)
+
+#### Choosing Between PRD and Requirement Declaration
+
+| Document Type | When to Use | Focus |
+|---------------|-------------|-------|
+| **Requirement Declaration** | Infrastructure, migrations, refactoring, internal technical work | Technical "what" and "how" |
+| **PRD (Product Requirements Document)** | User-facing features, product changes, UX modifications | User needs, stories, journeys |
+
+**Key Principle**: The deciding factor is **user visibility**, not complexity.
+- If users will notice or interact with the change → **PRD** (includes user stories, personas, UX flows)
+- If the change is internal/invisible to users → **Requirement Declaration** (technical specs only)
+
+**Examples**:
+- VPS Migration → Requirement Declaration (infrastructure, users won't notice)
+- Security Hardening → Requirement Declaration (internal improvement)
+- Smart Document System → PRD (changes user interaction)
+- New Financial Reports → PRD (new user-facing feature)
 
 **→ CHECKPOINT: Wait for approval before proceeding to Phase 2**
 
@@ -129,14 +146,14 @@ We follow a phase-gated approach where each phase requires approval before proce
 
 - **Background**: Economics/Finance degree, self-taught tech (Python, SQL, JS, ML/LLM)
 - **Languages**: English, 汉语普通话, Français, Español
-- **Technical Level**: Strong analytical skills, growing coding expertise
+- **Technical Level**: Strong analytical skills, terrible coding expertise
 
 ### My Role (Claude)
 
 - **Question**: Don't hesitate to ask clarifying questions
 - **Suggest**: Propose better approaches or alternatives
 - **Correct**: Point out potential issues or better practices
-- **Help**: Explain technical concepts clearly
+- **Help and teach**: Explain technical concepts clearly
 - **Guide**: Provide step-by-step guidance through complex tasks
 
 ### General Principles
@@ -215,9 +232,9 @@ We follow a phase-gated approach where each phase requires approval before proce
 
 All development phases are tracked in a dedicated `*_DEVELOPMENT_TRACK.md` file. This log is updated at the end of each phase to record decisions, progress, and next steps.
 
-- `docs/V2_PHASE2_DESIGN.md` - Design document (architecture, ER diagrams, API design)
-- `docs/V2_PHASE3-6_DEVELOPMENT_TRACK.md` - Implementation log (54 tasks completed)
-- `docs/PHASE3_ARCHIVE_TASKS1-32.md` - Archived detailed logs for tasks 1-32
+- `docs/V*_PHASE1_REQUIREMENT_DECLARATION.md` - Requirement document (deliver PRD if development is complicated)
+- `docs/V*_PHASE2_DESIGN.md` - Design document (architecture, ER diagrams, API design)
+- `docs/V*_PHASE3-6_DEVELOPMENT_TRACK.md` - Implementation log (54 tasks completed)
 
 ---
 
