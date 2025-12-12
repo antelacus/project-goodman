@@ -218,6 +218,73 @@ We follow a phase-gated approach where each phase requires approval before proce
 - Database: structured tables for exact queries, vector embeddings for semantic search
 - Admin operations require password verification via `admin-auth.ts`
 
+### Code Documentation Standards
+
+**IMPORTANT**: The project lead has limited coding expertise and needs to understand every file and every line of code. All code must be thoroughly documented.
+
+**Required Comments**:
+
+1. **File Header** - Every file must start with a comment block explaining:
+   - What this file does (purpose)
+   - How it fits into the system (relationship to other files)
+   - Key exports or entry points
+
+2. **Function/Component Comments** - Every function and React component must have:
+   - What it does (purpose)
+   - Parameters explained (what each one is for)
+   - Return value explained
+   - Example usage if not obvious
+
+3. **Logic Comments** - Within code blocks:
+   - Explain "why" not just "what" for non-obvious logic
+   - Mark important decision points
+   - Explain any workarounds or edge case handling
+   - Comment complex conditionals and loops
+
+4. **Section Markers** - For longer files:
+   - Use section dividers (`// ========== SECTION NAME ==========`)
+   - Group related code together with labels
+
+**Comment Style**:
+```typescript
+// ============================================================
+// FILE: example.ts
+// PURPOSE: Handles user authentication flow
+// RELATED: auth-helpers.ts (password hashing), supabase.ts (database)
+// ============================================================
+
+/**
+ * Verifies user credentials against the database
+ *
+ * @param email - User's email address for lookup
+ * @param password - Plain text password to verify (will be hashed)
+ * @returns User object if valid, null if invalid credentials
+ *
+ * @example
+ * const user = await verifyCredentials('user@example.com', 'password123');
+ * if (user) { /* logged in */ }
+ */
+export async function verifyCredentials(email: string, password: string): Promise<User | null> {
+  // Step 1: Find user by email
+  const user = await db.users.findByEmail(email);
+
+  // Early return if user doesn't exist
+  // (we don't reveal whether email exists for security)
+  if (!user) return null;
+
+  // Step 2: Compare password hash
+  // Using bcrypt which handles salt internally
+  const isValid = await bcrypt.compare(password, user.passwordHash);
+
+  return isValid ? user : null;
+}
+```
+
+**Language**: Comments should be in **English** for code logic. Chinese (中文) is acceptable for:
+- User-facing strings and labels
+- Business domain terms (财务指标名称)
+- Documentation that will be read by Chinese-speaking users
+
 ### Known Issues & Gotchas
 
 - PDF parsing fails with plain text content; use `.md` files for testing
