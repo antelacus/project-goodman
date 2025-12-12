@@ -20,6 +20,59 @@
 
 ---
 
+## [3.0.0] - 2025-12-12
+
+### 新增
+
+#### 基础设施
+- **VPS 部署**: 从 Vercel Serverless 迁移到自托管 VPS (Ubuntu 24.04 LTS)
+- **Docker 容器化**: 应用运行在 Docker 容器中，支持多项目部署
+- **nginx 反向代理**: 处理 SSL 终止、WebSocket 代理、安全头注入
+- **Cloudflare 集成**: DDoS 防护、CDN 缓存、Origin Certificate SSL
+- **UptimeRobot 监控**: HTTPS 可用性监控与告警
+
+#### 运维能力
+- **健康检查 API**: 新增 `/api/health` 端点用于容器健康监测
+- **自动重启**: Docker `restart: unless-stopped` 策略
+- **开机自启**: 系统重启后自动恢复服务
+- **日志管理**: Docker 原生日志，支持 `docker compose logs` 查看
+
+### 变更
+
+- 部署平台: Vercel Serverless → VPS + Docker + nginx
+- SSL 证书: Vercel 自动 SSL → Cloudflare Origin Certificate (15年有效期)
+- 进程管理: Serverless 函数 → Docker 容器 (PM2 可选)
+- 超时限制: 60 秒硬限制 → 无限制 (支持长时间 AI 推理)
+
+### 移除
+
+- Vercel Serverless 部署依赖 (代码仍兼容，仅不再使用)
+
+### 安全
+
+- nginx Cloudflare IP 白名单 (仅允许 Cloudflare 流量)
+- 直接 IP 访问阻止 (返回 444)
+- SSL/TLS 1.2+ 强制
+- 安全响应头 (X-Frame-Options, X-Content-Type-Options, X-XSS-Protection)
+- .env 文件权限 600
+- Docker 容器以非 root 用户运行
+
+### 技术
+
+- Docker: v29.1.2
+- Docker Compose: v5.0.0
+- nginx: 1.24.0 (Ubuntu)
+- Node.js: 20 LTS (容器内)
+- 基础镜像: node:20-bookworm-slim (支持 canvas 原生模块)
+
+### 文档
+
+- 新增 `docs/V3.0_PHASE1_REQUIREMENT_DECLARATION.md` - 需求声明
+- 新增 `docs/V3.0_PHASE2_DESIGN.md` - 设计文档 (含配置模板)
+- 新增 `docs/V3.0_PHASE3-5_DEVELOPMENT_TRACK.md` - 实施记录
+
+---
+
 ## [2.0.0] - 2025-12-03
 
 ### 新增

@@ -95,7 +95,7 @@
 - 💾 **数据持久化**：用户上传文档自动向量化并持久化存储
 - 🧩 **模块化架构**：易于接入自有 LLM / Embedding 服务
 - 📱 **响应式 UI**：Tailwind CSS 4 打造现代财务应用体验
-- 🚀 **Serverless 架构**：完全兼容 Vercel 免费部署
+- 🚀 **VPS + Docker 部署**：自托管 VPS，Docker 容器化，无超时限制
 
 ---
 
@@ -113,7 +113,7 @@
 | 安全 | bcryptjs（密码哈希）· Session 管理 |
 | 验证 | Zod（Schema 验证） |
 | 计算引擎 | expr-eval（安全公式求值） |
-| 部署 | Vercel Serverless |
+| 部署 | VPS + Docker + nginx (Cloudflare CDN) |
 
 ---
 
@@ -251,9 +251,20 @@ project-goodman/
 - [x] 可追溯性引用系统
 - [x] 多维置信度评分
 
-### V3 开发（规划中）
+### V3 开发（进行中）
 
-见V3_DEVELOPMENT_PLAN.md
+- [x] **V3.0 VPS 迁移** - 从 Vercel 迁移到自托管 VPS
+  - Docker 容器化部署
+  - nginx 反向代理 + Cloudflare CDN
+  - 无超时限制，支持长时间 AI 推理
+  - UptimeRobot 监控
+- [ ] **V3.1 LangGraph 预备重构** - 代码结构优化
+- [ ] **V3.2 安全增强** - Redis 速率限制、会话管理
+- [ ] **V3.3 智能文档系统** - AI 自动文档发现与选择
+- [ ] **V3.4 LangGraph 完整迁移** - AI Agent 架构
+- [ ] **V3.5 管理用财报体系** - 管理会计分析功能
+
+详见 `docs/V3_DEVELOPMENT_PLAN.md`
 
 ---
 
@@ -351,11 +362,12 @@ for file in tests/**/*.test.ts; do npx tsx "$file"; done
 - **数据库限制**: Supabase 免费层有 500MB 存储，5GB 带宽/月。通过仪表板监控。
 - **文件存储**: 原始文件存储在 Supabase Storage `document-files` bucket，支持签名 URL 预览。
 - **向量索引**: 批量数据插入后创建 IVFFlat 索引以获得更好的性能。
-- **连接池**: Supabase 自动为 Serverless 函数处理此问题。
+- **连接池**: Supabase 自动处理连接池管理。
 - **持久性**: 所有文档现在都持久化在 Supabase 中（刷新后无数据丢失）。
-- **速率限制**: `src/lib/rateLimit.ts` 中的简单内存速率限制。生产环境考虑使用 Redis。
+- **速率限制**: `src/lib/rateLimit.ts` 中的客户端速率限制。V3.2 将引入 Redis 服务端限制。
 - **安全**: RLS 已在所有 7 个表上启用。验证所有文件上传。数据库上传需要管理员认证。
-- **自动暂停**: Supabase 免费层在 7 天不活动后自动暂停（请求时即时唤醒）。
+- **Supabase 自动暂停**: Supabase 免费层在 7 天不活动后自动暂停（请求时即时唤醒）。
+- **VPS 监控**: UptimeRobot 监控服务可用性，异常时自动告警。
 - **计算准确性**: 预设函数确保 100% 计算准确性。始终验证结果是否符合预期公式。
 
 ---
