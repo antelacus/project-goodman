@@ -68,6 +68,13 @@ We follow a phase-gated approach where each phase requires approval before proce
 
 **Deliverable**: Design document and architecture proposal
 
+**Design Document Guidelines**:
+
+- **Focus on design, not implementation**: Explain architectural decisions, not code details
+- **Keep it reviewable**: Concise (~100-200 lines), easy to scan, clear sections
+- **Use diagrams**: Architecture diagrams, data flow charts when helpful
+- **Code examples**: Minimal - only to illustrate patterns, not full implementations
+
 **→ CHECKPOINT: Wait for approval before proceeding**
 **→ ACTION: Create comprehensive todo list of all implementation tasks**
 
@@ -273,11 +280,12 @@ function calculateDebtToEquity(totalDebt: number, totalEquity: number): number {
 }
 ```
 
-**Language**: English for code logic. Chinese (中文) acceptable for:
+**Language Standards**:
 
-- User-facing strings and labels
-- Business domain terms (财务指标名称)
-- Documentation for Chinese-speaking users
+- **Code**: English for all code (functions, variables, comments)
+- **User-facing content**: Chinese (中文) for UI strings, labels, business domain terms (财务指标名称)
+- **Documentation in `/docs`**: **Simplified Chinese (简体中文)** for all documents (PRDs, design docs, development tracks), while keeping code examples and technical terminology in English
+- **CLAUDE.md, README.md, CHANGELOG.md**: English (for broader accessibility)
 
 ### Known Issues & Gotchas
 
