@@ -40,10 +40,12 @@ We follow a phase-gated approach where each phase requires approval before proce
 | **PRD (Product Requirements Document)** | User-facing features, product changes, UX modifications | User needs, stories, journeys |
 
 **Key Principle**: The deciding factor is **user visibility**, not complexity.
+
 - If users will notice or interact with the change → **PRD** (includes user stories, personas, UX flows)
 - If the change is internal/invisible to users → **Requirement Declaration** (technical specs only)
 
 **Examples**:
+
 - VPS Migration → Requirement Declaration (infrastructure, users won't notice)
 - Security Hardening → Requirement Declaration (internal improvement)
 - Smart Document System → PRD (changes user interaction)
@@ -220,70 +222,62 @@ We follow a phase-gated approach where each phase requires approval before proce
 
 ### Code Documentation Standards
 
-**IMPORTANT**: The project lead has limited coding expertise and needs to understand every file and every line of code. All code must be thoroughly documented.
+**Philosophy**: The project lead reviews rather than writes code. Documentation should enable understanding of **architecture and intent**, not line-by-line mechanics. Well-named code is self-documenting; comments explain "why", not "what".
 
-**Required Comments**:
+**Three Levels of Documentation**:
 
-1. **File Header** - Every file must start with a comment block explaining:
-   - What this file does (purpose)
-   - How it fits into the system (relationship to other files)
-   - Key exports or entry points
+1. **Architecture Level** (in `docs/` folder)
+   - System overview and data flows
+   - Key concepts and patterns used
+   - For external libraries: explanation of core concepts (e.g., "What is a LangGraph StateGraph?")
 
-2. **Function/Component Comments** - Every function and React component must have:
-   - What it does (purpose)
-   - Parameters explained (what each one is for)
-   - Return value explained
-   - Example usage if not obvious
+2. **File Level** (only for complex/entry-point files)
+   - Brief header: purpose + key exports
+   - Skip for simple utility files where the filename is self-explanatory
 
-3. **Logic Comments** - Within code blocks:
-   - Explain "why" not just "what" for non-obvious logic
-   - Mark important decision points
-   - Explain any workarounds or edge case handling
-   - Comment complex conditionals and loops
+3. **Code Level** (minimal, targeted)
+   - **DO comment**: Non-obvious business logic, workarounds, "why" decisions
+   - **DON'T comment**: Obvious operations, standard patterns, self-explanatory code
 
-4. **Section Markers** - For longer files:
-   - Use section dividers (`// ========== SECTION NAME ==========`)
-   - Group related code together with labels
+**For External Libraries**:
 
-**Comment Style**:
+- Create ONE reference doc (e.g., `docs/LANGGRAPH_CONCEPTS.md`) explaining key concepts
+- In code, use descriptive naming that maps to those concepts
+- Don't repeat library documentation in every file
+
+**Example - Good vs Over-documented**:
+
 ```typescript
-// ============================================================
-// FILE: example.ts
-// PURPOSE: Handles user authentication flow
-// RELATED: auth-helpers.ts (password hashing), supabase.ts (database)
-// ============================================================
-
+// ❌ Over-documented (noisy)
 /**
- * Verifies user credentials against the database
- *
- * @param email - User's email address for lookup
- * @param password - Plain text password to verify (will be hashed)
- * @returns User object if valid, null if invalid credentials
- *
- * @example
- * const user = await verifyCredentials('user@example.com', 'password123');
- * if (user) { /* logged in */ }
+ * Calculates the debt-to-equity ratio
+ * @param totalDebt - The total debt amount
+ * @param totalEquity - The total equity amount
+ * @returns The debt-to-equity ratio as a number
  */
-export async function verifyCredentials(email: string, password: string): Promise<User | null> {
-  // Step 1: Find user by email
-  const user = await db.users.findByEmail(email);
+function calculateDebtToEquity(totalDebt: number, totalEquity: number): number {
+  // Divide debt by equity to get ratio
+  return totalDebt / totalEquity;
+}
 
-  // Early return if user doesn't exist
-  // (we don't reveal whether email exists for security)
-  if (!user) return null;
+// ✅ Self-documenting (clean)
+function calculateDebtToEquity(totalDebt: number, totalEquity: number): number {
+  return totalDebt / totalEquity;
+}
 
-  // Step 2: Compare password hash
-  // Using bcrypt which handles salt internally
-  const isValid = await bcrypt.compare(password, user.passwordHash);
-
-  return isValid ? user : null;
+// ✅ Comment only when "why" is non-obvious
+function calculateDebtToEquity(totalDebt: number, totalEquity: number): number {
+  // Return 0 instead of Infinity when equity is zero (company-specific rule)
+  if (totalEquity === 0) return 0;
+  return totalDebt / totalEquity;
 }
 ```
 
-**Language**: Comments should be in **English** for code logic. Chinese (中文) is acceptable for:
+**Language**: English for code logic. Chinese (中文) acceptable for:
+
 - User-facing strings and labels
 - Business domain terms (财务指标名称)
-- Documentation that will be read by Chinese-speaking users
+- Documentation for Chinese-speaking users
 
 ### Known Issues & Gotchas
 
@@ -299,7 +293,7 @@ export async function verifyCredentials(email: string, password: string): Promis
 
 All development phases are tracked in a dedicated `*_DEVELOPMENT_TRACK.md` file. This log is updated at the end of each phase to record decisions, progress, and next steps.
 
-- `docs/V*_PHASE1_REQUIREMENT_DECLARATION.md` - Requirement document (deliver PRD if development is complicated)
+- `docs/V*_PHASE1_REQUIREMENT_DECLARATION.md` - Requirement document (deliver PRD if development is user-faced)
 - `docs/V*_PHASE2_DESIGN.md` - Design document (architecture, ER diagrams, API design)
 - `docs/V*_PHASE3-6_DEVELOPMENT_TRACK.md` - Implementation log (54 tasks completed)
 
