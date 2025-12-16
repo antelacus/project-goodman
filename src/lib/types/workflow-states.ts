@@ -27,15 +27,30 @@ import type {
 } from "./domain-types";
 
 // ============================================================================
-// Base Error Interface (placeholder for Phase E)
+// Serialized Error Interface
 // ============================================================================
 
-export interface WorkflowError {
+/**
+ * Serialized form of WorkflowError for state storage.
+ * This interface matches the return type of WorkflowError.toJSON().
+ *
+ * For throwing/catching errors, use the class hierarchy in src/lib/errors/:
+ * - ToolExecutionError, InsufficientDataError, LowConfidenceError, etc.
+ *
+ * For storing errors in workflow state, use this interface (via toWorkflowError()).
+ */
+export interface SerializedWorkflowError {
   code: string;
   message: string;
   recoverable: boolean;
-  context?: Record<string, unknown>;
+  context: Record<string, unknown>;
 }
+
+/**
+ * @deprecated Use SerializedWorkflowError for new code.
+ * Kept for backward compatibility.
+ */
+export type WorkflowErrorData = SerializedWorkflowError;
 
 // ============================================================================
 // Workflow Metadata
@@ -45,7 +60,7 @@ export interface WorkflowMeta {
   startTime: number;
   endTime?: number;
   currentStep: string;
-  errors: WorkflowError[];
+  errors: SerializedWorkflowError[];
   debugInfo?: Record<string, unknown>;
 }
 
