@@ -7,19 +7,9 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { runGuidanceChatWorkflow } from "../../../lib/workflows/guidance-chat";
+import type { GuidanceChatRequest } from "../../../lib/types/api-types";
 
 export const runtime = "nodejs";
-
-interface GuidanceChatRequest {
-  question: string;
-  uploadedDocument?: {
-    text: string;
-    fileName: string;
-    id?: string;
-  };
-  documentIds?: string[];
-  regulationCategories?: string[];
-}
 
 export async function POST(request: NextRequest) {
   try {

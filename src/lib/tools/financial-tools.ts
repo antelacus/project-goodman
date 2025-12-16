@@ -238,7 +238,14 @@ export function buildFinancialAnalysisFunctionDefs(): Array<{
     parameters: object;
   };
 }> {
-  const tools = presetFunctions.map((func) => {
+  const tools: Array<{
+    type: "function";
+    function: {
+      name: string;
+      description: string;
+      parameters: object;
+    };
+  }> = presetFunctions.map((func) => {
     const requiredInputsStr = func.requiredInputs.join("、");
     const categoryName = CATEGORY_MAP[func.category] || func.category;
 

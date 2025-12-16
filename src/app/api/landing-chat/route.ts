@@ -1,17 +1,7 @@
 export const runtime = "nodejs";
 import { NextRequest, NextResponse } from "next/server";
 import { runLandingChatWorkflow } from "../../../lib/workflows/landing-chat";
-
-// Define request type
-type ChatMessage = {
-  role: "user" | "assistant";
-  content: string;
-};
-
-type LandingChatRequest = {
-  message: string;
-  conversationHistory?: ChatMessage[];
-};
+import type { LandingChatRequest } from "../../../lib/types/api-types";
 
 export async function POST(req: NextRequest) {
   try {

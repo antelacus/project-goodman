@@ -101,6 +101,7 @@ export interface Tool<TInput = unknown, TOutput = unknown> {
 
 /**
  * OpenAI function parameter schema
+ * Includes index signature for compatibility with OpenAI's FunctionParameters
  */
 export interface OpenAIParameterSchema {
   type: "object";
@@ -114,6 +115,7 @@ export interface OpenAIParameterSchema {
     }
   >;
   required?: string[];
+  [key: string]: unknown;
 }
 
 /**

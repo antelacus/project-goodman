@@ -6,6 +6,26 @@
  * and future LangGraph migration compatibility.
  */
 
+import type {
+  ChatMessage,
+  Citation,
+  RelatedArticle,
+  SourceDocument,
+  CalculationInput,
+  CalculationValue,
+  CalculationResultSimple,
+  ConfidenceFactor,
+  ConfidenceEvaluation,
+  SuggestedModule,
+  VectorSearchResult,
+  KeywordSearchResult,
+  CombinedSearchResult,
+  ToolCall,
+  IntentAnalysis,
+  UploadedDocument,
+  FinancialMetricDataExtended,
+} from "./domain-types";
+
 // ============================================================================
 // Base Error Interface (placeholder for Phase E)
 // ============================================================================
@@ -72,21 +92,8 @@ export interface FinancialAnalysisState extends WorkflowState {
     requiredMetrics: string[];
     availableMetrics: string[];
     missingMetrics: string[];
-    dataMap: Record<
-      string,
-      {
-        value: number;
-        unit: string;
-        source: string;
-        documentId: string;
-      }
-    >;
-    sourceDocuments: Array<{
-      id: string;
-      name: string;
-      year: string;
-      period: string;
-    }>;
+    dataMap: Record<string, FinancialMetricDataExtended>;
+    sourceDocuments: SourceDocument[];
   };
 
   // Step 3: Execute calculation
@@ -95,58 +102,32 @@ export interface FinancialAnalysisState extends WorkflowState {
     functionDisplayName: string;
     formula: string;
     inputs: Record<string, number>;
-    result: {
-      value: number;
-      formatted: string;
-      unit: string;
-    };
+    result: CalculationValue;
     steps: string[];
     warnings?: string[];
   };
 
   // Step 4: Evaluate confidence
-  confidence: {
-    score: number;
-    factors: Array<{
-      name: string;
-      score: number;
-      weight: number;
-    }>;
-    threshold: number;
-    passed: boolean;
-    reason?: string;
-  };
+  confidence: ConfidenceEvaluation;
 
   // Step 5: Generate response
   output: {
-    type: 'calculation_result' | 'insufficient_data' | 'low_confidence' | 'no_function';
+    type:
+      | "calculation_result"
+      | "insufficient_data"
+      | "low_confidence"
+      | "no_function";
     answer: string;
     calculation?: {
       functionUsed: string;
       functionDisplayName: string;
       formula: string;
-      inputs: Record<
-        string,
-        {
-          value: number;
-          unit: string;
-          source: string;
-        }
-      >;
-      result: {
-        value: number;
-        formatted: string;
-        unit: string;
-      };
+      inputs: Record<string, CalculationInput>;
+      result: CalculationValue;
       steps: string[];
     };
     confidence: number;
-    sourceDocuments: Array<{
-      id: string;
-      name: string;
-      year: string;
-      period: string;
-    }>;
+    sourceDocuments: SourceDocument[];
     missingData?: string[];
     suggestion?: string;
     warnings?: string[];
@@ -164,11 +145,7 @@ export interface GuidanceChatState extends WorkflowState {
   // Input from API request
   input: {
     question: string;
-    uploadedDocument?: {
-      text: string;
-      fileName: string;
-      id?: string;
-    };
+    uploadedDocument?: UploadedDocument;
     documentIds?: string[];
     regulationCategories?: string[];
   };
@@ -176,109 +153,41 @@ export interface GuidanceChatState extends WorkflowState {
   // Step 1: Hybrid search (vector + keyword)
   search: {
     keywords: string[];
-    vectorResults: Array<{
-      chunk_id: string;
-      content: string;
-      similarity: number;
-      regulation: string;
-      article: string;
-    }>;
-    keywordResults: Array<{
-      regulation_id: string;
-      regulation_name: string;
-      article_number: string;
-      article_content: string;
-      relevance: number;
-    }>;
-    combinedResults: Array<{
-      regulation: string;
-      article: string;
-      content: string;
-      relevance: number;
-    }>;
+    vectorResults: VectorSearchResult[];
+    keywordResults: KeywordSearchResult[];
+    combinedResults: CombinedSearchResult[];
     businessContext?: string;
   };
 
   // Step 2: Generate guidance
   reasoning: {
     guidanceText: string;
-    citations: Array<{
-      regulation: string;
-      article: string;
-      content: string;
-      relevance: number;
-    }>;
-    toolCalls?: Array<{
-      functionName: string;
-      arguments: Record<string, unknown>;
-    }>;
+    citations: Citation[];
+    toolCalls?: ToolCall[];
   };
 
   // Step 3: Execute tools (optional, if guidance needs calculations)
   toolExecution?: {
-    calculations: Array<{
-      functionName: string;
-      functionDisplayName: string;
-      formula: string;
-      inputs: Record<string, { value: number; unit: string; source: string }>;
-      result: {
-        value: number;
-        formatted: string;
-      };
-      description?: string;
-    }>;
+    calculations: CalculationResultSimple[];
   };
 
   // Step 4: Find related articles
   relatedArticles: {
-    articles: Array<{
-      regulation: string;
-      article: string;
-      summary: string;
-    }>;
+    articles: RelatedArticle[];
   };
 
   // Step 5: Evaluate confidence
-  confidence: {
-    score: number;
-    factors: Array<{
-      name: string;
-      score: number;
-      weight: number;
-    }>;
-    threshold: number;
-    passed: boolean;
-    reason?: string;
-  };
+  confidence: ConfidenceEvaluation;
 
   // Step 6: Generate response
   output: {
-    type: 'guidance' | 'not_found' | 'low_confidence';
+    type: "guidance" | "not_found" | "low_confidence";
     guidance?: string;
-    citations: Array<{
-      regulation: string;
-      article: string;
-      content: string;
-      relevance: number;
-    }>;
+    citations: Citation[];
     confidence: number;
-    relatedArticles?: Array<{
-      regulation: string;
-      article: string;
-      summary: string;
-    }>;
+    relatedArticles?: RelatedArticle[];
     warnings?: string[];
-    calculations?: Array<{
-      functionName: string;
-      functionDisplayName: string;
-      formula: string;
-      inputs: Record<string, { value: number; unit: string; source: string }>;
-      result: {
-        value: number;
-        formatted: string;
-      };
-      description?: string;
-    }>;
+    calculations?: CalculationResultSimple[];
   };
 
   // Workflow metadata
@@ -292,35 +201,20 @@ export interface GuidanceChatState extends WorkflowState {
 export interface LandingChatState extends WorkflowState {
   // Input from API request
   input: {
-    messages: Array<{
-      role: 'user' | 'assistant';
-      content: string;
-    }>;
+    messages: ChatMessage[];
     currentMessage: string;
   };
 
   // Step 1: Generate reply
   reply: {
     content: string;
-    conversationHistory: Array<{
-      role: 'user' | 'assistant';
-      content: string;
-    }>;
+    conversationHistory: ChatMessage[];
   };
 
   // Step 2: Analyze intent and route to module
   routing: {
-    intentAnalysis: {
-      extractionKeywords: number;
-      analysisKeywords: number;
-      guidanceKeywords: number;
-    };
-    suggestedModule?: {
-      name: string;
-      displayName: string;
-      reason: string;
-      url: string;
-    };
+    intentAnalysis: IntentAnalysis;
+    suggestedModule?: SuggestedModule;
     confidence: number;
   };
 
@@ -332,12 +226,7 @@ export interface LandingChatState extends WorkflowState {
   // Step 4: Generate response
   output: {
     reply: string;
-    suggestedModule?: {
-      name: string;
-      displayName: string;
-      reason: string;
-      url: string;
-    };
+    suggestedModule?: SuggestedModule;
     suggestedQuestions?: string[];
     confidence: number;
   };
@@ -345,3 +234,30 @@ export interface LandingChatState extends WorkflowState {
   // Workflow metadata
   meta: WorkflowMeta;
 }
+
+// ============================================================================
+// Re-export domain types for convenience
+// ============================================================================
+
+export type {
+  ChatMessage,
+  Citation,
+  RelatedArticle,
+  SourceDocument,
+  CalculationInput,
+  CalculationValue,
+  CalculationResult,
+  CalculationResultSimple,
+  ConfidenceFactor,
+  ConfidenceEvaluation,
+  SuggestedModule,
+  VectorSearchResult,
+  KeywordSearchResult,
+  CombinedSearchResult,
+  ToolCall,
+  IntentAnalysis,
+  UploadedDocument,
+  FinancialMetricData,
+  FinancialMetricDataExtended,
+  FinancialMetricDataWithYear,
+} from "./domain-types";
