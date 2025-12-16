@@ -611,7 +611,7 @@ export async function generateResponse(
       output: {
         type: "no_function",
         answer:
-          "抱歉，我无法识别您想要计算的财务指标。请尝试更具体的问题，例如"计算2024年的资产负债率"。",
+          "抱歉，我无法识别您想要计算的财务指标。请尝试更具体的问题，例如「计算2024年的资产负债率」。",
         confidence: 0.3,
         sourceDocuments: [],
         suggestion: "您可以询问流动比率、资产负债率、净利润率等常见财务指标。",

@@ -187,7 +187,15 @@ async function queryStructuredFinancialData(
     string,
     { value: number; unit: string; source: string; year: string }
   > = {};
-  for (const row of data || []) {
+  for (const row of (data || []) as Array<{
+    metric_name: string;
+    metric_value: number;
+    unit: string;
+    year: string;
+    period: string;
+    document_id: string;
+    documents: { id: string; name: string };
+  }>) {
     // Use the first (most recent) value for each metric
     if (!metrics[row.metric_name]) {
       metrics[row.metric_name] = {
@@ -276,7 +284,8 @@ export async function performHybridSearch(
   }
 
   // Vector similarity search on document_chunks
-  const { data: vectorData, error: vectorError } = await supabase.rpc(
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data: vectorData, error: vectorError } = await (supabase.rpc as any)(
     "match_documents",
     {
       query_embedding: queryEmbedding,
@@ -308,7 +317,12 @@ export async function performHybridSearch(
 
   // Add/merge vector results
   if (vectorData) {
-    for (const vecResult of vectorData) {
+    for (const vecResult of vectorData as Array<{
+      id: string;
+      document_id: string;
+      content: string;
+      similarity: number;
+    }>) {
       const { data: matchingReg } = await supabase
         .from("structured_regulations")
         .select("*")
@@ -320,7 +334,8 @@ export async function performHybridSearch(
         .limit(1);
 
       if (matchingReg && matchingReg.length > 0) {
-        const reg = matchingReg[0];
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const reg = matchingReg[0] as any;
         const existing = combinedResults.get(reg.id);
         if (existing) {
           existing.semantic_score = Math.max(
@@ -349,7 +364,7 @@ export async function performHybridSearch(
 
         combinedResults.set(vecResult.id, {
           id: vecResult.id,
-          regulation_name: docInfo?.name || "参考文档",
+          regulation_name: (docInfo as { name: string } | null)?.name || "参考文档",
           article_number: "",
           content: vecResult.content,
           keyword_score: 0,
@@ -887,7 +902,11 @@ export async function findRelatedArticles(
       .limit(3);
 
     if (articles) {
-      for (const article of articles) {
+      for (const article of articles as Array<{
+        regulation_name: string;
+        article_number: string;
+        content: string;
+      }>) {
         // Skip if already in main citations
         if (
           citations.some(
