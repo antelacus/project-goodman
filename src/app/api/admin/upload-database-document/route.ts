@@ -33,6 +33,7 @@ import {
 } from "../../../../lib/financial-validation";
 import { uploadFileToStorage } from "../../../../lib/storage-helpers";
 import { generateRequestId, createErrorResponse } from "../../../../lib/security/error-handler";
+import { validateFileByExtension } from "../../../../lib/security/file-validator";
 
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
@@ -266,6 +267,37 @@ export async function POST(request: NextRequest) {
         } as UploadResponse,
         { status: 401 }
       );
+    }
+
+    // Step 0.5: Validate file content (magic number check) for binary files
+    // REQ-009: Prevent file masquerading attacks
+    const fileExt = fileName.toLowerCase().split('.').pop();
+    const isBinaryFile = ['pdf', 'xlsx', 'png', 'jpg', 'jpeg', 'webp', 'gif'].includes(fileExt || '');
+
+    if (isBinaryFile) {
+      try {
+        // Check if documentText is base64-encoded
+        const isBase64 = /^[A-Za-z0-9+/]+=*$/.test(documentText.replace(/\s/g, ''));
+        if (isBase64 && documentText.length > 100) {
+          const fileBuffer = Buffer.from(documentText, 'base64');
+          const contentValidation = validateFileByExtension(fileBuffer, fileName);
+
+          if (!contentValidation.valid) {
+            console.warn(`[Admin Upload] File content validation failed for ${fileName}: ${contentValidation.error}`);
+            return NextResponse.json(
+              {
+                success: false,
+                message: contentValidation.error || "文件内容验证失败",
+                error: "File content validation failed",
+              } as UploadResponse,
+              { status: 400 }
+            );
+          }
+        }
+      } catch (validationError) {
+        console.error(`[Admin Upload] File validation error:`, validationError);
+        // Don't fail on validation errors, just log them
+      }
     }
 
     // Initialize Supabase client

@@ -1,6 +1,7 @@
 export const runtime = "nodejs";
 import { NextRequest, NextResponse } from "next/server";
 import { generateRequestId, createErrorResponse } from "../../../lib/security/error-handler";
+import { validateFileByExtension } from "../../../lib/security/file-validator";
 
 export async function POST(req: NextRequest) {
   const requestId = req.headers.get('x-request-id') || generateRequestId();
@@ -32,6 +33,19 @@ export async function POST(req: NextRequest) {
     if (!fileExtension || !allowedTypes.includes(fileExtension)) {
       return NextResponse.json(
         { error: "Unsupported file type. Only PDF, XLSX, TXT, and CSV files are allowed." },
+        { status: 400 }
+      );
+    }
+
+    // 文件内容验证 (魔数检测)
+    // REQ-009: Validate file content matches declared type
+    const fileBuffer = Buffer.from(await (file as File).arrayBuffer());
+    const contentValidation = validateFileByExtension(fileBuffer, (file as File).name);
+
+    if (!contentValidation.valid) {
+      console.warn(`[Upload] File content validation failed for ${(file as File).name}: ${contentValidation.error}`);
+      return NextResponse.json(
+        { error: contentValidation.error || "文件内容验证失败" },
         { status: 400 }
       );
     }
