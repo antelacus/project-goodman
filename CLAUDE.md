@@ -203,6 +203,31 @@ We follow a phase-gated approach where each phase requires approval before proce
 - **Storage**: Supabase Storage (`document-files` bucket)
 - **Libraries**: Zod (validation), bcryptjs (auth), expr-eval (calculations), xlsx (Excel parsing)
 
+### Deployment Architecture
+
+**Production**: Docker containers on VPS
+- Next.js app runs in Docker container (`goodman`)
+- Redis runs in Docker container (`goodman-redis`)
+- nginx reverse proxy handles SSL and routing
+- `docker-compose.yml` located in parent directory (`/home/deploy/goodman/`)
+
+**Development**: Local Node.js
+- Use `npm run dev` for local development (unchanged)
+- Hot reload works normally
+- Docker is only for production deployment
+
+**Deployment Commands**:
+```bash
+# Deploy to production (from /home/deploy/goodman/)
+cd /home/deploy/goodman && docker compose up -d --build goodman
+
+# View logs
+docker logs -f goodman
+
+# Restart without rebuild
+docker compose restart goodman
+```
+
 ### Key Directories
 
 - `src/app/` - Next.js App Router pages
@@ -293,7 +318,6 @@ function calculateDebtToEquity(totalDebt: number, totalEquity: number): number {
 - Excel parsing only supports `.xlsx` (not `.xls`), single sheet per file
 - Vector index (IVFFlat) not yet created due to small data volume (<1000 chunks)
 - 10 database indexes currently unused - may optimize after production usage analysis
-- Server-side rate limiting not implemented (MVP acceptable, planned for V3)
 
 ---
 

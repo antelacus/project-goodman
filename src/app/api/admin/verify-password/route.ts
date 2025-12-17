@@ -5,6 +5,7 @@ import { generateRequestId, createErrorResponse } from "../../../../lib/security
 import { createSession, COOKIE_NAME, COOKIE_OPTIONS, SessionData } from "../../../../lib/security/session";
 import { checkBruteForce, recordFailedAttempt, resetBruteForce } from "../../../../lib/security/brute-force";
 import { logAuthEvent, logSecurityEvent } from "../../../../lib/security/audit-logger";
+import { validateRequest, AdminVerifyPasswordSchema } from "../../../../lib/validation/api-schemas";
 
 /**
  * Helper to extract client IP from request
@@ -64,14 +65,17 @@ export async function POST(req: NextRequest) {
 
     // Step 2: Parse and validate request body
     const body = await req.json();
-    const { password } = body;
 
-    if (!password || typeof password !== 'string') {
+    // Validate with Zod schema (includes length limit)
+    const validation = validateRequest(AdminVerifyPasswordSchema, body);
+    if (!validation.success) {
       return NextResponse.json(
-        { valid: false, error: '密码不能为空', requestId },
+        { valid: false, error: validation.error, requestId },
         { status: 400, headers: { 'X-Request-ID': requestId } }
       );
     }
+
+    const { password } = validation.data;
 
     // Add delay if brute-force protection suggests it (after 3 failures)
     const delaySeconds = bruteCheck.waitSeconds ?? 0;
