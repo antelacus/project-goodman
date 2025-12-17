@@ -32,6 +32,7 @@ import {
   validateCashFlow
 } from "../../../../lib/financial-validation";
 import { uploadFileToStorage } from "../../../../lib/storage-helpers";
+import { generateRequestId, createErrorResponse } from "../../../../lib/security/error-handler";
 
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
@@ -223,6 +224,7 @@ interface UploadResponse {
 }
 
 export async function POST(request: NextRequest) {
+  const requestId = request.headers.get('x-request-id') || generateRequestId();
   const startTime = Date.now();
 
   try {
@@ -548,18 +550,9 @@ export async function POST(request: NextRequest) {
       processingTime,
     } as UploadResponse);
 
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("[Admin Upload] Error:", error);
-
-    return NextResponse.json(
-      {
-        success: false,
-        message: "处理文档时发生错误",
-        error: error.message || "Unknown error",
-        processingTime: Date.now() - startTime,
-      } as UploadResponse,
-      { status: 500 }
-    );
+    return createErrorResponse(error, requestId, 500);
   }
 }
 

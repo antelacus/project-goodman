@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 import OpenAI from "openai";
 import * as XLSX from "xlsx";
 import { createServerSupabaseClient } from "../../../../lib/supabase";
+import { generateRequestId, createErrorResponse } from "../../../../lib/security/error-handler";
 
 export const runtime = "nodejs";
 
@@ -172,6 +173,8 @@ async function generateEmbeddings(chunks: string[]): Promise<number[][]> {
 }
 
 export async function POST(req: NextRequest) {
+    const requestId = req.headers.get('x-request-id') || generateRequestId();
+
     try {
         const body: UploadTempRequest = await req.json();
         const { fileData, fileName, fileType, source } = body;
@@ -253,8 +256,8 @@ export async function POST(req: NextRequest) {
             message: "Document uploaded and vectorized successfully (Temporary)."
         });
 
-    } catch (error: any) {
+    } catch (error: unknown) {
         console.error("Upload Temp Error:", error);
-        return NextResponse.json({ error: error.message || "Unknown error" }, { status: 500 });
+        return createErrorResponse(error, requestId, 500);
     }
 }

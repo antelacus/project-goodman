@@ -12,6 +12,8 @@ export const runtime = "nodejs";
 
 import { NextRequest, NextResponse } from "next/server";
 import { runFinancialAnalysisWorkflow } from "../../../lib/workflows/financial-analysis";
+import { validateRequest, FinancialAnalysisRequestSchema } from "../../../lib/validation/api-schemas";
+import { generateRequestId, createErrorResponse } from "../../../lib/security/error-handler";
 
 /**
  * Environment variable to toggle between new workflow and legacy implementation
@@ -23,17 +25,22 @@ const USE_WORKFLOW_ENGINE = process.env.USE_WORKFLOW_ENGINE === 'true';
  * Main POST handler
  */
 export async function POST(request: NextRequest) {
+  // Get request ID from middleware (or generate one)
+  const requestId = request.headers.get('x-request-id') || generateRequestId();
+
   try {
     const body = await request.json();
-    const { question, year, period, documentIds } = body;
 
-    // Validate request
-    if (!question || typeof question !== 'string') {
+    // Validate request with Zod schema
+    const validation = validateRequest(FinancialAnalysisRequestSchema, body);
+    if (!validation.success) {
       return NextResponse.json(
-        { error: '问题不能为空' },
-        { status: 400 }
+        { error: validation.error, requestId },
+        { status: 413, headers: { 'X-Request-ID': requestId } }
       );
     }
+
+    const { question, year, period, documentIds } = validation.data;
 
     // Use new workflow architecture
     const state = await runFinancialAnalysisWorkflow({
@@ -46,14 +53,8 @@ export async function POST(request: NextRequest) {
     // Return workflow output
     return NextResponse.json(state.output);
 
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Financial Analysis API error:', error);
-    return NextResponse.json(
-      {
-        error: '处理财务分析请求时发生错误',
-        details: error.message
-      },
-      { status: 500 }
-    );
+    return createErrorResponse(error, requestId, 500);
   }
 }

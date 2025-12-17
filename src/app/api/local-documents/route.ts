@@ -1,7 +1,10 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { createServerSupabaseClient } from "../../../lib/supabase";
+import { generateRequestId, createErrorResponse } from "../../../lib/security/error-handler";
 
-export async function GET() {
+export async function GET(req: NextRequest) {
+  const requestId = req.headers.get('x-request-id') || generateRequestId();
+
   try {
     const supabase = createServerSupabaseClient();
 
@@ -66,12 +69,8 @@ export async function GET() {
 
     return NextResponse.json({ documents: formattedDocuments });
 
-  } catch (error) {
+  } catch (error: unknown) {
     console.error("Error loading documents from Supabase:", error);
-    const errorMessage = error instanceof Error ? error.message : "Unknown error";
-    return NextResponse.json(
-      { error: "Failed to load documents", details: errorMessage },
-      { status: 500 }
-    );
+    return createErrorResponse(error, requestId, 500);
   }
 }

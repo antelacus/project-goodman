@@ -1,7 +1,10 @@
 export const runtime = "nodejs";
 import { NextRequest, NextResponse } from "next/server";
+import { generateRequestId, createErrorResponse } from "../../../lib/security/error-handler";
 
 export async function POST(req: NextRequest) {
+  const requestId = req.headers.get('x-request-id') || generateRequestId();
+
   try {
     const formData = await req.formData();
     const file = formData.get('file');
@@ -43,16 +46,15 @@ export async function POST(req: NextRequest) {
       message: "File validation successful"
     });
 
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('Upload API error:', error);
-    return NextResponse.json(
-      { error: "Internal server error" },
-      { status: 500 }
-    );
+    return createErrorResponse(error, requestId, 500);
   }
 }
 
 export async function DELETE(req: NextRequest) {
+  const requestId = req.headers.get('x-request-id') || generateRequestId();
+
   try {
     const { searchParams } = new URL(req.url);
     const documentId = searchParams.get('documentId');
@@ -70,11 +72,8 @@ export async function DELETE(req: NextRequest) {
       message: "Document deleted successfully"
     });
 
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('Delete API error:', error);
-    return NextResponse.json(
-      { error: "Internal server error" },
-      { status: 500 }
-    );
+    return createErrorResponse(error, requestId, 500);
   }
 } 
