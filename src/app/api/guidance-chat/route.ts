@@ -7,24 +7,27 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { runGuidanceChatWorkflow } from "../../../lib/workflows/guidance-chat";
-import type { GuidanceChatRequest } from "../../../lib/types/api-types";
+import { validateRequest, GuidanceChatRequestSchema } from "../../../lib/validation/api-schemas";
+import { generateRequestId, createErrorResponse } from "../../../lib/security/error-handler";
 
 export const runtime = "nodejs";
 
 export async function POST(request: NextRequest) {
-  try {
-    const body: GuidanceChatRequest = await request.json();
-    const { question, uploadedDocument, documentIds, regulationCategories } =
-      body;
+  const requestId = request.headers.get('x-request-id') || generateRequestId();
 
-    // Validate input
-    if (
-      !question ||
-      typeof question !== "string" ||
-      question.trim().length === 0
-    ) {
-      return NextResponse.json({ error: "请提供有效的问题" }, { status: 400 });
+  try {
+    const body = await request.json();
+
+    // Validate request with Zod schema
+    const validation = validateRequest(GuidanceChatRequestSchema, body);
+    if (!validation.success) {
+      return NextResponse.json(
+        { error: validation.error, requestId },
+        { status: 413, headers: { 'X-Request-ID': requestId } }
+      );
     }
+
+    const { question, uploadedDocument, documentIds, regulationCategories } = validation.data;
 
     // Run workflow
     const state = await runGuidanceChatWorkflow({
@@ -36,15 +39,9 @@ export async function POST(request: NextRequest) {
 
     // Return output
     return NextResponse.json(state.output);
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Guidance Chat API error:", error);
-
-    return NextResponse.json(
-      {
-        error: "处理请求时出错，请稍后重试",
-        details: error instanceof Error ? error.message : "未知错误",
-      },
-      { status: 500 }
-    );
+    return createErrorResponse(error, requestId, 500);
   }
 }
+

@@ -10,10 +10,13 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { presetFunctions } from '../../../lib/preset-functions';
+import { generateRequestId, createErrorResponse } from '../../../lib/security/error-handler';
 
 export const runtime = 'nodejs';
 
 export async function GET(request: NextRequest) {
+  const requestId = request.headers.get('x-request-id') || generateRequestId();
+
   try {
     // Transform preset functions into API response format
     const functions = presetFunctions.map((func) => ({
@@ -39,11 +42,8 @@ export async function GET(request: NextRequest) {
         efficiency: functions.filter(f => f.category === 'efficiency').length,
       },
     });
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('Error fetching preset functions:', error);
-    return NextResponse.json(
-      { error: '获取预设函数列表失败' },
-      { status: 500 }
-    );
+    return createErrorResponse(error, requestId, 500);
   }
 }

@@ -4,25 +4,16 @@ import {
   verifyAdminPassword,
   createAdminSession,
 } from "../../../../lib/admin-auth";
+import { generateRequestId, createErrorResponse } from "../../../../lib/security/error-handler";
 
 /**
  * POST /api/admin/verify-password
  *
  * Verify admin password and create a session token if valid.
- *
- * Request Body:
- * {
- *   password: string;
- * }
- *
- * Response:
- * {
- *   valid: boolean;
- *   token?: string;        // Session token (Bearer token)
- *   expiresAt?: number;    // Unix timestamp when session expires
- * }
  */
 export async function POST(req: NextRequest) {
+  const requestId = req.headers.get('x-request-id') || generateRequestId();
+
   try {
     // Parse request body
     const body = await req.json();
@@ -31,11 +22,8 @@ export async function POST(req: NextRequest) {
     // Validate input
     if (!password || typeof password !== 'string') {
       return NextResponse.json(
-        {
-          valid: false,
-          error: 'Password is required'
-        },
-        { status: 400 }
+        { valid: false, error: 'Password is required', requestId },
+        { status: 400, headers: { 'X-Request-ID': requestId } }
       );
     }
 
@@ -45,10 +33,8 @@ export async function POST(req: NextRequest) {
     if (!isValid) {
       // Return generic error message to prevent information disclosure
       return NextResponse.json(
-        {
-          valid: false,
-        },
-        { status: 200 } // Return 200 to avoid timing attacks
+        { valid: false, requestId },
+        { status: 200, headers: { 'X-Request-ID': requestId } }
       );
     }
 
@@ -60,18 +46,12 @@ export async function POST(req: NextRequest) {
       valid: true,
       token: session.token,
       expiresAt: session.expiresAt,
+      requestId,
     });
 
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('Admin password verification error:', error);
-
-    // Return generic error to prevent information disclosure
-    return NextResponse.json(
-      {
-        valid: false,
-        error: 'Verification failed'
-      },
-      { status: 500 }
-    );
+    return createErrorResponse(error, requestId, 500);
   }
 }
+

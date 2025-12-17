@@ -1,20 +1,32 @@
+/**
+ * Landing Chat API Route
+ *
+ * Provides conversational AI guidance for the landing page.
+ */
+
 export const runtime = "nodejs";
+
 import { NextRequest, NextResponse } from "next/server";
 import { runLandingChatWorkflow } from "../../../lib/workflows/landing-chat";
-import type { LandingChatRequest } from "../../../lib/types/api-types";
+import { validateRequest, LandingChatRequestSchema } from "../../../lib/validation/api-schemas";
+import { generateRequestId, createErrorResponse } from "../../../lib/security/error-handler";
 
 export async function POST(req: NextRequest) {
-  try {
-    const body: LandingChatRequest = await req.json();
-    const { message, conversationHistory = [] } = body;
+  const requestId = req.headers.get('x-request-id') || generateRequestId();
 
-    // Validate request
-    if (!message || typeof message !== "string" || message.trim().length === 0) {
+  try {
+    const body = await req.json();
+
+    // Validate request with Zod schema
+    const validation = validateRequest(LandingChatRequestSchema, body);
+    if (!validation.success) {
       return NextResponse.json(
-        { error: "Message is required" },
-        { status: 400 }
+        { error: validation.error, requestId },
+        { status: 413, headers: { 'X-Request-ID': requestId } }
       );
     }
+
+    const { message, conversationHistory = [] } = validation.data;
 
     // Run workflow
     const state = await runLandingChatWorkflow({
@@ -24,12 +36,9 @@ export async function POST(req: NextRequest) {
 
     // Return output
     return NextResponse.json(state.output);
-  } catch (err: unknown) {
-    console.error("Landing Chat API Error:", err);
-    const errorMessage = err instanceof Error ? err.message : "未知错误";
-    return NextResponse.json(
-      { error: "Failed to process chat message.", details: errorMessage },
-      { status: 500 }
-    );
+  } catch (error: unknown) {
+    console.error("Landing Chat API Error:", error);
+    return createErrorResponse(error, requestId, 500);
   }
 }
+

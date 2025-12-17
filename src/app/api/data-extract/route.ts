@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 import OpenAI from "openai";
 import * as XLSX from "xlsx";
 import { getDataExtractPrompt } from "../../../lib/prompts";
+import { generateRequestId, createErrorResponse } from "../../../lib/security/error-handler";
 
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
@@ -25,6 +26,8 @@ const ALL_SUPPORTED_TYPES = [...SUPPORTED_IMAGE_TYPES, SUPPORTED_PDF_TYPE, SUPPO
 const MAX_BASE64_SIZE = 2 * 1024 * 1024 * 1.4;
 
 export async function POST(req: NextRequest) {
+  const requestId = req.headers.get('x-request-id') || generateRequestId();
+
   try {
     const body = await req.json();
     const { fileData, fileType, fileName } = body;
@@ -155,25 +158,8 @@ export async function POST(req: NextRequest) {
       fileName: fileName || 'unknown'
     });
 
-  } catch (err: unknown) {
-    console.error("Data Extract API Error:", err);
-
-    const errorMessage = err instanceof Error ? err.message : "未知错误";
-
-    // Check for specific OpenAI errors
-    if (errorMessage.includes('Could not process image')) {
-      return NextResponse.json({
-        success: false,
-        error: 'image_processing_failed',
-        message: '图片处理失败，请确保上传的是清晰的图片或PDF文件'
-      }, { status: 400 });
-    }
-
-    return NextResponse.json({
-      success: false,
-      error: 'extraction_failed',
-      message: 'AI 提取失败，请重试',
-      details: errorMessage
-    }, { status: 500 });
+  } catch (error: unknown) {
+    console.error("Data Extract API Error:", error);
+    return createErrorResponse(error, requestId, 500);
   }
 }

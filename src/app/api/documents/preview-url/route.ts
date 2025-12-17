@@ -6,8 +6,11 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { getSignedFileUrl } from "../../../../lib/storage-helpers";
+import { generateRequestId, createErrorResponse } from "../../../../lib/security/error-handler";
 
 export async function GET(req: NextRequest) {
+  const requestId = req.headers.get('x-request-id') || generateRequestId();
+
   try {
     const { searchParams } = new URL(req.url);
     const fileUrl = searchParams.get('fileUrl');
@@ -34,12 +37,8 @@ export async function GET(req: NextRequest) {
       signedUrl,
     });
 
-  } catch (err: unknown) {
-    console.error("Preview URL Error:", err);
-    const errorMessage = err instanceof Error ? err.message : "Unknown error";
-    return NextResponse.json(
-      { error: "Failed to get preview URL", details: errorMessage },
-      { status: 500 }
-    );
+  } catch (error: unknown) {
+    console.error("Preview URL Error:", error);
+    return createErrorResponse(error, requestId, 500);
   }
 }

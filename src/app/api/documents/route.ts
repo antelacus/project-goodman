@@ -3,6 +3,7 @@ import OpenAI from "openai";
 import { createServerSupabaseClient } from "../../../lib/supabase";
 import { verifyAdminPassword } from "../../../lib/admin-auth";
 import { deleteDocumentFiles } from "../../../lib/storage-helpers";
+import { generateRequestId, createErrorResponse } from "../../../lib/security/error-handler";
 
 // Initialize OpenAI client
 const openai = new OpenAI({
@@ -10,6 +11,8 @@ const openai = new OpenAI({
 });
 
 export async function POST(req: NextRequest) {
+  const requestId = req.headers.get('x-request-id') || generateRequestId();
+
   try {
     const body = await req.json();
     const { text, documentId, documentName, docCategory = "business", docType } = body;
@@ -144,18 +147,16 @@ export async function POST(req: NextRequest) {
       message: "文档处理完成并已保存到数据库"
     });
 
-  } catch (err: unknown) {
-    console.error("Document Processing Error:", err);
-    const errorMessage = err instanceof Error ? err.message : "未知错误";
-    return NextResponse.json(
-      { error: "Failed to process document", details: errorMessage },
-      { status: 500 }
-    );
+  } catch (error: unknown) {
+    console.error("Document Processing Error:", error);
+    return createErrorResponse(error, requestId, 500);
   }
 }
 
 // GET方法：从Supabase获取文档列表
 export async function GET(req: NextRequest) {
+  const requestId = req.headers.get('x-request-id') || generateRequestId();
+
   try {
     const { searchParams } = new URL(req.url);
     const docCategory = searchParams.get('category');
@@ -188,18 +189,16 @@ export async function GET(req: NextRequest) {
       documents: documents || [],
     });
 
-  } catch (err: unknown) {
-    console.error("Document Fetch Error:", err);
-    const errorMessage = err instanceof Error ? err.message : "未知错误";
-    return NextResponse.json(
-      { error: "Failed to fetch documents", details: errorMessage },
-      { status: 500 }
-    );
+  } catch (error: unknown) {
+    console.error("Document Fetch Error:", error);
+    return createErrorResponse(error, requestId, 500);
   }
 }
 
 // DELETE方法：删除文档
 export async function DELETE(req: NextRequest) {
+  const requestId = req.headers.get('x-request-id') || generateRequestId();
+
   try {
     const { searchParams } = new URL(req.url);
     const documentId = searchParams.get('id');
@@ -239,18 +238,16 @@ export async function DELETE(req: NextRequest) {
       message: "Document deleted successfully"
     });
 
-  } catch (err: unknown) {
-    console.error("Document Delete Error:", err);
-    const errorMessage = err instanceof Error ? err.message : "未知错误";
-    return NextResponse.json(
-      { error: "Failed to delete document", details: errorMessage },
-      { status: 500 }
-    );
+  } catch (error: unknown) {
+    console.error("Document Delete Error:", error);
+    return createErrorResponse(error, requestId, 500);
   }
 }
 
 // PATCH方法：更新文档属性（管理员）
 export async function PATCH(req: NextRequest) {
+  const requestId = req.headers.get('x-request-id') || generateRequestId();
+
   try {
     const body = await req.json();
     const { documentId, adminPassword, updates } = body;
@@ -355,13 +352,9 @@ export async function PATCH(req: NextRequest) {
       document: data
     });
 
-  } catch (err: unknown) {
-    console.error("Document Update Error:", err);
-    const errorMessage = err instanceof Error ? err.message : "未知错误";
-    return NextResponse.json(
-      { error: "Failed to update document", details: errorMessage },
-      { status: 500 }
-    );
+  } catch (error: unknown) {
+    console.error("Document Update Error:", error);
+    return createErrorResponse(error, requestId, 500);
   }
 }
 

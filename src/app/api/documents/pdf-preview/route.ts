@@ -14,6 +14,7 @@ export const runtime = "nodejs";
 
 import { NextRequest, NextResponse } from "next/server";
 import { createServerSupabaseClient } from "../../../../lib/supabase";
+import { generateRequestId, createErrorResponse } from "../../../../lib/security/error-handler";
 
 // Dynamic imports for server-side PDF rendering
 let pdfjs: typeof import("pdfjs-dist") | null = null;
@@ -34,6 +35,8 @@ async function initPdfJs() {
 }
 
 export async function GET(request: NextRequest) {
+  const requestId = request.headers.get('x-request-id') || generateRequestId();
+
   try {
     const { searchParams } = new URL(request.url);
     const fileUrl = searchParams.get("fileUrl");
@@ -130,17 +133,16 @@ export async function GET(request: NextRequest) {
         "Content-Disposition": "inline",
       },
     });
-  } catch (error) {
+  } catch (error: unknown) {
     console.error("PDF preview error:", error);
-    return NextResponse.json(
-      { error: "Failed to render PDF page", details: error instanceof Error ? error.message : "Unknown error" },
-      { status: 500 }
-    );
+    return createErrorResponse(error, requestId, 500);
   }
 }
 
 // Also provide page count endpoint
 export async function POST(request: NextRequest) {
+  const requestId = request.headers.get('x-request-id') || generateRequestId();
+
   try {
     const { fileUrl } = await request.json();
 
@@ -193,11 +195,8 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({
       numPages: pdfDocument.numPages,
     });
-  } catch (error) {
+  } catch (error: unknown) {
     console.error("PDF page count error:", error);
-    return NextResponse.json(
-      { error: "Failed to get PDF page count" },
-      { status: 500 }
-    );
+    return createErrorResponse(error, requestId, 500);
   }
 }
