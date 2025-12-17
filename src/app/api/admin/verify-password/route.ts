@@ -4,6 +4,7 @@ import { verifyAdminPassword } from "../../../../lib/admin-auth";
 import { generateRequestId, createErrorResponse } from "../../../../lib/security/error-handler";
 import { createSession, COOKIE_NAME, COOKIE_OPTIONS, SessionData } from "../../../../lib/security/session";
 import { checkBruteForce, recordFailedAttempt, resetBruteForce } from "../../../../lib/security/brute-force";
+import { logAuthEvent, logSecurityEvent } from "../../../../lib/security/audit-logger";
 
 /**
  * Helper to extract client IP from request
@@ -38,6 +39,12 @@ export async function POST(req: NextRequest) {
     const bruteCheck = await checkBruteForce(clientIP);
 
     if (!bruteCheck.allowed) {
+      // Audit: Log lockout attempt
+      logSecurityEvent('lockout_active', clientIP, userAgent, {
+        requestId,
+        waitSeconds: bruteCheck.waitSeconds,
+      });
+
       return NextResponse.json(
         {
           valid: false,
@@ -80,6 +87,12 @@ export async function POST(req: NextRequest) {
       const failResult = await recordFailedAttempt(clientIP);
 
       if (failResult.locked) {
+        // Audit: Log lockout triggered
+        logSecurityEvent('lockout_triggered', clientIP, userAgent, {
+          requestId,
+          lockDuration: failResult.lockDuration,
+        });
+
         return NextResponse.json(
           {
             valid: false,
@@ -97,6 +110,9 @@ export async function POST(req: NextRequest) {
         );
       }
 
+      // Audit: Log failed login attempt
+      logAuthEvent('login_failed', clientIP, userAgent, { requestId });
+
       // Return generic error (don't reveal if password exists)
       return NextResponse.json(
         { valid: false, requestId },
@@ -109,6 +125,12 @@ export async function POST(req: NextRequest) {
 
     // Create Redis-backed session
     const session: SessionData = await createSession(clientIP, userAgent);
+
+    // Audit: Log successful login
+    logAuthEvent('login_success', clientIP, userAgent, {
+      requestId,
+      sessionId: session.token.substring(0, 8) + '...',  // Log partial token only
+    });
 
     // Build response with session cookie
     const response = NextResponse.json(

@@ -4,6 +4,7 @@ import OpenAI from "openai";
 import * as XLSX from "xlsx";
 import { createServerSupabaseClient } from "../../../../lib/supabase";
 import { generateRequestId, createErrorResponse } from "../../../../lib/security/error-handler";
+import { validateFileByExtension } from "../../../../lib/security/file-validator";
 
 export const runtime = "nodejs";
 
@@ -196,6 +197,24 @@ export async function POST(req: NextRequest) {
             }
         } else {
             return NextResponse.json({ error: "Invalid source." }, { status: 400 });
+        }
+
+        // Step 1.5: Validate file content (magic number check)
+        // REQ-009: Prevent file masquerading attacks
+        try {
+            const fileBuffer = Buffer.from(fileData, 'base64');
+            const contentValidation = validateFileByExtension(fileBuffer, fileName);
+
+            if (!contentValidation.valid) {
+                console.warn(`[Upload Temp] File content validation failed for ${fileName}: ${contentValidation.error}`);
+                return NextResponse.json(
+                    { error: contentValidation.error || "文件内容验证失败" },
+                    { status: 400 }
+                );
+            }
+        } catch (validationError) {
+            console.error(`[Upload Temp] File validation error:`, validationError);
+            // Don't fail on validation errors, just log
         }
 
         // 2. Extract Text
