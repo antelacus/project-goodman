@@ -3,10 +3,14 @@
  *
  * Provides secure password verification and session management for admin features.
  * Admin password is stored in environment variable ADMIN_PASSWORD.
- * Sessions are stored in-memory with 1-hour expiration.
+ *
+ * V3.2: Uses bcrypt for password hashing with migration support.
+ * Sessions are now primarily handled by Redis (see security/session.ts).
+ * Legacy in-memory sessions kept for backward compatibility during transition.
  */
 
 import { randomBytes } from 'crypto';
+import { verifyPassword } from './security/password';
 
 // Types
 export interface AdminSession {
@@ -15,33 +19,47 @@ export interface AdminSession {
   expiresAt: number;
 }
 
+export interface PasswordVerificationResult {
+  valid: boolean;
+  needsRehash: boolean;
+}
+
 // Constants
 const SESSION_DURATION_MS = 60 * 60 * 1000; // 1 hour
 
-// In-memory session storage
-// Note: In production with multiple instances, consider using Redis or similar
+// In-memory session storage (legacy - prefer Redis sessions for new code)
 const activeSessions = new Map<string, AdminSession>();
 
 /**
  * Verify a password against the stored admin password
+ * Supports both bcrypt hashes and plaintext (for migration)
+ *
  * @param password - Plain text password to verify
- * @returns True if password is correct, false otherwise
+ * @returns Verification result with needsRehash flag
  */
-export async function verifyAdminPassword(password: string): Promise<boolean> {
+export async function verifyAdminPassword(password: string): Promise<PasswordVerificationResult> {
   try {
     const adminPassword = process.env.ADMIN_PASSWORD;
 
     if (!adminPassword) {
       console.error('ADMIN_PASSWORD environment variable is not set');
-      return false;
+      return { valid: false, needsRehash: false };
     }
 
-    // Direct comparison for simplicity
-    // In production, you might want to store a hashed version
-    return password === adminPassword;
+    // Use bcrypt verification with migration support
+    const result = await verifyPassword(password, adminPassword);
+
+    if (result.needsRehash) {
+      console.warn(
+        'SECURITY: Admin password should be upgraded to bcrypt hash. ' +
+        'Generate with: node -e "require(\'bcryptjs\').hash(\'PASSWORD\', 12).then(console.log)"'
+      );
+    }
+
+    return result;
   } catch (error) {
     console.error('Error verifying admin password:', error);
-    return false;
+    return { valid: false, needsRehash: false };
   }
 }
 
