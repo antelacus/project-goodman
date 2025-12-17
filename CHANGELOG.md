@@ -20,6 +20,39 @@
 
 ---
 
+## [3.2.0] - 2025-12-17
+
+### 新增
+
+#### 安全增强
+- **服务端速率限制**: Redis 支持的滑动窗口速率限制
+  - AI 端点: 20 请求/分钟
+  - 认证端点: 5 请求/分钟
+  - 数据端点: 60 请求/分钟
+- **暴力破解防护**: 3 次失败后延迟，5 次失败后锁定 15 分钟
+- **Redis 会话管理**: 24 小时 TTL，HTTP-only Secure Cookie
+- **安全响应头**: X-Frame-Options, X-Content-Type-Options, X-XSS-Protection, CSP, Referrer-Policy, Permissions-Policy
+- **审计日志**: 结构化 JSON 日志，自动轮转 (10MB)
+- **输入验证**: Zod schema 验证所有 API 请求，长度限制防止资源耗尽
+- **错误脱敏**: 生产环境隐藏详细错误信息
+
+#### 基础设施
+- **Redis 容器**: `goodman-redis` 提供分布式状态存储
+- **Next.js 中间件**: 集中式安全检查入口
+
+### 变更
+
+- 密码验证: 明文比较 → bcrypt 哈希验证 (cost=12)
+- 会话存储: 内存 Map → Redis 持久化
+- 错误响应: 详细错误信息 → 环境感知脱敏
+
+### 技术细节
+
+- 新增文件: `src/middleware.ts`, `src/lib/redis.ts`, `src/lib/security/*`, `src/lib/validation/api-schemas.ts`
+- 测试覆盖: 17 项安全测试全部通过
+
+---
+
 ## [3.0.0] - 2025-12-12
 
 ### 新增
