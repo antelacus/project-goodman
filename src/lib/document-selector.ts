@@ -1,19 +1,7 @@
 
 import { analyzeIntent } from './query-intent';
-import { searchDocuments, SearchResultDocument } from './document-search';
-
-export interface DocumentSelectionResult {
-    selectedDocuments: SearchResultDocument[];
-    intent: {
-        query: string;
-        keywords: string[];
-        year?: number;
-    };
-    meta: {
-        totalFound: number;
-        autoSelectedCount: number;
-    };
-}
+import { searchDocuments } from './document-search';
+import { DocumentSelectionResult } from './types/domain-types';
 
 export interface SelectionOptions {
     maxDocuments?: number;

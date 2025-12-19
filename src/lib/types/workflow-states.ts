@@ -24,6 +24,7 @@ import type {
   IntentAnalysis,
   UploadedDocument,
   FinancialMetricDataExtended,
+  DocumentSelectionResult,
 } from "./domain-types";
 
 // ============================================================================
@@ -93,7 +94,15 @@ export interface FinancialAnalysisState extends WorkflowState {
     year?: string;
     period?: string;
     documentIds?: string[];
+    // Auto selection configuration
+    autoSelect?: {
+      enabled: boolean;
+      maxDocuments?: number;
+    };
   };
+
+  // Step 0: Document Selection (New Phase C)
+  documentSelection?: DocumentSelectionResult;
 
   // Step 1: Route to function
   routing: {
@@ -128,10 +137,10 @@ export interface FinancialAnalysisState extends WorkflowState {
   // Step 5: Generate response
   output: {
     type:
-      | "calculation_result"
-      | "insufficient_data"
-      | "low_confidence"
-      | "no_function";
+    | "calculation_result"
+    | "insufficient_data"
+    | "low_confidence"
+    | "no_function";
     answer: string;
     calculation?: {
       functionUsed: string;
@@ -143,6 +152,7 @@ export interface FinancialAnalysisState extends WorkflowState {
     };
     confidence: number;
     sourceDocuments: SourceDocument[];
+    documentSelection?: DocumentSelectionResult; // Include selection in final output if needed
     missingData?: string[];
     suggestion?: string;
     warnings?: string[];
@@ -163,7 +173,15 @@ export interface GuidanceChatState extends WorkflowState {
     uploadedDocument?: UploadedDocument;
     documentIds?: string[];
     regulationCategories?: string[];
+    // Auto selection configuration
+    autoSelect?: {
+      enabled: boolean;
+      maxDocuments?: number;
+    };
   };
+
+  // Step 0: Document Selection (New Phase C)
+  documentSelection?: DocumentSelectionResult;
 
   // Step 1: Hybrid search (vector + keyword)
   search: {
@@ -203,6 +221,7 @@ export interface GuidanceChatState extends WorkflowState {
     relatedArticles?: RelatedArticle[];
     warnings?: string[];
     calculations?: CalculationResultSimple[];
+    documentSelection?: DocumentSelectionResult; // Include selection in final output if needed
   };
 
   // Workflow metadata

@@ -50,9 +50,35 @@ const chatMessageSchema = z.object({
         ),
 });
 
+// Auto Select configuration
+const autoSelectSchema = z.object({
+    enabled: z.boolean().default(true),
+    maxDocuments: z.number().min(1).max(20).default(5),
+}).optional();
+
 // =============================================================================
 // API Request Schemas
 // =============================================================================
+
+/**
+ * Document Search Request
+ * POST /api/document-search
+ */
+export const DocumentSearchRequestSchema = z.object({
+    query: z
+        .string()
+        .min(1, '查询内容不能为空')
+        .max(
+            VALIDATION_LIMITS.MAX_QUESTION_LENGTH,
+            `查询长度不能超过 ${VALIDATION_LIMITS.MAX_QUESTION_LENGTH} 字符`
+        ),
+    options: z.object({
+        limit: z.number().min(1).max(20).optional(),
+        threshold: z.number().min(0).max(100).optional(),
+    }).optional(),
+});
+
+export type DocumentSearchRequest = z.infer<typeof DocumentSearchRequestSchema>;
 
 /**
  * Financial Analysis Request
@@ -72,6 +98,7 @@ export const FinancialAnalysisRequestSchema = z.object({
         .optional(),
     period: z.enum(['Q1', 'Q2', 'Q3', 'Q4', 'annual']).optional(),
     documentIds: documentIdsSchema,
+    autoSelect: autoSelectSchema,
 });
 
 export type FinancialAnalysisRequest = z.infer<typeof FinancialAnalysisRequestSchema>;
@@ -95,6 +122,7 @@ export const GuidanceChatRequestSchema = z
             id: z.string().optional(),
         }).optional(),
         documentIds: documentIdsSchema,
+        autoSelect: autoSelectSchema,
         regulationCategories: z.array(z.string().max(100)).max(10).optional(),
     });
 

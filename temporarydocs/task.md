@@ -13,10 +13,10 @@
   - [x] Implement `src/lib/query-intent.ts`: Intent analysis (Keywords + Year extraction). <!-- id: 9 -->
   - [x] Implement `src/lib/document-selector.ts`: Auto-selection logic (Top-N + filtering). <!-- id: 10 -->
 
-- [ ] **Phase C: Workflow Integration** <!-- id: 11 -->
-  - [ ] Create `src/lib/workflows/shared/document-selection.ts`: Reusable workflow step. <!-- id: 12 -->
-  - [ ] Integrate into `financial-analysis` workflow. <!-- id: 13 -->
-  - [ ] Integrate into `guidance-chat` workflow. <!-- id: 14 -->
+- [x] **Phase C: Workflow Integration** <!-- id: 11 -->
+  - [x] Create `src/lib/workflows/shared/document-selection.ts`: Reusable workflow step. <!-- id: 12 -->
+  - [x] Integrate into `financial-analysis` workflow. <!-- id: 13 -->
+  - [x] Integrate into `guidance-chat` workflow. <!-- id: 14 -->
 
 - [ ] **Phase D: Frontend Implementation** <!-- id: 15 -->
   - [ ] Create Component: `DocumentSourceDisplay.tsx`. <!-- id: 16 -->

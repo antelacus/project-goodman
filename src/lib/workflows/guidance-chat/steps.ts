@@ -233,7 +233,14 @@ export async function performHybridSearch(
 
   // Determine search scope
   let searchDocIds: string[] = [];
-  if (documentIds && documentIds.length > 0) {
+
+  // Use selected documents if available (from document-selection step)
+  if (state.documentSelection?.selectedDocuments) {
+    searchDocIds = state.documentSelection.selectedDocuments.map(d => d.documentId);
+    console.log(`[Guidance Chat] Using ${searchDocIds.length} auto-selected documents.`);
+  }
+  // Legacy/Manual fallback: Check input documentIds directly if no selection result (shouldn't happen if step ran)
+  else if (documentIds && documentIds.length > 0) {
     searchDocIds = documentIds;
   } else {
     // Fallback: Search all knowledge documents
@@ -242,11 +249,11 @@ export async function performHybridSearch(
       .select("id")
       .eq("doc_category", "knowledge");
     searchDocIds = regDocs?.map((d: any) => d.id) || [];
+  }
 
-    // Add uploadedDocument id if present (legacy support)
-    if (uploadedDocument?.id) {
-      searchDocIds.push(uploadedDocument.id);
-    }
+  // Add uploadedDocument id if present (legacy support)
+  if (uploadedDocument?.id && !searchDocIds.includes(uploadedDocument.id)) {
+    searchDocIds.push(uploadedDocument.id);
   }
 
   // Extract keywords for structured search
@@ -393,12 +400,12 @@ export async function performHybridSearch(
 
   const vectorResults = vectorData
     ? vectorData.slice(0, 10).map((r: any) => ({
-        chunk_id: r.id,
-        content: r.content,
-        similarity: r.similarity,
-        regulation: r.metadata?.regulation || "",
-        article: r.metadata?.article || "",
-      }))
+      chunk_id: r.id,
+      content: r.content,
+      similarity: r.similarity,
+      regulation: r.metadata?.regulation || "",
+      article: r.metadata?.article || "",
+    }))
     : [];
 
   const keywordMappedResults = keywordResults.map((r) => ({

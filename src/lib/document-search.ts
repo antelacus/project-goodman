@@ -1,5 +1,7 @@
 import { createServerSupabaseClient } from '@/lib/supabase';
 
+import { SearchResultDocument } from './types/domain-types';
+
 // Types define the search filters and options
 export interface DocumentSearchFilters {
     year?: number;
@@ -26,24 +28,7 @@ export interface DocumentSearchOptions {
     threshold?: number; // Minimum relevance score (0-100)
 }
 
-export interface SearchResultDocument {
-    documentId: string;
-    documentName: string;
-    docType: string;
-    year?: number;
-    period?: string;
-    relevanceScore: number; // 0-100
-    matchedChunks: SearchResultChunk[];
-}
-
-export interface SearchResultChunk {
-    chunkId: string;
-    content: string;
-    sectionTitle?: string;
-    sectionPath?: string[];
-    similarity: number; // This is actually RRF score in hybrid mode, or similarity in vector mode
-    sourceType: 'vector' | 'keyword' | 'hybrid';
-}
+// SearchResultDocument and SearchResultChunk are now imported from domain-types
 
 export interface DocumentSearchResponse {
     documents: SearchResultDocument[];

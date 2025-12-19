@@ -282,7 +282,14 @@ export async function queryData(
   state: FinancialAnalysisState
 ): Promise<FinancialAnalysisState> {
   const { selectedFunction, functionArgs } = state.routing;
-  const { year, period, documentIds } = state.input;
+  const { year, period } = state.input;
+
+  // Use selected documents if available, otherwise fallback to input IDs
+  let targetDocumentIds = state.input.documentIds;
+  if (state.documentSelection?.selectedDocuments?.length) {
+    targetDocumentIds = state.documentSelection.selectedDocuments.map(d => d.documentId);
+    console.log(`[Financial Analysis] Using ${targetDocumentIds.length} selected documents.`);
+  }
 
   if (!selectedFunction) {
     throw new Error("No function selected in routing step");
@@ -310,7 +317,7 @@ export async function queryData(
       }
     }
 
-    const financialData = await queryFinancialData([metric_name], undefined, targetPeriod, documentIds);
+    const financialData = await queryFinancialData([metric_name], undefined, targetPeriod, targetDocumentIds);
 
     const relevantData = financialData.filter((row: any) => years.includes(row.year));
 
@@ -365,7 +372,7 @@ export async function queryData(
   const targetPeriod = (functionArgs as any).period || period || "annual";
 
   const requiredMetrics = presetFunc.requiredInputs;
-  const financialData = await queryFinancialData(requiredMetrics, targetYear, targetPeriod, documentIds);
+  const financialData = await queryFinancialData(requiredMetrics, targetYear, targetPeriod, targetDocumentIds);
 
   const dataMap: Record<string, any> = {};
   const sourceDocumentsMap = new Map();
@@ -653,9 +660,8 @@ export async function generateResponse(
       ...state,
       output: {
         type: "low_confidence",
-        answer: `计算结果的置信度较低（${confidenceScore.toFixed(2)}），建议谨慎使用。${
-          state.confidence.reason || ""
-        }`,
+        answer: `计算结果的置信度较低（${confidenceScore.toFixed(2)}），建议谨慎使用。${state.confidence.reason || ""
+          }`,
         confidence: confidenceScore,
         sourceDocuments: sourceDocuments,
       },
