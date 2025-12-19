@@ -1,5 +1,3 @@
-
-```
 import { NextRequest, NextResponse } from "next/server";
 import OpenAI from "openai";
 import * as XLSX from "xlsx";
@@ -37,7 +35,7 @@ async function extractTextFromFile(
     fileName: string,
     fileType: string
 ): Promise<string> {
-    console.log(`[Upload Temp] Extracting text from ${ fileName } (${ fileType })`);
+    console.log(`[Upload Temp] Extracting text from ${fileName} (${fileType})`);
 
     if (fileType === SUPPORTED_TXT_TYPE || fileName.endsWith('.txt')) {
         return Buffer.from(fileData, 'base64').toString('utf-8');
@@ -89,7 +87,7 @@ async function extractTextFromFile(
                     {
                         type: "input_file",
                         filename: fileName,
-                        file_data: `data:${ fileType }; base64, ${ fileData } `
+                        file_data: `data:${fileType};base64,${fileData}`
                     }
                 ]
             }]
@@ -107,7 +105,7 @@ async function extractTextFromFile(
                     {
                         type: "image_url",
                         image_url: {
-                            url: `data:${ fileType }; base64, ${ fileData } `,
+                            url: `data:${fileType};base64,${fileData}`,
                             detail: "high"
                         }
                     }
@@ -129,7 +127,7 @@ async function extractTextFromFile(
                         {
                             type: "input_file",
                             filename: fileName,
-                            file_data: `data:${ fileType }; base64, ${ fileData } `
+                            file_data: `data:${fileType};base64,${fileData}`
                         }
                     ]
                 }]
@@ -194,7 +192,7 @@ export async function POST(req: NextRequest) {
             const contentValidation = validateFileByExtension(fileBuffer, fileName);
 
             if (!contentValidation.valid) {
-                console.warn(`[Upload Temp] File content validation failed for ${ fileName }: ${ contentValidation.error } `);
+                console.warn(`[Upload Temp] File content validation failed for ${fileName}: ${contentValidation.error}`);
                 return NextResponse.json(
                     { error: contentValidation.error || "文件内容验证失败" },
                     { status: 400 }
@@ -293,7 +291,7 @@ export async function POST(req: NextRequest) {
                 quality: parseResult.quality,
                 hasToc: parseResult.hasToc,
                 sectionCount: parseResult.sections.length,
-                suggestions: parseResult.suggestions // if supported, or generate specific suggestions
+                sections: parseResult.sections.slice(0, 10).map(s => ({ title: s.title, level: s.level }))
             },
             message: "Document uploaded and vectorized successfully (Temporary)."
         });

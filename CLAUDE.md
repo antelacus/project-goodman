@@ -206,17 +206,20 @@ We follow a phase-gated approach where each phase requires approval before proce
 ### Deployment Architecture
 
 **Production**: Docker containers on VPS
+
 - Next.js app runs in Docker container (`goodman`)
 - Redis runs in Docker container (`goodman-redis`)
 - nginx reverse proxy handles SSL and routing
 - `docker-compose.yml` located in parent directory (`/home/deploy/goodman/`)
 
 **Development**: Local Node.js
+
 - Use `npm run dev` for local development (unchanged)
 - Hot reload works normally
 - Docker is only for production deployment
 
 **Deployment Commands**:
+
 ```bash
 # Deploy to production (from /home/deploy/goodman/)
 cd /home/deploy/goodman && docker compose up -d --build goodman
@@ -231,14 +234,23 @@ docker compose restart goodman
 ### Key Directories
 
 - `src/app/` - Next.js App Router pages
-- `src/app/api/` - API routes (14 endpoints)
+- `src/app/api/` - API routes (15 endpoints)
 - `src/lib/` - Core business logic
   - `src/lib/prompts/` - Prompt templates (`.txt` files)
   - `src/lib/preset-functions.ts` - 22 financial calculation functions
   - `src/lib/financial-metric-names.ts` - Standardized metric name constants
   - `src/lib/document-constants.ts` - Document type/period display mappings
   - `src/lib/storage-helpers.ts` - Supabase Storage utilities
+  - `src/lib/section-parser.ts` - Document section parser (TOC/heading detection)
+  - `src/lib/section-aware-chunker.ts` - Section-aware text chunking
+  - `src/lib/document-search.ts` - Hybrid search service (RRF fusion)
+  - `src/lib/document-selector.ts` - Intelligent document selection orchestrator
+  - `src/lib/query-intent.ts` - Query intent analysis (LLM-based)
+  - `src/lib/workflows/shared/` - Shared workflow steps (document selection)
 - `src/components/` - React components
+  - `src/components/DocumentSourceDisplay.tsx` - Document source display with relevance scores
+  - `src/components/DocumentSelectionModal.tsx` - Document selection override modal
+  - `src/components/UploadFeedback.tsx` - Upload structure analysis feedback
 - `supabase/migrations/` - Database migrations
 - `docs/` - Design documents and development logs
 - `tests/` - Test scripts
@@ -248,9 +260,12 @@ docker compose restart goodman
 - Prompt templates stored in `src/lib/prompts/*.txt`, loaded via `src/lib/prompts.ts`
 - Financial metric names defined as constants in `financial-metric-names.ts` (no hardcoded strings)
 - Document types and periods use mapping constants in `document-constants.ts`
-- Use Zod for API input validation
+- Use Zod for API input validation (schemas in `src/lib/validation/api-schemas.ts`)
 - Database: structured tables for exact queries, vector embeddings for semantic search
 - Admin operations require password verification via `admin-auth.ts`
+- Document search uses hybrid retrieval (vector + keyword) with RRF fusion scoring
+- Workflow shared logic goes in `src/lib/workflows/shared/` for reuse across modules
+- Document selection supports both auto (AI) and manual (user override) modes
 
 ### Code Documentation Standards
 
@@ -317,7 +332,9 @@ function calculateDebtToEquity(totalDebt: number, totalEquity: number): number {
 - PDF parsing fails with plain text content; use `.md` files for testing
 - Excel parsing only supports `.xlsx` (not `.xls`), single sheet per file
 - Vector index (IVFFlat) not yet created due to small data volume (<1000 chunks)
-- 10 database indexes currently unused - may optimize after production usage analysis
+- 12 database indexes currently unused - may optimize after production usage analysis
+- TOC detection requires actual document body to be far enough from TOC (3000+ chars)
+- 3 RPC functions have mutable search_path warnings (documented, not critical)
 
 ---
 
@@ -327,7 +344,7 @@ All development phases are tracked in a dedicated `*_DEVELOPMENT_TRACK.md` file.
 
 - `docs/V*_PHASE1_REQUIREMENT_DECLARATION.md` - Requirement document (deliver PRD if development is user-faced)
 - `docs/V*_PHASE2_DESIGN.md` - Design document (architecture, ER diagrams, API design)
-- `docs/V*_PHASE3-6_DEVELOPMENT_TRACK.md` - Implementation log (54 tasks completed)
+- `docs/V*_PHASE3-6_DEVELOPMENT_TRACK.md` - Implementation log
 
 ---
 
