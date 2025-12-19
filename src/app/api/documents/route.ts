@@ -4,6 +4,8 @@ import { createServerSupabaseClient } from "../../../lib/supabase";
 import { verifyAdminPassword } from "../../../lib/admin-auth";
 import { deleteDocumentFiles } from "../../../lib/storage-helpers";
 import { generateRequestId, createErrorResponse } from "../../../lib/security/error-handler";
+import { parseDocumentSections } from "../../../lib/section-parser";
+import { createSectionAwareChunks } from "../../../lib/section-aware-chunker";
 
 // Initialize OpenAI client
 const openai = new OpenAI({
@@ -24,28 +26,33 @@ export async function POST(req: NextRequest) {
     // Initialize Supabase client
     const supabase = createServerSupabaseClient();
 
-    // 1. 文本分块处理
-    const chunks = splitTextIntoChunks(text, 1000); // 每块1000字符
+    // 1. Analyze Document Structure & Create Chunks
+    const parseResult = await parseDocumentSections(text);
+    const chunksWithSection = createSectionAwareChunks(text, parseResult.sections, 1000);
 
-    // 2. 为每个文本块生成Embedding
+    // 2. Generate Embeddings for each chunk
     const embeddings = [];
-    for (let i = 0; i < chunks.length; i++) {
-      const chunk = chunks[i];
+    for (const chunkItem of chunksWithSection) {
       const embeddingResponse = await openai.embeddings.create({
         model: "gpt-5-mini",
-        input: chunk,
+        input: chunkItem.content,
         encoding_format: "float",
       });
+
       embeddings.push({
-        id: `${documentId}-chunk-${i}`,
+        id: `${documentId}-chunk-${chunkItem.chunkIndex}`,
         document_id: documentId,
-        chunk_index: i,
-        content: chunk,
+        chunk_index: chunkItem.chunkIndex,
+        content: chunkItem.content,
         embedding: embeddingResponse.data[0].embedding,
+        // New Section Metadata
+        section_title: chunkItem.sectionTitle || null,
+        section_level: chunkItem.sectionLevel || 0,
+        section_path: chunkItem.sectionPath || null,
       });
     }
 
-    // 3. 生成文档摘要
+    // 3. Generate Document Summary (Keep existing logic)
     const summaryPrompt = `
       请为以下财务文档生成一个简洁的摘要，包含：
       1. 文档类型
@@ -62,7 +69,7 @@ export async function POST(req: NextRequest) {
         "summary": "文档摘要",
         "key_metrics": ["关键指标1", "关键指标2"],
         "time_period": "时间范围",
-        "total_chunks": ${chunks.length}
+        "total_chunks": ${chunksWithSection.length}
       }
     `;
 
@@ -75,8 +82,8 @@ export async function POST(req: NextRequest) {
 
     const summary = JSON.parse(summaryResponse.choices[0]?.message?.content || "{}");
 
-    // 4. 保存到Supabase数据库
-    // First, insert the document metadata
+    // 4. Save to Supabase
+    // Insert document metadata with new structure fields
     const { error: docError } = await supabase
       .from('documents')
       .insert({
@@ -87,6 +94,16 @@ export async function POST(req: NextRequest) {
         status: 'ready',
         size: Buffer.byteLength(text, 'utf-8'),
         summary,
+        // New fields
+        section_structure: JSON.stringify({
+          hasToc: parseResult.hasToc,
+          quality: parseResult.quality,
+          sectionCount: parseResult.sections.length,
+          // Storing top-level sections for quick preview if needed, or full structure
+          // Design doc simplified this, but let's store basics
+          sections: parseResult.sections.slice(0, 50).map(s => ({ title: s.title, level: s.level }))
+        }),
+        structure_quality: parseResult.quality
       } as any);
 
     if (docError) {
@@ -94,12 +111,19 @@ export async function POST(req: NextRequest) {
       if (docError.code === '23505') {
         const { error: updateError } = await supabase
           .from('documents')
-          // @ts-ignore - Supabase type inference issue
+          // @ts-expect-error - Supabase type inference issue with dynamic JSONB/Text[] fields
           .update({
             name: documentName || documentId,
             size: Buffer.byteLength(text, 'utf-8'),
             summary,
             upload_time: new Date().toISOString(),
+            section_structure: JSON.stringify({
+              hasToc: parseResult.hasToc,
+              quality: parseResult.quality,
+              sectionCount: parseResult.sections.length,
+              sections: parseResult.sections.slice(0, 50).map(s => ({ title: s.title, level: s.level }))
+            }),
+            structure_quality: parseResult.quality
           })
           .eq('id', documentId);
 
@@ -134,7 +158,7 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // 返回结果（包含简化的chunks信息，不包含embeddings）
+    // Return result
     return NextResponse.json({
       success: true,
       documentId,
@@ -144,7 +168,13 @@ export async function POST(req: NextRequest) {
         text: content,
         chunkIndex: chunk_index
       })),
-      message: "文档处理完成并已保存到数据库"
+      structureAnalysis: {
+        quality: parseResult.quality,
+        hasToc: parseResult.hasToc,
+        sectionCount: parseResult.sections.length,
+        suggestions: parseResult.quality === 'basic' ? ['Document has weak structure. Consider adding a Table of Contents.'] : []
+      },
+      message: "文档处理完成并已保存到数据库 (Intelligent Structure Analysis Applied)"
     });
 
   } catch (error: unknown) {
@@ -358,22 +388,4 @@ export async function PATCH(req: NextRequest) {
   }
 }
 
-// 文本分块函数
-function splitTextIntoChunks(text: string, chunkSize: number): string[] {
-  const chunks: string[] = [];
-  let currentChunk = "";
-  // 按句子分割
-  const sentences = text.split(/[。！？\n]/).filter(s => s.trim());
-  for (const sentence of sentences) {
-    if ((currentChunk + sentence).length > chunkSize && currentChunk) {
-      chunks.push(currentChunk.trim());
-      currentChunk = sentence;
-    } else {
-      currentChunk += sentence + "。";
-    }
-  }
-  if (currentChunk.trim()) {
-    chunks.push(currentChunk.trim());
-  }
-  return chunks;
-}
+

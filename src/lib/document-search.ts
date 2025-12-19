@@ -1,11 +1,23 @@
 import { createServerSupabaseClient } from '@/lib/supabase';
-import { Database } from '@/lib/database.types';
 
 // Types define the search filters and options
 export interface DocumentSearchFilters {
     year?: number;
     docTypes?: string[];
     sections?: string[];
+}
+
+interface RpcSearchResultRow {
+    chunk_id: string;
+    document_id: string;
+    document_name: string;
+    doc_type: string;
+    content: string;
+    section_title: string;
+    section_path: string[];
+    year: number;
+    period: string;
+    rrf_score: number;
 }
 
 export interface DocumentSearchOptions {
@@ -54,21 +66,28 @@ export async function searchDocuments(
     const supabase = createServerSupabaseClient();
 
     // 1. Generate text embedding for the query
-    // Note: We use the same model as ingestion
-    const embeddingResponse = await supabase.functions.invoke('embed', {
-        body: { input: query }
-    });
+    let queryEmbedding: number[] | null = null;
 
-    // Fallback if edge function fails or use local/other embedding method if project setup differs
-    // Assuming 'embed' function exists or we have a local helper. 
-    // Checking codebase, usually there is an openai helper or supabase helper.
-    // Implementation below assumes we get embedding.
-    // For now stubbing embedding generation as it depends on `ai-extraction.ts` or similar.
-    // Let's assume we have a helper `generateEmbedding(query)`.
-    const queryEmbedding = await generateEmbedding(query);
+    try {
+        const { data: embedData, error: embedError } = await supabase.functions.invoke('embed', {
+            body: { input: query }
+        });
+
+        if (!embedError && embedData?.embedding) {
+            queryEmbedding = embedData.embedding;
+        }
+    } catch (e) {
+        console.warn('Edge function embedding failed, falling back to local:', e);
+    }
+
+    // Fallback if edge function failed
+    if (!queryEmbedding) {
+        queryEmbedding = await generateEmbedding(query);
+    }
 
     // 2. Call the RPC function `search_documents_hybrid`
     // mapping inputs to RPC params
+    // RPC expects query_embedding as vector(1536), passed as string or array in JS client
     const rpcParams = {
         query_embedding: queryEmbedding,
         query_text: query,
@@ -95,7 +114,7 @@ export async function searchDocuments(
 
     const documentsMap = new Map<string, SearchResultDocument>();
 
-    (rpcResults || []).forEach((row: any) => {
+    (rpcResults as RpcSearchResultRow[] || []).forEach((row) => {
         // Normalize RRF score to 0-100 relevance
         // Max theoretical RRF (rank 1 in both lists) approx 0.033 -> 100
         // Min useful RRF (rank 20 in one list) approx 0.012 -> 40
@@ -155,7 +174,7 @@ import OpenAI from 'openai';
 async function generateEmbedding(text: string): Promise<number[]> {
     // Simple OpenAI embedding wrapper
     // This should ideally reuse a shared instance from `src/lib/ai-extraction.ts` or similar
-    const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+    const openai = new OpenAI();
     const response = await openai.embeddings.create({
         model: 'text-embedding-3-small',
         input: text.replace(/\n/g, ' '),
