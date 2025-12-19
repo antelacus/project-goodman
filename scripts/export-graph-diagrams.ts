@@ -34,12 +34,10 @@ async function exportGraphDiagrams() {
     }
 
     try {
-        /*
         const { guidanceChatGraph } = await import(
             "../src/lib/workflows/guidance-chat/graph"
         );
         graphs.push({ name: "guidance-chat", graph: guidanceChatGraph });
-        */
     } catch (e) {
         console.log("Guidance Chat graph not yet available.");
     }
