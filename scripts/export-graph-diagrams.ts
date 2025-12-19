@@ -1,5 +1,9 @@
 import * as fs from "fs";
 import * as path from "path";
+import dotenv from "dotenv";
+
+dotenv.config({ path: ".env.local" });
+dotenv.config(); // fallback to .env
 
 // Note: This script will fail until the graphs are actualy implemented and exported.
 // It is created in Phase A as per the plan, but will be fully functional in later phases.
@@ -18,20 +22,21 @@ async function exportGraphDiagrams() {
     try {
         // NOTE: These imports will fail if the files don't exist yet (which they don't in Phase A).
         // We will uncomment these as we implement the graphs.
-        /*
+
         const { financialAnalysisGraph } = await import(
-          "../src/lib/workflows/financial-analysis/graph"
+            "../src/lib/workflows/financial-analysis/graph"
         );
-         graphs.push({ name: "financial-analysis", graph: financialAnalysisGraph });
-        */
+        graphs.push({ name: "financial-analysis", graph: financialAnalysisGraph });
+
     } catch (e) {
+        console.error("Error loading Financial Analysis graph:", e);
         console.log("Financial Analysis graph not yet available.");
     }
 
     try {
         /*
         const { guidanceChatGraph } = await import(
-          "../src/lib/workflows/guidance-chat/graph"
+            "../src/lib/workflows/guidance-chat/graph"
         );
         graphs.push({ name: "guidance-chat", graph: guidanceChatGraph });
         */
@@ -40,13 +45,14 @@ async function exportGraphDiagrams() {
     }
 
     try {
-        /*
+
         const { landingChatGraph } = await import(
-          "../src/lib/workflows/landing-chat/graph"
+            "../src/lib/workflows/landing-chat/graph"
         );
         graphs.push({ name: "landing-chat", graph: landingChatGraph });
-        */
+
     } catch (e) {
+        console.error("Error loading Landing Chat graph:", e);
         console.log("Landing Chat graph not yet available.");
     }
 
