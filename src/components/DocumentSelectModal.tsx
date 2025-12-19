@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { useDocumentStore, Document } from "../store/documents";
+import { UploadFeedback, StructureAnalysis } from "./UploadFeedback";
 
 interface DocumentSelectModalProps {
   open: boolean;
@@ -26,6 +27,7 @@ const DocumentSelectModal: React.FC<DocumentSelectModalProps> = ({
   const documents = customDocuments || storeDocuments;
   const [search, setSearch] = useState("");
   const [uploading, setUploading] = useState(false);
+  const [uploadAnalysis, setUploadAnalysis] = useState<StructureAnalysis | null>(null);
 
   if (!open) return null;
 
@@ -61,6 +63,8 @@ const DocumentSelectModal: React.FC<DocumentSelectModalProps> = ({
     }
 
     setUploading(true);
+    setUploadAnalysis(null); // Clear previous analysis
+
     try {
       // Convert to Base64
       const arrayBuffer = await file.arrayBuffer();
@@ -105,6 +109,11 @@ const DocumentSelectModal: React.FC<DocumentSelectModalProps> = ({
 
       useDocumentStore.getState().addDocument(newDoc);
 
+      // Set analysis result if available
+      if (result.structureAnalysis) {
+        setUploadAnalysis(result.structureAnalysis);
+      }
+
       // Auto-select the new document
       if (mode === "single") {
         onSelect([newDoc.id]);
@@ -143,6 +152,8 @@ const DocumentSelectModal: React.FC<DocumentSelectModalProps> = ({
         padding: 32,
         minWidth: 340,
         maxWidth: 480,
+        maxHeight: "90vh",
+        overflowY: "auto",
         position: "relative"
       }}
         onClick={e => e.stopPropagation()}
@@ -156,6 +167,17 @@ const DocumentSelectModal: React.FC<DocumentSelectModalProps> = ({
           onChange={e => setSearch(e.target.value)}
           className="w-full border border-gray-300 rounded px-3 py-2 mb-4"
         />
+
+        {/* Upload Analysis Feedback */}
+        {uploadAnalysis && (
+          <div className="mb-4">
+            <UploadFeedback
+              analysis={uploadAnalysis}
+              onClose={() => setUploadAnalysis(null)}
+            />
+          </div>
+        )}
+
         {categories.map(cat => (
           <div key={cat} className="mb-4">
             <div className="font-bold mb-2 text-gray-700">{cat === "knowledge" ? "数据库文档" : "待处理文档"}</div>
@@ -182,6 +204,7 @@ const DocumentSelectModal: React.FC<DocumentSelectModalProps> = ({
             )}
           </div>
         ))}
+
         {showUpload && (
           <div className="mb-4">
             <label className="block mb-2 font-medium">补充上传待处理文档（PDF 格式，小于1MB）</label>
@@ -206,8 +229,13 @@ const DocumentSelectModal: React.FC<DocumentSelectModalProps> = ({
                 style={{ display: 'none' }}
               />
             </div>
+            {/* Simple Help Text */}
+            <div className="text-xs text-gray-500 mt-2">
+              支持上传 PDF, 图片, Excel, Docx, TXT 格式。系统将自动分析文档结构。
+            </div>
           </div>
         )}
+
         <button
           className="w-full border border-black rounded px-3 py-2 font-medium bg-white hover:bg-gray-100 transition-colors mt-2"
           onClick={() => window.open("/documents", "_blank")}
