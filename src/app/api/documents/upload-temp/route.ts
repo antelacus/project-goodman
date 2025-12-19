@@ -1,10 +1,13 @@
 
+```
 import { NextRequest, NextResponse } from "next/server";
 import OpenAI from "openai";
 import * as XLSX from "xlsx";
 import { createServerSupabaseClient } from "../../../../lib/supabase";
 import { generateRequestId, createErrorResponse } from "../../../../lib/security/error-handler";
 import { validateFileByExtension } from "../../../../lib/security/file-validator";
+import { parseDocumentSections } from "../../../../lib/section-parser";
+import { createSectionAwareChunks } from "../../../../lib/section-aware-chunker";
 
 export const runtime = "nodejs";
 
@@ -34,7 +37,7 @@ async function extractTextFromFile(
     fileName: string,
     fileType: string
 ): Promise<string> {
-    console.log(`[Upload Temp] Extracting text from ${fileName} (${fileType})`);
+    console.log(`[Upload Temp] Extracting text from ${ fileName } (${ fileType })`);
 
     if (fileType === SUPPORTED_TXT_TYPE || fileName.endsWith('.txt')) {
         return Buffer.from(fileData, 'base64').toString('utf-8');
@@ -60,8 +63,7 @@ async function extractTextFromFile(
     // For DOCX, since we don't have a parser, we will try to use the 'responses' API if it accepts it, OR fallback to a simple "extract text from XML" if we can't use OpenAI.
     // WAIT: The user approved using OpenAI. Let's use the 'responses' API for PDF.
     // For DOCX, 'responses' API might not support it.
-    // Let's use a simple XML regex extractor for DOCX as a fallback if we can't use OpenAI, OR just try OpenAI.
-    // Actually, let's use a simple text extractor for DOCX to be safe and fast, as OpenAI might be overkill/unsupported for DOCX binary.
+    // Let's use a simple text extractor for DOCX to be safe and fast, as OpenAI might be overkill/unsupported for DOCX binary.
     // BUT, I don't have a DOCX library.
     // Let's try to use OpenAI 'file' input for PDF. For DOCX, I'll use a simple "unzip and read document.xml" approach? No, that requires 'adm-zip' or similar.
     // I will use a simple "remove binary characters" approach for DOCX? No, that's bad.
@@ -87,7 +89,7 @@ async function extractTextFromFile(
                     {
                         type: "input_file",
                         filename: fileName,
-                        file_data: `data:${fileType};base64,${fileData}`
+                        file_data: `data:${ fileType }; base64, ${ fileData } `
                     }
                 ]
             }]
@@ -105,7 +107,7 @@ async function extractTextFromFile(
                     {
                         type: "image_url",
                         image_url: {
-                            url: `data:${fileType};base64,${fileData}`,
+                            url: `data:${ fileType }; base64, ${ fileData } `,
                             detail: "high"
                         }
                     }
@@ -127,7 +129,7 @@ async function extractTextFromFile(
                         {
                             type: "input_file",
                             filename: fileName,
-                            file_data: `data:${fileType};base64,${fileData}`
+                            file_data: `data:${ fileType }; base64, ${ fileData } `
                         }
                     ]
                 }]
@@ -140,20 +142,6 @@ async function extractTextFromFile(
     }
 
     return "";
-}
-
-/**
- * Chunk document text
- */
-function chunkDocument(text: string, chunkSize: number = 1000, overlap: number = 200): string[] {
-    const chunks: string[] = [];
-    let start = 0;
-    while (start < text.length) {
-        const end = Math.min(start + chunkSize, text.length);
-        chunks.push(text.slice(start, end));
-        start += chunkSize - overlap;
-    }
-    return chunks;
 }
 
 /**
@@ -206,14 +194,14 @@ export async function POST(req: NextRequest) {
             const contentValidation = validateFileByExtension(fileBuffer, fileName);
 
             if (!contentValidation.valid) {
-                console.warn(`[Upload Temp] File content validation failed for ${fileName}: ${contentValidation.error}`);
+                console.warn(`[Upload Temp] File content validation failed for ${ fileName }: ${ contentValidation.error } `);
                 return NextResponse.json(
                     { error: contentValidation.error || "文件内容验证失败" },
                     { status: 400 }
                 );
             }
         } catch (validationError) {
-            console.error(`[Upload Temp] File validation error:`, validationError);
+            console.error(`[Upload Temp] File validation error: `, validationError);
             // Don't fail on validation errors, just log
         }
 
@@ -223,9 +211,14 @@ export async function POST(req: NextRequest) {
             return NextResponse.json({ error: "Failed to extract text." }, { status: 400 });
         }
 
-        // 3. Vectorize
-        const chunks = chunkDocument(text);
-        const embeddings = await generateEmbeddings(chunks);
+        // 3. Analyze Structure & Vectorize
+        // Use parseDocumentSections and createSectionAwareChunks
+        const parseResult = await parseDocumentSections(text);
+        const chunksWithSection = createSectionAwareChunks(text, parseResult.sections, 1000);
+        
+        // Generate Embeddings
+        const plainChunks = chunksWithSection.map(c => c.content);
+        const embeddings = await generateEmbeddings(plainChunks);
 
         // 4. Store in DB (is_temp=true)
         const supabase = createServerSupabaseClient();
@@ -240,38 +233,68 @@ export async function POST(req: NextRequest) {
                 doc_type: fileName.split('.').pop() || 'unknown',
                 status: "ready",
                 size: Buffer.byteLength(text, 'utf8'),
-                is_structured: false, // Temp docs are not structured extracted yet
-                // @ts-ignore - is_temp might not be in types yet if generated types aren't updated, but we assume DB has it or we add it
+                // @ts-ignore - is_structured is now boolean or string based on schema, assuming bool here based on old code but route.ts suggests storing json?
+                // Wait, route.ts stores `section_structure` JSONB and `structure_quality`.
+                // is_structured is likely a boolean flag in DB.
+                is_structured: parseResult.quality !== 'basic', 
+                // @ts-ignore
                 is_temp: true,
                 summary: {
                     document_type: 'temp_upload',
                     summary: text.substring(0, 200) + '...',
+                    structure_metrics: {
+                        quality: parseResult.quality,
+                        sections: parseResult.sections.length
+                    }
                 },
                 processed_at: new Date().toISOString(),
+                // Store structure info
+                section_structure: JSON.stringify({
+                    hasToc: parseResult.hasToc,
+                    quality: parseResult.quality,
+                    sectionCount: parseResult.sections.length,
+                    sections: parseResult.sections.slice(0, 50).map(s => ({ title: s.title, level: s.level }))
+                }),
+                structure_quality: parseResult.quality
             } as any);
 
         if (docError) throw docError;
 
         // Store chunks
-        const chunkRecords = chunks.map((chunk, index) => ({
+        const chunkRecords = chunksWithSection.map((chunk, index) => ({
             id: crypto.randomUUID(),
             document_id: documentId,
             chunk_index: index,
-            content: chunk,
+            content: chunk.content,
             embedding: embeddings[index],
             chunk_type: "general",
+            // Store section metadata
+            section_title: chunk.sectionTitle || null,
+            section_level: chunk.sectionLevel || 0,
+            section_path: chunk.sectionPath || null
         }));
 
-        const { error: chunksError } = await supabase
-            .from("document_chunks")
-            .insert(chunkRecords as any);
-
-        if (chunksError) throw chunksError;
+        // Batch insert chunks
+        const BATCH_SIZE = 100;
+        for (let i = 0; i < chunkRecords.length; i += BATCH_SIZE) {
+            const batch = chunkRecords.slice(i, i + BATCH_SIZE);
+            const { error: chunksError } = await supabase
+                .from("document_chunks")
+                .insert(batch as any);
+            
+            if (chunksError) throw chunksError;
+        }
 
         return NextResponse.json({
             success: true,
             documentId,
             textPreview: text.substring(0, 200),
+            structureAnalysis: {
+                quality: parseResult.quality,
+                hasToc: parseResult.hasToc,
+                sectionCount: parseResult.sections.length,
+                suggestions: parseResult.suggestions // if supported, or generate specific suggestions
+            },
             message: "Document uploaded and vectorized successfully (Temporary)."
         });
 
