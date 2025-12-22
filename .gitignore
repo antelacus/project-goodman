@@ -54,5 +54,7 @@ check-*.ts
 debug_*.txt
 debug_*.xlsx
 
-# knowledge files (local reference only)
-knowledge_files/
+# data directory (ignore contents but keep structure)
+/data/**/*
+!/data/**/
+!/data/**/.keep

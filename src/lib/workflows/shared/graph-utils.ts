@@ -16,6 +16,7 @@ export function createStepLogger(graphName: string) {
             summary.routing = {
                 selectedFunction: (state.routing as any).selectedFunction,
                 confidence: (state.routing as any).confidence,
+                reasoning: (state.routing as any).functionArgs?._reasoning,
             };
         }
 
