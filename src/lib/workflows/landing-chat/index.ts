@@ -6,9 +6,6 @@
  */
 
 import type { LandingChatState } from "../../types";
-import * as steps from "./steps";
-
-import type { LandingChatState } from "../../types";
 import { runLandingChatWorkflowGraph } from "./graph";
 import { createInitialMeta } from "../shared/graph-utils";
 

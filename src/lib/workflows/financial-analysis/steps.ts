@@ -127,6 +127,10 @@ function buildFunctionDefinitions(): OpenAI.Chat.ChatCompletionTool[] {
         parameters: {
           type: "object",
           properties: {
+            _reasoning: {
+              type: "string",
+              description: "Briefly explain why you are selecting this function and why standard logic applies or does not apply.",
+            },
             year: {
               type: "string",
               description:
@@ -137,7 +141,7 @@ function buildFunctionDefinitions(): OpenAI.Chat.ChatCompletionTool[] {
               description: "会计期间：annual（年度）、Q1、Q2、Q3、Q4。默认为 annual。",
             },
           },
-          required: [],
+          required: ["_reasoning"],
         },
       },
     };
@@ -152,6 +156,10 @@ function buildFunctionDefinitions(): OpenAI.Chat.ChatCompletionTool[] {
       parameters: {
         type: "object",
         properties: {
+          _reasoning: {
+            type: "string",
+            description: "Briefly explain why you are selecting this generic function instead of a preset one (e.g., 'requires multi-year comparison' or 'metric not in presets').",
+          },
           metric_name: {
             type: "string",
             description: '财务指标的标准中文名称，例如"销售商品、提供劳务收到的现金"、"研发费用"。',
@@ -166,7 +174,7 @@ function buildFunctionDefinitions(): OpenAI.Chat.ChatCompletionTool[] {
             description: "会计期间：annual（年度）、Q1、Q2、Q3、Q4。默认为 annual。",
           },
         },
-        required: ["metric_name", "years"],
+        required: ["_reasoning", "metric_name", "years"],
       },
     },
   });
