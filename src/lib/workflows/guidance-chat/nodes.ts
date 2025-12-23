@@ -90,7 +90,7 @@ export const agentNode = async (
             content: m.content || "",
             ...(m.tool_calls && { tool_calls: m.tool_calls }),
             ...(m.tool_call_id && { tool_call_id: m.tool_call_id }),
-        }))
+        })) as any
     ];
 
     if (agent.currentIteration === 0) {
