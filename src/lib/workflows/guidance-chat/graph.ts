@@ -1,56 +1,59 @@
 import { StateGraph, START, END } from "@langchain/langgraph";
 import { GuidanceChatAnnotation, type GuidanceChatGraphState } from "./state";
 import * as nodes from "./nodes";
-import { withLogging } from "../shared/graph-utils";
 
-const GRAPH_NAME = "GuidanceChat";
-
-// --- Conditional Edge Functions ---
-
-const afterSearch = (state: GuidanceChatGraphState) => {
-    // Check for search errors
-    if ((state.search as any)?.error) {
+const afterAgentNode = (state: GuidanceChatGraphState): string => {
+    const { agent } = state;
+    if (agent.currentIteration >= agent.maxIterations) {
         return "generateResponse";
     }
-
-    // Check if citations were found
-    if (state.search.combinedResults.length === 0) {
-        // No relevant documents -> Skip reasoning and go straight to response (which will return "Not Found")
+    if (agent.isComplete) {
         return "generateResponse";
     }
-
-    return "generateGuidance";
+    if (agent.pendingToolCalls.length > 0) {
+        return "toolNode";
+    }
+    return "generateResponse";
 };
 
-// --- Graph Definition ---
+const afterToolNode = (): string => "agentNode";
 
 const workflow = new StateGraph(GuidanceChatAnnotation)
-    // Add Nodes
-    .addNode("performHybridSearch", withLogging(GRAPH_NAME, "performHybridSearch", nodes.performHybridSearchNode))
-    .addNode("generateGuidance", withLogging(GRAPH_NAME, "generateGuidance", nodes.generateGuidanceNode))
-    .addNode("findRelatedArticles", withLogging(GRAPH_NAME, "findRelatedArticles", nodes.findRelatedArticlesNode))
-    .addNode("evaluateConfidence", withLogging(GRAPH_NAME, "evaluateConfidence", nodes.evaluateConfidenceNode))
-    .addNode("generateResponse", withLogging(GRAPH_NAME, "generateResponse", nodes.generateResponseNode))
+    .addNode("loadMemory", nodes.loadMemoryNode)
+    .addNode("searchNode", nodes.searchNode) // Renamed from "search" to "searchNode"
+    .addNode("agentNode", nodes.agentNode)
+    .addNode("toolNode", nodes.toolNode)
+    .addNode("generateResponse", nodes.generateResponseNode)
+    .addNode("saveMemory", nodes.saveMemoryNode)
 
-    // Add Edges
-    .addEdge(START, "performHybridSearch")
+    .addEdge(START, "loadMemory")
+    .addEdge("loadMemory", "searchNode")
+    .addEdge("searchNode", "agentNode")
 
-    // Conditional: Search -> Guidance OR Response (if no docs)
-    .addConditionalEdges("performHybridSearch", afterSearch)
+    .addConditionalEdges("agentNode", afterAgentNode, {
+        toolNode: "toolNode",
+        generateResponse: "generateResponse",
+    })
+    .addConditionalEdges("toolNode", afterToolNode, {
+        agentNode: "agentNode",
+    })
 
-    // Linear flow from there
-    .addEdge("generateGuidance", "findRelatedArticles")
-    .addEdge("findRelatedArticles", "evaluateConfidence")
-    .addEdge("evaluateConfidence", "generateResponse")
-    .addEdge("generateResponse", END);
+    .addEdge("generateResponse", "saveMemory")
+    .addEdge("saveMemory", END);
 
-// Compile
 export const guidanceChatGraph = workflow.compile();
 
-// Runner
-export async function runGuidanceChatGraph(
-    input: GuidanceChatGraphState["input"]
+export async function runGuidanceChatWorkflow(
+    input: GuidanceChatGraphState["input"] & { sessionId?: string }
 ): Promise<GuidanceChatGraphState> {
-    const result = await guidanceChatGraph.invoke({ input });
+    const initialState = {
+        input,
+        sessionId: input.sessionId
+    };
+
+    const result = await guidanceChatGraph.invoke({
+        input,
+        sessionId: input.sessionId
+    });
     return result as GuidanceChatGraphState;
 }

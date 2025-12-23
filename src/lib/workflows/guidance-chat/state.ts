@@ -14,6 +14,30 @@ export const GuidanceChatAnnotation = Annotation.Root({
         default: () => ({ question: "" }),
     }),
 
+    // Session ID
+    sessionId: Annotation<string | undefined>({
+        reducer: (prev, next) => next ?? prev,
+        default: () => undefined,
+    }),
+
+    // Agent State
+    agent: Annotation<{
+        messages: any[]; // Define proper type if possible, or use any[]
+        currentIteration: number;
+        maxIterations: number;
+        isComplete: boolean;
+        pendingToolCalls: any[];
+    }>({
+        reducer: (prev, next) => ({ ...prev, ...next }),
+        default: () => ({
+            messages: [],
+            currentIteration: 0,
+            maxIterations: 5,
+            isComplete: false,
+            pendingToolCalls: [],
+        }),
+    }),
+
     // Doc Selection: Keep latest (Phase C integration)
     documentSelection: Annotation<{ selectedDocuments: any[]; totalTokens: number } | undefined>({
         reducer: (prev, next) => next ?? prev,

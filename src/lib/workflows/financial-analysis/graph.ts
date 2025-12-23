@@ -1,79 +1,64 @@
 import { StateGraph, START, END } from "@langchain/langgraph";
-import { FinancialAnalysisAnnotation, type FinancialAnalysisGraphState } from "./state";
+import { FinancialAgentAnnotation, type FinancialAgentGraphState } from "./state";
 import * as nodes from "./nodes";
 import { withLogging } from "../shared/graph-utils";
 
-const GRAPH_NAME = "FinancialAnalysis";
+const GRAPH_NAME = "FinancialAgent";
 
-// --- Conditional Edge Functions ---
+// --- Conditional Edges ---
 
-const shouldQueryData = (state: FinancialAnalysisGraphState) => {
-    // Check for routing errors or failures
-    if ((state.routing as any)?.error) {
+const afterAgentNode = (state: FinancialAgentGraphState): string => {
+    const { agent } = state;
+
+    if (agent.currentIteration >= agent.maxIterations) {
         return "generateResponse";
     }
-    if (!state.routing.selectedFunction) {
+    if (agent.isComplete) {
         return "generateResponse";
     }
-    return "queryData";
+    if (agent.pendingToolCalls.length > 0) {
+        return "toolNode";
+    }
+    return "generateResponse";
 };
 
-const afterQueryData = (state: FinancialAnalysisGraphState) => {
-    // Check for query errors
-    if ((state.dataQuery as any)?.error) {
-        return "generateResponse";
-    }
-    // Check for missing metrics (business logic failure)
-    if (state.dataQuery.missingMetrics.length > 0) {
-        return "generateResponse";
-    }
-    return "executeCalculation";
-};
-
-const afterCalculation = (state: FinancialAnalysisGraphState) => {
-    // Check for calculation errors
-    if ((state.calculation as any)?.error) {
-        return "generateResponse";
-    }
-    return "evaluateConfidence";
-}
+const afterToolNode = (): string => "agentNode";
 
 // --- Graph Definition ---
 
-const workflow = new StateGraph(FinancialAnalysisAnnotation)
-    // Add Nodes
-    .addNode("routeToFunction", withLogging(GRAPH_NAME, "routeToFunction", nodes.routeToFunctionNode))
-    .addNode("queryData", withLogging(GRAPH_NAME, "queryData", nodes.queryDataNode))
-    .addNode("executeCalculation", withLogging(GRAPH_NAME, "executeCalculation", nodes.executeCalculationNode))
-    .addNode("evaluateConfidence", withLogging(GRAPH_NAME, "evaluateConfidence", nodes.evaluateConfidenceNode))
-    .addNode("generateResponse", withLogging(GRAPH_NAME, "generateResponse", nodes.generateResponseNode))
+// Note: withLogging helper is assumed to exist in ../shared/graph-utils. 
+// If not, we might need to verify or implement a simple wrapper or omit it.
+// I'll check its existence later, if missing I will remove the wrapper.
+// Given the design doc used it, I assume it exists.
 
-    // Add Edges
-    .addEdge(START, "routeToFunction")
+const workflow = new StateGraph(FinancialAgentAnnotation)
+    // Nodes
+    .addNode("loadMemory", nodes.loadMemoryNode)
+    .addNode("agentNode", nodes.agentNode)
+    .addNode("toolNode", nodes.toolNode)
+    .addNode("generateResponse", nodes.generateResponseNode)
+    .addNode("saveMemory", nodes.saveMemoryNode)
 
-    // Conditional: Route -> Query OR Response
-    .addConditionalEdges("routeToFunction", shouldQueryData)
-
-    // Conditional: Query -> Calc OR Response
-    .addConditionalEdges("queryData", afterQueryData)
-
-    // Conditional: Calc -> Confidence OR Response (on error)
-    .addConditionalEdges("executeCalculation", afterCalculation)
-
-    // Linear: Confidence -> Response
-    // (Both success and failure in confidence evaluation lead to response generation, just with different content)
-    .addEdge("evaluateConfidence", "generateResponse")
-
-    // End
-    .addEdge("generateResponse", END);
+    // Edges
+    .addEdge(START, "loadMemory")
+    .addEdge("loadMemory", "agentNode")
+    .addConditionalEdges("agentNode", afterAgentNode, {
+        toolNode: "toolNode",
+        generateResponse: "generateResponse",
+    })
+    .addConditionalEdges("toolNode", afterToolNode, {
+        agentNode: "agentNode",
+    })
+    .addEdge("generateResponse", "saveMemory")
+    .addEdge("saveMemory", END);
 
 // Compile
-export const financialAnalysisGraph = workflow.compile();
+export const financialAgentGraph = workflow.compile();
 
 // Runner
-export async function runFinancialAnalysisGraph(
-    input: FinancialAnalysisGraphState["input"]
-): Promise<FinancialAnalysisGraphState> {
-    const result = await financialAnalysisGraph.invoke({ input });
-    return result as FinancialAnalysisGraphState;
+export async function runFinancialAgentWorkflow(
+    input: FinancialAgentGraphState["input"]
+): Promise<FinancialAgentGraphState> {
+    const result = await financialAgentGraph.invoke({ input });
+    return result as FinancialAgentGraphState;
 }

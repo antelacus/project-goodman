@@ -1,23 +1,28 @@
 /**
  * Landing Chat API Route
  *
- * Provides conversational AI guidance for the landing page.
+ * Handles initial user interaction, intent analysis, and module routing.
+ * Now supports persistent memory via session ID.
+ *
+ * @route POST /api/landing-chat
  */
 
 export const runtime = "nodejs";
 
 import { NextRequest, NextResponse } from "next/server";
-import { runLandingChatWorkflow } from "../../../lib/workflows/landing-chat";
+import { runLandingChatWorkflowGraph } from "../../../lib/workflows/landing-chat/graph";
 import { validateRequest, LandingChatRequestSchema } from "../../../lib/validation/api-schemas";
 import { generateRequestId, createErrorResponse } from "../../../lib/security/error-handler";
 
-export async function POST(req: NextRequest) {
-  const requestId = req.headers.get('x-request-id') || generateRequestId();
+/**
+ * Main POST handler
+ */
+export async function POST(request: NextRequest) {
+  const requestId = request.headers.get('x-request-id') || generateRequestId();
 
   try {
-    const body = await req.json();
+    const body = await request.json();
 
-    // Validate request with Zod schema
     const validation = validateRequest(LandingChatRequestSchema, body);
     if (!validation.success) {
       return NextResponse.json(
@@ -26,19 +31,21 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const { message, conversationHistory = [] } = validation.data;
+    const { messages, currentMessage, sessionId } = validation.data;
 
-    // Run workflow
-    const state = await runLandingChatWorkflow({
-      messages: conversationHistory,
-      currentMessage: message,
+    const state = await runLandingChatWorkflowGraph({
+      messages: messages ?? [],  // Ensure messages is always an array
+      currentMessage,
+      sessionId
     });
 
-    // Return output
-    return NextResponse.json(state.output);
+    return NextResponse.json({
+      ...state.output,
+      sessionId: state.sessionId
+    });
+
   } catch (error: unknown) {
-    console.error("Landing Chat API Error:", error);
+    console.error('Landing Chat API error:', error);
     return createErrorResponse(error, requestId, 500);
   }
 }
-

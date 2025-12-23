@@ -17,6 +17,12 @@ export const LandingChatAnnotation = Annotation.Root({
         default: () => ({ messages: [], currentMessage: "" }),
     }),
 
+    // 会话 ID
+    sessionId: Annotation<string | undefined>({
+        reducer: (prev, next) => next ?? prev,
+        default: () => undefined,
+    }),
+
     // 步骤 1: 生成回复
     reply: Annotation<{
         content: string;

@@ -2,10 +2,22 @@ import fs from 'fs';
 import path from 'path';
 
 // 从本地文件读取prompt模板的辅助函数
-function readPromptFile(filename: string): string {
+// FROM:
+// function readPromptFile(filename: string): string {
+//   const filePath = path.join(process.cwd(), 'src', 'lib', 'prompts', filename);
+//   return fs.readFileSync(filePath, 'utf-8');
+// }
+
+export function loadPromptTemplate(filename: string): string {
   const filePath = path.join(process.cwd(), 'src', 'lib', 'prompts', filename);
   return fs.readFileSync(filePath, 'utf-8');
 }
+
+// Deprecated usage mapping if necessary, or just update internal usage
+function readPromptFile(filename: string): string {
+  return loadPromptTemplate(filename);
+}
+
 
 // 智能文档分析API prompt
 /**
