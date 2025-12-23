@@ -56,3 +56,26 @@ export {
   getFinancialToolNames,
   getFinancialTool,
 } from "./financial-tools";
+
+// New Tool Wrappers
+import { searchDocumentsTool } from "./compliance/search-documents";
+import { searchRegulationsTool } from "./compliance/search-regulations";
+import { extractDocumentTool } from "./extraction/extract-document";
+import { registerFinancialTools } from "./financial-tools";
+import { toolRegistry } from "./registry";
+
+/**
+ * Registers all available tools (V3.6a Unified Agent)
+ */
+export function registerUnifiedTools() {
+  // Register existing financial tools
+  registerFinancialTools();
+
+  // Register new compliance tools
+  toolRegistry.register(searchDocumentsTool);
+  toolRegistry.register(searchRegulationsTool);
+
+  // Register new extraction tools
+  toolRegistry.register(extractDocumentTool);
+}
+
