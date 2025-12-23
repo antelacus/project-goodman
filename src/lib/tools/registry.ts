@@ -32,7 +32,8 @@ export class ToolRegistry {
    */
   register<TInput, TOutput>(tool: Tool<TInput, TOutput>): void {
     if (this.tools.has(tool.name)) {
-      throw new Error(`Tool "${tool.name}" is already registered`);
+      // Already registered, skip
+      return;
     }
     this.tools.set(tool.name, tool as Tool);
   }
