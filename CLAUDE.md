@@ -195,6 +195,28 @@ We follow a phase-gated approach where each phase requires approval before proce
 
 ## Project Context
 
+### Product Vision & Target Users
+
+**Product**: AI-powered financial assistant for enterprise accounting departments
+
+**Target Users**:
+
+- **Primary**: Financial personnel in accounting departments (会计部门财务人员)
+- **Role**: Employees conducting financial analysis, compliance checking, and data extraction
+- **Context**: Internal company tool for efficiency enhancement (not B2C)
+
+**Core Value Proposition**:
+
+- Reduce time spent on repetitive financial calculations and compliance lookups
+- Provide AI-guided workflows instead of requiring users to navigate complex menus
+- Enable natural language interaction with financial data and regulations
+
+**Design Philosophy**:
+
+- **Unified conversational interface**: Single chat entry point, AI routes to appropriate capabilities
+- **Fewer choices, more guidance**: AI decides tools/modules, user focuses on questions
+- **Transparency**: Show AI reasoning, document sources, calculation steps
+
 ### Tech Stack
 
 - **Frontend**: Next.js 15, React 19, Tailwind CSS
