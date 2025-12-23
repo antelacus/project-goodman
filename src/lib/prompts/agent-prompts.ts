@@ -1,29 +1,42 @@
-import { loadPromptTemplate } from "../prompts"; // Assuming this exists or I need to check
-import { toolRegistry } from "@/lib/tools";
+import { loadPromptTemplate } from "../prompts";
+import { getAllMetricNames } from "../financial-schema";
+import { presetFunctions } from "../preset-functions";
+import { type PresetFunction } from "../preset-functions";
 
 /**
  * 构建 Financial Analysis Agent 系统提示
  */
 export function buildFinancialAgentSystemPrompt(): string {
-    // 加载基础模板
-    // Note: loadPromptTemplate implementation needs to be verified. 
-    // If it reads from file system, it should work with the file I just created.
-    let basePrompt = "";
+    let promptTemplate = "";
     try {
-        basePrompt = loadPromptTemplate("financial-agent-system.txt");
-    } catch (e) {
-        // Fallback if loadPromptTemplate fails or is not implemented as expected
-        console.warn("Could not load prompt template 'financial-agent-system', using fallback.");
-        basePrompt = `你是一个专业的财务分析 Agent... {{AVAILABLE_TOOLS}} ...`;
+        // Use the refined prompt file
+        promptTemplate = loadPromptTemplate("financial-analysis.txt");
+    } catch {
+        console.warn("Could not load prompt template 'financial-analysis.txt', using fallback.");
+        return "You are a helpful financial assistant.";
     }
 
-    // 动态添加可用工具列表
-    const financialTools = toolRegistry.getByCategory("financial");
-    const toolList = financialTools
-        .map(t => `- ${t.name}: ${t.description}`)
+    // 1. Preset Functions List
+    const availableFunctions = presetFunctions;
+    const functionsList = availableFunctions
+        .map((f: PresetFunction) => `- ${f.displayName} (${f.name}): ${f.interpretation || ""}`)
         .join("\n");
 
-    return basePrompt.replace("{{AVAILABLE_TOOLS}}", toolList);
+    // 2. Metric List
+    const metricList = getAllMetricNames().join("\n");
+
+    // 3. Available Documents (Placeholder default for now)
+    const availableDocuments = "System Database (All Years/Periods) - Consolidated & Parent";
+
+    // 4. Business Context (Placeholder default for now)
+    const businessContext = "Internal Company Data. The user is a financial professional.";
+
+    return promptTemplate
+        .replace(/{PRESET_FUNCTIONS_LIST}/g, functionsList)
+        .replace(/{AVAILABLE_DOCUMENTS}/g, availableDocuments)
+        .replace(/{CONTEXT}/g, "") // No conversation context in system prompt init
+        .replace(/{METRIC_LIST}/g, metricList)
+        .replace(/{BUSINESS_CONTEXT}/g, businessContext);
 }
 
 /**
@@ -33,9 +46,15 @@ export function buildGuidanceAgentSystemPrompt(
     citations: string
 ): string {
     try {
-        const basePrompt = loadPromptTemplate("guidance-agent-system");
+        const basePrompt = loadPromptTemplate("guidance-agent-system.txt"); // Added .txt extension safety
         return basePrompt.replace("{{CITATIONS}}", citations);
-    } catch (e) {
-        return `...`; // Fallback
+    } catch {
+        // Retry with generic name if .txt fails or vice versa
+        try {
+            const basePrompt = loadPromptTemplate("guidance-agent-system");
+            return basePrompt.replace("{{CITATIONS}}", citations);
+        } catch {
+            return `You are a helpful guidance assistant.`;
+        }
     }
 }

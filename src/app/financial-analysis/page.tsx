@@ -3,13 +3,11 @@ import React, { useState, useRef, useEffect } from "react";
 import PageContainer from "../../components/PageContainer";
 import PageTitle from "../../components/PageTitle";
 import { checkAndIncreaseApiLimit } from "../../lib/rateLimit";
-import Link from "next/link";
-import DocumentSelectModal from "../../components/DocumentSelectModal"; // 保持原有手动选择组件供参考
 import { DocumentSourceDisplay, SelectedDocumentInfo } from "../../components/DocumentSourceDisplay";
 import { DocumentSelectionModal } from "../../components/DocumentSelectionModal";
 import { Document } from "../../store/documents";
 import RichTextRenderer from "../../components/RichTextRenderer";
-import { FiAlertTriangle, FiLoader, FiFileText } from "react-icons/fi";
+import { FiAlertTriangle, FiLoader } from "react-icons/fi";
 import ChatInputArea from "../../components/ChatInputArea";
 import { HiOutlineLightBulb } from "react-icons/hi";
 
@@ -67,6 +65,7 @@ type FinancialAnalysisResponse = {
       year?: number;
     }>;
   };
+  sessionId?: string;
 };
 
 export default function FinancialAnalysisPage() {
@@ -74,6 +73,7 @@ export default function FinancialAnalysisPage() {
   const [isSending, setIsSending] = useState(false);
   const [inputMessage, setInputMessage] = useState("");
   const [availableDocuments, setAvailableDocuments] = useState<Document[]>([]);
+  const [sessionId, setSessionId] = useState<string>("");
 
   // 核心状态：文档选择配置
   const [selectionMode, setSelectionMode] = useState<'auto' | 'manual'>('auto');
@@ -102,6 +102,8 @@ export default function FinancialAnalysisPage() {
 
   useEffect(() => {
     loadAvailableDocuments();
+    // Simple UUID generation for session
+    setSessionId(crypto.randomUUID());
   }, []);
 
   const loadAvailableDocuments = async () => {
@@ -253,7 +255,8 @@ export default function FinancialAnalysisPage() {
         autoSelect: {
           enabled: mode === 'auto',
           maxDocuments: 5
-        }
+        },
+        sessionId: sessionId // Pass persistent session ID
       };
 
       const res = await fetch("/api/financial-analysis", {
@@ -267,6 +270,11 @@ export default function FinancialAnalysisPage() {
       }
 
       const responseData: FinancialAnalysisResponse = await res.json();
+
+      // Update session ID if returned from server
+      if (responseData.sessionId) {
+        setSessionId(responseData.sessionId);
+      }
 
       // 构建文档选择信息供前端显示
       let docSelectionInfo: ChatMessage['documentSelection'];
@@ -335,7 +343,7 @@ export default function FinancialAnalysisPage() {
 
           <RichTextRenderer
             content={msg.content}
-            onCalculationClick={(metric) => {
+            onCalculationClick={() => {
               const calcCard = document.getElementById(`calc-card-${msg.id}`);
               if (calcCard) {
                 calcCard.scrollIntoView({ behavior: 'smooth', block: 'center' });

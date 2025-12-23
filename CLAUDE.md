@@ -202,6 +202,7 @@ We follow a phase-gated approach where each phase requires approval before proce
 - **AI**: OpenAI GPT-5-mini
 - **Storage**: Supabase Storage (`document-files` bucket)
 - **Libraries**: Zod (validation), bcryptjs (auth), expr-eval (calculations), xlsx (Excel parsing)
+- **State**: Persistent Session ID (frontend & backend sync)
 
 ### Deployment Architecture
 
@@ -236,6 +237,7 @@ docker compose restart goodman
 - `src/app/` - Next.js App Router pages
 - `src/app/api/` - API routes (15 endpoints)
 - `src/lib/` - Core business logic
+  - `src/lib/services/` - Core services (financial data query, etc.)
   - `src/lib/prompts/` - Prompt templates (`.txt` files)
   - `src/lib/preset-functions.ts` - 22 financial calculation functions
   - `src/lib/financial-metric-names.ts` - Standardized metric name constants

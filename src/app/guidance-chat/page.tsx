@@ -132,6 +132,7 @@ export default function GuidanceChatPage() {
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
+  const [sessionId, setSessionId] = useState<string>("");
   const chatEndRef = useRef<HTMLDivElement>(null);
 
   // Document Selection State
@@ -157,6 +158,7 @@ export default function GuidanceChatPage() {
   // Load documents on mount
   useEffect(() => {
     loadAvailableDocuments();
+    setSessionId(crypto.randomUUID());
   }, []);
 
   // Sync store documents with local state when store changes (e.g. after upload)
@@ -241,6 +243,7 @@ export default function GuidanceChatPage() {
         body: JSON.stringify({
           question: message,
           documentIds: selectedDocIds,
+          sessionId: sessionId
         }),
       });
 
@@ -248,7 +251,11 @@ export default function GuidanceChatPage() {
         throw new Error("Failed to fetch response");
       }
 
-      const data: GuidanceResponse = await response.json();
+      const data: GuidanceResponse & { sessionId?: string } = await response.json();
+
+      if (data.sessionId) {
+        setSessionId(data.sessionId);
+      }
 
       const assistantMessage: ChatMessage = {
         id: `msg-${Date.now() + 1}`,

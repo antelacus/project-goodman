@@ -1,5 +1,5 @@
 import OpenAI from "openai";
-import { toolRegistry } from "@/lib/tools";
+import { toolRegistry, registerFinancialTools } from "@/lib/tools";
 import { FinancialAgentGraphState } from "./state";
 import { conversationMemory } from "@/lib/memory/conversation-memory";
 import { buildFinancialAgentSystemPrompt } from "@/lib/prompts/agent-prompts";
@@ -16,6 +16,8 @@ export const loadMemoryNode = async (
 
     const { sessionId: resolvedSessionId, messages } =
         await conversationMemory.getOrCreateSession(sessionId, "financial-analysis");
+
+    console.log(`[DEBUG] Memory Loaded for Session ${resolvedSessionId}: ${messages.length} messages`);
 
     return {
         agent: {
@@ -41,6 +43,9 @@ export const agentNode = async (
 
     // Build System Prompt
     const systemPromptTemplate = await buildFinancialAgentSystemPrompt();
+
+    // Ensure tools are registered
+    registerFinancialTools();
 
     // Tools
     const tools = toolRegistry.toOpenAIFunctionDefs({ detailed: true });
@@ -76,6 +81,8 @@ export const agentNode = async (
     });
 
     const responseMessage = completion.choices[0].message;
+    console.log("[DEBUG] Raw Model Response Content:", responseMessage.content);
+    console.log("[DEBUG] Raw Model Tool Calls:", JSON.stringify(responseMessage.tool_calls, null, 2));
 
     const newMessages = [...agent.messages];
 

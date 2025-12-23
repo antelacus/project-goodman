@@ -1,5 +1,5 @@
 import OpenAI from "openai";
-import { toolRegistry } from "@/lib/tools";
+import { toolRegistry, registerFinancialTools } from "@/lib/tools";
 import { GuidanceChatGraphState } from "./state";
 import { conversationMemory } from "@/lib/memory/conversation-memory";
 import { performHybridSearch as originalPerformHybridSearch, queryStructuredFinancialData } from "./steps";
@@ -54,6 +54,9 @@ export const agentNode = async (
     const { input, search, agent } = state;
     const { question } = input;
     const { combinedResults, businessContext } = search;
+
+    // Ensure tools are registered
+    registerFinancialTools();
 
     // Build System Prompt
     const citationsText = combinedResults
