@@ -30,6 +30,7 @@ import {
   QueryFinancialDataOutputSchema,
 } from "./types";
 import { toolRegistry } from "./registry";
+import { queryFinancialData } from "../services/financial-data";
 
 // ============================================================================
 // Category Mapping
@@ -81,14 +82,56 @@ function createFinancialToolFromPreset(preset: PresetFunction): Tool {
     metadata: { financial: metadata },
 
     execute: async (input): Promise<ToolExecutionResult> => {
-      // This is a placeholder - actual execution requires data fetching
-      // In real usage, the workflow orchestrator handles data retrieval
-      // and then calls executeFunction with the actual metric values
-      return {
-        success: false,
-        error:
-          "Direct execution not supported. Use workflow orchestrator to fetch data first.",
-      };
+      const { year, period } = input as { year?: string; period?: string };
+
+      try {
+        // Query required data
+        const data = await queryFinancialData(preset.requiredInputs, year, period);
+
+        // Prepare inputs for calculation
+        const inputs: Record<string, number> = {};
+        const missingMetrics: string[] = [];
+
+        preset.requiredInputs.forEach(metric => {
+          const point = data.find(d => d.metric_name === metric);
+          if (point) {
+            inputs[metric] = point.metric_value;
+          } else {
+            missingMetrics.push(metric);
+          }
+        });
+
+        if (missingMetrics.length > 0) {
+          return {
+            success: false,
+            error: `Missing required data: ${missingMetrics.join(", ")}`,
+            data: { missingMetrics }
+          };
+        }
+
+        // Execute calculation
+        const result = executeFunction(preset.name, inputs);
+
+        return {
+          success: true,
+          data: {
+            value: result.result.value,
+            formatted: result.result.formatted,
+            unit: preset.unit,
+            displayName: result.displayName,
+            formula: result.formulaDisplay,
+            interpretation: result.interpretation,
+            warnings: result.result.warnings,
+            sourceDocuments: data.map(d => d.documents.name)
+          }
+        };
+
+      } catch (error) {
+        return {
+          success: false,
+          error: error instanceof Error ? error.message : "Calculation failed"
+        };
+      }
     },
   };
 }
@@ -131,11 +174,39 @@ const getFinancialMetricTool: Tool = {
   }),
 
   execute: async (input): Promise<ToolExecutionResult> => {
-    // Placeholder - actual implementation in workflow
-    return {
-      success: false,
-      error: "Execute via workflow orchestrator",
-    };
+    const { metric_name, years, period } = input as { metric_name: string; years: string[]; period?: string };
+
+    try {
+      const data = await queryFinancialData([metric_name], undefined, period || "annual");
+      const relevantData = data.filter(d => years.includes(d.year));
+
+      if (relevantData.length === 0) {
+        return {
+          success: false,
+          error: `No data found for metric '${metric_name}' in years ${years.join(", ")}`
+        };
+      }
+
+      const yearMap: Record<string, number> = {};
+      relevantData.forEach(d => {
+        yearMap[d.year] = d.metric_value;
+      });
+
+      return {
+        success: true,
+        data: {
+          data: yearMap,
+          unit: relevantData[0].unit,
+          source: relevantData[0].documents.name
+        }
+      };
+
+    } catch (error) {
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : "Query failed"
+      };
+    }
   },
 };
 
@@ -156,11 +227,35 @@ const queryFinancialDataTool: Tool = {
   outputSchema: QueryFinancialDataOutputSchema,
 
   execute: async (input): Promise<ToolExecutionResult> => {
-    // Placeholder - actual implementation in workflow
-    return {
-      success: false,
-      error: "Execute via workflow orchestrator",
-    };
+    const { metric_names, year, period } = input as { metric_names: string[]; year?: string; period?: string };
+
+    try {
+      const data = await queryFinancialData(metric_names, year, period);
+
+      const metrics: Record<string, { value: number; unit: string; source: string; year: string; period: string }> = {};
+
+      data.forEach(d => {
+        metrics[d.metric_name] = {
+          value: d.metric_value,
+          unit: d.unit,
+          source: d.documents.name,
+          year: d.year,
+          period: d.period
+        };
+      });
+
+      return {
+        success: true,
+        data: {
+          metrics
+        }
+      };
+    } catch (error) {
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : "Query failed"
+      };
+    }
   },
 };
 
