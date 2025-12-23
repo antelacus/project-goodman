@@ -97,6 +97,7 @@ export const FinancialAnalysisRequestSchema = z.object({
         .regex(/^\d{4}$/, '年份格式无效')
         .optional(),
     period: z.enum(['Q1', 'Q2', 'Q3', 'Q4', 'annual']).optional(),
+    sessionId: uuidSchema.optional(),
     documentIds: documentIdsSchema,
     autoSelect: autoSelectSchema,
 });
@@ -124,6 +125,7 @@ export const GuidanceChatRequestSchema = z
         documentIds: documentIdsSchema,
         autoSelect: autoSelectSchema,
         regulationCategories: z.array(z.string().max(100)).max(10).optional(),
+        sessionId: uuidSchema.optional(),
     });
 
 export type GuidanceChatRequest = z.infer<typeof GuidanceChatRequestSchema>;
@@ -133,20 +135,21 @@ export type GuidanceChatRequest = z.infer<typeof GuidanceChatRequestSchema>;
  * POST /api/landing-chat
  */
 export const LandingChatRequestSchema = z.object({
-    message: z
+    currentMessage: z
         .string()
         .min(1, '消息不能为空')
         .max(
             VALIDATION_LIMITS.MAX_QUESTION_LENGTH,
             `消息长度不能超过 ${VALIDATION_LIMITS.MAX_QUESTION_LENGTH} 字符`
         ),
-    conversationHistory: z
+    messages: z
         .array(chatMessageSchema)
         .max(
             VALIDATION_LIMITS.MAX_MESSAGES_COUNT,
             `对话历史不能超过 ${VALIDATION_LIMITS.MAX_MESSAGES_COUNT} 条`
         )
-        .optional(),
+        .default([]),
+    sessionId: uuidSchema.optional(),
 });
 
 export type LandingChatRequest = z.infer<typeof LandingChatRequestSchema>;

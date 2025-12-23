@@ -133,7 +133,7 @@ function extractKeywords(text: string): string[] {
 /**
  * Query financial data from the structured database
  */
-async function queryStructuredFinancialData(
+export async function queryStructuredFinancialData(
   metricNames: string[],
   year?: string,
   period?: string,

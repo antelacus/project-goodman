@@ -1,130 +1,97 @@
 import { Annotation } from "@langchain/langgraph";
-import type { FinancialAnalysisState, WorkflowMeta } from "@/lib/types/workflow-states";
+import type { WorkflowMeta } from "@/lib/types/workflow-states";
 
-export const FinancialAnalysisAnnotation = Annotation.Root({
-    // 输入：保留最新值
+export interface AgentMessage {
+    id?: string;
+    role: "user" | "assistant" | "tool" | "system";
+    content: string;
+    tool_calls?: Array<{
+        id: string;
+        type: string;
+        function: { name: string; arguments: string };
+    }>;
+    tool_call_id?: string;
+    created_at?: string;
+}
+
+export interface ToolCall {
+    id: string;
+    name: string;
+    arguments: Record<string, unknown>;
+}
+
+export interface ToolResult {
+    toolCallId: string;
+    toolName: string;
+    success: boolean;
+    data?: unknown;
+    error?: string;
+}
+
+export const FinancialAgentAnnotation = Annotation.Root({
+    // Input
     input: Annotation<{
         question: string;
+        sessionId?: string;
         year?: string;
         period?: string;
         documentIds?: string[];
-        autoSelect?: { enabled: boolean; maxDocuments?: number };
     }>({
         reducer: (prev, next) => next ?? prev,
         default: () => ({ question: "" }),
     }),
 
-    // 文档选择结果：保留最新值
-    documentSelection: Annotation<{ selectedDocuments: any[]; totalTokens: number } | undefined>({
-        reducer: (prev, next) => next ?? prev,
-        default: () => undefined,
-    }),
-
-    //路由：合并
-    routing: Annotation<{
-        selectedFunction: string | null;
-        functionArgs: Record<string, unknown>;
-        confidence: number;
-        error?: { code: string; message: string }; // Result Pattern
+    // Agent State
+    agent: Annotation<{
+        sessionId?: string;
+        messages: AgentMessage[];
+        currentIteration: number;
+        maxIterations: number;
+        isComplete: boolean;
+        pendingToolCalls: ToolCall[];
     }>({
         reducer: (prev, next) => ({ ...prev, ...next }),
         default: () => ({
-            selectedFunction: null,
-            functionArgs: {},
-            confidence: 0,
+            messages: [],
+            currentIteration: 0,
+            maxIterations: 5,
+            isComplete: false,
+            pendingToolCalls: [],
         }),
     }),
 
-    // 数据查询：深度合并（关键）
-    dataQuery: Annotation<{
-        requiredMetrics: string[];
-        availableMetrics: string[];
-        missingMetrics: string[];
-        dataMap: Record<string, any>; // Complex map
-        sourceDocuments: any[];
-        error?: { code: string; message: string; details?: any }; // Result Pattern
-    }>({
-        reducer: (prev, next) => ({
-            ...prev,
-            ...next,
-            // dataMap 需要特殊处理吗？
-            // FinancialAnalysisState 的 dataMap 是一次性查询出来的，
-            // 如果分步查询可能需要合并。但在当前逻辑中，queryData 是一次性返回完整 map。
-            // 所以简单的 shallow merge ...prev, ...next 的 dataMap 属性覆盖是安全的，
-            // 只要 next.dataMap 是完整的。
-            // 如果 queryData 是增量更新，则需要 deep merge。
-            // 检查 steps.ts: queryData 函数是构建了一个新的 dataMap 并返回。
-            // 所以浅合并整个 dataQuery 对象是安全的。
-        }),
-        default: () => ({
-            requiredMetrics: [],
-            availableMetrics: [],
-            missingMetrics: [],
-            dataMap: {},
-            sourceDocuments: [],
-        }),
+    // Tool Execution Results
+    toolResults: Annotation<ToolResult[]>({
+        reducer: (prev, next) => [...(prev ?? []), ...(next ?? [])],
+        default: () => [],
     }),
 
-    // 计算结果：合并
-    calculation: Annotation<{
-        functionName: string;
-        functionDisplayName: string;
-        formula: string;
-        inputs: Record<string, number>;
-        result: { value: number; formatted: string; unit: string };
-        steps: string[];
-        warnings?: string[];
-        error?: { code: string; message: string }; // Result Pattern
-    }>({
-        reducer: (prev, next) => ({ ...prev, ...next }),
-        default: () => ({
-            functionName: "",
-            functionDisplayName: "",
-            formula: "",
-            inputs: {},
-            result: { value: 0, formatted: "", unit: "" },
-            steps: [],
-        }),
-    }),
-
-    // 置信度：合并
-    confidence: Annotation<{
-        score: number;
-        factors: any[];
-        threshold: number;
-        passed: boolean;
-        reason?: string;
-    }>({
-        reducer: (prev, next) => ({ ...prev, ...next }),
-        default: () => ({
-            score: 0,
-            factors: [],
-            threshold: 0.7,
-            passed: false,
-        }),
-    }),
-
-    // 输出：保留最新值
+    // Output
     output: Annotation<{
-        type: string;
+        type: "success" | "partial" | "error" | "no_data";
         answer: string;
+        sessionId: string;
+        calculations?: Array<{
+            name: string;
+            result: { value: number; formatted: string; unit: string };
+            formula: string;
+        }>;
         confidence: number;
-        sourceDocuments: any[];
-        missingData?: string[];
-        suggestion?: string;
-        warnings?: string[];
-        calculation?: any;
+        sourceDocuments: Array<{ id: string; name: string }>;
+        iterationCount: number;
     }>({
         reducer: (prev, next) => next ?? prev,
         default: () => ({
-            type: "init",
+            type: "error",
             answer: "",
+            sessionId: "",
             confidence: 0,
             sourceDocuments: [],
+            iterationCount: 0,
         }),
     }),
 
-    // Meta：合并
+    // Metadata
     meta: Annotation<WorkflowMeta>({
         reducer: (prev, next) => ({
             ...prev,
@@ -139,6 +106,4 @@ export const FinancialAnalysisAnnotation = Annotation.Root({
     }),
 });
 
-// 类型检查：确保 Annotation State 兼容 FinancialAnalysisState
-export type FinancialAnalysisGraphState = typeof FinancialAnalysisAnnotation.State;
-// const _typeCheck: FinancialAnalysisGraphState extends FinancialAnalysisState ? true : never = true;
+export type FinancialAgentGraphState = typeof FinancialAgentAnnotation.State;
