@@ -15,14 +15,18 @@ import {
 import { generateResponseNode } from "../core/nodes/generate-response";
 import { shouldContinue } from "../core/edges/routing";
 
-// Define the graph
-const workflow = new StateGraph<UnifiedAgentState>({
+// Define the graph with relaxed typing for node names
+// LangGraph's strict typing conflicts with dynamic node addition
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const workflow: any = new StateGraph<UnifiedAgentState>({
     channels: {
         input: {
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
             value: (left?: any, right?: any) => right ? right : left,
             default: () => ({ question: "" }),
         },
         agent: {
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
             value: (left?: any, right?: any) => right ? right : left,
             default: () => ({
                 sessionId: "",
@@ -35,14 +39,17 @@ const workflow = new StateGraph<UnifiedAgentState>({
             }),
         },
         toolResults: {
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
             value: (left?: any[], right?: any[]) => right ? right : (left || []),
             default: () => [],
         },
         output: {
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
             value: (left?: any, right?: any) => right ? right : left,
             default: () => undefined,
         },
         meta: {
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
             value: (left?: any, right?: any) => right ? right : left,
             default: () => undefined,
         },

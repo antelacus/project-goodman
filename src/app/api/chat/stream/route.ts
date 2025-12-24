@@ -1,8 +1,5 @@
-
 import { NextRequest, NextResponse } from 'next/server';
 import { unifiedAgentGraph } from '@/lib/workflows/unified/graph';
-import { UnifiedAgentState } from '@/lib/workflows/unified/state';
-import { v4 as uuidv4 } from 'uuid';
 
 export const runtime = 'nodejs'; // Ensure Node.js runtime for LangGraph
 
@@ -18,7 +15,8 @@ export async function POST(req: NextRequest) {
             );
         }
 
-        const currentSessionId = sessionId || uuidv4();
+        // Don't generate UUID here - let loadMemoryNode create/load the session
+        // This ensures sessionId consistency between what's stored and what's returned
 
         // Initialize state
         // We cast to any to avoid strict type checking on DeepPartial,
@@ -26,13 +24,13 @@ export async function POST(req: NextRequest) {
         const initialState: any = {
             input: {
                 question,
-                sessionId: currentSessionId,
+                sessionId: sessionId, // Pass as-is (can be undefined), loadMemoryNode will handle
                 files: files || [],
                 documentIds: documentIds || [],
                 workflowType: 'unified'
             },
             agent: {
-                sessionId: currentSessionId,
+                sessionId: "", // Will be set by loadMemoryNode
                 messages: [],
                 currentIteration: 0,
                 maxIterations: 10,
@@ -60,6 +58,7 @@ export async function POST(req: NextRequest) {
                     );
 
                     let finalOutput = null;
+                    let capturedSessionId: string | null = null; // Capture sessionId from loadMemory
 
                     for await (const event of eventStream) {
                         // Filter events to send meaningful updates to the client
@@ -79,7 +78,14 @@ export async function POST(req: NextRequest) {
                             sendEvent('tool_result', { tool: event.name, output: event.data.output });
                         }
 
-                        // 4. Capture Final Output: Look for the end of the main graph execution
+                        // 4. Capture sessionId from loadMemory node (this is the authoritative session ID)
+                        else if (event.event === 'on_chain_end' && event.name === 'loadMemory') {
+                            if (event.data?.output?.agent?.sessionId) {
+                                capturedSessionId = event.data.output.agent.sessionId;
+                            }
+                        }
+
+                        // 5. Capture Final Output: Look for the end of the main graph execution
                         // OR the end of the generateResponse node which produces the output
                         else if (event.event === 'on_chain_end' && event.name === 'generateResponse') {
                             if (event.data && event.data.output && event.data.output.output) {
@@ -117,8 +123,18 @@ export async function POST(req: NextRequest) {
                     }
 
                     if (outputData && outputData.answer) {
+                        // Use the session ID captured from loadMemory node (most authoritative source)
+                        // Falls back to finalOutput.agent.sessionId or the user-provided sessionId
+                        let returnedSessionId = capturedSessionId;
+                        if (!returnedSessionId && finalOutput?.agent?.sessionId) {
+                            returnedSessionId = finalOutput.agent.sessionId;
+                        }
+                        if (!returnedSessionId) {
+                            returnedSessionId = sessionId || 'unknown';
+                        }
+
                         sendEvent('complete', {
-                            sessionId: currentSessionId,
+                            sessionId: returnedSessionId,
                             ...outputData
                         });
                     } else {
@@ -128,7 +144,7 @@ export async function POST(req: NextRequest) {
                             sendEvent('error', { message: finalOutput.meta.error.message });
                         } else {
                             sendEvent('complete', {
-                                sessionId: currentSessionId,
+                                sessionId: capturedSessionId || sessionId || 'unknown',
                                 type: 'error',
                                 answer: 'I completed the task but could not generate a final response.'
                             });

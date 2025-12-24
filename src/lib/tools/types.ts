@@ -22,7 +22,8 @@ export type ToolCategory =
   | "search" // Database and vector search tools
   | "extraction" // Document/data extraction tools
   | "storage" // File storage operations
-  | "query"; // Data query tools
+  | "query" // Data query tools
+  | "compliance"; // Compliance and regulation tools
 
 /**
  * Metadata for financial tools
