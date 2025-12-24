@@ -24,7 +24,7 @@ export function useStreamingChat({ initialSessionId, onComplete, onError }: UseS
 
     const abortControllerRef = useRef<AbortController | null>(null);
 
-    const sendMessage = useCallback(async (question: string, files: any[] = []) => {
+    const sendMessage = useCallback(async (question: string, files: any[] = [], documentIds: string[] = []) => {
         // Reset state for new message
         setIsStreaming(true);
         setEvents([]);
@@ -45,8 +45,9 @@ export function useStreamingChat({ initialSessionId, onComplete, onError }: UseS
                 },
                 body: JSON.stringify({
                     question,
-                    sessionId: sessionId, // Use current session ID if available
+                    sessionId: sessionId,
                     files,
+                    documentIds,
                 }),
                 signal: abortController.signal,
             });
