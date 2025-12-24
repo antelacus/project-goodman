@@ -44,6 +44,12 @@ export interface WorkflowOutput {
     data?: Record<string, unknown>;
     /** Confidence score (0-1) */
     confidence?: number;
+    /** Source documents or references */
+    sources?: Array<{
+        id?: string;
+        name?: string;
+        type?: string;
+    }>;
 }
 
 /**

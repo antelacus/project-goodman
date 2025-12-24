@@ -12,18 +12,20 @@ export const SearchDocumentsInputSchema = z.object({
     query: z.string().describe("搜索关键词或问题"),
     year: z.number().optional().describe("年份过滤 (例如 2024)"),
     docTypes: z.array(z.string()).optional().describe("文档类型过滤 (例如 ['annual_report'])"),
-    limit: z.number().optional().default(5).describe("返回文档数量限制"),
+    limit: z.number().default(5).describe("返回文档数量限制"),
 });
 
 export type SearchDocumentsInput = z.infer<typeof SearchDocumentsInputSchema>;
 
-export const searchDocumentsTool: Tool<SearchDocumentsInput> = {
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export const searchDocumentsTool: Tool<SearchDocumentsInput, any> = {
     name: "search_documents",
     displayName: "搜索文档",
     displayNameEn: "Search Documents",
     description: "搜索公司财务文档库中的相关内容。当需要查找具体的财务数字、经营情况或管理层讨论时使用。",
     category: "search",
-    inputSchema: SearchDocumentsInputSchema,
+    // Cast to bypass Zod default() type mismatch
+    inputSchema: SearchDocumentsInputSchema as z.ZodSchema<SearchDocumentsInput>,
     outputSchema: z.any(), // Flexible output for now
     execute: async (input) => {
         try {

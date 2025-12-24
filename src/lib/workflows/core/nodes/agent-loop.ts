@@ -6,7 +6,7 @@
  */
 
 import { BaseAgentState } from "../state/base-state";
-import { SystemMessage, HumanMessage, BaseMessage, AIMessage } from "@langchain/core/messages";
+import { HumanMessage, AIMessage } from "@langchain/core/messages";
 import { toolRegistry } from "@/lib/tools/registry";
 import OpenAI from "openai";
 
@@ -43,8 +43,9 @@ export async function agentLoopNode(
         })
     ];
 
-    // If this is the very first turn and no messages exist yet (except system), add user input
-    if (messages.length === 0) {
+    // If this is the very first turn of this execution, add user input
+    // We check currentIteration === 0 because messages might contain history from DB
+    if (currentIteration === 0) {
         responseMessages.push({ role: "user", content: input.question });
     }
 
@@ -70,9 +71,15 @@ export async function agentLoopNode(
     // 3. Update State
     const newMessages = [...messages];
 
-    // Add User message to history if it was just legally added (first turn)
-    if (messages.length === 0) {
-        newMessages.push(new HumanMessage(input.question));
+    // Add User message to history if it was just legally added (first turn of this execution)
+    // AND if it's not already the last message (to depend defensively against duplicates)
+    if (currentIteration === 0) {
+        const lastMsg = newMessages[newMessages.length - 1];
+        const isDuplicate = lastMsg && lastMsg._getType() === 'human' && lastMsg.content === input.question;
+
+        if (!isDuplicate) {
+            newMessages.push(new HumanMessage(input.question));
+        }
     }
 
     newMessages.push(aiMessage);

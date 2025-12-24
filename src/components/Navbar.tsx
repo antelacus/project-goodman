@@ -7,6 +7,7 @@ import { useState } from "react";
 
 const navItems = [
   { name: "首页", href: "/" },
+  { name: "智能对话", href: "/chat" },
   { name: "财务信息提取", href: "/data-extract" },
   { name: "财务指标分析", href: "/financial-analysis" },
   { name: "财务合规指导", href: "/guidance-chat" },

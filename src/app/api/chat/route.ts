@@ -30,9 +30,9 @@ export async function POST(req: NextRequest) {
         // Initialize State
         // We provide a minimal initial state conforming to UnifiedAgentState
         const initialState = {
-            sessionId: sessionId, // Can be undefined, loadMemory will create one
             input: {
                 question: message,
+                sessionId: sessionId, // MUST be in input for loadMemoryNode to read
                 documentIds: documentIds || [],
             },
             agent: {
@@ -57,16 +57,17 @@ export async function POST(req: NextRequest) {
         };
 
         // Invoke Graph
-        const finalState = await unifiedAgentGraph.invoke(initialState as any);
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const finalState = await unifiedAgentGraph.invoke(initialState as any) as any;
 
         // Return Output
         return NextResponse.json({
             success: true,
             data: {
-                sessionId: finalState.agent.sessionId, // Return the actual (possibly new) session ID
-                answer: finalState.output?.answer || "No answer generated",
-                sources: finalState.output?.sources || [],
-                toolResults: finalState.toolResults, // Optional: return tool traces for debug/UI
+                sessionId: finalState?.agent?.sessionId || body.sessionId, // Return the actual (possibly new) session ID
+                answer: finalState?.output?.answer || "No answer generated",
+                sources: finalState?.output?.sources || [],
+                toolResults: finalState?.toolResults || [], // Optional: return tool traces for debug/UI
             }
         });
 

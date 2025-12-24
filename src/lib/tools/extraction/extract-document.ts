@@ -18,7 +18,8 @@ export const ExtractDocumentInputSchema = z.object({
 
 export type ExtractDocumentInput = z.infer<typeof ExtractDocumentInputSchema>;
 
-export const extractDocumentTool: Tool<ExtractDocumentInput> = {
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export const extractDocumentTool: Tool<ExtractDocumentInput, any> = {
     name: "extract_document",
     displayName: "文档信息提取",
     displayNameEn: "Extract Document Info",
@@ -41,7 +42,7 @@ export const extractDocumentTool: Tool<ExtractDocumentInput> = {
             if (chunkError) throw new Error(`Failed to fetch document content: ${chunkError.message}`);
             if (!chunks || chunks.length === 0) throw new Error("Document has no content");
 
-            const fullText = chunks.map(c => c.content).join("\n\n");
+            const fullText = chunks.map((c: { content: string }) => c.content).join("\n\n");
 
             // 2. Perform Extraction
             const result = await performStructuredExtraction(

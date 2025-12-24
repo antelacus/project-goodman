@@ -11,18 +11,20 @@ import OpenAI from "openai";
 
 export const SearchRegulationsInputSchema = z.object({
     query: z.string().describe("关于法规的问题或关键词"),
-    limit: z.number().optional().default(5).describe("返回结果数量"),
+    limit: z.number().default(5).describe("返回结果数量"),
 });
 
 export type SearchRegulationsInput = z.infer<typeof SearchRegulationsInputSchema>;
 
-export const searchRegulationsTool: Tool<SearchRegulationsInput> = {
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export const searchRegulationsTool: Tool<SearchRegulationsInput, any> = {
     name: "search_regulations",
     displayName: "搜索法规",
     displayNameEn: "Search Regulations",
     description: "查询税收、会计准则、法律法规等合规性文档。当用户询问具体政策或规定时使用。",
     category: "compliance",
-    inputSchema: SearchRegulationsInputSchema,
+    // Cast to bypass Zod default() type mismatch
+    inputSchema: SearchRegulationsInputSchema as z.ZodSchema<SearchRegulationsInput>,
     outputSchema: z.any(),
     execute: async (input) => {
         try {

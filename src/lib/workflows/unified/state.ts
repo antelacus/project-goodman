@@ -12,6 +12,7 @@ import { BaseAgentState } from "../core/state/base-state";
  * For now, it is identical to BaseAgentState.
  * We extend it to allow future specific fields without breaking core.
  */
+// eslint-disable-next-line @typescript-eslint/no-empty-object-type
 export interface UnifiedAgentState extends BaseAgentState {
     // Add specific fields here if needed in the future
     // e.g., userProfile, sessionSettings, etc.
