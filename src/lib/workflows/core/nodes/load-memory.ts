@@ -8,6 +8,7 @@
 import { BaseAgentState } from "../state/base-state";
 import { conversationMemory } from "@/lib/memory/conversation-memory";
 import { SystemMessage, HumanMessage, AIMessage, BaseMessage } from "@langchain/core/messages";
+import { createServerSupabaseClient } from "@/lib/supabase";
 
 /**
  * Loads memory and initializes agent state
@@ -24,7 +25,7 @@ export async function loadMemoryNode(
         // Fallback or throw
         throw new Error("State.input is undefined in loadMemoryNode");
     }
-    const { sessionId: requestedSessionId, question, workflowType } = state.input;
+    const { sessionId: requestedSessionId, question, workflowType, documentIds } = state.input;
 
     // 1. Get or create session
     // Default to 'unified' if not specified
@@ -34,6 +35,41 @@ export async function loadMemoryNode(
         requestedSessionId,
         effectiveWorkflowType
     );
+
+    // 2. Fetch Document Context if documentIds are present
+    let contextMessage: SystemMessage | null = null;
+    if (documentIds && documentIds.length > 0) {
+        try {
+            const supabase = createServerSupabaseClient();
+            const docsContentPromises = documentIds.map(async (docId) => {
+                const { data: chunks, error } = await supabase
+                    .from("document_chunks")
+                    .select("content")
+                    .eq("document_id", docId)
+                    .order("chunk_index", { ascending: true });
+
+                if (error) {
+                    console.error(`Failed to fetch chunks for doc ${docId}:`, error);
+                    return null;
+                }
+                if (!chunks || chunks.length === 0) return null;
+
+                return chunks.map((c: { content: string }) => c.content).join("\n");
+            });
+
+            const docsContents = await Promise.all(docsContentPromises);
+            const validContents = docsContents.filter(c => c !== null);
+
+            if (validContents.length > 0) {
+                const combinedContext = validContents.join("\n\n---\n\n");
+                contextMessage = new SystemMessage(
+                    `[Active Document Context]\nThe user has provided the following document content for reference in this conversation:\n\n${combinedContext}\n\n[End of Document Context]`
+                );
+            }
+        } catch (err) {
+            console.error("Error fetching document context:", err);
+        }
+    }
 
     // 3. Convert DB messages to LangChain BaseMessage[]
     const messages: BaseMessage[] = history.map((msg) => {
@@ -45,6 +81,11 @@ export async function loadMemoryNode(
             return new SystemMessage(msg.content);
         }
     });
+
+    // Append context message if it exists
+    if (contextMessage) {
+        messages.push(contextMessage);
+    }
 
     // 4. Initialize Agent Runtime State
     return {

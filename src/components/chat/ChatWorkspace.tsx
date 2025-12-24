@@ -45,31 +45,16 @@ export default function ChatWorkspace() {
         onError: handleError
     });
 
-    const handleSendMessage = async (text: string, files: File[]) => {
+    const handleSendMessage = async (text: string, files: File[], documentIds: string[]) => {
         // 1. Optimistically add user message
         const userMsg: Message = {
             role: 'user',
-            content: text + (files.length > 0 ? `\n\n[Attached ${files.length} files]` : ''),
+            content: text + (files.length > 0 ? `\n\n[Attached ${files.length} files]` : '') + (documentIds.length > 0 ? `\n\n[Attached ${documentIds.length} existing documents]` : ''),
             id: Date.now().toString()
         };
         setMessages(prev => [...prev, userMsg]);
 
-        // 2. Convert files to expected format (base64 or just metadata?)
-        // The API expects `files` but checking previous code or context...
-        // The `UnifiedAgentState` has `files`.
-        // Let's assume for now we need to read files as base64 if we want to send them, 
-        // OR if we are using the `upload-temp` API.
-        // Given the Phase D Context, there is `/api/documents/upload-temp`. 
-        // But for V3.6c simplicity and "Unified", let's see if the prompt handles file content directly or if we need to upload first.
-        // The `load-memory` node loads files? No.
-        // The Input has `files`.
-
-        // For this implementation, I will just pass the files array if the hook supports it.
-        // Looking at useStreamingChat: `sendMessage(question, files=[])`
-        // And it JSON.stringifies `files`. 
-        // JSON.stringify on a File object returns {}. We need to convert to Base64 or metadata.
-
-        // Let's implement a quick file reader to Base64.
+        // 2. Convert files to expected format
         const fileData = await Promise.all(files.map(async (file) => {
             return new Promise<{ name: string; type: string; content: string | ArrayBuffer | null }>((resolve) => {
                 const reader = new FileReader();
@@ -85,7 +70,7 @@ export default function ChatWorkspace() {
         }));
 
         // 3. Send
-        await sendMessage(text, fileData);
+        await sendMessage(text, fileData, documentIds);
     };
 
     return (

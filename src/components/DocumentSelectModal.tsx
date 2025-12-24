@@ -178,9 +178,9 @@ const DocumentSelectModal: React.FC<DocumentSelectModalProps> = ({
           </div>
         )}
 
-        {categories.map(cat => (
+        {categories.filter(c => c === 'business').map(cat => (
           <div key={cat} className="mb-4">
-            <div className="font-bold mb-2 text-gray-700">{cat === "knowledge" ? "数据库文档" : "待处理文档"}</div>
+            <div className="font-bold mb-2 text-gray-700">待处理文档</div>
             {filtered(cat).length === 0 ? (
               <div className="text-gray-400 mb-2">暂无文档</div>
             ) : (
