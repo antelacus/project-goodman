@@ -32,15 +32,6 @@ export interface Citation {
 }
 
 /**
- * Related article reference (less detailed than Citation)
- */
-export interface RelatedArticle {
-  regulation: string;
-  article: string;
-  summary: string;
-}
-
-/**
  * Source document reference
  */
 export interface SourceDocument {
@@ -112,95 +103,6 @@ export interface CalculationResult {
   description?: string;
 }
 
-/**
- * Simplified calculation result (used in guidance chat)
- */
-export interface CalculationResultSimple {
-  functionName: string;
-  functionDisplayName: string;
-  formula: string;
-  inputs: Record<string, CalculationInput>;
-  result: {
-    value: number;
-    formatted: string;
-  };
-  description?: string;
-}
-
-// ============================================================================
-// Confidence Evaluation Types
-// ============================================================================
-
-/**
- * Individual confidence factor
- */
-export interface ConfidenceFactor {
-  name: string;
-  score: number;
-  weight: number;
-}
-
-/**
- * Full confidence evaluation result
- */
-export interface ConfidenceEvaluation {
-  score: number;
-  factors: ConfidenceFactor[];
-  threshold: number;
-  passed: boolean;
-  reason?: string;
-}
-
-// ============================================================================
-// Module Suggestion Types
-// ============================================================================
-
-/**
- * Suggested module for user navigation
- */
-export interface SuggestedModule {
-  name: string;
-  displayName: string;
-  reason: string;
-  url: string;
-}
-
-// ============================================================================
-// Search Result Types
-// ============================================================================
-
-/**
- * Vector search result from regulation chunks
- */
-export interface VectorSearchResult {
-  chunk_id: string;
-  content: string;
-  similarity: number;
-  regulation: string;
-  article: string;
-}
-
-/**
- * Keyword search result from regulations
- */
-export interface KeywordSearchResult {
-  regulation_id: string;
-  regulation_name: string;
-  article_number: string;
-  article_content: string;
-  relevance: number;
-}
-
-/**
- * Combined search result (merged from vector + keyword)
- */
-export interface CombinedSearchResult {
-  regulation: string;
-  article: string;
-  content: string;
-  relevance: number;
-}
-
 // ============================================================================
 // Document Selection Types
 // ============================================================================
@@ -249,19 +151,6 @@ export interface DocumentSelectionResult {
 export interface ToolCall {
   functionName: string;
   arguments: Record<string, unknown>;
-}
-
-// ============================================================================
-// Intent Analysis Types
-// ============================================================================
-
-/**
- * Intent analysis result for landing chat routing
- */
-export interface IntentAnalysis {
-  extractionKeywords: number;
-  analysisKeywords: number;
-  guidanceKeywords: number;
 }
 
 // ============================================================================

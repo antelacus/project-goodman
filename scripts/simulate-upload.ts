@@ -1,3 +1,9 @@
+/**
+ * Test: simulate-upload.ts
+ *
+ * Simulates a file upload POSt request to the internal API.
+ * Used to verify the upload flow without using the frontend UI.
+ */
 
 import fs from 'fs';
 import path from 'path';

@@ -48,6 +48,7 @@ test-*.ts
 test_*.ts
 test_*.json
 verify-*.ts
+!verify-unified-agent.ts
 verify-*.js
 quick-*.ts
 check-*.ts

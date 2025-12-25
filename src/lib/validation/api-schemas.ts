@@ -16,9 +16,7 @@ export const VALIDATION_LIMITS = {
     MAX_MESSAGES_COUNT: 10,
     MAX_MESSAGE_LENGTH: 5000,
     MAX_MESSAGES_TOTAL_LENGTH: 20000,
-    MAX_DOCUMENT_IDS: 20,
     MAX_PASSWORD_LENGTH: 128,
-    MAX_YEAR_LENGTH: 4,
 } as const;
 
 // =============================================================================
@@ -28,131 +26,9 @@ export const VALIDATION_LIMITS = {
 // UUID validation
 const uuidSchema = z.string().uuid('无效的文档 ID 格式');
 
-// Document IDs array
-const documentIdsSchema = z
-    .array(uuidSchema)
-    .max(
-        VALIDATION_LIMITS.MAX_DOCUMENT_IDS,
-        `最多选择 ${VALIDATION_LIMITS.MAX_DOCUMENT_IDS} 个文档`
-    )
-    .optional();
-
-// Chat message
-const chatMessageSchema = z.object({
-    role: z.enum(['user', 'assistant'], {
-        errorMap: () => ({ message: '消息角色必须是 user 或 assistant' }),
-    }),
-    content: z
-        .string()
-        .max(
-            VALIDATION_LIMITS.MAX_MESSAGE_LENGTH,
-            `单条消息不能超过 ${VALIDATION_LIMITS.MAX_MESSAGE_LENGTH} 字符`
-        ),
-});
-
-// Auto Select configuration
-const autoSelectSchema = z.object({
-    enabled: z.boolean().default(true),
-    maxDocuments: z.number().min(1).max(20).default(5),
-}).optional();
-
 // =============================================================================
 // API Request Schemas
 // =============================================================================
-
-/**
- * Document Search Request
- * POST /api/document-search
- */
-export const DocumentSearchRequestSchema = z.object({
-    query: z
-        .string()
-        .min(1, '查询内容不能为空')
-        .max(
-            VALIDATION_LIMITS.MAX_QUESTION_LENGTH,
-            `查询长度不能超过 ${VALIDATION_LIMITS.MAX_QUESTION_LENGTH} 字符`
-        ),
-    options: z.object({
-        limit: z.number().min(1).max(20).optional(),
-        threshold: z.number().min(0).max(100).optional(),
-    }).optional(),
-});
-
-export type DocumentSearchRequest = z.infer<typeof DocumentSearchRequestSchema>;
-
-/**
- * Financial Analysis Request
- * POST /api/financial-analysis
- */
-export const FinancialAnalysisRequestSchema = z.object({
-    question: z
-        .string()
-        .min(1, '问题不能为空')
-        .max(
-            VALIDATION_LIMITS.MAX_QUESTION_LENGTH,
-            `问题长度不能超过 ${VALIDATION_LIMITS.MAX_QUESTION_LENGTH} 字符`
-        ),
-    year: z
-        .string()
-        .regex(/^\d{4}$/, '年份格式无效')
-        .optional(),
-    period: z.enum(['Q1', 'Q2', 'Q3', 'Q4', 'annual']).optional(),
-    sessionId: uuidSchema.optional(),
-    documentIds: documentIdsSchema,
-    autoSelect: autoSelectSchema,
-});
-
-export type FinancialAnalysisRequest = z.infer<typeof FinancialAnalysisRequestSchema>;
-
-/**
- * Guidance Chat Request
- * POST /api/guidance-chat
- */
-export const GuidanceChatRequestSchema = z
-    .object({
-        question: z
-            .string()
-            .min(1, '问题不能为空')
-            .max(
-                VALIDATION_LIMITS.MAX_QUESTION_LENGTH,
-                `问题长度不能超过 ${VALIDATION_LIMITS.MAX_QUESTION_LENGTH} 字符`
-            ),
-        uploadedDocument: z.object({
-            text: z.string().max(100000), // 100KB text limit
-            fileName: z.string().max(255),
-            id: z.string().optional(),
-        }).optional(),
-        documentIds: documentIdsSchema,
-        autoSelect: autoSelectSchema,
-        regulationCategories: z.array(z.string().max(100)).max(10).optional(),
-        sessionId: uuidSchema.optional(),
-    });
-
-export type GuidanceChatRequest = z.infer<typeof GuidanceChatRequestSchema>;
-
-/**
- * Landing Chat Request
- * POST /api/landing-chat
- */
-export const LandingChatRequestSchema = z.object({
-    currentMessage: z
-        .string()
-        .min(1, '消息不能为空')
-        .max(
-            VALIDATION_LIMITS.MAX_QUESTION_LENGTH,
-            `消息长度不能超过 ${VALIDATION_LIMITS.MAX_QUESTION_LENGTH} 字符`
-        ),
-    messages: z
-        .array(chatMessageSchema)
-        .max(
-            VALIDATION_LIMITS.MAX_MESSAGES_COUNT,
-            `对话历史不能超过 ${VALIDATION_LIMITS.MAX_MESSAGES_COUNT} 条`
-        )
-        .default([]),
-    sessionId: uuidSchema.optional(),
-});
-
-export type LandingChatRequest = z.infer<typeof LandingChatRequestSchema>;
 
 /**
  * Admin Password Verification Request
