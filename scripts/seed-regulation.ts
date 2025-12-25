@@ -1,3 +1,9 @@
+/**
+ * Utility: seed-regulation.ts
+ *
+ * Seeds regulation articles into the 'structured_regulations' table.
+ * Extracts articles from JSON documents and structures them for compliance search.
+ */
 
 import { createClient } from '@supabase/supabase-js';
 import fs from 'fs';

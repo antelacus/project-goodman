@@ -1,3 +1,9 @@
+/**
+ * Test: simulate-column-upload.ts
+ *
+ * Simulates a file upload with specific column mapping configuration.
+ * Verifies that the backend correctly handles user-defined column mappings for Excel files.
+ */
 
 import fs from 'fs';
 import path from 'path';

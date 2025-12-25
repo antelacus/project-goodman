@@ -1,3 +1,9 @@
+/**
+ * Utility: inspect-excel.ts
+ *
+ * Inspects a local Excel file structure to help debug column mapping and content extraction issues.
+ * Prints row samples and searches for key metric keywords.
+ */
 
 import * as XLSX from 'xlsx';
 import fs from 'fs';
