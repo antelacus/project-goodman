@@ -54,7 +54,7 @@ export async function loadMemoryNode(
                 }
                 if (!chunks || chunks.length === 0) return null;
 
-                return chunks.map((c: { content: string }) => c.content).join("\n");
+                return `Document ID: ${docId}\n\n${chunks.map((c: { content: string }) => c.content).join("\n")}`;
             });
 
             const docsContents = await Promise.all(docsContentPromises);
@@ -63,7 +63,7 @@ export async function loadMemoryNode(
             if (validContents.length > 0) {
                 const combinedContext = validContents.join("\n\n---\n\n");
                 contextMessage = new SystemMessage(
-                    `[Active Document Context]\nThe user has provided the following document content for reference in this conversation:\n\n${combinedContext}\n\n[End of Document Context]`
+                    `[Active Document Context]\nThe user has provided the following document content for reference in this conversation. If you need to perform specific extraction tools, use the provided Document IDs.\n\n${combinedContext}\n\n[End of Document Context]`
                 );
             }
         } catch (err) {

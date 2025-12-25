@@ -9,41 +9,6 @@ import { FaFileInvoiceDollar } from "react-icons/fa";
 export default function HomePage() {
     const featureRef = useRef<HTMLDivElement | null>(null);
     const [highlight, setHighlight] = useState(false);
-    const [showChoice, setShowChoice] = useState(false);
-
-    const closeChoice = () => setShowChoice(false);
-
-    const ChoiceOverlay = () => (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 animate-in fade-in duration-200" onClick={closeChoice}>
-            <div className="bg-white rounded-xl p-8 w-full max-w-md shadow-2xl scale-100 animate-in zoom-in-95 duration-200" onClick={(e) => e.stopPropagation()}>
-                <h4 className="text-xl font-bold mb-6 text-center text-gray-900">选择你想开始的功能</h4>
-                <div className="flex flex-col gap-4">
-                    <Link
-                        href="/data-extract"
-                        className="group flex items-center justify-center gap-3 border border-yellow-500/30 bg-yellow-50 hover:bg-yellow-500 hover:text-black hover:border-yellow-500 text-yellow-700 font-semibold py-4 rounded-lg transition-all shadow-sm hover:shadow-md"
-                    >
-                        <FaFileInvoiceDollar className="text-lg group-hover:scale-110 transition-transform" />
-                        财务信息提取
-                    </Link>
-                    <Link
-                        href="/financial-analysis"
-                        className="group flex items-center justify-center gap-3 border border-yellow-500/30 bg-yellow-50 hover:bg-yellow-500 hover:text-black hover:border-yellow-500 text-yellow-700 font-semibold py-4 rounded-lg transition-all shadow-sm hover:shadow-md"
-                    >
-                        <FiTrendingUp className="text-lg group-hover:scale-110 transition-transform" />
-                        财务指标分析
-                    </Link>
-                    <Link
-                        href="/guidance-chat"
-                        className="group flex items-center justify-center gap-3 border border-yellow-500/30 bg-yellow-50 hover:bg-yellow-500 hover:text-black hover:border-yellow-500 text-yellow-700 font-semibold py-4 rounded-lg transition-all shadow-sm hover:shadow-md"
-                    >
-                        <FiCheckCircle className="text-lg group-hover:scale-110 transition-transform" />
-                        财务合规指导
-                    </Link>
-                </div>
-                <button className="mt-6 w-full text-sm text-gray-500 hover:text-gray-900 transition-colors" onClick={closeChoice}>取消</button>
-            </div>
-        </div>
-    );
 
     const handleExperienceClick = (e: React.MouseEvent<HTMLAnchorElement>) => {
         e.preventDefault();
@@ -100,10 +65,9 @@ export default function HomePage() {
                     </div>
 
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-8 w-full">
-                        {/* 模块一 */}
-                        <Link
-                            href="/data-extract"
-                            className={`bg-white border border-gray-100 rounded-2xl p-8 flex flex-col items-center transition-all duration-300 group cursor-pointer ${highlight ? "ring-4 ring-yellow-400 scale-[1.02]" : "shadow-sm hover:shadow-xl hover:-translate-y-2"
+                        {/* 能力一 */}
+                        <div
+                            className={`bg-white border border-gray-100 rounded-2xl p-8 flex flex-col items-center transition-all duration-300 group ${highlight ? "ring-4 ring-yellow-400 scale-[1.02]" : "shadow-sm hover:shadow-xl hover:-translate-y-2"
                                 }`}
                         >
                             <div className="w-14 h-14 bg-yellow-100 rounded-full flex items-center justify-center mb-6 text-yellow-600 text-2xl group-hover:bg-yellow-500 group-hover:text-white transition-colors">
@@ -118,11 +82,10 @@ export default function HomePage() {
                                 <li>自动结构化关键信息</li>
                                 <li>便捷灵活复制信息</li>
                             </ul>
-                        </Link>
-                        {/* 模块二 */}
-                        <Link
-                            href="/financial-analysis"
-                            className={`bg-white border border-gray-100 rounded-2xl p-8 flex flex-col items-center transition-all duration-300 group cursor-pointer ${highlight ? "ring-4 ring-yellow-400 scale-[1.02]" : "shadow-sm hover:shadow-xl hover:-translate-y-2"
+                        </div>
+                        {/* 能力二 */}
+                        <div
+                            className={`bg-white border border-gray-100 rounded-2xl p-8 flex flex-col items-center transition-all duration-300 group ${highlight ? "ring-4 ring-yellow-400 scale-[1.02]" : "shadow-sm hover:shadow-xl hover:-translate-y-2"
                                 }`}
                         >
                             <div className="w-14 h-14 bg-yellow-100 rounded-full flex items-center justify-center mb-6 text-yellow-600 text-2xl group-hover:bg-yellow-500 group-hover:text-white transition-colors">
@@ -137,11 +100,10 @@ export default function HomePage() {
                                 <li>财务指标自动计算</li>
                                 <li>支持校验 AI 计算结果</li>
                             </ul>
-                        </Link>
-                        {/* 模块三 */}
-                        <Link
-                            href="/guidance-chat"
-                            className={`bg-white border border-gray-100 rounded-2xl p-8 flex flex-col items-center transition-all duration-300 group cursor-pointer ${highlight ? "ring-4 ring-yellow-400 scale-[1.02]" : "shadow-sm hover:shadow-xl hover:-translate-y-2"
+                        </div>
+                        {/* 能力三 */}
+                        <div
+                            className={`bg-white border border-gray-100 rounded-2xl p-8 flex flex-col items-center transition-all duration-300 group ${highlight ? "ring-4 ring-yellow-400 scale-[1.02]" : "shadow-sm hover:shadow-xl hover:-translate-y-2"
                                 }`}
                         >
                             <div className="w-14 h-14 bg-yellow-100 rounded-full flex items-center justify-center mb-6 text-yellow-600 text-2xl group-hover:bg-yellow-500 group-hover:text-white transition-colors">
@@ -156,7 +118,7 @@ export default function HomePage() {
                                 <li>多文档联合分析</li>
                                 <li>合规性建议输出</li>
                             </ul>
-                        </Link>
+                        </div>
                     </div>
                 </section>
 
@@ -218,15 +180,13 @@ export default function HomePage() {
                 {/* FINAL CTA */}
                 <section className="flex flex-col items-center text-center mt-10 mb-20 bg-yellow-50/50 rounded-3xl p-16">
                     <h3 className="text-3xl font-extrabold mb-8 text-gray-900">准备好让财务工作更 smart 吗？</h3>
-                    <button
-                        onClick={() => setShowChoice(true)}
+                    <Link
+                        href="/chat"
                         className="bg-yellow-500 hover:bg-yellow-600 text-black font-bold py-4 px-12 rounded-full shadow-lg hover:shadow-yellow-500/30 transition-all transform hover:-translate-y-1"
                     >
-                        立即开始
-                    </button>
+                        开始对话
+                    </Link>
                 </section>
-
-                {showChoice && <ChoiceOverlay />}
             </PageContainer>
         </div>
     );

@@ -103,8 +103,8 @@ const ChatInput: React.FC<ChatInputProps> = ({ onSendMessage, disabled }) => {
                 }),
             }).catch(console.error); // Background, don't block UI
 
-            // 2. Call Extraction API
-            const response = await fetch('/api/data-extract', {
+            // 2. Call Extraction Tool API
+            const response = await fetch('/api/tools/extract', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({

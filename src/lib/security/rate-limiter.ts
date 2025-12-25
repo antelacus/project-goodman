@@ -43,10 +43,9 @@ const RATE_LIMITS: Record<string, RateLimitConfig> = {
 // Endpoint to category mapping
 const ENDPOINT_CATEGORIES: Record<string, string> = {
     // AI-intensive endpoints (expensive OpenAI calls)
-    '/api/financial-analysis': 'ai',
-    '/api/guidance-chat': 'ai',
+    '/api/chat': 'ai',
     '/api/landing-chat': 'ai',
-    '/api/data-extract': 'ai',
+    '/api/tools/extract': 'ai',
 
     // Authentication endpoints (strict limits)
     '/api/admin/verify-password': 'auth',
