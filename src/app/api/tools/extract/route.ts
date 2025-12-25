@@ -1,9 +1,17 @@
+/**
+ * Standalone Data Extraction Tool API
+ *
+ * Extracts structured data from files (images, PDFs, Excel).
+ * This is a quick-action tool, separate from the conversational agent.
+ *
+ * @route POST /api/tools/extract
+ */
 export const runtime = "nodejs";
 import { NextRequest, NextResponse } from "next/server";
 import OpenAI from "openai";
 import * as XLSX from "xlsx";
-import { getDataExtractPrompt } from "../../../lib/prompts";
-import { generateRequestId, createErrorResponse } from "../../../lib/security/error-handler";
+import { getDataExtractPrompt } from "../../../../lib/prompts";
+import { generateRequestId, createErrorResponse } from "../../../../lib/security/error-handler";
 
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
@@ -159,7 +167,7 @@ export async function POST(req: NextRequest) {
     });
 
   } catch (error: unknown) {
-    console.error("Data Extract API Error:", error);
+    console.error("Data Extract Tool API Error:", error);
     return createErrorResponse(error, requestId, 500);
   }
 }

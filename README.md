@@ -20,18 +20,26 @@
 
 | 模块 | 描述 | 典型场景 |
 |------|------|-----------|
-| **智能首页** | AI 对话式导航，理解用户意图并推荐合适的功能模块 | 新用户引导、快速定位功能 |
-| **财务信息提取** | 上传文档（PDF、图片、Excel），AI 自动抽取关键信息并生成结构化结果 | 合同、发票、报表 |
+| **智能对话** | 统一的 AI 对话界面，自动理解意图并调用合适的工具<br/>**实时反馈**：SSE 流式响应，显示 AI 思考过程<br/>**多轮对话**：支持上下文记忆，连续追问<br/>**智能工具调用**：22 个财务计算 + 法规检索 + 文档搜索 | 财务分析、合规咨询、数据查询 |
+| **快捷工具** | 独立的快速操作工具<br/>**信息提取**：上传文档（PDF、图片、Excel），AI 自动抽取关键信息 | 发票提取、合同解析 |
 | **文档管理** | 管理已上传的文档，支持预览、编辑属性、删除<br/>**管理员模式**：将文档上传至数据库并进行结构化存储 | 知识库管理 |
-| **财务指标分析** | 基于数据库文档，AI 对话式计算财务指标<br/>**智能文档选择**：AI 自动发现相关文档，用户可覆盖<br/>**22 个预设函数**：流动比率、ROE、资产负债率、杜邦分析等<br/>**自定义查询**：支持任意指标提取与增长率计算 | 财报分析、趋势预测 |
-| **财务合规指导** | 结合法规+业务文档，判断处理是否合规并给出建议<br/>**混合检索**：关键词匹配 + 向量相似度<br/>**智能计算**：支持上传文档（自动向量化），自动提取数据并进行合规性测算 | 税务筹划、风险识别 |
+
+### 核心能力
+
+通过统一对话界面，AI 可自动调用以下能力：
+
+| 能力 | 描述 |
+|------|------|
+| **财务指标分析** | 22 个预设函数：流动比率、ROE、资产负债率、杜邦分析等<br/>智能文档选择 + 自定义查询 |
+| **财务合规指导** | 混合检索法规库（关键词 + 向量），结合业务文档判断合规性 |
+| **文档信息提取** | 从上传的 PDF/图片/Excel 中提取结构化数据 |
 
 <details>
 <summary>📸 项目截图（点击展开）</summary>
 
-| 首页 | 信息提取 | 指标分析 | 合规指导 |
-|------|----------|----------|----------|
-| ![](data/showcases/homepage-screenshot.png) | ![](data/showcases/data-extract-screenshot.png) | ![](data/showcases/financial-analysis-screenshot.png) | ![](data/showcases/guidance-chat-screenshot.png) |
+| 首页 | 智能对话 |
+|------|----------|
+| ![](data/showcases/homepage-screenshot.png) | ![](data/showcases/chat-screenshot.png) |
 
 </details>
 
@@ -83,6 +91,9 @@
 
 ## 亮点特性
 
+- 🤖 **统一 AI Agent**：单一对话入口，自动理解意图并调用合适的工具（LangGraph 驱动）
+- 📡 **实时流式响应**：SSE 推送 AI 思考过程，降低等待焦虑
+- 💬 **多轮对话记忆**：支持上下文连续追问，跨问题引用
 - 🧠 **GPT-5-mini + Function Calling**：智能路由、意图理解、精准计算
 - 🗄️ **双重存储架构**：结构化数据（PostgreSQL）+ 向量嵌入（pgvector），兼顾精度与语义
 - 🔢 **22 个预设财务函数**：流动比率、ROE、资产负债率、杜邦分析等开箱即用，可扩展
@@ -190,42 +201,40 @@ graph TB
 project-goodman/
 ├── src/
 │   ├── app/                         # Next.js 应用路由
-│   │   ├── api/                     # API 路由 (12 个端点)
+│   │   ├── api/                     # API 路由
+│   │   │   ├── chat/                # 统一 Agent API（同步 + SSE 流式）
+│   │   │   ├── tools/               # 独立工具 API（extract 等）
 │   │   │   ├── admin/               # 管理员端点（密码验证、文档上传）
 │   │   │   ├── landing-chat/        # 首页对话路由
-│   │   │   ├── financial-analysis/  # 财务分析（预设函数 + 动态查询）
-│   │   │   ├── guidance-chat/       # 合规指导（混合检索）
 │   │   │   ├── documents/           # 文档 CRUD + 预览
-│   │   │   ├── data-extract/        # 信息提取
 │   │   │   └── preset-functions/    # 预设函数列表
-│   │   ├── page.tsx                 # 智能首页（对话式导航）
-│   │   ├── documents/               # 文档管理模块
-│   │   ├── data-extract/            # 信息提取模块
-│   │   ├── financial-analysis/      # 财务分析模块
-│   │   └── guidance-chat/           # 合规指导模块
+│   │   ├── page.tsx                 # 首页（产品介绍）
+│   │   ├── chat/                    # 统一对话工作台（主入口）
+│   │   └── documents/               # 文档管理模块
 │   ├── components/                  # React 组件
+│   │   ├── chat/                    # 对话 UI 组件
+│   │   │   ├── ChatWorkspace.tsx    # 对话主容器
+│   │   │   ├── MessageList.tsx      # 消息列表
+│   │   │   ├── ChatInput.tsx        # 输入框（支持文件上传）
+│   │   │   └── ThinkingIndicator.tsx # 实时思考状态
 │   │   ├── AdminPasswordTrigger.tsx # 管理员密码弹窗
 │   │   ├── RichTextRenderer.tsx     # 可追溯引用渲染器
 │   │   ├── Navbar.tsx               # 导航栏（带路由高亮）
 │   │   └── ...                      # 其他 UI 组件
 │   ├── lib/                         # 工具函数库
+│   │   ├── workflows/               # LangGraph 工作流
+│   │   │   ├── core/                # 共享节点（load-memory, agent-loop 等）
+│   │   │   ├── unified/             # 统一 Agent Graph
+│   │   │   ├── landing-chat/        # 首页对话工作流
+│   │   │   └── shared/              # 共享工具函数
+│   │   ├── tools/                   # 工具定义
+│   │   │   ├── financial/           # 财务计算工具
+│   │   │   ├── compliance/          # 合规搜索工具
+│   │   │   └── extraction/          # 信息提取工具
 │   │   ├── prompts/                 # Prompt 模板
-│   │   │   ├── landing-page.txt
-│   │   │   ├── financial-analysis.txt
-│   │   │   ├── guidance-chat.txt
-│   │   │   └── data-extract.txt
 │   │   ├── preset-functions.ts      # 22 个预设财务函数
-│   │   ├── financial-metric-names.ts # 财务指标名称常量
-│   │   ├── document-constants.ts    # 文档类型/期间映射
-│   │   ├── storage-helpers.ts       # Supabase Storage 工具
-│   │   ├── structured-extraction.ts # 结构化提取引擎
-│   │   ├── confidence-scoring.ts    # 置信度评分系统
-│   │   ├── admin-auth.ts            # 管理员认证
-│   │   ├── section-parser.ts        # 章节解析器 (V3.3)
-│   │   ├── section-aware-chunker.ts # 章节感知分块 (V3.3)
-│   │   ├── document-search.ts       # 混合搜索服务 (V3.3)
-│   │   ├── document-selector.ts     # 智能文档选择 (V3.3)
-│   │   ├── query-intent.ts          # 查询意图分析 (V3.3)
+│   │   ├── document-search.ts       # 混合搜索服务
+│   │   ├── document-selector.ts     # 智能文档选择
 │   │   └── ...                      # 其他工具
 │   └── store/                       # Zustand 状态管理
 ├── supabase/
@@ -260,7 +269,7 @@ project-goodman/
 - [x] 可追溯性引用系统
 - [x] 多维置信度评分
 
-### V3 开发（进行中）
+### V3 开发（已完成）
 
 - [x] **V3.0 VPS 迁移** - 从 Vercel 迁移到自托管 VPS
   - Docker 容器化部署
@@ -274,8 +283,19 @@ project-goodman/
   - 章节感知处理（TOC/标题检测）
   - 查询意图分析（年份、关键词提取）
   - 前端集成（来源显示、手动覆盖）
-- [ ] **V3.4 LangGraph 完整迁移** - AI Agent 架构
-- [ ] **V3.5 管理用财报体系** - 管理会计分析功能
+- [x] **V3.4 LangGraph 完整迁移** - 所有工作流迁移到 LangGraph StateGraph
+- [x] **V3.5 财务 Agent 逻辑升级** - 多轮对话、多工具调用、上下文记忆
+- [x] **V3.6 现代 Agent 交互重构** - 统一对话界面
+  - 统一 Agent 架构（单一 Graph，扁平工具注册）
+  - SSE 流式响应（实时显示思考过程）
+  - 统一对话 UI（/chat 替代分模块页面）
+  - 技术债务清理（移除旧模块代码）
+
+### 后续规划
+
+- [ ] **V3.7 管理用财报体系** - 管理会计分析功能
+- [ ] **V3.8 安全增强（后续）** - 持续安全改进
+- [ ] **V3.9 用户管理系统** - 多用户支持
 
 详见 `docs/V3_DEVELOPMENT_PLAN.md`
 

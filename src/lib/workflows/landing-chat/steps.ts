@@ -18,21 +18,23 @@ const openai = new OpenAI({
 // Constants
 // ============================================================================
 
+// All capabilities are now unified under /chat
+// Module names are kept for intent analysis but all route to unified chat
 const MODULES = {
   "data-extract": {
     name: "data-extract",
     displayName: "财务信息提取",
-    url: "/data-extract",
+    url: "/chat",
   },
   "financial-analysis": {
     name: "financial-analysis",
     displayName: "财务指标分析",
-    url: "/financial-analysis",
+    url: "/chat",
   },
   "guidance-chat": {
     name: "guidance-chat",
     displayName: "财务合规指导",
-    url: "/guidance-chat",
+    url: "/chat",
   },
 } as const;
 

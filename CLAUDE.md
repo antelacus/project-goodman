@@ -257,24 +257,27 @@ docker compose restart goodman
 ### Key Directories
 
 - `src/app/` - Next.js App Router pages
-- `src/app/api/` - API routes (15 endpoints)
+  - `src/app/chat/` - Unified chat workspace (main entry point)
+  - `src/app/documents/` - Document management
+  - `src/app/api/chat/` - Unified agent API (sync + streaming)
+  - `src/app/api/tools/` - Standalone tool APIs (extract, etc.)
 - `src/lib/` - Core business logic
   - `src/lib/services/` - Core services (financial data query, etc.)
   - `src/lib/prompts/` - Prompt templates (`.txt` files)
+  - `src/lib/tools/` - Tool definitions (financial, compliance, extraction)
+  - `src/lib/workflows/` - LangGraph workflows
+    - `src/lib/workflows/core/` - Shared node implementations
+    - `src/lib/workflows/unified/` - Unified agent graph
+    - `src/lib/workflows/landing-chat/` - Landing page chat
+    - `src/lib/workflows/shared/` - Shared utilities
   - `src/lib/preset-functions.ts` - 22 financial calculation functions
   - `src/lib/financial-metric-names.ts` - Standardized metric name constants
   - `src/lib/document-constants.ts` - Document type/period display mappings
-  - `src/lib/storage-helpers.ts` - Supabase Storage utilities
-  - `src/lib/section-parser.ts` - Document section parser (TOC/heading detection)
-  - `src/lib/section-aware-chunker.ts` - Section-aware text chunking
   - `src/lib/document-search.ts` - Hybrid search service (RRF fusion)
   - `src/lib/document-selector.ts` - Intelligent document selection orchestrator
-  - `src/lib/query-intent.ts` - Query intent analysis (LLM-based)
-  - `src/lib/workflows/shared/` - Shared workflow steps (document selection)
 - `src/components/` - React components
+  - `src/components/chat/` - Chat UI components (MessageList, ChatInput, etc.)
   - `src/components/DocumentSourceDisplay.tsx` - Document source display with relevance scores
-  - `src/components/DocumentSelectionModal.tsx` - Document selection override modal
-  - `src/components/UploadFeedback.tsx` - Upload structure analysis feedback
 - `supabase/migrations/` - Database migrations
 - `docs/` - Design documents and development logs
 - `tests/` - Test scripts
