@@ -102,10 +102,11 @@ export function useAdminAuth() {
 
       const data = await response.json();
 
-      if (data.valid && data.token) {
-        // Store session
+      if (data.valid) {
+        // Session is now managed via HTTP-only cookie (set by API)
+        // Store minimal client-side state for UI purposes
         setAdminSession({
-          token: data.token,
+          token: 'cookie-session', // Token is in HTTP-only cookie, this is just a marker
           expiresAt: data.expiresAt,
         });
         setIsAuthenticated(true);
@@ -222,8 +223,8 @@ const ADMIN_SESSION_KEY = 'admin_session';
 function isLocalStorageAvailable(): boolean {
   try {
     return typeof window !== 'undefined' &&
-           typeof window.localStorage !== 'undefined' &&
-           typeof window.localStorage.getItem === 'function';
+      typeof window.localStorage !== 'undefined' &&
+      typeof window.localStorage.getItem === 'function';
   } catch {
     return false;
   }
