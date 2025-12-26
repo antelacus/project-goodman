@@ -186,8 +186,8 @@ We follow a phase-gated approach where each phase requires approval before proce
 
 1. After Phase 1 (Requirements) → Get approval
 2. After Phase 2 (Design + Todo List) → Get approval
-3. **After each task completion** (Phases 3-4-5) → Wait for user confirmation
-4. After Phase 6 (Final Review) → Get approval for deployment
+3: **After each task completion** (Phases 3-4-5) → Wait for user confirmation
+3. After Phase 6 (Final Review) → Get approval for deployment
 
 **Note**: The per-task checkpoint (step 3) is critical for context window management. This pause allows the user to track token usage and prevents exceeding context limits.
 
@@ -199,23 +199,34 @@ We follow a phase-gated approach where each phase requires approval before proce
 
 **Product**: AI-powered financial assistant for enterprise accounting departments
 
-**Target Users**:
+**Project Stage**: Evolving from demonstration project to production-ready tool
 
-- **Primary**: Financial personnel in accounting departments (会计部门财务人员)
+**Target Users** (Dual Audience):
+
+| Audience | Purpose | Key Experience |
+|----------|---------|----------------|
+| **Potential Employers** | Showcase developer's capabilities in financial AI agent development | Landing page attraction, professional impression, technical demonstration |
+| **Company Employees** | Daily work tool for accounting departments | Quick onboarding, efficient workflows, reliable functionality |
+
+**User Profiles**:
+
+- **Primary Users**: Financial personnel in accounting departments (会计部门财务人员)
 - **Role**: Employees conducting financial analysis, compliance checking, and data extraction
-- **Context**: Internal company tool for efficiency enhancement (not B2C)
+- **Secondary Visitors**: Recruiters, hiring managers, technical evaluators exploring the project
 
 **Core Value Proposition**:
 
 - Reduce time spent on repetitive financial calculations and compliance lookups
 - Provide AI-guided workflows instead of requiring users to navigate complex menus
 - Enable natural language interaction with financial data and regulations
+- Demonstrate real-world applicability of AI agent technology in finance
 
 **Design Philosophy**:
 
-- **Unified conversational interface**: Single chat entry point, AI routes to appropriate capabilities
+- **Unified workspace interface**: Single entry point (工作台), AI routes to appropriate capabilities
 - **Fewer choices, more guidance**: AI decides tools/modules, user focuses on questions
 - **Transparency**: Show AI reasoning, document sources, calculation steps
+- **Professional aesthetic**: Traditional corporate style that conveys security and reliability to financial users
 
 ### Tech Stack
 
