@@ -8,11 +8,8 @@ export const metadata = {
 
 export default function ChatPage() {
     return (
-        <main className="min-h-screen pt-16">
-            {/* pt-16 to account for fixed navbar if it exists, checking layout... 
-          Navbar seems to be in flow but sticky? I'll check Navbar styles later. 
-          Assuming standard layout behavior for now. */}
+        <div className="h-full">
             <ChatWorkspace />
-        </main>
+        </div>
     );
 }
