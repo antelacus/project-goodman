@@ -1,9 +1,9 @@
 "use client";
 import React, { useState, useCallback, useEffect } from "react";
-import { useDocumentStore, Document } from "../../store/documents";
-import PageContainer from "../../components/PageContainer";
-import PageTitle from "../../components/PageTitle";
-import { useAdminAuth } from "../../components/AdminPasswordTrigger";
+import { useDocumentStore, Document } from "@/store/documents";
+import PageContainer from "@/components/PageContainer";
+import PageTitle from "@/components/PageTitle";
+import { useAdminAuth } from "@/components/AdminPasswordTrigger";
 import { useDropzone } from "react-dropzone";
 import {
   DOC_TYPE_OPTIONS,
@@ -14,14 +14,12 @@ import {
   isFinancialStatement,
   isUploadable,
   PDF_ONLY_TYPES,
-  NON_UPLOADABLE_TYPES,
-} from "../../lib/document-constants";
+} from "@/lib/document-constants";
 import {
   isImage,
   isPdf,
   isExcel,
-  getFileExtension,
-} from "../../lib/storage-helpers";
+} from "@/lib/storage-helpers";
 
 // Generate year options (last 20 years)
 const YEAR_OPTIONS = Array.from({ length: 20 }, (_, i) => `${2025 - i}`);
@@ -818,6 +816,7 @@ export default function DocumentsPage() {
                     )}
                     {isImage(previewDoc.name) && (
                       <div className="flex items-center justify-center h-full bg-gray-50 rounded p-4">
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
                         <img
                           src={previewSignedUrl}
                           alt={previewDoc.name}

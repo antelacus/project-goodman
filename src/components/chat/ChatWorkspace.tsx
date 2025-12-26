@@ -74,7 +74,7 @@ export default function ChatWorkspace() {
     };
 
     return (
-        <div className="flex flex-col h-[calc(100vh-64px)] bg-slate-50 relative overflow-hidden">
+        <div className="flex flex-col h-full bg-slate-50 relative overflow-hidden">
             {/* Background decoration */}
             <div className="absolute inset-0 bg-gradient-to-br from-indigo-50 via-white to-purple-50 opacity-50 pointer-events-none" />
 

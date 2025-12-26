@@ -169,15 +169,15 @@ graph TB
 project-goodman/
 ├── src/
 │   ├── app/                         # Next.js 应用路由
+│   │   ├── (landing)/               # 公开页面
+│   │   │   └── page.tsx             # 首页（产品介绍）
+│   │   ├── (workspace)/             # 需认证的工作区
+│   │   │   ├── layout.tsx           # Sidebar 布局
+│   │   │   ├── chat/                # 统一对话工作台
+│   │   │   ├── documents/           # 文档管理模块
+│   │   │   ├── help/                # 使用指南
+│   │   │   └── about/               # 关于页面
 │   │   ├── api/                     # API 路由
-│   │   │   ├── chat/                # 统一 Agent API（同步 + SSE 流式）
-│   │   │   ├── tools/               # 独立工具 API（extract 等）
-│   │   │   ├── admin/               # 管理员端点（密码验证、文档上传）
-│   │   │   ├── documents/           # 文档 CRUD + 预览
-│   │   │   └── health/              # 健康检查端点
-│   │   ├── page.tsx                 # 首页（产品介绍）
-│   │   ├── chat/                    # 统一对话工作台（主入口）
-│   │   └── documents/               # 文档管理模块
 │   ├── components/                  # React 组件
 │   │   ├── chat/                    # 对话 UI 组件
 │   │   │   ├── ChatWorkspace.tsx    # 对话主容器
@@ -260,7 +260,8 @@ project-goodman/
 
 ### 后续规划
 
-- [ ] **V3.7 UI 升级** - 统一对话界面美化与优化
+- [ ] **V3.7 UI 升级 (进行中)** - 统一对话界面美化与优化
+  - [x] Phase 1: 侧边栏布局与视觉升级
 - [ ] **V3.8 管理用财报体系** - 管理会计分析功能
 - [ ] **V3.9 安全增强（后续）** - 持续安全改进
 - [ ] **V3.10 用户管理系统** - 多用户支持

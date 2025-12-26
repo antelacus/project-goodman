@@ -1,6 +1,5 @@
 import { Inter } from "next/font/google";
 import "./globals.css";
-import Navbar from "../components/Navbar";
 import { ClientOnlyProvider } from "../components/ClientOnlyProvider";
 
 const inter = Inter({ subsets: ["latin"] });
@@ -31,7 +30,6 @@ export default function RootLayout({
   return (
     <html lang="zh" suppressHydrationWarning>
       <body className={`${inter.className} bg-white text-black antialiased`} suppressHydrationWarning>
-        <Navbar />
         <ClientOnlyProvider>{children}</ClientOnlyProvider>
       </body>
     </html>
