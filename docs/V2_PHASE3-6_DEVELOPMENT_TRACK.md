@@ -349,17 +349,20 @@
 - **示例**: `f336d0bc.../资产负债表2024Q4.xlsx`
 
 **优势**:
+
 - ✅ 无文件名冲突（每个文档有唯一文件夹）
 - ✅ 易于清理（删除文档时删除整个文件夹）
 - ✅ 直接映射（document_id → 存储路径）
 
 **数据库 Schema 新增**:
+
 ```sql
 ALTER TABLE documents ADD COLUMN file_url TEXT;
 COMMENT ON COLUMN documents.file_url IS 'URL to original file in Supabase Storage';
 ```
 
 **存储流程**:
+
 1. 管理员上传文件（base64）
 2. API 保存原始文件到 Storage → 获取 file_url
 3. API 提取文本并向量化
@@ -367,6 +370,7 @@ COMMENT ON COLUMN documents.file_url IS 'URL to original file in Supabase Storag
 5. 用户点击预览时，显示原始文件（PDF/图片/Excel）
 
 **预览增强**:
+
 - **PDF**: 嵌入式查看器（iframe）
 - **图片**: 直接图片显示
 - **Excel**: 表格预览（首个工作表，前20行）
@@ -379,10 +383,12 @@ COMMENT ON COLUMN documents.file_url IS 'URL to original file in Supabase Storag
 **问题陈述**:
 
 当前状态存在**双重存储**同一信息：
+
 - 数据库列：`doc_type`, `year`, `period`（可查询，结构化）
 - JSONB 字段：`summary.document_type`, `summary.time_period`（显示，灵活）
 
 **问题**:
+
 - ❌ 冗余和潜在的同步问题
 - ❌ 不清楚应该使用哪个
 - ❌ 维护困难
@@ -392,15 +398,18 @@ COMMENT ON COLUMN documents.file_url IS 'URL to original file in Supabase Storag
 **Schema 变更**:
 
 **保留（数据库列 - 真实来源）**:
+
 - `doc_type` (TEXT) - 如 'balance_sheet', 'regulation'
 - `year` (VARCHAR(4)) - 如 '2024', '2023'
 - `period` (VARCHAR(20)) - 如 'Q1', 'Q2', 'annual'
 
 **移除（JSONB 字段 - 冗余）**:
+
 - `summary.document_type` → 使用 `doc_type` + 显示映射
 - `summary.time_period` → 使用 `year` + `period` + 显示映射
 
 **保留（JSONB 字段 - AI 生成）**:
+
 - `summary.summary` - AI 生成的摘要文本
 - `summary.key_metrics` - AI 生成的指标列表
 
@@ -470,6 +479,7 @@ export function formatYearPeriod(year: string | null, period: string | null): st
 **总宽度**: ~1,148px（小屏幕需要水平滚动）
 
 **布局示意**:
+
 ```
 ┌─────────┬──────────────────────┬─────────────────────────────────────────┬─────────┐
 │ [✓] 文档名│                      │  类型  年份  期间  上传时间   大小      │ 操作    │
@@ -478,10 +488,12 @@ export function formatYearPeriod(year: string | null, period: string | null): st
 ```
 
 **编辑行为**:
+
 - **单选**: 可内联编辑所有可编辑字段
 - **多选**: 通过表头下拉框批量编辑（与当前实现类似）
 
 **不显示的列**:
+
 - ❌ `is_structured`（用户不需要知道）
 - ❌ `extraction_status`（用户不需要知道）
 - ❌ `status`（仅显示 'ready' 状态的文档）
@@ -589,7 +601,6 @@ export function formatYearPeriod(year: string | null, period: string | null): st
 
 - [x] 基于 `knowledge_files/财务分析比率及公式.md` 中的财务分析公式，扩展预设函数库，新增 8 个财务计算函数。
 
-
 | #    | 函数名                         | 中文名称             | 类别       | 公式                                         | 单位 |
 | ---- | ------------------------------ | -------------------- | ---------- | -------------------------------------------- | ---- |
 | 1    | `working_capital`              | 营运资本             | liquidity  | 流动资产 - 流动负债                          | 元   |
@@ -602,7 +613,6 @@ export function formatYearPeriod(year: string | null, period: string | null): st
 | 8    | `dupont_roe`                   | 杜邦分析ROE          | composite  | 营业净利率 × 总资产周转率 × 权益乘数         | %    |
 
 - [x] 新增 `composite` 类别用于综合分析指标：
-
 
 ```typescript
 export type FunctionCategory = 'liquidity' | 'solvency' | 'profitability' | 'efficiency' | 'composite';
@@ -636,11 +646,8 @@ ROE: 15.00%
 
 **完成时间**: 2025-12-03
 
-
-
-### 测试清单 - ✅ 全部通过
-
 #### 文件存储测试 ✅
+
 - [x] 上传 PDF 并验证文件出现在 Storage
 - [x] 上传 Excel 并验证文件出现在 Storage
 - [x] 上传图片并验证文件出现在 Storage
@@ -651,6 +658,7 @@ ROE: 15.00%
 - [x] 验证图片预览正常
 
 #### 属性管理测试 ✅
+
 - [x] 验证 doc_type 下拉框显示映射标签
 - [x] 验证 period 下拉框显示映射标签
 - [x] 验证 year 下拉框选择正常
@@ -660,12 +668,14 @@ ROE: 15.00%
 - [x] 验证无 year/period 的文档显示 "-"
 
 #### 回归测试 ✅
+
 - [x] 验证现有文档仍可加载
 - [x] 验证财务分析功能仍正常
 - [x] 验证合规指导功能仍正常
 - [x] 验证管理员认证仍正常
 
 #### 集成测试结果 (2025-12-02) ✅
+
 - **test-phase6-features.ts**: 8/8 通过
 - **test-phase6-integration.ts**: 6/6 步骤通过
 - **npm run build**: ✅ 成功
@@ -723,6 +733,7 @@ ROE: 15.00%
 | INFO | 未使用的索引 | 10 | ⚠️ 可优化 |
 
 **未使用的索引详情** (可在生产环境使用后重新评估):
+
 - `idx_documents_extraction_status` - documents 表
 - `idx_documents_year_period` - documents 表
 - `idx_documents_status` - documents 表
@@ -757,6 +768,7 @@ ROE: 15.00%
 | 安全响应头缺失 | 低 | 14 | ⚠️ 可改进 |
 
 **关键安全措施已实施**:
+
 - ✅ RLS 已在所有表上启用
 - ✅ 管理员密码验证
 - ✅ 服务密钥仅在服务端使用
@@ -774,43 +786,13 @@ ROE: 15.00%
 
 ---
 
-### 🎉 V2 开发完成总结
-
-**阶段 3-6 全部完成！**
-
-**核心功能**:
-- ✅ 双重存储架构（结构化 + 向量）
-- ✅ 22 个预设财务函数
-- ✅ 管理员认证与文档上传
-- ✅ 混合检索（50% 向量 + 50% 关键词）
-- ✅ 多维度置信度评分
-- ✅ 原始文件存储与预览
-- ✅ 可追溯性引用系统
-
-**安全性**:
-- ✅ RLS 已启用（所有 7 个表）
-- ✅ 管理员密码保护
-- ✅ 服务密钥仅限服务端
-- ⚠️ 服务端速率限制待实现 (V3)
-
-**性能**:
-- ✅ 35+ 数据库索引已创建
-- ✅ Vector 扩展已安装 (v0.8.0)
-- ⚠️ 10 个未使用索引可后续优化
-
-**下一步**: 按照 `DEPLOYMENT_CHECKLIST.md` 部署到 Vercel
-
----
-
-## V2 维护：文档类型扩展 (2025-12-09)
-
-### 任务 55：文档上传界面增强
+#### 任务 55：文档上传界面增强
 
 **目标**: 扩展管理员文档上传界面，支持更多文档类型和更精细的分类。
 
 **所做更改**:
 
-#### 1. 新增文档类型
+##### 1. 新增文档类型
 
 | 类别 | doc_type | 中文名称 | 处理方式 | 备注 |
 |------|----------|----------|----------|------|
@@ -818,9 +800,10 @@ ROE: 15.00%
 | 财务信息 | `account_detail` | 科目明细 | - | 暂不可上传 |
 | 其他信息 | `business_info` | 业务情况 | 向量存储 | 仅支持 PDF，增强 AI 上下文 |
 
-#### 2. UI 界面调整
+##### 2. UI 界面调整
 
 **新的文档类型分组**:
+
 ```
 财务报表
 ├── 资产负债表 (balance_sheet)
@@ -842,24 +825,28 @@ ROE: 15.00%
 ```
 
 **格式限制**:
+
 - `financial_report` 和 `business_info` 仅支持 PDF 格式
 - 其他类型支持 PDF、图片、Excel 等
 
-#### 3. AI 上下文增强
+##### 3. AI 上下文增强
 
 **业务情况 (business_info) 文档**:
+
 - 在财务分析和合规指导模块中自动搜索并注入
 - 帮助 AI 提供更贴近企业实际情况的分析和建议
 
 **修改的 API**:
+
 - `/api/financial-analysis/route.ts` - 添加 `queryBusinessContext()` 函数
 - `/api/guidance-chat/route.ts` - 添加 `queryBusinessContext()` 函数
 
 **修改的提示词**:
+
 - `src/lib/prompts/financial-analysis.txt` - 添加 `{BUSINESS_CONTEXT}` 占位符
 - `src/lib/prompts/guidance-chat.txt` - 添加 `{BUSINESS_CONTEXT}` 占位符
 
-#### 4. 修改的文件
+##### 4. 修改的文件
 
 | 文件 | 变更 |
 |------|------|
@@ -873,7 +860,7 @@ ROE: 15.00%
 | `src/lib/prompts/financial-analysis.txt` | 业务上下文说明 |
 | `src/lib/prompts/guidance-chat.txt` | 业务上下文说明 |
 
-#### 5. 测试结果
+##### 5. 测试结果
 
 - **npm run build**: ✅ 成功
 

@@ -261,6 +261,8 @@ docker compose restart goodman
   - `src/app/documents/` - Document management
   - `src/app/api/chat/` - Unified agent API (sync + streaming)
   - `src/app/api/tools/` - Standalone tool APIs (extract, etc.)
+  - `src/app/api/admin/` - Admin endpoints (password verification, document upload)
+  - `src/app/api/documents/` - Document CRUD + preview
 - `src/lib/` - Core business logic
   - `src/lib/services/` - Core services (financial data query, etc.)
   - `src/lib/prompts/` - Prompt templates (`.txt` files)
@@ -268,7 +270,6 @@ docker compose restart goodman
   - `src/lib/workflows/` - LangGraph workflows
     - `src/lib/workflows/core/` - Shared node implementations
     - `src/lib/workflows/unified/` - Unified agent graph
-    - `src/lib/workflows/landing-chat/` - Landing page chat
     - `src/lib/workflows/shared/` - Shared utilities
   - `src/lib/preset-functions.ts` - 22 financial calculation functions
   - `src/lib/financial-metric-names.ts` - Standardized metric name constants
@@ -276,8 +277,10 @@ docker compose restart goodman
   - `src/lib/document-search.ts` - Hybrid search service (RRF fusion)
   - `src/lib/document-selector.ts` - Intelligent document selection orchestrator
 - `src/components/` - React components
-  - `src/components/chat/` - Chat UI components (MessageList, ChatInput, etc.)
-  - `src/components/DocumentSourceDisplay.tsx` - Document source display with relevance scores
+  - `src/components/chat/` - Chat UI components (ChatWorkspace, MessageList, ChatInput, ThinkingIndicator, ExtractionResultModal)
+  - `src/components/AdminPasswordTrigger.tsx` - Admin password modal
+  - `src/components/DocumentSelectModal.tsx` - Document selection modal
+  - `src/components/Navbar.tsx` - Navigation bar with route highlighting
 - `supabase/migrations/` - Database migrations
 - `docs/` - Design documents and development logs
 - `tests/` - Test scripts

@@ -5,11 +5,11 @@
 > 让财务工作流全自动、零压力
 
 <!--
-文档用途: 项目的公开介绍文档。解释项目是什么、如何使用、为什么存在。目标读者是用户和新开发者。
+文档用途: 项目的公开介绍文档。解释项目是什么、如何使用、为什么存在。目标读者是用户。
 
 | 读者 | 更新频率 | 相关文档 |
 |------|----------|----------|
-| 用户、新开发者 | 功能/配置变更时 | CHANGELOG (版本历史), DESIGN (架构) |
+| 用户 | 功能/配置变更时 | CHANGELOG (版本历史)|
 -->
 
 [在线体验 Demo](https://goodman.antelacus.com)｜[License: AGPL-3.0](https://www.gnu.org/licenses/agpl-3.0.html)
@@ -22,7 +22,7 @@
 |------|------|-----------|
 | **智能对话** | 统一的 AI 对话界面，自动理解意图并调用合适的工具<br/>**实时反馈**：SSE 流式响应，显示 AI 思考过程<br/>**多轮对话**：支持上下文记忆，连续追问<br/>**智能工具调用**：22 个财务计算 + 法规检索 + 文档搜索 | 财务分析、合规咨询、数据查询 |
 | **快捷工具** | 独立的快速操作工具<br/>**信息提取**：上传文档（PDF、图片、Excel），AI 自动抽取关键信息 | 发票提取、合同解析 |
-| **文档管理** | 管理已上传的文档，支持预览、编辑属性、删除<br/>**管理员模式**：将文档上传至数据库并进行结构化存储 | 知识库管理 |
+| **文档管理** | 管理已上传的文档，支持预览、编辑属性、删除<br/> | 知识库管理 |
 
 ### 核心能力
 
@@ -32,44 +32,11 @@
 |------|------|
 | **财务指标分析** | 22 个预设函数：流动比率、ROE、资产负债率、杜邦分析等<br/>智能文档选择 + 自定义查询 |
 | **财务合规指导** | 混合检索法规库（关键词 + 向量），结合业务文档判断合规性 |
-| **文档信息提取** | 从上传的 PDF/图片/Excel 中提取结构化数据 |
-
-<details>
-<summary>📸 项目截图（点击展开）</summary>
-
-| 首页 | 智能对话 |
-|------|----------|
-| ![](data/showcases/homepage-screenshot.png) | ![](data/showcases/chat-screenshot.png) |
-
-</details>
+| **财务会计工具** | 当前已开发**文档信息提取**，从上传的 PDF/图片/Excel 中提取结构化数据 |
 
 ---
 
-## 管理员模式配置（可选）
-
-管理员模式允许您直接上传文档到数据库并进行结构化存储，包括财务报表和法规文件的深度解析。
-
-### 配置步骤
-
-1. **设置管理员密码**：在 `.env.local` 中添加：
-
-   ```bash
-   ADMIN_PASSWORD=your_secure_password_here
-   ```
-
-2. **激活管理员模式**：
-   - 访问 **文档管理** 页面 (`/documents`)
-   - 在页面标题处的 **📁** 图标上 **三击**（triple-click）
-   - 输入管理员密码解锁
-
-3. **上传文档到数据库**：
-   - 选择文档类型（见下表分类）
-   - 填写年份和期间（针对财务报表类）
-   - 点击「上传到数据库」
-   - 系统自动执行类型对应的处理流程
-   - 原始文件同时保存到 Supabase Storage，支持预览
-
-### 支持的文档类型与处理流程
+## 数据库支持的文档类型与处理流程
 
 数据库文档分为 4 大类，每类有不同的处理方式：
 
@@ -168,6 +135,7 @@ graph TB
 ```
 
 **处理流程说明**:
+
 - **财务报表** (3表): 提取财务指标到 `financial_data` + 向量化到 `document_chunks`
 - **法规准则** (法律法规/会计准则): 提取条款到 `structured_regulations` + 向量化
 - **其他文档** (财务报告/业务情况/规章制度等): 仅向量化，支持语义搜索
@@ -205,9 +173,8 @@ project-goodman/
 │   │   │   ├── chat/                # 统一 Agent API（同步 + SSE 流式）
 │   │   │   ├── tools/               # 独立工具 API（extract 等）
 │   │   │   ├── admin/               # 管理员端点（密码验证、文档上传）
-│   │   │   ├── landing-chat/        # 首页对话路由
 │   │   │   ├── documents/           # 文档 CRUD + 预览
-│   │   │   └── preset-functions/    # 预设函数列表
+│   │   │   └── health/              # 健康检查端点
 │   │   ├── page.tsx                 # 首页（产品介绍）
 │   │   ├── chat/                    # 统一对话工作台（主入口）
 │   │   └── documents/               # 文档管理模块
@@ -216,16 +183,16 @@ project-goodman/
 │   │   │   ├── ChatWorkspace.tsx    # 对话主容器
 │   │   │   ├── MessageList.tsx      # 消息列表
 │   │   │   ├── ChatInput.tsx        # 输入框（支持文件上传）
-│   │   │   └── ThinkingIndicator.tsx # 实时思考状态
+│   │   │   ├── ThinkingIndicator.tsx # 实时思考状态
+│   │   │   └── ExtractionResultModal.tsx # 提取结果弹窗
 │   │   ├── AdminPasswordTrigger.tsx # 管理员密码弹窗
-│   │   ├── RichTextRenderer.tsx     # 可追溯引用渲染器
+│   │   ├── DocumentSelectModal.tsx  # 文档选择弹窗
 │   │   ├── Navbar.tsx               # 导航栏（带路由高亮）
 │   │   └── ...                      # 其他 UI 组件
 │   ├── lib/                         # 工具函数库
 │   │   ├── workflows/               # LangGraph 工作流
 │   │   │   ├── core/                # 共享节点（load-memory, agent-loop 等）
 │   │   │   ├── unified/             # 统一 Agent Graph
-│   │   │   ├── landing-chat/        # 首页对话工作流
 │   │   │   └── shared/              # 共享工具函数
 │   │   ├── tools/                   # 工具定义
 │   │   │   ├── financial/           # 财务计算工具
@@ -308,7 +275,7 @@ project-goodman/
 **通过管理员模式上传**
 
 1. 启用管理员模式（配置 `ADMIN_PASSWORD`）
-2. 访问文档管理页面，三击 📁 图标解锁
+2. 访问文档管理页面，三击“文档管理”字样解锁
 3. 选择正确的文档类型：
    - **财务报表** (balance_sheet/income_statement/cash_flow): 需指定年份和期间
    - **财务报告** (financial_report): 仅支持 PDF，需指定年份和期间
@@ -320,6 +287,7 @@ project-goodman/
 **处理结果验证**
 
 上传完成后可在文档列表查看处理状态：
+
 - **向量化**: 所有文档类型都会生成 chunks + embeddings
 - **财务指标**: 仅财务报表类，可在「财务指标分析」模块验证
 - **结构化条款**: 仅法规准则类，要求文档使用 "第X条" 标准格式
@@ -337,15 +305,6 @@ Project Goodman 内置 **22 个预设财务计算函数**，覆盖 5 大类别�
 | **综合分析** | 杜邦分析 ROE（分解为营业净利率 × 总资产周转率 × 权益乘数） |
 
 所有函数定义在 `src/lib/preset-functions.ts`，可通过 `/api/preset-functions` 查询列表。
-
-### 本地开发
-
-```bash
-npm run dev        # 启动开发服务器
-npm run build      # 构建生产版本
-npm run start      # 启动生产服务器
-npm run lint       # ESLint 检查
-```
 
 ### 测试
 
