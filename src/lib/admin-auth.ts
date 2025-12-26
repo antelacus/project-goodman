@@ -41,6 +41,13 @@ export async function verifyAdminPassword(password: string): Promise<PasswordVer
   try {
     const adminPassword = process.env.ADMIN_PASSWORD;
 
+    // DEBUG: Log what we're working with (remove after debugging)
+    console.log('[DEBUG] verifyAdminPassword called');
+    console.log('[DEBUG] ADMIN_PASSWORD set:', !!adminPassword);
+    console.log('[DEBUG] ADMIN_PASSWORD length:', adminPassword?.length);
+    console.log('[DEBUG] ADMIN_PASSWORD starts with $2:', adminPassword?.startsWith('$2'));
+    console.log('[DEBUG] Input password length:', password?.length);
+
     if (!adminPassword) {
       console.error('ADMIN_PASSWORD environment variable is not set');
       return { valid: false, needsRehash: false };
@@ -48,6 +55,8 @@ export async function verifyAdminPassword(password: string): Promise<PasswordVer
 
     // Use bcrypt verification with migration support
     const result = await verifyPassword(password, adminPassword);
+
+    console.log('[DEBUG] verifyPassword result:', result);
 
     if (result.needsRehash) {
       console.warn(
