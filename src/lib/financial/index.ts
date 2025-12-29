@@ -12,11 +12,15 @@
 export {
   presetFunctions,
   executeFunction,
-  getPresetByName,
+  getFunctionByName,
+  getFunctionsByCategory,
+  getAllFunctionNames,
+  searchFunctionsByName,
   type PresetFunction,
   type FunctionCategory,
   type CalculationResult,
   type ValidationRule,
+  type ExecutionResult,
 } from "./preset-functions";
 
 // Metric Names

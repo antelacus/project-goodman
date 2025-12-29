@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createServerSupabaseClient } from "../../../lib/supabase";
-import { generateRequestId, createErrorResponse } from "../../../lib/security/error-handler";
+import { createServerSupabaseClient } from "@/lib/database";
+import { generateRequestId, createErrorResponse } from "@/lib/security";
 
 export async function GET(req: NextRequest) {
   const requestId = req.headers.get('x-request-id') || generateRequestId();

@@ -7,7 +7,7 @@
 
 import { z } from "zod";
 import { Tool } from "../types";
-import { createServerSupabaseClient } from "@/lib/supabase";
+import { createServerSupabaseClient } from "@/lib/database";
 import OpenAI from "openai";
 
 // ============================================================================

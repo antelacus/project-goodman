@@ -1,9 +1,8 @@
 "use client";
 import React, { useState, useCallback, useEffect } from "react";
 import { useDocumentStore, Document } from "@/store/documents";
-import PageContainer from "@/components/PageContainer";
-import PageTitle from "@/components/PageTitle";
-import { useAdminAuth } from "@/components/AdminPasswordTrigger";
+import { PageContainer, PageTitle } from "@/components/layout";
+import { useAdminAuth } from "@/components/admin";
 import { useDropzone } from "react-dropzone";
 import {
   DOC_TYPE_OPTIONS,

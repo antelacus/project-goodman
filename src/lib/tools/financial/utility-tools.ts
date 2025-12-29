@@ -8,7 +8,7 @@
  */
 
 import { z } from "zod";
-import { presetFunctions, executeFunction } from "../../preset-functions";
+import { presetFunctions, executeFunction } from "@/lib/financial";
 import type { Tool, ToolExecutionResult } from "../types";
 import {
   QueryFinancialDataInputSchema,

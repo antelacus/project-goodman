@@ -11,7 +11,7 @@ import {
   executeFunction,
   type PresetFunction,
   type FunctionCategory,
-} from "../../preset-functions";
+} from "@/lib/financial";
 import type {
   Tool,
   ToolExecutionResult,

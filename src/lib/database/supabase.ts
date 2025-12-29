@@ -1,5 +1,5 @@
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
-import { Database } from './database.types';
+import { Database } from './types';
 
 // Supabase client for server-side operations (API routes)
 export function createServerSupabaseClient(): SupabaseClient<Database> {

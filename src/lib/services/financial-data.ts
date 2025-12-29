@@ -1,4 +1,4 @@
-import { createServerSupabaseClient } from "../supabase";
+import { createServerSupabaseClient } from "@/lib/database";
 
 export interface FinancialDataPoint {
     metric_name: string;

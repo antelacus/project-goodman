@@ -15,25 +15,30 @@ export const runtime = "nodejs";
 import { NextRequest, NextResponse } from "next/server";
 import OpenAI from "openai";
 import * as XLSX from "xlsx";
-import { createServerSupabaseClient } from "../../../../lib/supabase";
-import { verifyAdminPassword } from "../../../../lib/admin-auth";
+import { createServerSupabaseClient } from "@/lib/database";
+import {
+  verifyAdminPassword,
+  generateRequestId,
+  createErrorResponse,
+  validateFileByExtension,
+} from "@/lib/security";
 import {
   performStructuredExtraction,
-  DocumentType,
-  ExtractionResult,
-  FinancialExtractionResult,
-  RegulationExtractionResult,
-} from "../../../../lib/structured-extraction";
-import { performColumnBasedExtraction, ColumnMapping, ColumnExtractionOptions } from "../../../../lib/column-extraction";
-import { performAIExtraction } from "../../../../lib/ai-extraction";
+  performColumnBasedExtraction,
+  performAIExtraction,
+  type DocumentType,
+  type ExtractionResult,
+  type FinancialExtractionResult,
+  type RegulationExtractionResult,
+  type ColumnMapping,
+  type ColumnExtractionOptions,
+} from "@/lib/extraction";
 import {
   validateBalanceSheet,
   validateIncomeStatement,
-  validateCashFlow
-} from "../../../../lib/financial-validation";
-import { uploadFileToStorage } from "../../../../lib/storage-helpers";
-import { generateRequestId, createErrorResponse } from "../../../../lib/security/error-handler";
-import { validateFileByExtension } from "../../../../lib/security/file-validator";
+  validateCashFlow,
+} from "@/lib/financial";
+import { uploadFileToStorage } from "@/lib/documents";
 
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,

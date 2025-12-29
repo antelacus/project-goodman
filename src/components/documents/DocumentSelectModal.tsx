@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { useDocumentStore, Document } from "../store/documents";
+import { useDocumentStore, Document } from "@/store/documents";
 import { UploadFeedback, StructureAnalysis } from "./UploadFeedback";
 
 interface DocumentSelectModalProps {

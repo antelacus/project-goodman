@@ -1,4 +1,4 @@
-import { createServerSupabaseClient } from "../supabase";
+import { createServerSupabaseClient } from "@/lib/database";
 
 export interface ConversationMessage {
     id?: string;

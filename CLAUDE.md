@@ -268,45 +268,47 @@ docker compose restart goodman
 ### Key Directories
 
 - `src/app/` - Next.js App Router pages
-  - `src/app/chat/` - Unified chat workspace (main entry point)
-  - `src/app/documents/` - Document management
+  - `src/app/(landing)/` - Public landing page
+  - `src/app/(workspace)/` - Authenticated workspace (chat, documents, help, about)
   - `src/app/api/chat/` - Unified agent API (sync + streaming)
-  - `src/app/api/tools/` - Standalone tool APIs (extract, etc.)
+  - `src/app/api/quick-actions/` - Standalone quick-action APIs (extract, etc.)
   - `src/app/api/admin/` - Admin endpoints (password verification, document upload)
   - `src/app/api/documents/` - Document CRUD + preview
-- `src/lib/` - Core business logic
-  - `src/lib/services/` - Core services (financial data query, etc.)
-  - `src/lib/prompts/` - Prompt templates (`.txt` files)
-  - `src/lib/tools/` - Tool definitions (financial, compliance, extraction)
+- `src/lib/` - Core business logic (domain-based modules)
+  - `src/lib/database/` - Database clients (Supabase, Redis, types)
+  - `src/lib/documents/` - Document processing (search, chunker, parser, storage, constants)
+  - `src/lib/extraction/` - Data extraction (AI, structured, column-based)
+  - `src/lib/financial/` - Financial domain (preset-functions, metric-names, schema, validation)
+  - `src/lib/security/` - Security utilities (admin-auth, session, rate-limiter, audit)
+  - `src/lib/services/` - Core services (financial data query)
+  - `src/lib/tools/` - Agent tool definitions (financial, search, extraction)
   - `src/lib/workflows/` - LangGraph workflows
     - `src/lib/workflows/core/` - Shared node implementations
     - `src/lib/workflows/unified/` - Unified agent graph
-    - `src/lib/workflows/shared/` - Shared utilities
-  - `src/lib/preset-functions.ts` - 22 financial calculation functions
-  - `src/lib/financial-metric-names.ts` - Standardized metric name constants
-  - `src/lib/document-constants.ts` - Document type/period display mappings
-  - `src/lib/document-search.ts` - Hybrid search service (RRF fusion)
-  - `src/lib/document-selector.ts` - Intelligent document selection orchestrator
-- `src/components/` - React components
-  - `src/components/chat/` - Chat UI components (ChatWorkspace, MessageList, ChatInput, ThinkingIndicator, ExtractionResultModal)
-  - `src/components/AdminPasswordTrigger.tsx` - Admin password modal
-  - `src/components/DocumentSelectModal.tsx` - Document selection modal
-  - `src/components/Navbar.tsx` - Navigation bar with route highlighting
+  - `src/lib/prompts/` - Prompt templates (`.txt` files + loader)
+  - `src/lib/validation/` - API input validation schemas
+- `src/components/` - React components (domain-based modules)
+  - `src/components/chat/` - Chat UI (ChatWorkspace, MessageList, ChatInput, ThinkingIndicator)
+  - `src/components/layout/` - Layout (Navbar, Sidebar, PageContainer, PageTitle)
+  - `src/components/documents/` - Document UI (DocumentSelectModal, UploadFeedback)
+  - `src/components/admin/` - Admin UI (PasswordModal)
+  - `src/components/quick-actions/` - Quick action modals (ExtractionModal)
+  - `src/components/providers/` - Context providers (ClientOnlyProvider)
 - `supabase/migrations/` - Database migrations
 - `docs/` - Design documents and development logs
 - `tests/` - Test scripts
 
 ### Code Conventions
 
-- Prompt templates stored in `src/lib/prompts/*.txt`, loaded via `src/lib/prompts.ts`
-- Financial metric names defined as constants in `financial-metric-names.ts` (no hardcoded strings)
-- Document types and periods use mapping constants in `document-constants.ts`
+- Prompt templates stored in `src/lib/prompts/*.txt`, loaded via `src/lib/prompts/index.ts`
+- Financial metric names defined as constants in `src/lib/financial/metric-names.ts`
+- Document types and periods use mapping constants in `src/lib/documents/constants.ts`
 - Use Zod for API input validation (schemas in `src/lib/validation/api-schemas.ts`)
-- Database: structured tables for exact queries, vector embeddings for semantic search
-- Admin operations require password verification via `admin-auth.ts`
+- Database clients in `src/lib/database/` (Supabase for data, Redis for sessions/cache)
+- Admin operations require password verification via `src/lib/security/admin-auth.ts`
 - Document search uses hybrid retrieval (vector + keyword) with RRF fusion scoring
-- Workflow shared logic goes in `src/lib/workflows/shared/` for reuse across modules
-- Document selection supports both auto (AI) and manual (user override) modes
+- Agent tools defined in `src/lib/tools/`, quick-actions in `src/app/api/quick-actions/`
+- Components organized by domain with barrel exports (`index.ts`) for clean imports
 
 ### Code Documentation Standards
 

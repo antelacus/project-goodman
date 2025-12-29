@@ -9,7 +9,7 @@
  * - 5 failures: 15-minute lockout
  */
 
-import { redis } from '../redis';
+import { redis } from '@/lib/database/redis';
 
 // =============================================================================
 // Types

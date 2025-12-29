@@ -1,11 +1,20 @@
 export const runtime = "nodejs";
 import { NextRequest, NextResponse } from "next/server";
-import { verifyAdminPassword } from "../../../../lib/admin-auth";
-import { generateRequestId, createErrorResponse } from "../../../../lib/security/error-handler";
-import { createSession, COOKIE_NAME, COOKIE_OPTIONS, SessionData } from "../../../../lib/security/session";
-import { checkBruteForce, recordFailedAttempt, resetBruteForce } from "../../../../lib/security/brute-force";
-import { logAuthEvent, logSecurityEvent } from "../../../../lib/security/audit-logger";
-import { validateRequest, AdminVerifyPasswordSchema } from "../../../../lib/validation/api-schemas";
+import {
+  verifyAdminPassword,
+  generateRequestId,
+  createErrorResponse,
+  createSession,
+  COOKIE_NAME,
+  COOKIE_OPTIONS,
+  type SessionData,
+  checkBruteForce,
+  recordFailedAttempt,
+  resetBruteForce,
+  logAuthEvent,
+  logSecurityEvent,
+} from "@/lib/security";
+import { validateRequest, AdminVerifyPasswordSchema } from "@/lib/validation/api-schemas";
 
 /**
  * Helper to extract client IP from request

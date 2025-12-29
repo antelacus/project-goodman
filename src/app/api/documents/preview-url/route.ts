@@ -5,8 +5,8 @@
  */
 
 import { NextRequest, NextResponse } from "next/server";
-import { getSignedFileUrl } from "../../../../lib/storage-helpers";
-import { generateRequestId, createErrorResponse } from "../../../../lib/security/error-handler";
+import { getSignedFileUrl } from "@/lib/documents";
+import { generateRequestId, createErrorResponse } from "@/lib/security";
 
 export async function GET(req: NextRequest) {
   const requestId = req.headers.get('x-request-id') || generateRequestId();

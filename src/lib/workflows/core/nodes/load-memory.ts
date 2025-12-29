@@ -8,7 +8,7 @@
 import { BaseAgentState } from "../state/base-state";
 import { conversationMemory } from "@/lib/memory/conversation-memory";
 import { SystemMessage, HumanMessage, AIMessage, BaseMessage } from "@langchain/core/messages";
-import { createServerSupabaseClient } from "@/lib/supabase";
+import { createServerSupabaseClient } from "@/lib/database";
 
 /**
  * Loads memory and initializes agent state

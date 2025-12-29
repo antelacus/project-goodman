@@ -1,11 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import OpenAI from "openai";
-import { createServerSupabaseClient } from "../../../lib/supabase";
-import { verifyAdminPassword } from "../../../lib/admin-auth";
-import { deleteDocumentFiles } from "../../../lib/storage-helpers";
-import { generateRequestId, createErrorResponse } from "../../../lib/security/error-handler";
-import { parseDocumentSections } from "../../../lib/section-parser";
-import { createSectionAwareChunks } from "../../../lib/section-aware-chunker";
+import { createServerSupabaseClient } from "@/lib/database";
+import { verifyAdminPassword, generateRequestId, createErrorResponse } from "@/lib/security";
+import { deleteDocumentFiles, parseDocumentSections, createSectionAwareChunks } from "@/lib/documents";
 
 // Initialize OpenAI client
 const openai = new OpenAI({

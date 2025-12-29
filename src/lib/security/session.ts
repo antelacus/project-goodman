@@ -6,7 +6,7 @@
  */
 
 import { v4 as uuidv4 } from 'uuid';
-import { redis } from '../redis';
+import { redis } from '@/lib/database/redis';
 
 // =============================================================================
 // Types
