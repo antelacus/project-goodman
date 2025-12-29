@@ -3,25 +3,30 @@
  *
  * Unified tool system for the workflow architecture.
  *
+ * Directory Structure:
+ * - /financial  - Financial calculation & query tools (25 tools)
+ * - /search     - Document & regulation search tools (2 tools)
+ * - /extraction - Document extraction tools (1 tool)
+ *
  * Usage:
  * ```typescript
- * import { toolRegistry, registerFinancialTools } from '@/lib/tools';
+ * import { toolRegistry, registerUnifiedTools } from '@/lib/tools';
  *
- * // Register tools at app startup
- * registerFinancialTools();
+ * // Register all tools at app startup
+ * registerUnifiedTools();
  *
  * // Get OpenAI function definitions
  * const tools = toolRegistry.toOpenAIFunctionDefs();
  *
  * // Execute a tool
- * const result = await toolRegistry.execute('calculate_financial_metric', {
- *   metric_name: 'debt_to_asset_ratio',
- *   inputs: { '负债总计': 100, '资产总计': 200 }
- * });
+ * const result = await toolRegistry.execute('current_ratio', { year: '2024' });
  * ```
  */
 
-// Core types
+// ============================================================================
+// Core Types & Registry
+// ============================================================================
+
 export type {
   Tool,
   ToolCategory,
@@ -34,7 +39,6 @@ export type {
   ChatCompletionToolChoiceOption,
 } from "./types";
 
-// Schemas
 export {
   FinancialToolInputSchema,
   FinancialToolOutputSchema,
@@ -42,40 +46,60 @@ export {
   QueryFinancialDataOutputSchema,
 } from "./types";
 
-// Type guards
 export { isFinancialTool, isTool } from "./types";
 
-// Registry
 export { ToolRegistry, toolRegistry } from "./registry";
 
-// Financial tools
+// ============================================================================
+// Financial Tools
+// ============================================================================
+
 export {
   registerFinancialTools,
   buildFinancialAnalysisFunctionDefs,
   buildGuidanceChatFunctionDefs,
-  getFinancialToolNames,
-  getFinancialTool,
-} from "./financial-tools";
+  getPresetToolNames as getFinancialToolNames,
+  getPresetTool as getFinancialTool,
+} from "./financial";
 
-// New Tool Wrappers
-import { searchDocumentsTool } from "./compliance/search-documents";
-import { searchRegulationsTool } from "./compliance/search-regulations";
-import { extractDocumentTool } from "./extraction/extract-document";
-import { registerFinancialTools } from "./financial-tools";
-import { toolRegistry } from "./registry";
+// ============================================================================
+// Search Tools
+// ============================================================================
+
+export {
+  searchDocumentsTool,
+  searchRegulationsTool,
+  registerSearchTools,
+} from "./search";
+
+// ============================================================================
+// Extraction Tools
+// ============================================================================
+
+export {
+  extractDocumentTool,
+  registerExtractionTools,
+} from "./extraction";
+
+// ============================================================================
+// Unified Registration
+// ============================================================================
+
+import { registerFinancialTools } from "./financial";
+import { registerSearchTools } from "./search";
+import { registerExtractionTools } from "./extraction";
 
 /**
- * Registers all available tools (V3.6a Unified Agent)
+ * Register all available tools (V3.6a Unified Agent)
+ *
+ * Call this at application startup to make all 28 tools available:
+ * - 22 preset financial calculations
+ * - 3 financial utility tools
+ * - 2 search tools
+ * - 1 extraction tool
  */
-export function registerUnifiedTools() {
-  // Register existing financial tools
+export function registerUnifiedTools(): void {
   registerFinancialTools();
-
-  // Register new compliance tools
-  toolRegistry.register(searchDocumentsTool);
-  toolRegistry.register(searchRegulationsTool);
-
-  // Register new extraction tools
-  toolRegistry.register(extractDocumentTool);
+  registerSearchTools();
+  registerExtractionTools();
 }
-

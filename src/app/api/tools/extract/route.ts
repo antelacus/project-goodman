@@ -51,7 +51,7 @@ export async function POST(req: NextRequest) {
         .from('documents')
         .select('file_url, name, doc_type')
         .eq('id', documentId)
-        .single();
+        .single<{ file_url: string | null; name: string; doc_type: string }>();
 
       if (docError || !doc) {
         return NextResponse.json({ success: false, error: 'document_not_found', message: '找不到指定文档' }, { status: 404 });

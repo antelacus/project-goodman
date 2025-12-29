@@ -14,12 +14,12 @@ import {
   isFinancialStatement,
   isUploadable,
   PDF_ONLY_TYPES,
-} from "@/lib/document-constants";
+} from "@/lib/documents";
 import {
   isImage,
   isPdf,
   isExcel,
-} from "@/lib/storage-helpers";
+} from "@/lib/documents";
 
 // Generate year options (last 20 years)
 const YEAR_OPTIONS = Array.from({ length: 20 }, (_, i) => `${2025 - i}`);
