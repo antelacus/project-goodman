@@ -1,6 +1,6 @@
 "use client";
 import { useEffect } from "react";
-import { useDocumentStore } from "../store/documents";
+import { useDocumentStore } from "@/store/documents";
 
 export function ClientOnlyProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {

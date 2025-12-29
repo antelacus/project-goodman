@@ -8,7 +8,7 @@ export function loadPromptTemplate(filename: string): string {
 
 /**
  * 生成智能文档分析的系统提示词（用于视觉识别）。
- * Used by: /api/tools/extract
+ * Used by: /api/quick-actions/extract
  */
 export function getDataExtractPrompt(): string {
   const promptTemplate = loadPromptTemplate('data-extract.txt');

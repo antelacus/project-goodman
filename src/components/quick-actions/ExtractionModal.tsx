@@ -1,19 +1,19 @@
 import React, { useState, useEffect, useRef } from "react";
 import { Copy, FileText, Check, Loader2, FileSpreadsheet } from "lucide-react";
-import DocumentSelectModal from "../DocumentSelectModal";
-import { useDocumentStore } from "../../store/documents";
+import { DocumentSelectModal } from "@/components/documents";
+import { useDocumentStore } from "@/store/documents";
 
-interface ExtractionToolModalProps {
+interface ExtractionModalProps {
     isOpen: boolean;
     onClose: () => void;
 }
 
 type ExtractionStep = 'intro' | 'confirm' | 'extracting' | 'result' | 'error';
 
-export default function ExtractionToolModal({
+export default function ExtractionModal({
     isOpen,
     onClose,
-}: ExtractionToolModalProps) {
+}: ExtractionModalProps) {
     const [step, setStep] = useState<ExtractionStep>('intro');
     const [selectedDocId, setSelectedDocId] = useState<string | null>(null);
     const [isDocSelectOpen, setIsDocSelectOpen] = useState(false);
@@ -61,7 +61,7 @@ export default function ExtractionToolModal({
 
         setStep('extracting');
         try {
-            const response = await fetch('/api/tools/extract', {
+            const response = await fetch('/api/quick-actions/extract', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ documentId: selectedDocId }),

@@ -2,7 +2,7 @@
 import React, { useRef, useState, useEffect } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import PageContainer from "@/components/PageContainer";
+import { PageContainer } from "@/components/layout";
 import { CheckCircle, Zap, TrendingUp, FileText } from "lucide-react";
 
 // Simple Landing Navbar

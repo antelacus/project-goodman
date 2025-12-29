@@ -1,6 +1,6 @@
 import React, { useRef, useState } from 'react';
 import { Paperclip, Send, X, BarChart2 } from 'lucide-react';
-import DocumentSelectModal from '../DocumentSelectModal';
+import { DocumentSelectModal } from '@/components/documents';
 import { useDocumentStore } from '../../store/documents';
 
 type AnalysisResult = {

@@ -169,47 +169,38 @@ graph TB
 project-goodman/
 ├── src/
 │   ├── app/                         # Next.js 应用路由
-│   │   ├── (landing)/               # 公开页面
-│   │   │   └── page.tsx             # 首页（产品介绍）
-│   │   ├── (workspace)/             # 需认证的工作区
-│   │   │   ├── layout.tsx           # Sidebar 布局
-│   │   │   ├── chat/                # 统一对话工作台
-│   │   │   ├── documents/           # 文档管理模块
-│   │   │   ├── help/                # 使用指南
-│   │   │   └── about/               # 关于页面
-│   │   ├── api/                     # API 路由
-│   ├── components/                  # React 组件
-│   │   ├── chat/                    # 对话 UI 组件
-│   │   │   ├── ChatWorkspace.tsx    # 对话主容器
-│   │   │   ├── MessageList.tsx      # 消息列表
-│   │   │   ├── ChatInput.tsx        # 输入框（支持文件上传）
-│   │   │   ├── ThinkingIndicator.tsx # 实时思考状态
-│   │   │   └── ExtractionResultModal.tsx # 提取结果弹窗
-│   │   ├── AdminPasswordTrigger.tsx # 管理员密码弹窗
-│   │   ├── DocumentSelectModal.tsx  # 文档选择弹窗
-│   │   ├── Navbar.tsx               # 导航栏（带路由高亮）
-│   │   └── ...                      # 其他 UI 组件
-│   ├── lib/                         # 工具函数库
-│   │   ├── workflows/               # LangGraph 工作流
-│   │   │   ├── core/                # 共享节点（load-memory, agent-loop 等）
-│   │   │   ├── unified/             # 统一 Agent Graph
-│   │   │   └── shared/              # 共享工具函数
-│   │   ├── tools/                   # 工具定义
+│   │   ├── (landing)/               # 公开页面（首页）
+│   │   ├── (workspace)/             # 工作区（chat, documents, help, about）
+│   │   └── api/                     # API 路由
+│   │       ├── chat/                # Agent API（同步 + 流式）
+│   │       ├── quick-actions/       # 快捷操作 API
+│   │       ├── admin/               # 管理员 API
+│   │       └── documents/           # 文档 CRUD API
+│   ├── components/                  # React 组件（按领域组织）
+│   │   ├── chat/                    # 对话 UI（ChatWorkspace, MessageList, ChatInput）
+│   │   ├── layout/                  # 布局组件（Navbar, Sidebar, PageContainer）
+│   │   ├── documents/               # 文档 UI（DocumentSelectModal, UploadFeedback）
+│   │   ├── admin/                   # 管理员 UI（PasswordModal）
+│   │   ├── quick-actions/           # 快捷操作弹窗（ExtractionModal）
+│   │   └── providers/               # Context Providers
+│   ├── lib/                         # 核心业务逻辑（按领域组织）
+│   │   ├── database/                # 数据库客户端（Supabase, Redis）
+│   │   ├── documents/               # 文档处理（搜索、分块、解析、存储）
+│   │   ├── extraction/              # 数据提取（AI、结构化、Excel）
+│   │   ├── financial/               # 财务领域（预设函数、指标名、验证）
+│   │   ├── security/                # 安全工具（认证、会话、限流、审计）
+│   │   ├── tools/                   # Agent 工具定义
 │   │   │   ├── financial/           # 财务计算工具
-│   │   │   ├── compliance/          # 合规搜索工具
-│   │   │   └── extraction/          # 信息提取工具
+│   │   │   ├── search/              # 搜索工具
+│   │   │   └── extraction/          # 提取工具
+│   │   ├── workflows/               # LangGraph 工作流
+│   │   │   ├── core/                # 共享节点
+│   │   │   └── unified/             # 统一 Agent Graph
 │   │   ├── prompts/                 # Prompt 模板
-│   │   ├── preset-functions.ts      # 22 个预设财务函数
-│   │   ├── document-search.ts       # 混合搜索服务
-│   │   ├── document-selector.ts     # 智能文档选择
-│   │   └── ...                      # 其他工具
+│   │   └── validation/              # API 输入验证
 │   └── store/                       # Zustand 状态管理
-├── supabase/
-│   └── migrations/                  # 数据库迁移文件
-├── tests/
-│   ├── integration/                 # API 集成测试
-│   ├── unit/                        # 单元测试
-│   └── e2e/                         # 端到端测试
+├── supabase/migrations/             # 数据库迁移文件
+├── tests/                           # 测试（integration, unit, e2e）
 ├── docs/                            # 设计文档和开发日志
 └── public/                          # 静态资源
 ```

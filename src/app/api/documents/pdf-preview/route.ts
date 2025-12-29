@@ -13,8 +13,8 @@
 export const runtime = "nodejs";
 
 import { NextRequest, NextResponse } from "next/server";
-import { createServerSupabaseClient } from "../../../../lib/supabase";
-import { generateRequestId, createErrorResponse } from "../../../../lib/security/error-handler";
+import { createServerSupabaseClient } from "@/lib/database";
+import { generateRequestId, createErrorResponse } from "@/lib/security";
 
 // Dynamic imports for server-side PDF rendering
 let pdfjs: typeof import("pdfjs-dist") | null = null;

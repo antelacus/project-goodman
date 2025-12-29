@@ -17,7 +17,7 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useSidebar } from './SidebarProvider';
-import ExtractionToolModal from '../chat/ExtractionToolModal';
+import ExtractionModal from '../quick-actions/ExtractionModal';
 
 // Define navigation items
 const navItems = [
@@ -200,7 +200,7 @@ export default function Sidebar() {
                 </div>
             </aside>
 
-            <ExtractionToolModal
+            <ExtractionModal
                 isOpen={isExtractionOpen}
                 onClose={() => setIsExtractionOpen(false)}
             />

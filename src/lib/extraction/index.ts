@@ -8,20 +8,32 @@
  */
 
 // AI Extraction
-export {
-  extractFinancialData,
-} from "./ai";
+export { performAIExtraction } from "./ai";
 
 // Structured Extraction
 export {
   performStructuredExtraction,
-  classifyDocument,
+  classifyDocumentType,
+  extractFinancialMetrics,
+  extractYearAndPeriod,
+  extractRegulationArticles,
+  extractKeywords,
+  validateExtractionResult,
+  formatMetricName,
   type DocumentType,
   type ExtractionResult,
+  type FinancialMetric,
+  type RegulationArticle,
+  type ContractClause,
+  type FinancialExtractionResult,
+  type RegulationExtractionResult,
+  type ContractExtractionResult,
+  type GeneralExtractionResult,
 } from "./structured";
 
 // Column Extraction
 export {
-  extractFromExcel,
-  getColumnMappingForType,
+  performColumnBasedExtraction,
+  type ColumnMapping,
+  type ColumnExtractionOptions,
 } from "./column";

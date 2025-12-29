@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { unifiedAgentGraph } from "@/lib/workflows/unified/graph";
-import { createServerSupabaseClient } from "@/lib/supabase";
+import { createServerSupabaseClient } from "@/lib/database";
 
 export async function POST(req: NextRequest) {
     try {

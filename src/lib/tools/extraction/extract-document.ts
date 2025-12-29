@@ -6,8 +6,8 @@
 
 import { z } from "zod";
 import type { Tool } from "../types";
-import { createServerSupabaseClient } from "@/lib/supabase";
-import { performStructuredExtraction, DocumentType } from "@/lib/structured-extraction";
+import { createServerSupabaseClient } from "@/lib/database";
+import { performStructuredExtraction, type DocumentType } from "@/lib/extraction";
 
 export const ExtractDocumentInputSchema = z.object({
     documentId: z.string().describe("UUID of the document to extract from"),

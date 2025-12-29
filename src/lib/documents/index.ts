@@ -14,7 +14,7 @@ export {
   searchDocuments,
   type DocumentSearchFilters,
   type DocumentSearchOptions,
-  type DocumentSearchResult,
+  type DocumentSearchResponse,
 } from "./search";
 
 // Constants
@@ -53,10 +53,16 @@ export {
 
 // Storage
 export {
-  uploadDocumentFile,
+  uploadFileToStorage,
   downloadFileAsBase64,
-  getSignedUrl,
-  deleteDocumentFile,
-  listDocumentFiles,
+  getSignedFileUrl,
+  getSignedFileUrls,
+  deleteFileFromStorage,
+  deleteDocumentFiles,
   getFirstFileForDocument,
+  getFileExtension,
+  isPreviewable,
+  isImage,
+  isPdf,
+  isExcel,
 } from "./storage";

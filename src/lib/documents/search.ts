@@ -1,6 +1,6 @@
-import { createServerSupabaseClient } from '@/lib/supabase';
+import { createServerSupabaseClient } from '@/lib/database';
 
-import { SearchResultDocument } from './types/domain-types';
+import { SearchResultDocument } from '@/lib/types/domain-types';
 
 // Types define the search filters and options
 export interface DocumentSearchFilters {
