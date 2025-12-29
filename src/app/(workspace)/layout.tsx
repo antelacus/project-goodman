@@ -9,7 +9,7 @@ function WorkspaceLayoutContent({ children }: { children: React.ReactNode }) {
     const { isCollapsed } = useSidebar();
 
     return (
-        <div className="flex min-h-screen flex-col bg-neutral-950 md:flex-row">
+        <div className="flex min-h-screen flex-col bg-neutral-50 md:flex-row">
             {/* Mobile Header - Visible only on mobile */}
             <MobileHeader />
 

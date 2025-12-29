@@ -2,7 +2,7 @@ import React, { useEffect, useRef } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkMath from 'remark-math';
 import rehypeKatex from 'rehype-katex';
-import { Bot, User } from 'lucide-react';
+import { Bot } from 'lucide-react';
 import 'katex/dist/katex.min.css';
 import ThinkingIndicator from './ThinkingIndicator';
 
@@ -31,40 +31,32 @@ const MessageList: React.FC<MessageListProps> = ({ messages, currentThinking }) 
 
     return (
         <div className="flex-1 w-full max-w-4xl mx-auto space-y-6 pb-4">
-            {messages.length === 0 && (
-                <div className="flex flex-col items-center justify-center h-full text-neutral-400 mt-20">
-                    <div className="w-16 h-16 bg-gradient-to-br from-yellow-50 to-white rounded-2xl flex items-center justify-center mb-4 shadow-sm border border-yellow-100/50">
-                        <Bot className="w-8 h-8 text-yellow-500" />
-                    </div>
-                    <p className="text-lg font-medium text-neutral-600">How can I help you today?</p>
-                    <p className="text-sm mt-2 opacity-70">Ask about financial analysis, compliance, or upload reports.</p>
-                </div>
-            )}
-
             {messages.map((msg, idx) => (
                 <div
                     key={msg.id || idx}
-                    className={`flex items-start gap-4 ${msg.role === 'user' ? 'flex-row-reverse' : ''}`}
+                    className={`flex items-start gap-4 ${msg.role === 'user' ? 'justify-end' : ''}`}
                 >
-                    {/* Avatar */}
-                    <div className={`flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center border shadow-sm mt-1
-                ${msg.role === 'user'
-                            ? 'bg-neutral-800 text-white border-neutral-700'
-                            : 'bg-yellow-400 text-black border-yellow-500/20'}`}
-                    >
-                        {msg.role === 'user' ? <User size={16} /> : <Bot size={18} />}
-                    </div>
+                    {/* Avatar (Only for Assistant, User doesn't usually show avatar in Gemini chat flow next to bubble) */}
+                    {msg.role === 'assistant' && (
+                        <div className="flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center mt-1 text-blue-500">
+                            <span className="text-xl">✨</span>
+                            {/* Or use the cleaner Icon: <Bot size={20} className="text-blue-500" />. 
+                                Gemini uses the sparkle icon. I'll stick to a simple sparkle or Bot icon for now 
+                                but style it cleaner. */}
+                        </div>
+                    )}
 
                     {/* Content Bubble */}
-                    <div className={`flex-1 max-w-[80%] rounded-2xl px-5 py-3.5 text-sm leading-relaxed shadow-sm
-                ${msg.role === 'user'
-                            ? 'bg-neutral-800 text-white rounded-tr-sm'
-                            : 'bg-white text-neutral-800 border border-neutral-100 rounded-tl-sm'}`}
+                    <div className={`flex-1 max-w-[85%] text-base leading-relaxed
+                        ${msg.role === 'user'
+                            ? 'bg-[#f0f4f9] text-[#1f1f1f] rounded-[24px] px-6 py-4' // Gemini User Bubble
+                            : 'bg-transparent text-[#1f1f1f] px-0 py-0' // Gemini Assistant (Borderless)
+                        }`}
                     >
                         {msg.role === 'user' ? (
                             <div className="whitespace-pre-wrap">{msg.content}</div>
                         ) : (
-                            <div className="prose prose-sm max-w-none prose-neutral prose-p:my-1 prose-headings:my-2 prose-ul:my-1 prose-li:my-0">
+                            <div className="prose prose-neutral max-w-none prose-p:leading-relaxed prose-pre:bg-neutral-100 prose-pre:rounded-xl prose-pre:p-4">
                                 <ReactMarkdown
                                     remarkPlugins={[remarkMath]}
                                     rehypePlugins={[rehypeKatex]}

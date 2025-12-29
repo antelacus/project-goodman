@@ -308,3 +308,80 @@ export function isExcel(filename: string): boolean {
   const ext = getFileExtension(filename);
   return ['xlsx', 'xls'].includes(ext);
 }
+
+/**
+ * Download a file from Supabase Storage as a Base64 string
+ *
+ * @param storagePath - The storage path or full URL (we'll extract the path)
+ * @returns Base64 string of the file content
+ */
+export async function downloadFileAsBase64(storagePath: string): Promise<string> {
+  const supabase = createStorageClient();
+
+  // If a full URL is provided, extract the path
+  // Assume standard Supabase storage URL format or just the path
+  // If it's a full URL, we might need to handle it, but for now assume we get the path or relative path
+  // Ideally, the caller provides the internal storage path (e.g., "doc_id/file.pdf")
+
+  // Clean path just in case
+  let cleanPath = storagePath;
+  if (storagePath.includes(`${BUCKET_NAME}/`)) {
+    cleanPath = storagePath.split(`${BUCKET_NAME}/`)[1];
+  }
+
+  console.log(`[Storage] Downloading file: ${cleanPath}`);
+
+  const { data, error } = await supabase.storage
+    .from(BUCKET_NAME)
+    .download(cleanPath);
+
+  if (error) {
+    console.error('[Storage] Download error:', error);
+    throw new Error(`Failed to download file: ${error.message}`);
+  }
+
+  if (!data) {
+    throw new Error('No data received from download');
+  }
+
+  // Convert Blob/File to ArrayBuffer then Buffer then Base64
+  const arrayBuffer = await data.arrayBuffer();
+  const buffer = Buffer.from(arrayBuffer);
+  return buffer.toString('base64');
+}
+
+/**
+ * Get the first file found for a document ID
+ * Used as a fallback when file_url is missing in database
+ */
+export async function getFirstFileForDocument(documentId: string): Promise<{ path: string; name: string } | null> {
+  const supabase = createStorageClient();
+
+  const { data: files, error } = await supabase.storage
+    .from(BUCKET_NAME)
+    .list(documentId, {
+      limit: 1,
+      offset: 0,
+      sortBy: { column: 'name', order: 'asc' },
+    });
+
+  if (error) {
+    console.error('[Storage] List files error:', error);
+    return null;
+  }
+
+  if (!files || files.length === 0) {
+    return null;
+  }
+
+  // Filter out .emptyFolderPlaceholder if it exists
+  const validFiles = files.filter(f => f.name !== '.emptyFolderPlaceholder');
+
+  if (validFiles.length === 0) return null;
+
+  const file = validFiles[0];
+  return {
+    path: `${documentId}/${file.name}`,
+    name: file.name
+  };
+}
