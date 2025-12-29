@@ -74,9 +74,9 @@ export default function ChatWorkspace() {
     };
 
     return (
-        <div className="flex flex-col h-full bg-slate-50 relative overflow-hidden">
-            {/* Background decoration */}
-            <div className="absolute inset-0 bg-gradient-to-br from-indigo-50 via-white to-purple-50 opacity-50 pointer-events-none" />
+        <div className="flex flex-col h-full bg-neutral-50 relative overflow-hidden">
+            {/* Background decoration - Simplified */}
+            <div className="absolute inset-0 bg-white/50 opacity-10 pointer-events-none" />
 
             <div className="flex-1 flex flex-col max-w-5xl mx-auto w-full px-4 pt-6 pb-4 z-10 relative">
                 <div className="flex-1 overflow-y-auto mb-4 bg-white/60 backdrop-blur-sm rounded-2xl border border-white/50 shadow-sm p-6 scroll-smooth">
