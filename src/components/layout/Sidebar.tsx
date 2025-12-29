@@ -6,7 +6,7 @@ import {
     ChevronsRight,
     FileSpreadsheet,
     FolderOpen,
-    HelpCircle,
+    BookOpen,
     Info,
     Mail,
     Plus,
@@ -20,7 +20,7 @@ import { useSidebar } from './SidebarProvider';
 // Define navigation items
 const navItems = [
     { name: '文档管理', href: '/documents', icon: FolderOpen },
-    { name: '使用指南', href: '/help', icon: HelpCircle },
+    { name: '使用指南', href: '/help', icon: BookOpen },
     { name: '关于', href: '/about', icon: Info },
 ];
 

@@ -1,5 +1,5 @@
 import React, { useRef, useState } from 'react';
-import { FiPaperclip, FiSend, FiX, FiFileText, FiBarChart2 } from 'react-icons/fi';
+import { Paperclip, Send, X, FileText, BarChart2 } from 'lucide-react';
 import ExtractionResultModal from './ExtractionResultModal';
 import DocumentSelectModal from '../DocumentSelectModal';
 import { useDocumentStore } from '../../store/documents';
@@ -138,20 +138,20 @@ const ChatInput: React.FC<ChatInputProps> = ({ onSendMessage, disabled }) => {
             {(files.length > 0 || selectedDocIds.length > 0) && (
                 <div className="flex flex-wrap gap-2 mb-2 px-2">
                     {files.map((file, i) => (
-                        <div key={`file-${i}`} className="flex items-center bg-white border border-slate-200 rounded-lg px-3 py-1.5 text-xs text-slate-600 shadow-sm animate-in fade-in slide-in-from-bottom-1">
+                        <div key={`file-${i}`} className="flex items-center bg-white border border-neutral-200 rounded-lg px-3 py-1.5 text-xs text-neutral-600 shadow-sm animate-in fade-in slide-in-from-bottom-1">
                             <span className="truncate max-w-[150px]">{file.name}</span>
                             <button onClick={() => removeFile(i)} className="ml-2 hover:text-red-500">
-                                <FiX />
+                                <X size={14} />
                             </button>
                         </div>
                     ))}
                     {selectedDocIds.map((id) => {
                         const doc = documents.find(d => d.id === id);
                         return (
-                            <div key={`doc-${id}`} className="flex items-center bg-purple-50 border border-purple-200 rounded-lg px-3 py-1.5 text-xs text-purple-700 shadow-sm animate-in fade-in slide-in-from-bottom-1">
+                            <div key={`doc-${id}`} className="flex items-center bg-yellow-50 border border-yellow-200 rounded-lg px-3 py-1.5 text-xs text-yellow-800 shadow-sm animate-in fade-in slide-in-from-bottom-1">
                                 <span className="truncate max-w-[150px]">{doc ? doc.name : 'Unknown Doc'}</span>
-                                <button onClick={() => removeDocId(id)} className="ml-2 hover:text-purple-900">
-                                    <FiX />
+                                <button onClick={() => removeDocId(id)} className="ml-2 hover:text-yellow-900">
+                                    <X size={14} />
                                 </button>
                             </div>
                         );
@@ -159,14 +159,14 @@ const ChatInput: React.FC<ChatInputProps> = ({ onSendMessage, disabled }) => {
                 </div>
             )}
 
-            <div className="bg-white rounded-2xl border border-slate-200 shadow-lg shadow-slate-200/50 flex items-end p-2 transition-all focus-within:ring-2 focus-within:ring-indigo-500/20 focus-within:border-indigo-500/50 relative z-10">
+            <div className="bg-white rounded-2xl border border-neutral-200 shadow-lg shadow-neutral-200/50 flex items-end p-2 transition-all focus-within:ring-2 focus-within:ring-yellow-500/20 focus-within:border-yellow-500/50 relative z-10">
                 <button
                     onClick={() => setIsDocModalOpen(true)}
-                    className="p-3 text-slate-400 hover:text-indigo-600 hover:bg-slate-50 rounded-xl transition-colors"
+                    className="p-3 text-neutral-400 hover:text-neutral-900 hover:bg-neutral-50 rounded-xl transition-colors"
                     disabled={disabled}
                     title="Select or Upload documents"
                 >
-                    <FiPaperclip size={20} />
+                    <Paperclip size={20} />
                     {/* Hidden file input kept for drag-and-drop support if needed, or removed if strictly modal-only. 
                         Let's keep it but not use it via click. */}
                     <input
@@ -184,7 +184,7 @@ const ChatInput: React.FC<ChatInputProps> = ({ onSendMessage, disabled }) => {
                     onChange={(e) => { setMessage(e.target.value); autoResize(); }}
                     onKeyDown={handleKeyDown}
                     placeholder="Ask about financial reports, regulations, or upload documents..."
-                    className="flex-1 max-h-[200px] min-h-[24px] bg-transparent border-none focus:ring-0 resize-none py-3 px-2 text-slate-700 placeholder:text-slate-400 leading-relaxed"
+                    className="flex-1 max-h-[200px] min-h-[24px] bg-transparent border-none focus:ring-0 resize-none py-3 px-2 text-neutral-900 placeholder:text-neutral-400 leading-relaxed"
                     rows={1}
                     disabled={disabled}
                 />
@@ -193,11 +193,11 @@ const ChatInput: React.FC<ChatInputProps> = ({ onSendMessage, disabled }) => {
                     onClick={handleSubmit}
                     disabled={(!message.trim() && files.length === 0 && selectedDocIds.length === 0) || disabled}
                     className={`p-3 rounded-xl transition-all duration-200 ${(message.trim() || files.length > 0 || selectedDocIds.length > 0) && !disabled
-                        ? 'bg-indigo-600 text-white shadow-md shadow-indigo-200 hover:bg-indigo-700 hover:scale-105 active:scale-95'
-                        : 'bg-slate-100 text-slate-300 cursor-not-allowed'
+                        ? 'bg-yellow-500 text-black shadow-md shadow-yellow-200 hover:bg-yellow-400 hover:scale-105 active:scale-95'
+                        : 'bg-neutral-100 text-neutral-300 cursor-not-allowed'
                         }`}
                 >
-                    <FiSend size={20} />
+                    <Send size={20} />
                 </button>
             </div>
 
@@ -206,13 +206,13 @@ const ChatInput: React.FC<ChatInputProps> = ({ onSendMessage, disabled }) => {
                 <button
                     onClick={() => extractInputRef.current?.click()}
                     disabled={extracting}
-                    className="flex items-center gap-2 text-xs font-medium text-slate-500 hover:text-indigo-600 transition-colors group"
+                    className="flex items-center gap-2 text-xs font-medium text-neutral-500 hover:text-black transition-colors group"
                 >
-                    <div className="p-1.5 rounded-lg bg-white border border-slate-200 group-hover:border-indigo-200 group-hover:bg-indigo-50 shadow-sm transition-colors">
+                    <div className="p-1.5 rounded-lg bg-white border border-neutral-200 group-hover:border-yellow-400 group-hover:bg-yellow-50 shadow-sm transition-colors">
                         {extracting ? (
-                            <div className="animate-spin h-3.5 w-3.5 border-2 border-indigo-500 border-t-transparent rounded-full" />
+                            <div className="animate-spin h-3.5 w-3.5 border-2 border-yellow-500 border-t-transparent rounded-full" />
                         ) : (
-                            <FiFileText size={14} />
+                            <FileText size={14} />
                         )}
                     </div>
                     Data Visualization
@@ -226,9 +226,9 @@ const ChatInput: React.FC<ChatInputProps> = ({ onSendMessage, disabled }) => {
                 </button>
 
                 {/* Placeholder for future tools */}
-                <button className="flex items-center gap-2 text-xs font-medium text-slate-400 cursor-not-allowed">
-                    <div className="p-1.5 rounded-lg bg-slate-50 border border-slate-200 shadow-sm">
-                        <FiBarChart2 size={14} />
+                <button className="flex items-center gap-2 text-xs font-medium text-neutral-400 cursor-not-allowed">
+                    <div className="p-1.5 rounded-lg bg-neutral-50 border border-neutral-200 shadow-sm">
+                        <BarChart2 size={14} />
                     </div>
                     Financial Analysis
                 </button>
