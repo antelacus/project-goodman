@@ -5,7 +5,7 @@
  */
 
 import { z } from "zod";
-import { Tool } from "../types";
+import type { Tool } from "../types";
 import { createServerSupabaseClient } from "@/lib/supabase";
 import { performStructuredExtraction, DocumentType } from "@/lib/structured-extraction";
 
