@@ -73,25 +73,41 @@ export default function ChatWorkspace() {
         await sendMessage(text, fileData, documentIds);
     };
 
+    const hasMessages = messages.length > 0;
+
     return (
-        <div className="flex flex-col h-full bg-neutral-50 relative overflow-hidden">
+        <div className="flex flex-col h-full bg-neutral-50 relative overflow-hidden font-sans">
             {/* Background decoration - Simplified */}
             <div className="absolute inset-0 bg-white/50 opacity-10 pointer-events-none" />
 
-            <div className="flex-1 flex flex-col max-w-5xl mx-auto w-full px-4 pt-6 pb-4 z-10 relative">
-                <div className="flex-1 overflow-y-auto mb-4 bg-white/60 backdrop-blur-sm rounded-2xl border border-white/50 shadow-sm p-6 scroll-smooth">
-                    <MessageList messages={messages} currentThinking={currentThinking} />
+            {!hasMessages ? (
+                /* Zero State: Centered */
+                <div className="flex-1 flex flex-col items-center justify-center p-4 max-w-3xl mx-auto w-full z-10 relative animate-in fade-in duration-500">
+                    <div className="mb-8 text-left w-full pl-1">
+                        <h1 className="text-4xl md:text-5xl bg-clip-text text-transparent bg-gradient-to-r from-neutral-900 via-neutral-600 to-yellow-600 font-medium mb-2 tracking-tight">你好，</h1>
+                        <h2 className="text-4xl md:text-5xl text-neutral-300 font-medium tracking-tight">今天有什么可以帮您？</h2>
+                    </div>
+                    <div className="w-full">
+                        <ChatInput onSendMessage={handleSendMessage} disabled={isStreaming} />
+                    </div>
                 </div>
+            ) : (
+                /* Active State: Chat Interface */
+                <div className="flex-1 flex flex-col max-w-4xl mx-auto w-full px-4 z-10 relative">
+                    <div className="flex-1 overflow-y-auto py-4 scroll-smooth no-scrollbar" id="chat-scroll-area">
+                        <MessageList messages={messages} currentThinking={currentThinking} />
+                    </div>
 
-                <div className="w-full mb-2">
-                    <ChatInput onSendMessage={handleSendMessage} disabled={isStreaming} />
-                    {sessionId && (
-                        <div className="text-[10px] text-center text-slate-300 mt-1 font-mono">
-                            Session ID: {sessionId}
-                        </div>
-                    )}
+                    <div className="w-full pb-4 pt-2">
+                        <ChatInput onSendMessage={handleSendMessage} disabled={isStreaming} />
+                        {sessionId && (
+                            <div className="text-[10px] text-center text-slate-300 mt-2 font-mono">
+                                会话 ID: {sessionId}
+                            </div>
+                        )}
+                    </div>
                 </div>
-            </div>
+            )}
         </div>
     );
 }

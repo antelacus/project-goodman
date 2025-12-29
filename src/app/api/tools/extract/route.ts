@@ -12,6 +12,8 @@ import OpenAI from "openai";
 import * as XLSX from "xlsx";
 import { getDataExtractPrompt } from "../../../../lib/prompts";
 import { generateRequestId, createErrorResponse } from "../../../../lib/security/error-handler";
+import { createServerSupabaseClient } from "../../../../lib/supabase";
+import { downloadFileAsBase64, getFirstFileForDocument } from "../../../../lib/storage-helpers";
 
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
@@ -38,7 +40,57 @@ export async function POST(req: NextRequest) {
 
   try {
     const body = await req.json();
-    const { fileData, fileType, fileName } = body;
+    let { fileData, fileType, fileName, documentId } = body;
+
+    // Logic: If documentId is provided, fetch fileData from storage
+    if (documentId) {
+      console.log(`[Extraction API] Fetching document from storage: ${documentId}`);
+      const supabase = createServerSupabaseClient();
+
+      const { data: doc, error: docError } = await supabase
+        .from('documents')
+        .select('file_url, name, doc_type')
+        .eq('id', documentId)
+        .single();
+
+      if (docError || !doc) {
+        return NextResponse.json({ success: false, error: 'document_not_found', message: '找不到指定文档' }, { status: 404 });
+      }
+
+      let storagePath = doc.file_url;
+      // Fallback: If file_url is missing in DB, check storage for files
+      if (!storagePath) {
+        console.log(`[Extraction API] file_url missing in DB for ${documentId}, attempting fallback lookup...`);
+        const fileInfo = await getFirstFileForDocument(documentId);
+        if (fileInfo) {
+          storagePath = fileInfo.path;
+          // Also update fileName if not present or generic
+          if (!fileName) fileName = fileInfo.name;
+        }
+      }
+
+      if (!storagePath) {
+        return NextResponse.json({ success: false, error: 'file_not_found', message: '文档原始文件不存在，无法进行提取' }, { status: 404 });
+      }
+
+      // Fetch file content
+      try {
+        fileData = await downloadFileAsBase64(storagePath);
+        // If name wasn't updated above, use doc name
+        if (!fileName) fileName = doc.name;
+
+        // Infer mime type from extension if not explicitly known (though we usually know it)
+        const ext = fileName.split('.').pop()?.toLowerCase();
+        if (ext === 'pdf') fileType = 'application/pdf';
+        else if (['png', 'jpg', 'jpeg'].includes(ext || '')) fileType = `image/${ext === 'jpg' ? 'jpeg' : ext}`;
+        else if (ext === 'xlsx') fileType = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
+        else fileType = 'application/octet-stream'; // Fallback
+
+      } catch (storageError) {
+        console.error(`[Extraction API] Failed to download file:`, storageError);
+        return NextResponse.json({ success: false, error: 'storage_error', message: '无法读取文档文件' }, { status: 500 });
+      }
+    }
 
     // Validate required fields
     if (!fileData || !fileType) {

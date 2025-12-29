@@ -1,6 +1,5 @@
 import React, { useRef, useState } from 'react';
-import { Paperclip, Send, X, FileText, BarChart2 } from 'lucide-react';
-import ExtractionResultModal from './ExtractionResultModal';
+import { Paperclip, Send, X, BarChart2 } from 'lucide-react';
 import DocumentSelectModal from '../DocumentSelectModal';
 import { useDocumentStore } from '../../store/documents';
 
@@ -19,16 +18,25 @@ const ChatInput: React.FC<ChatInputProps> = ({ onSendMessage, disabled }) => {
     const [selectedDocIds, setSelectedDocIds] = useState<string[]>([]);
     const [isDocModalOpen, setIsDocModalOpen] = useState(false);
 
-    // Extraction Tool State
-    const [isExtractModalOpen, setIsExtractModalOpen] = useState(false);
-    const [extractionData, setExtractionData] = useState<AnalysisResult | null>(null);
-    const [extracting, setExtracting] = useState(false);
+    // Menu States
+    const [isMenuOpen, setIsMenuOpen] = useState(false);
 
     const textareaRef = useRef<HTMLTextAreaElement>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
-    const extractInputRef = useRef<HTMLInputElement>(null);
+    const menuRef = useRef<HTMLDivElement>(null);
 
     const documents = useDocumentStore((s) => s.documents);
+
+    // Close menu on click outside
+    React.useEffect(() => {
+        const handleClickOutside = (event: MouseEvent) => {
+            if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
+                setIsMenuOpen(false);
+            }
+        };
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => document.removeEventListener('mousedown', handleClickOutside);
+    }, []);
 
     const handleKeyDown = (e: React.KeyboardEvent) => {
         if (e.key === 'Enter' && !e.shiftKey) {
@@ -53,6 +61,7 @@ const ChatInput: React.FC<ChatInputProps> = ({ onSendMessage, disabled }) => {
             setFiles(prev => [...prev, ...Array.from(e.target.files || [])]);
         }
         if (fileInputRef.current) fileInputRef.current.value = '';
+        setIsMenuOpen(false); // Close menu after select
     };
 
     const removeFile = (index: number) => {
@@ -70,73 +79,11 @@ const ChatInput: React.FC<ChatInputProps> = ({ onSendMessage, disabled }) => {
         }
     };
 
-    // --- Data Extraction Logic ---
-    const convertToBase64 = (file: File): Promise<string> => {
-        return new Promise((resolve, reject) => {
-            const reader = new FileReader();
-            reader.onload = () => resolve((reader.result as string).split(',')[1]);
-            reader.onerror = () => reject(new Error('File read failed'));
-            reader.readAsDataURL(file);
-        });
-    };
-
-    const handleExtractFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
-        const file = e.target.files?.[0];
-        if (!file) return;
-
-        setExtracting(true);
-        setExtractionData(null);
-
-        try {
-            const base64Data = await convertToBase64(file);
-
-            // 1. Upload to Temp (Vectorization) - Silent background compliance
-            // We do this to ensure the file is available for future chat context if needed
-            fetch('/api/documents/upload-temp', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    fileData: base64Data,
-                    fileType: file.type,
-                    fileName: file.name,
-                    source: 'data-extract'
-                }),
-            }).catch(console.error); // Background, don't block UI
-
-            // 2. Call Extraction Tool API
-            const response = await fetch('/api/tools/extract', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    fileData: base64Data,
-                    fileType: file.type,
-                    fileName: file.name
-                }),
-            });
-
-            const result = await response.json();
-            if (!result.success) throw new Error(result.message || 'Extraction failed');
-
-            setExtractionData(result.data);
-            setIsExtractModalOpen(true);
-
-            // Optional: Add to chat files automatically? 
-            // setFiles(prev => [...prev, file]); 
-
-        } catch (error) {
-            console.error('Extraction Error:', error);
-            alert('Failed to extract data. Please try again.');
-        } finally {
-            setExtracting(false);
-            if (extractInputRef.current) extractInputRef.current.value = '';
-        }
-    };
-
     return (
         <div className="relative max-w-4xl mx-auto w-full">
-            {/* File Preview */}
+            {/* File Preview Chips */}
             {(files.length > 0 || selectedDocIds.length > 0) && (
-                <div className="flex flex-wrap gap-2 mb-2 px-2">
+                <div className="flex flex-wrap gap-2 mb-3 px-2">
                     {files.map((file, i) => (
                         <div key={`file-${i}`} className="flex items-center bg-white border border-neutral-200 rounded-lg px-3 py-1.5 text-xs text-neutral-600 shadow-sm animate-in fade-in slide-in-from-bottom-1">
                             <span className="truncate max-w-[150px]">{file.name}</span>
@@ -159,91 +106,96 @@ const ChatInput: React.FC<ChatInputProps> = ({ onSendMessage, disabled }) => {
                 </div>
             )}
 
-            <div className="bg-white rounded-2xl border border-neutral-200 shadow-lg shadow-neutral-200/50 flex items-end p-2 transition-all focus-within:ring-2 focus-within:ring-yellow-500/20 focus-within:border-yellow-500/50 relative z-10">
-                <button
-                    onClick={() => setIsDocModalOpen(true)}
-                    className="p-3 text-neutral-400 hover:text-neutral-900 hover:bg-neutral-50 rounded-xl transition-colors"
-                    disabled={disabled}
-                    title="Select or Upload documents"
-                >
-                    <Paperclip size={20} />
-                    {/* Hidden file input kept for drag-and-drop support if needed, or removed if strictly modal-only. 
-                        Let's keep it but not use it via click. */}
-                    <input
-                        type="file"
-                        multiple
-                        ref={fileInputRef}
-                        className="hidden"
-                        onChange={handleFileChange}
-                    />
-                </button>
+            {/* Main Input Container - Gemini Style */}
+            <div className="bg-[#f0f4f9] focus-within:bg-white border border-transparent focus-within:border-neutral-300 focus-within:shadow-sm transition-all duration-200 ease-in-out rounded-[28px] overflow-hidden">
+                <div className="flex flex-col">
+                    {/* Row 1: Text Area */}
+                    <div className="w-full px-4 pt-4">
+                        <textarea
+                            ref={textareaRef}
+                            value={message}
+                            onChange={(e) => { setMessage(e.target.value); autoResize(); }}
+                            onKeyDown={handleKeyDown}
+                            placeholder="输入您的问题..."
+                            className="w-full max-h-[200px] min-h-[48px] bg-transparent border-none focus:ring-0 resize-none p-0 text-neutral-900 placeholder:text-neutral-500 leading-relaxed text-base"
+                            rows={1}
+                            disabled={disabled}
+                        />
+                    </div>
 
-                <textarea
-                    ref={textareaRef}
-                    value={message}
-                    onChange={(e) => { setMessage(e.target.value); autoResize(); }}
-                    onKeyDown={handleKeyDown}
-                    placeholder="Ask about financial reports, regulations, or upload documents..."
-                    className="flex-1 max-h-[200px] min-h-[24px] bg-transparent border-none focus:ring-0 resize-none py-3 px-2 text-neutral-900 placeholder:text-neutral-400 leading-relaxed"
-                    rows={1}
-                    disabled={disabled}
-                />
+                    {/* Row 2: Toolbar & Send Button */}
+                    <div className="flex items-center justify-between px-2 pb-2">
+                        {/* Left: Tools */}
+                        <div className="flex items-center gap-1">
+                            {/* + Button */}
+                            <div className="relative" ref={menuRef}>
+                                <button
+                                    onClick={() => setIsMenuOpen(!isMenuOpen)}
+                                    className="w-10 h-10 flex items-center justify-center rounded-full hover:bg-neutral-200/50 text-neutral-600 transition-colors"
+                                    disabled={disabled}
+                                    title="添加附件"
+                                >
+                                    <span className="text-2xl leading-none font-light pb-1">+</span>
+                                </button>
 
-                <button
-                    onClick={handleSubmit}
-                    disabled={(!message.trim() && files.length === 0 && selectedDocIds.length === 0) || disabled}
-                    className={`p-3 rounded-xl transition-all duration-200 ${(message.trim() || files.length > 0 || selectedDocIds.length > 0) && !disabled
-                        ? 'bg-yellow-500 text-black shadow-md shadow-yellow-200 hover:bg-yellow-400 hover:scale-105 active:scale-95'
-                        : 'bg-neutral-100 text-neutral-300 cursor-not-allowed'
-                        }`}
-                >
-                    <Send size={20} />
-                </button>
-            </div>
+                                {/* Dropdown Menu */}
+                                {isMenuOpen && (
+                                    <div className="absolute bottom-12 left-0 w-56 bg-white rounded-xl shadow-xl border border-neutral-100 overflow-hidden py-1 animate-in fade-in zoom-in-95 origin-bottom-left z-50">
+                                        <button
+                                            onClick={() => fileInputRef.current?.click()}
+                                            className="w-full text-left px-4 py-3 hover:bg-neutral-50 flex items-center gap-3 text-sm text-neutral-700"
+                                        >
+                                            <div className="w-8 h-8 rounded-full bg-red-50 text-red-500 flex items-center justify-center">
+                                                <Paperclip size={16} />
+                                            </div>
+                                            <div>
+                                                <div className="font-medium">上传文件</div>
+                                                <div className="text-[10px] text-neutral-400">支持 PDF, Excel, 图片</div>
+                                            </div>
+                                        </button>
 
-            {/* Tool Shortcut Bar */}
-            <div className="flex gap-4 mt-3 px-2">
-                <button
-                    onClick={() => extractInputRef.current?.click()}
-                    disabled={extracting}
-                    className="flex items-center gap-2 text-xs font-medium text-neutral-500 hover:text-black transition-colors group"
-                >
-                    <div className="p-1.5 rounded-lg bg-white border border-neutral-200 group-hover:border-yellow-400 group-hover:bg-yellow-50 shadow-sm transition-colors">
-                        {extracting ? (
-                            <div className="animate-spin h-3.5 w-3.5 border-2 border-yellow-500 border-t-transparent rounded-full" />
-                        ) : (
-                            <FileText size={14} />
+                                        {/* Other options masked for now as per requirement */}
+                                    </div>
+                                )}
+                            </div>
+
+                            {/* Tools Button (Visual Only) */}
+                            <button
+                                className="flex items-center gap-2 h-10 px-4 rounded-full hover:bg-neutral-200/50 text-neutral-600 transition-colors opacity-50 cursor-not-allowed"
+                                title="工具 (即将推出)"
+                            >
+                                <BarChart2 size={18} />
+                                <span className="text-sm font-medium">工具</span>
+                            </button>
+                        </div>
+
+                        {/* Right: Send Button (Conditional) */}
+                        {(message.trim() || files.length > 0 || selectedDocIds.length > 0) && (
+                            <button
+                                onClick={handleSubmit}
+                                disabled={disabled}
+                                className="w-10 h-10 flex items-center justify-center rounded-full bg-black text-white hover:bg-neutral-800 transition-all duration-200 animate-in zoom-in"
+                            >
+                                <Send size={18} />
+                            </button>
                         )}
                     </div>
-                    Data Visualization
-                    <input
-                        type="file"
-                        ref={extractInputRef}
-                        className="hidden"
-                        accept=".pdf,.png,.jpg,.jpeg,.xlsx"
-                        onChange={handleExtractFileSelect}
-                    />
-                </button>
-
-                {/* Placeholder for future tools */}
-                <button className="flex items-center gap-2 text-xs font-medium text-neutral-400 cursor-not-allowed">
-                    <div className="p-1.5 rounded-lg bg-neutral-50 border border-neutral-200 shadow-sm">
-                        <BarChart2 size={14} />
-                    </div>
-                    Financial Analysis
-                </button>
+                </div>
             </div>
 
-            <div className="text-center mt-4">
-                <p className="text-[10px] text-slate-400">Project Goodman V3.6c • AI can make mistakes. Please verify important information.</p>
+            <div className="text-center mt-3">
+                <p className="text-[10px] text-neutral-400">Goodman 可能会犯错，请核查重要信息</p>
             </div>
 
-            {/* Results Modal */}
-            <ExtractionResultModal
-                isOpen={isExtractModalOpen}
-                onClose={() => setIsExtractModalOpen(false)}
-                data={extractionData}
+            {/* Hidden Inputs */}
+            <input
+                type="file"
+                multiple
+                ref={fileInputRef}
+                className="hidden"
+                onChange={handleFileChange}
             />
+            {/* Extract Input Removed */}
 
             {/* Document Select Modal */}
             <DocumentSelectModal
