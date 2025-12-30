@@ -174,8 +174,9 @@ project-goodman/
 │   │   └── api/                     # API 路由
 │   │       ├── chat/                # Agent API（同步 + 流式）
 │   │       ├── quick-actions/       # 快捷操作 API
-│   │       ├── admin/               # 管理员 API
-│   │       └── documents/           # 文档 CRUD API
+│   │       ├── admin/               # 管理员 API（密码验证、文档上传）
+│   │       ├── documents/           # 文档管理 API（删除、更新、预览、用户上传）
+│   │       └── local-documents/     # 文档列表 API（获取所有文档含chunks）
 │   ├── components/                  # React 组件（按领域组织）
 │   │   ├── chat/                    # 对话 UI（ChatWorkspace, MessageList, ChatInput）
 │   │   ├── layout/                  # 布局组件（Navbar, Sidebar, PageContainer）
@@ -252,7 +253,8 @@ project-goodman/
 ### 后续规划
 
 - [ ] **V3.7 UI 升级 (进行中)** - 统一对话界面美化与优化
-  - [x] Phase 1: 侧边栏布局与视觉升级
+  - [x] Phase 1-5: 侧边栏布局、视觉升级、代码重构
+  - [x] 用户文件上传流程修复（统一入口 + 向量化存储）
 - [ ] **V3.8 管理用财报体系** - 管理会计分析功能
 - [ ] **V3.9 安全增强（后续）** - 持续安全改进
 - [ ] **V3.10 用户管理系统** - 多用户支持

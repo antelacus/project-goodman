@@ -3,10 +3,6 @@ import { Paperclip, Send, X, BarChart2 } from 'lucide-react';
 import { DocumentSelectModal } from '@/components/documents';
 import { useDocumentStore } from '../../store/documents';
 
-type AnalysisResult = {
-    [key: string]: string | number;
-};
-
 interface ChatInputProps {
     onSendMessage: (message: string, files: File[], documentIds: string[]) => void;
     disabled?: boolean;
@@ -14,7 +10,6 @@ interface ChatInputProps {
 
 const ChatInput: React.FC<ChatInputProps> = ({ onSendMessage, disabled }) => {
     const [message, setMessage] = useState('');
-    const [files, setFiles] = useState<File[]>([]);
     const [selectedDocIds, setSelectedDocIds] = useState<string[]>([]);
     const [isDocModalOpen, setIsDocModalOpen] = useState(false);
 
@@ -22,7 +17,6 @@ const ChatInput: React.FC<ChatInputProps> = ({ onSendMessage, disabled }) => {
     const [isMenuOpen, setIsMenuOpen] = useState(false);
 
     const textareaRef = useRef<HTMLTextAreaElement>(null);
-    const fileInputRef = useRef<HTMLInputElement>(null);
     const menuRef = useRef<HTMLDivElement>(null);
 
     const documents = useDocumentStore((s) => s.documents);
@@ -46,26 +40,19 @@ const ChatInput: React.FC<ChatInputProps> = ({ onSendMessage, disabled }) => {
     };
 
     const handleSubmit = () => {
-        if ((!message.trim() && files.length === 0 && selectedDocIds.length === 0) || disabled) return;
-        onSendMessage(message, files, selectedDocIds);
+        if ((!message.trim() && selectedDocIds.length === 0) || disabled) return;
+        // Pass empty array for files - all uploads now go through DocumentSelectModal as document IDs
+        onSendMessage(message, [], selectedDocIds);
         setMessage('');
-        setFiles([]);
         setSelectedDocIds([]);
         if (textareaRef.current) {
             textareaRef.current.style.height = 'auto';
         }
     };
 
-    const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        if (e.target.files) {
-            setFiles(prev => [...prev, ...Array.from(e.target.files || [])]);
-        }
-        if (fileInputRef.current) fileInputRef.current.value = '';
-        setIsMenuOpen(false); // Close menu after select
-    };
-
-    const removeFile = (index: number) => {
-        setFiles(prev => prev.filter((_, i) => i !== index));
+    const handleUploadClick = () => {
+        setIsDocModalOpen(true);
+        setIsMenuOpen(false);
     };
 
     const removeDocId = (idToRemove: string) => {
@@ -81,17 +68,9 @@ const ChatInput: React.FC<ChatInputProps> = ({ onSendMessage, disabled }) => {
 
     return (
         <div className="relative max-w-4xl mx-auto w-full">
-            {/* File Preview Chips */}
-            {(files.length > 0 || selectedDocIds.length > 0) && (
+            {/* Selected Document Chips */}
+            {selectedDocIds.length > 0 && (
                 <div className="flex flex-wrap gap-2 mb-3 px-2">
-                    {files.map((file, i) => (
-                        <div key={`file-${i}`} className="flex items-center bg-white border border-neutral-200 rounded-lg px-3 py-1.5 text-xs text-neutral-600 shadow-sm animate-in fade-in slide-in-from-bottom-1">
-                            <span className="truncate max-w-[150px]">{file.name}</span>
-                            <button onClick={() => removeFile(i)} className="ml-2 hover:text-red-500">
-                                <X size={14} />
-                            </button>
-                        </div>
-                    ))}
                     {selectedDocIds.map((id) => {
                         const doc = documents.find(d => d.id === id);
                         return (
@@ -142,7 +121,7 @@ const ChatInput: React.FC<ChatInputProps> = ({ onSendMessage, disabled }) => {
                                 {isMenuOpen && (
                                     <div className="absolute bottom-12 left-0 w-56 bg-white rounded-xl shadow-xl border border-neutral-100 overflow-hidden py-1 animate-in fade-in zoom-in-95 origin-bottom-left z-50">
                                         <button
-                                            onClick={() => fileInputRef.current?.click()}
+                                            onClick={handleUploadClick}
                                             className="w-full text-left px-4 py-3 hover:bg-neutral-50 flex items-center gap-3 text-sm text-neutral-700"
                                         >
                                             <div className="w-8 h-8 rounded-full bg-red-50 text-red-500 flex items-center justify-center">
@@ -170,7 +149,7 @@ const ChatInput: React.FC<ChatInputProps> = ({ onSendMessage, disabled }) => {
                         </div>
 
                         {/* Right: Send Button (Conditional) */}
-                        {(message.trim() || files.length > 0 || selectedDocIds.length > 0) && (
+                        {(message.trim() || selectedDocIds.length > 0) && (
                             <button
                                 onClick={handleSubmit}
                                 disabled={disabled}
@@ -187,17 +166,7 @@ const ChatInput: React.FC<ChatInputProps> = ({ onSendMessage, disabled }) => {
                 <p className="text-[10px] text-neutral-400">Goodman 可能会犯错，请核查重要信息</p>
             </div>
 
-            {/* Hidden Inputs */}
-            <input
-                type="file"
-                multiple
-                ref={fileInputRef}
-                className="hidden"
-                onChange={handleFileChange}
-            />
-            {/* Extract Input Removed */}
-
-            {/* Document Select Modal */}
+            {/* Document Select Modal - Single entry point for file uploads */}
             <DocumentSelectModal
                 open={isDocModalOpen}
                 onClose={() => setIsDocModalOpen(false)}

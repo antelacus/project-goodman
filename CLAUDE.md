@@ -273,7 +273,8 @@ docker compose restart goodman
   - `src/app/api/chat/` - Unified agent API (sync + streaming)
   - `src/app/api/quick-actions/` - Standalone quick-action APIs (extract, etc.)
   - `src/app/api/admin/` - Admin endpoints (password verification, document upload)
-  - `src/app/api/documents/` - Document CRUD + preview
+  - `src/app/api/documents/` - Document management (DELETE, PATCH, preview, upload-temp)
+  - `src/app/api/local-documents/` - Document list API (GET all documents with chunks)
 - `src/lib/` - Core business logic (domain-based modules)
   - `src/lib/database/` - Database clients (Supabase, Redis, types)
   - `src/lib/documents/` - Document processing (search, chunker, parser, storage, constants)
