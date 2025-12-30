@@ -22,8 +22,19 @@ export interface ToolCall {
 export interface ConversationSession {
     id: string;
     workflowType: string;
+    title?: string;
+    ownerId?: string;
+    ownerType?: 'admin' | 'user' | 'guest';
     messages: ConversationMessage[];
     metadata: Record<string, unknown>;
+    createdAt: string;
+    updatedAt: string;
+}
+
+export interface SessionListItem {
+    id: string;
+    title: string | null;
+    workflowType: string;
     createdAt: string;
     updatedAt: string;
 }
@@ -43,13 +54,17 @@ export class ConversationMemory {
      */
     async createSession(
         workflowType: string,
-        metadata: Record<string, unknown> = {}
+        metadata: Record<string, unknown> = {},
+        ownerId?: string,
+        ownerType?: 'admin' | 'user' | 'guest'
     ): Promise<string> {
         const { data, error } = await this.supabase
             .from("conversation_sessions")
             .insert({
                 workflow_type: workflowType,
                 metadata,
+                owner_id: ownerId || null,
+                owner_type: ownerType || null,
             })
             .select("id")
             .single();
@@ -103,6 +118,9 @@ export class ConversationMemory {
         return {
             id: session.id,
             workflowType: session.workflow_type,
+            title: session.title || undefined,
+            ownerId: session.owner_id || undefined,
+            ownerType: session.owner_type || undefined,
             messages: orderedMessages.map((m: any) => ({
                 id: m.id,
                 role: m.role as any,
@@ -168,7 +186,9 @@ export class ConversationMemory {
      */
     async getOrCreateSession(
         sessionId: string | undefined,
-        workflowType: string
+        workflowType: string,
+        ownerId?: string,
+        ownerType?: 'admin' | 'user' | 'guest'
     ): Promise<{ sessionId: string; messages: ConversationMessage[]; isNew: boolean }> {
         if (sessionId) {
             const session = await this.loadSession(sessionId);
@@ -181,12 +201,75 @@ export class ConversationMemory {
             }
         }
 
-        const newSessionId = await this.createSession(workflowType);
+        const newSessionId = await this.createSession(workflowType, {}, ownerId, ownerType);
         return {
             sessionId: newSessionId,
             messages: [],
             isNew: true,
         };
+    }
+
+    /**
+     * Updates the title of a session.
+     */
+    async updateSessionTitle(sessionId: string, title: string): Promise<void> {
+        const { error } = await this.supabase
+            .from("conversation_sessions")
+            .update({ title })
+            .eq("id", sessionId);
+
+        if (error) {
+            console.error("Error updating session title:", error);
+            throw new Error(`Failed to update session title: ${error.message}`);
+        }
+    }
+
+    /**
+     * Gets the title of a session (null if not set).
+     */
+    async getSessionTitle(sessionId: string): Promise<string | null> {
+        const { data, error } = await this.supabase
+            .from("conversation_sessions")
+            .select("title")
+            .eq("id", sessionId)
+            .single();
+
+        if (error) {
+            if (error.code === 'PGRST116') return null; // Session not found
+            console.error("Error getting session title:", error);
+            return null;
+        }
+        return data?.title || null;
+    }
+
+    /**
+     * Lists sessions for a specific owner, ordered by most recent first.
+     */
+    async listSessionsByOwner(
+        ownerId: string,
+        ownerType: 'admin' | 'user' | 'guest',
+        limit: number = 20
+    ): Promise<SessionListItem[]> {
+        const { data, error } = await this.supabase
+            .from("conversation_sessions")
+            .select("id, title, workflow_type, created_at, updated_at")
+            .eq("owner_id", ownerId)
+            .eq("owner_type", ownerType)
+            .order("updated_at", { ascending: false })
+            .limit(limit);
+
+        if (error) {
+            console.error("Error listing sessions:", error);
+            return [];
+        }
+
+        return (data || []).map((s: any) => ({
+            id: s.id,
+            title: s.title,
+            workflowType: s.workflow_type,
+            createdAt: s.created_at,
+            updatedAt: s.updated_at,
+        }));
     }
 }
 

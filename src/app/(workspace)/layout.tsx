@@ -1,5 +1,6 @@
 'use client';
 
+import { Suspense } from 'react';
 import MobileHeader from '@/components/layout/MobileHeader';
 import Sidebar from '@/components/layout/Sidebar';
 import { SidebarProvider, useSidebar } from '@/components/layout/SidebarProvider';
@@ -14,7 +15,10 @@ function WorkspaceLayoutContent({ children }: { children: React.ReactNode }) {
             <MobileHeader />
 
             {/* Sidebar - Handles its own responsive visibility */}
-            <Sidebar />
+            {/* Wrapped in Suspense for useSearchParams support */}
+            <Suspense fallback={null}>
+                <Sidebar />
+            </Suspense>
 
             {/* Main Content Area */}
             <main
