@@ -1,228 +1,20 @@
+/**
+ * API Route: /api/documents
+ *
+ * Document management endpoints (DELETE, PATCH only).
+ *
+ * Note: GET is handled by /api/local-documents
+ * Note: POST (upload) is handled by:
+ *   - /api/documents/upload-temp (user uploads)
+ *   - /api/admin/upload-database-document (admin uploads)
+ */
+
 import { NextRequest, NextResponse } from "next/server";
-import OpenAI from "openai";
 import { createServerSupabaseClient } from "@/lib/database";
 import { verifyAdminPassword, generateRequestId, createErrorResponse } from "@/lib/security";
-import { deleteDocumentFiles, parseDocumentSections, createSectionAwareChunks } from "@/lib/documents";
+import { deleteDocumentFiles } from "@/lib/documents";
 
-// Initialize OpenAI client
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-});
-
-export async function POST(req: NextRequest) {
-  const requestId = req.headers.get('x-request-id') || generateRequestId();
-
-  try {
-    const body = await req.json();
-    const { text, documentId, documentName, docCategory = "business", docType } = body;
-
-    if (!text || !documentId) {
-      return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
-    }
-
-    // Initialize Supabase client
-    const supabase = createServerSupabaseClient();
-
-    // 1. Analyze Document Structure & Create Chunks
-    const parseResult = await parseDocumentSections(text);
-    const chunksWithSection = createSectionAwareChunks(text, parseResult.sections, 1000);
-
-    // 2. Generate Embeddings for each chunk
-    const embeddings = [];
-    for (const chunkItem of chunksWithSection) {
-      const embeddingResponse = await openai.embeddings.create({
-        model: "gpt-5-mini",
-        input: chunkItem.content,
-        encoding_format: "float",
-      });
-
-      embeddings.push({
-        id: `${documentId}-chunk-${chunkItem.chunkIndex}`,
-        document_id: documentId,
-        chunk_index: chunkItem.chunkIndex,
-        content: chunkItem.content,
-        embedding: embeddingResponse.data[0].embedding,
-        // New Section Metadata
-        section_title: chunkItem.sectionTitle || null,
-        section_level: chunkItem.sectionLevel || 0,
-        section_path: chunkItem.sectionPath || null,
-      });
-    }
-
-    // 3. Generate Document Summary (Keep existing logic)
-    const summaryPrompt = `
-      请为以下财务文档生成一个简洁的摘要，包含：
-      1. 文档类型
-      2. 主要财务数据
-      3. 关键指标
-      4. 时间范围
-
-      文档内容：
-      ${text.substring(0, 2000)}...
-
-      请以JSON格式返回：
-      {
-        "document_type": "文档类型",
-        "summary": "文档摘要",
-        "key_metrics": ["关键指标1", "关键指标2"],
-        "time_period": "时间范围",
-        "total_chunks": ${chunksWithSection.length}
-      }
-    `;
-
-    const summaryResponse = await openai.chat.completions.create({
-      model: "gpt-5-mini",
-      messages: [{ role: "user", content: summaryPrompt }],
-      response_format: { type: "json_object" },
-      max_completion_tokens: 1000,
-    });
-
-    const summary = JSON.parse(summaryResponse.choices[0]?.message?.content || "{}");
-
-    // 4. Save to Supabase
-    // Insert document metadata with new structure fields
-    const { error: docError } = await supabase
-      .from('documents')
-      .insert({
-        id: documentId,
-        name: documentName || documentId,
-        doc_category: docCategory,
-        doc_type: docType || 'txt',
-        status: 'ready',
-        size: Buffer.byteLength(text, 'utf-8'),
-        summary,
-        // New fields
-        section_structure: JSON.stringify({
-          hasToc: parseResult.hasToc,
-          quality: parseResult.quality,
-          sectionCount: parseResult.sections.length,
-          // Storing top-level sections for quick preview if needed, or full structure
-          // Design doc simplified this, but let's store basics
-          sections: parseResult.sections.slice(0, 50).map(s => ({ title: s.title, level: s.level }))
-        }),
-        structure_quality: parseResult.quality
-      } as any);
-
-    if (docError) {
-      // If document already exists, update it
-      if (docError.code === '23505') {
-        const { error: updateError } = await supabase
-          .from('documents')
-          // @ts-expect-error - Supabase type inference issue with dynamic JSONB/Text[] fields
-          .update({
-            name: documentName || documentId,
-            size: Buffer.byteLength(text, 'utf-8'),
-            summary,
-            upload_time: new Date().toISOString(),
-            section_structure: JSON.stringify({
-              hasToc: parseResult.hasToc,
-              quality: parseResult.quality,
-              sectionCount: parseResult.sections.length,
-              sections: parseResult.sections.slice(0, 50).map(s => ({ title: s.title, level: s.level }))
-            }),
-            structure_quality: parseResult.quality
-          })
-          .eq('id', documentId);
-
-        if (updateError) {
-          throw updateError;
-        }
-
-        // Delete existing chunks
-        const { error: deleteError } = await supabase
-          .from('document_chunks')
-          .delete()
-          .eq('document_id', documentId);
-
-        if (deleteError) {
-          throw deleteError;
-        }
-      } else {
-        throw docError;
-      }
-    }
-
-    // Insert chunks in batches
-    const BATCH_SIZE = 100;
-    for (let i = 0; i < embeddings.length; i += BATCH_SIZE) {
-      const batch = embeddings.slice(i, i + BATCH_SIZE);
-      const { error: chunksError } = await supabase
-        .from('document_chunks')
-        .insert(batch as any);
-
-      if (chunksError) {
-        throw chunksError;
-      }
-    }
-
-    // Return result
-    return NextResponse.json({
-      success: true,
-      documentId,
-      summary,
-      chunks: embeddings.map(({ id, content, chunk_index }) => ({
-        id,
-        text: content,
-        chunkIndex: chunk_index
-      })),
-      structureAnalysis: {
-        quality: parseResult.quality,
-        hasToc: parseResult.hasToc,
-        sectionCount: parseResult.sections.length,
-        suggestions: parseResult.quality === 'basic' ? ['Document has weak structure. Consider adding a Table of Contents.'] : []
-      },
-      message: "文档处理完成并已保存到数据库 (Intelligent Structure Analysis Applied)"
-    });
-
-  } catch (error: unknown) {
-    console.error("Document Processing Error:", error);
-    return createErrorResponse(error, requestId, 500);
-  }
-}
-
-// GET方法：从Supabase获取文档列表
-export async function GET(req: NextRequest) {
-  const requestId = req.headers.get('x-request-id') || generateRequestId();
-
-  try {
-    const { searchParams } = new URL(req.url);
-    const docCategory = searchParams.get('category');
-    const docTypes = searchParams.get('type'); // comma-separated types
-
-    const supabase = createServerSupabaseClient();
-
-    let query = supabase
-      .from('documents')
-      .select('id, name, doc_category, doc_type, upload_time, status, size, summary, year, period, is_structured, file_url')
-      .order('upload_time', { ascending: false });
-
-    if (docCategory) {
-      query = query.eq('doc_category', docCategory);
-    }
-
-    if (docTypes) {
-      const types = docTypes.split(',').map(t => t.trim());
-      query = query.in('doc_type', types);
-    }
-
-    const { data: documents, error } = await query;
-
-    if (error) {
-      throw error;
-    }
-
-    return NextResponse.json({
-      success: true,
-      documents: documents || [],
-    });
-
-  } catch (error: unknown) {
-    console.error("Document Fetch Error:", error);
-    return createErrorResponse(error, requestId, 500);
-  }
-}
-
-// DELETE方法：删除文档
+// DELETE: Delete a document and all related data
 export async function DELETE(req: NextRequest) {
   const requestId = req.headers.get('x-request-id') || generateRequestId();
 
@@ -271,7 +63,7 @@ export async function DELETE(req: NextRequest) {
   }
 }
 
-// PATCH方法：更新文档属性（管理员）
+// PATCH: Update document metadata (admin only)
 export async function PATCH(req: NextRequest) {
   const requestId = req.headers.get('x-request-id') || generateRequestId();
 
@@ -354,7 +146,7 @@ export async function PATCH(req: NextRequest) {
 
     const supabase = createServerSupabaseClient();
 
-    // Update document using raw query to avoid type issues
+    // Update document
     const { data, error } = await (supabase
       .from('documents') as any)
       .update(updateData)
@@ -384,5 +176,3 @@ export async function PATCH(req: NextRequest) {
     return createErrorResponse(error, requestId, 500);
   }
 }
-
-
