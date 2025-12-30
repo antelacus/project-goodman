@@ -61,6 +61,12 @@ export async function POST(req: NextRequest) {
         // Don't generate UUID here - let loadMemoryNode create/load the session
         // This ensures sessionId consistency between what's stored and what's returned
 
+        // V3.10+: Determine owner info for session tracking
+        // For admin/user: use userId as owner
+        // For guest: use auth sessionId as owner
+        const ownerId = session.userId || session.sessionId;
+        const ownerType = session.role;
+
         // Initialize state
         // We cast to any to avoid strict type checking on DeepPartial,
         // but the structure matches UnifiedAgentState.
@@ -70,7 +76,9 @@ export async function POST(req: NextRequest) {
                 sessionId: sessionId, // Pass as-is (can be undefined), loadMemoryNode will handle
                 files: files || [],
                 documentIds: documentIds || [],
-                workflowType: 'unified'
+                workflowType: 'unified',
+                ownerId,
+                ownerType,
             },
             agent: {
                 sessionId: "", // Will be set by loadMemoryNode

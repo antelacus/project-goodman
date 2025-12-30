@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { cn } from '@/lib/utils';
 import {
     ChevronsLeft,
@@ -15,12 +15,20 @@ import {
     Settings,
     LogIn,
     LogOut,
+    MessageSquare,
 } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
-import { usePathname, useRouter } from 'next/navigation';
+import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { useSidebar } from './SidebarProvider';
 import ExtractionModal from '../quick-actions/ExtractionModal';
+
+interface SessionItem {
+    id: string;
+    title: string;
+    createdAt: string;
+    updatedAt: string;
+}
 
 // Define navigation items
 const navItems = [
@@ -38,10 +46,31 @@ export default function Sidebar() {
     } = useSidebar();
     const pathname = usePathname();
     const router = useRouter();
+    const searchParams = useSearchParams();
     const [isExtractionOpen, setIsExtractionOpen] = useState(false);
     const [isAdmin, setIsAdmin] = useState(false);
+    const [sessions, setSessions] = useState<SessionItem[]>([]);
+    const [sessionsLoading, setSessionsLoading] = useState(true);
 
-    // Check admin status on mount
+    // Get current session ID from URL
+    const currentSessionId = searchParams.get('session');
+
+    // Fetch sessions
+    const fetchSessions = useCallback(async () => {
+        try {
+            const res = await fetch('/api/sessions');
+            if (res.ok) {
+                const data = await res.json();
+                setSessions(data.sessions || []);
+            }
+        } catch {
+            // Silently fail
+        } finally {
+            setSessionsLoading(false);
+        }
+    }, []);
+
+    // Check admin status and fetch sessions on mount
     useEffect(() => {
         const checkAdmin = async () => {
             try {
@@ -53,15 +82,20 @@ export default function Sidebar() {
             }
         };
         checkAdmin();
-    }, []);
+        fetchSessions();
+    }, [fetchSessions]);
 
-    // Handle "New Chat" - for now, just reload /chat or push to /chat if elsewhere
+    // Handle "New Chat" - navigate to /chat without session param
     const handleNewChat = () => {
-        if (pathname === '/chat') {
-            window.location.reload();
-        } else {
-            router.push('/chat');
-        }
+        router.push('/chat');
+        if (isMobileOpen) closeMobile();
+        // Refresh sessions after a short delay to allow new session to be created
+        setTimeout(fetchSessions, 2000);
+    };
+
+    // Handle session click
+    const handleSessionClick = (sessionId: string) => {
+        router.push(`/chat?session=${sessionId}`);
         if (isMobileOpen) closeMobile();
     };
 
@@ -148,6 +182,50 @@ export default function Sidebar() {
                             </>
                         )}
                     </button>
+
+                    {/* Session History Section */}
+                    {!isCollapsed && sessions.length > 0 && (
+                        <div className="mt-3 flex-1 overflow-y-auto max-h-48">
+                            <div className="mb-2 px-2 text-xs font-semibold uppercase text-neutral-400">
+                                对话历史
+                            </div>
+                            <div className="space-y-1">
+                                {sessions.slice(0, 10).map((session) => {
+                                    const isActive = currentSessionId === session.id ||
+                                        (pathname === '/chat' && !currentSessionId && sessions[0]?.id === session.id);
+                                    return (
+                                        <button
+                                            key={session.id}
+                                            onClick={() => handleSessionClick(session.id)}
+                                            className={cn(
+                                                "flex w-full items-center rounded-lg p-2 text-sm transition-colors text-left",
+                                                isActive
+                                                    ? "bg-yellow-50 text-yellow-700 font-medium"
+                                                    : "text-neutral-600 hover:bg-neutral-100 hover:text-neutral-900"
+                                            )}
+                                            title={session.title}
+                                        >
+                                            <MessageSquare size={16} className="mr-2 flex-shrink-0" />
+                                            <span className="truncate">{session.title}</span>
+                                        </button>
+                                    );
+                                })}
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Collapsed Session Indicator */}
+                    {isCollapsed && sessions.length > 0 && (
+                        <button
+                            onClick={() => sessions[0] && handleSessionClick(sessions[0].id)}
+                            className={cn(
+                                "flex items-center justify-center rounded-lg p-2 text-neutral-600 hover:bg-neutral-100 hover:text-neutral-900 transition-colors"
+                            )}
+                            title="对话历史"
+                        >
+                            <MessageSquare size={20} />
+                        </button>
+                    )}
 
                     {/* Quick Tools Section */}
                     <div className="mt-2">

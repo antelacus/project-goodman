@@ -6,6 +6,7 @@
 
 import { BaseAgentState } from "../state/base-state";
 import { conversationMemory, ConversationMessage, ToolCall } from "@/lib/memory/conversation-memory";
+import { generateSessionTitle } from "@/lib/memory/session-title";
 import { AIMessage, HumanMessage, ToolMessage, BaseMessage } from "@langchain/core/messages";
 
 /**
@@ -67,6 +68,26 @@ export async function saveMemoryNode(
     // Save to DB
     console.log(`Saving ${dbMessages.length} new messages to session ${sessionId}`);
     await conversationMemory.saveMessages(sessionId, dbMessages);
+
+    // Generate session title if this is a new session (no title yet)
+    // We check if this was the first batch of messages (initialMessageCount was 0)
+    if (initialMessageCount === 0) {
+        try {
+            const existingTitle = await conversationMemory.getSessionTitle(sessionId);
+            if (!existingTitle) {
+                // Find the first user message to generate title from
+                const firstUserMessage = dbMessages.find(m => m.role === 'user');
+                if (firstUserMessage) {
+                    const title = await generateSessionTitle(firstUserMessage.content);
+                    await conversationMemory.updateSessionTitle(sessionId, title);
+                    console.log(`Generated session title: ${title}`);
+                }
+            }
+        } catch (err) {
+            // Don't fail the whole save if title generation fails
+            console.error("Error generating session title:", err);
+        }
+    }
 
     // Update initialMessageCount so we don't save them again if this node runs multiple times
     // (Though typically saveMemory is at the end)

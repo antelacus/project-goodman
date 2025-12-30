@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { Suspense } from 'react';
 import ChatWorkspace from '@/components/chat/ChatWorkspace';
 
 export const metadata = {
@@ -9,7 +9,13 @@ export const metadata = {
 export default function ChatPage() {
     return (
         <div className="h-full">
-            <ChatWorkspace />
+            <Suspense fallback={
+                <div className="flex items-center justify-center h-full text-neutral-400">
+                    加载中...
+                </div>
+            }>
+                <ChatWorkspace />
+            </Suspense>
         </div>
     );
 }

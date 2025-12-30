@@ -30,6 +30,10 @@ export interface WorkflowInput {
     documentIds?: number[];
     /** Optional workflow type override */
     workflowType?: string;
+    /** Owner ID for session ownership (auth sessionId or userId) */
+    ownerId?: string;
+    /** Owner type for session ownership */
+    ownerType?: 'admin' | 'user' | 'guest';
 }
 
 /**

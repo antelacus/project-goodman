@@ -1,6 +1,7 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { useStreamingChat } from '@/hooks/useStreamingChat';
 import MessageList from './MessageList';
 import ChatInput from './ChatInput';
@@ -13,7 +14,49 @@ interface Message {
 }
 
 export default function ChatWorkspace() {
+    const searchParams = useSearchParams();
+    const urlSessionId = searchParams.get('session');
+
     const [messages, setMessages] = useState<Message[]>([]);
+    const [isLoadingSession, setIsLoadingSession] = useState(false);
+    const [loadedSessionId, setLoadedSessionId] = useState<string | null>(null);
+
+    // Load session messages when URL session parameter changes
+    useEffect(() => {
+        const loadSession = async () => {
+            if (!urlSessionId || urlSessionId === loadedSessionId) return;
+
+            setIsLoadingSession(true);
+            try {
+                const res = await fetch(`/api/sessions/${urlSessionId}`);
+                if (res.ok) {
+                    const data = await res.json();
+                    if (data.messages && data.messages.length > 0) {
+                        setMessages(data.messages.map((m: any) => ({
+                            role: m.role,
+                            content: m.content,
+                            id: m.id || Date.now().toString(),
+                        })));
+                    }
+                    setLoadedSessionId(urlSessionId);
+                }
+            } catch (error) {
+                console.error('Failed to load session:', error);
+            } finally {
+                setIsLoadingSession(false);
+            }
+        };
+
+        loadSession();
+    }, [urlSessionId, loadedSessionId]);
+
+    // Reset when navigating to new chat (no session param)
+    useEffect(() => {
+        if (!urlSessionId && loadedSessionId) {
+            setMessages([]);
+            setLoadedSessionId(null);
+        }
+    }, [urlSessionId, loadedSessionId]);
 
     const handleComplete = (data: { answer?: string; sessionId?: string }) => {
         // Add the final assistant response
@@ -42,6 +85,7 @@ export default function ChatWorkspace() {
     };
 
     const { sendMessage, isStreaming, currentThinking, sessionId } = useStreamingChat({
+        initialSessionId: urlSessionId || undefined,
         onComplete: handleComplete,
         onError: handleError
     });
@@ -84,7 +128,14 @@ export default function ChatWorkspace() {
             {/* Background decoration - Simplified */}
             <div className="absolute inset-0 bg-white/50 opacity-10 pointer-events-none" />
 
-            {!hasMessages ? (
+            {/* Loading indicator for session loading */}
+            {isLoadingSession && (
+                <div className="absolute inset-0 flex items-center justify-center z-20 bg-white/80">
+                    <div className="text-neutral-500">加载对话中...</div>
+                </div>
+            )}
+
+            {!hasMessages && !isLoadingSession ? (
                 /* Zero State: Centered */
                 <div className="flex-1 flex flex-col items-center justify-center p-4 max-w-3xl mx-auto w-full z-10 relative animate-in fade-in duration-500">
                     <div className="mb-8 text-left w-full pl-1">
