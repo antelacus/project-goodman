@@ -1,17 +1,35 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createServerSupabaseClient } from "@/lib/database";
-import { generateRequestId, createErrorResponse } from "@/lib/security";
+import { generateRequestId, createErrorResponse, getSession } from "@/lib/security";
 
 export async function GET(req: NextRequest) {
   const requestId = req.headers.get('x-request-id') || generateRequestId();
 
   try {
+    // V3.10: Get session for document filtering
+    const session = await getSession(req);
     const supabase = createServerSupabaseClient();
 
-    // 获取所有文档（知识型和业务型）
-    const { data: documents, error: docsError } = await supabase
-      .from('documents')
-      .select('*')
+    // V3.10: Build query based on role
+    // - Admin: Can see all documents
+    // - Guest/User: Can see knowledge + own business documents
+    // - No session: Can see only knowledge documents
+    let query = supabase.from('documents').select('*');
+
+    if (!session) {
+      // No session - only knowledge documents
+      query = query.eq('doc_category', 'knowledge');
+    } else if (session.role === 'admin') {
+      // Admin - can see all documents (no filter)
+    } else {
+      // Guest or User - knowledge + own business documents
+      const ownerId = session.role === 'guest' ? session.sessionId : session.userId;
+      query = query.or(
+        `doc_category.eq.knowledge,and(owner_type.eq.${session.role},owner_id.eq.${ownerId})`
+      );
+    }
+
+    const { data: documents, error: docsError } = await query
       .order('created_at', { ascending: false });
 
     if (docsError) {
@@ -65,6 +83,9 @@ export async function GET(req: NextRequest) {
       size: doc.size,
       summary: doc.summary,
       chunks: chunksByDocId.get(doc.id) || [],
+      // V3.10: Ownership info
+      ownerType: doc.owner_type,
+      expiresAt: doc.expires_at ? new Date(doc.expires_at).getTime() : null,
     }));
 
     return NextResponse.json({ documents: formattedDocuments });

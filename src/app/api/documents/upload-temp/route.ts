@@ -5,6 +5,7 @@
  * - Extracts text from uploaded file (PDF, images, Excel, text)
  * - Vectorizes and stores temporarily in Supabase
  * - Does NOT store original file (privacy protection)
+ * - V3.10: Supports guest sessions with rate limiting and document ownership
  *
  * @route POST /api/documents/upload-temp
  */
@@ -15,7 +16,13 @@ import { NextRequest, NextResponse } from "next/server";
 import OpenAI from "openai";
 import * as XLSX from "xlsx";
 import { createServerSupabaseClient } from "@/lib/database";
-import { generateRequestId, createErrorResponse } from "@/lib/security";
+import {
+  generateRequestId,
+  createErrorResponse,
+  ensureSession,
+  checkGuestRate,
+  incrementGuestRate,
+} from "@/lib/security";
 import { parseDocumentSections, createSectionAwareChunks } from "@/lib/documents";
 
 const openai = new OpenAI({
@@ -148,6 +155,36 @@ export async function POST(req: NextRequest) {
   const requestId = req.headers.get('x-request-id') || generateRequestId();
 
   try {
+    // V3.10: Ensure session exists (creates guest session if needed)
+    const sessionResult = await ensureSession(req);
+    const { session, isNewSession } = sessionResult;
+
+    // V3.10: Check rate limit for guest users
+    if (session.role === 'guest') {
+      const rateCheck = await checkGuestRate(session.sessionId, 'upload');
+      if (!rateCheck.allowed) {
+        const response = NextResponse.json(
+          {
+            error: '已达到文件上传限制，请1小时后重试',
+            resetsAt: rateCheck.resetsAt,
+            remaining: rateCheck.remaining,
+            total: rateCheck.total,
+          },
+          { status: 429 }
+        );
+
+        if (isNewSession && sessionResult.setCookieHeader) {
+          response.cookies.set(
+            sessionResult.setCookieHeader.name,
+            sessionResult.setCookieHeader.value,
+            sessionResult.setCookieHeader.options
+          );
+        }
+
+        return response;
+      }
+    }
+
     const body: UploadRequest = await req.json();
     const { fileData, fileName, fileType } = body;
 
@@ -168,7 +205,12 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    console.log(`[upload-temp] Processing file: ${fileName}, type: ${fileType}`);
+    // V3.10: Increment rate limit for guest after validation passes
+    if (session.role === 'guest') {
+      await incrementGuestRate(session.sessionId, 'upload');
+    }
+
+    console.log(`[upload-temp] Processing file: ${fileName}, type: ${fileType}, session: ${session.role}`);
 
     // Step 1: Extract text from file
     const extractedText = await extractTextFromFile(fileData, fileName, fileType);
@@ -203,6 +245,14 @@ export async function POST(req: NextRequest) {
     const supabase = createServerSupabaseClient();
     const documentId = crypto.randomUUID();
 
+    // V3.10: Calculate ownership based on session role
+    const ownerId = session.role === 'guest' ? session.sessionId : session.userId;
+    const ownerType = session.role;
+    // Guest documents expire in 1 hour
+    const expiresAt = session.role === 'guest'
+      ? new Date(Date.now() + 60 * 60 * 1000).toISOString()
+      : null;
+
     // Create document record (NO file_url - privacy protection)
     const { error: docError } = await supabase
       .from('documents')
@@ -232,6 +282,10 @@ export async function POST(req: NextRequest) {
           sections: parseResult.sections.slice(0, 20).map(s => ({ title: s.title, level: s.level }))
         }),
         structure_quality: parseResult.quality,
+        // V3.10: Ownership fields
+        owner_id: ownerId,
+        owner_type: ownerType,
+        expires_at: expiresAt,
         // file_url is intentionally NOT set - no original file storage
       } as any);
 
@@ -270,7 +324,7 @@ export async function POST(req: NextRequest) {
     console.log(`[upload-temp] Successfully stored document ${documentId} with ${chunks.length} chunks`);
 
     // Return response
-    return NextResponse.json({
+    const response = NextResponse.json({
       success: true,
       documentId,
       textPreview: extractedText.substring(0, 300) + (extractedText.length > 300 ? '...' : ''),
@@ -282,8 +336,21 @@ export async function POST(req: NextRequest) {
         suggestions: parseResult.quality === 'basic'
           ? ['文档结构较简单，建议添加标题和分节以提高检索效果']
           : []
-      }
+      },
+      // V3.10: Include expiration info for guest documents
+      ...(expiresAt && { expiresAt: new Date(expiresAt).getTime() })
     });
+
+    // V3.10: Set session cookie for new guests
+    if (isNewSession && sessionResult.setCookieHeader) {
+      response.cookies.set(
+        sessionResult.setCookieHeader.name,
+        sessionResult.setCookieHeader.value,
+        sessionResult.setCookieHeader.options
+      );
+    }
+
+    return response;
 
   } catch (error: unknown) {
     console.error("[upload-temp] Error:", error);

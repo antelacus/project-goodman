@@ -29,13 +29,16 @@ export {
   type PasswordVerificationResult,
 } from "./admin-auth";
 
-// Session
+// Session (V3.10: Redis-backed sessions with role support)
 export {
   createSession,
+  createAdminSession as createRedisAdminSession,  // Renamed to avoid conflict with legacy admin-auth
+  createGuestSession,
   verifySession,
   destroySession,
   renewSession,
   getSessionRemainingTime,
+  getCookieOptions,
   COOKIE_NAME,
   COOKIE_OPTIONS,
   type SessionData,
@@ -71,3 +74,27 @@ export {
 export {
   validateFileByExtension,
 } from "./file-validator";
+
+// Guest Session (V3.10)
+export {
+  ensureSession,
+  applySessionCookie,
+  getSession,
+  isAdmin,
+  requireAdmin,
+  isErrorResponse,
+  getClientIP,
+  type EnsureSessionResult,
+} from "./guest-session";
+
+// Guest Rate Limiting (V3.10)
+export {
+  checkGuestRate,
+  incrementGuestRate,
+  getGuestRateLimits,
+  resetGuestRate,
+  resetAllGuestRates,
+  GUEST_RATE_LIMITS,
+  type GuestAction,
+  type GuestRateResult,
+} from "./guest-rate";

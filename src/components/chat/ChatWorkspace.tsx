@@ -4,6 +4,7 @@ import React, { useState } from 'react';
 import { useStreamingChat } from '@/hooks/useStreamingChat';
 import MessageList from './MessageList';
 import ChatInput from './ChatInput';
+import GuestBanner from './GuestBanner';
 
 interface Message {
     role: 'user' | 'assistant';
@@ -77,6 +78,9 @@ export default function ChatWorkspace() {
 
     return (
         <div className="flex flex-col h-full bg-neutral-50 relative overflow-hidden font-sans">
+            {/* Guest Banner - Shows rate limits for guests */}
+            <GuestBanner />
+
             {/* Background decoration - Simplified */}
             <div className="absolute inset-0 bg-white/50 opacity-10 pointer-events-none" />
 

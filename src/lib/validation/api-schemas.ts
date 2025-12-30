@@ -17,6 +17,7 @@ export const VALIDATION_LIMITS = {
     MAX_MESSAGE_LENGTH: 5000,
     MAX_MESSAGES_TOTAL_LENGTH: 20000,
     MAX_PASSWORD_LENGTH: 128,
+    MAX_USERNAME_LENGTH: 50,
 } as const;
 
 // =============================================================================
@@ -31,7 +32,7 @@ const uuidSchema = z.string().uuid('无效的文档 ID 格式');
 // =============================================================================
 
 /**
- * Admin Password Verification Request
+ * Admin Password Verification Request (Legacy)
  * POST /api/admin/verify-password
  */
 export const AdminVerifyPasswordSchema = z.object({
@@ -45,6 +46,29 @@ export const AdminVerifyPasswordSchema = z.object({
 });
 
 export type AdminVerifyPasswordRequest = z.infer<typeof AdminVerifyPasswordSchema>;
+
+/**
+ * Login Request (V3.10)
+ * POST /api/auth/login
+ */
+export const LoginSchema = z.object({
+    username: z
+        .string()
+        .min(1, '用户名不能为空')
+        .max(
+            VALIDATION_LIMITS.MAX_USERNAME_LENGTH,
+            `用户名长度不能超过 ${VALIDATION_LIMITS.MAX_USERNAME_LENGTH} 字符`
+        ),
+    password: z
+        .string()
+        .min(1, '密码不能为空')
+        .max(
+            VALIDATION_LIMITS.MAX_PASSWORD_LENGTH,
+            `密码长度不能超过 ${VALIDATION_LIMITS.MAX_PASSWORD_LENGTH} 字符`
+        ),
+});
+
+export type LoginRequest = z.infer<typeof LoginSchema>;
 
 // =============================================================================
 // Validation Helper

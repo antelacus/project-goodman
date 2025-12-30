@@ -3,6 +3,7 @@
  *
  * Extracts structured data from files (images, PDFs, Excel).
  * This is a quick-action, separate from the conversational agent.
+ * V3.10: Supports guest sessions with rate limiting
  *
  * @route POST /api/quick-actions/extract
  */
@@ -11,7 +12,13 @@ import { NextRequest, NextResponse } from "next/server";
 import OpenAI from "openai";
 import * as XLSX from "xlsx";
 import { getDataExtractPrompt } from "@/lib/prompts";
-import { generateRequestId, createErrorResponse } from "@/lib/security";
+import {
+  generateRequestId,
+  createErrorResponse,
+  ensureSession,
+  checkGuestRate,
+  incrementGuestRate,
+} from "@/lib/security";
 import { createServerSupabaseClient } from "@/lib/database";
 import { downloadFileAsBase64, getFirstFileForDocument } from "@/lib/documents";
 
@@ -39,6 +46,38 @@ export async function POST(req: NextRequest) {
   const requestId = req.headers.get('x-request-id') || generateRequestId();
 
   try {
+    // V3.10: Ensure session exists (creates guest session if needed)
+    const sessionResult = await ensureSession(req);
+    const { session, isNewSession } = sessionResult;
+
+    // V3.10: Check rate limit for guest users
+    if (session.role === 'guest') {
+      const rateCheck = await checkGuestRate(session.sessionId, 'extract');
+      if (!rateCheck.allowed) {
+        const response = NextResponse.json(
+          {
+            success: false,
+            error: 'rate_limit',
+            message: '已达到数据提取限制，请1小时后重试',
+            resetsAt: rateCheck.resetsAt,
+            remaining: rateCheck.remaining,
+            total: rateCheck.total,
+          },
+          { status: 429 }
+        );
+
+        if (isNewSession && sessionResult.setCookieHeader) {
+          response.cookies.set(
+            sessionResult.setCookieHeader.name,
+            sessionResult.setCookieHeader.value,
+            sessionResult.setCookieHeader.options
+          );
+        }
+
+        return response;
+      }
+    }
+
     const body = await req.json();
     let { fileData, fileType, fileName, documentId } = body;
 
@@ -47,14 +86,24 @@ export async function POST(req: NextRequest) {
       console.log(`[Extraction API] Fetching document from storage: ${documentId}`);
       const supabase = createServerSupabaseClient();
 
+      // V3.10: Fetch document with ownership check
       const { data: doc, error: docError } = await supabase
         .from('documents')
-        .select('file_url, name, doc_type')
+        .select('file_url, name, doc_type, owner_id, owner_type, doc_category')
         .eq('id', documentId)
-        .single<{ file_url: string | null; name: string; doc_type: string }>();
+        .single<{ file_url: string | null; name: string; doc_type: string; owner_id: string | null; owner_type: string | null; doc_category: string }>();
 
       if (docError || !doc) {
         return NextResponse.json({ success: false, error: 'document_not_found', message: '找不到指定文档' }, { status: 404 });
+      }
+
+      // V3.10: Check document access permission
+      // Admin can access all; Others can only access knowledge or own documents
+      if (session.role !== 'admin' && doc.doc_category !== 'knowledge') {
+        const ownerId = session.role === 'guest' ? session.sessionId : session.userId;
+        if (doc.owner_id !== ownerId) {
+          return NextResponse.json({ success: false, error: 'forbidden', message: '无权访问此文档' }, { status: 403 });
+        }
       }
 
       let storagePath = doc.file_url;
@@ -208,15 +257,31 @@ export async function POST(req: NextRequest) {
       throw new Error("AI extraction returned no result");
     }
 
+    // V3.10: Increment rate limit for guest after successful extraction
+    if (session.role === 'guest') {
+      await incrementGuestRate(session.sessionId, 'extract');
+    }
+
     // Parse and return the result
     const parsedResult = JSON.parse(result);
 
-    return NextResponse.json({
+    const response = NextResponse.json({
       success: true,
       data: parsedResult,
       fileType: fileType,
       fileName: fileName || 'unknown'
     });
+
+    // V3.10: Set session cookie for new guests
+    if (isNewSession && sessionResult.setCookieHeader) {
+      response.cookies.set(
+        sessionResult.setCookieHeader.name,
+        sessionResult.setCookieHeader.value,
+        sessionResult.setCookieHeader.options
+      );
+    }
+
+    return response;
 
   } catch (error: unknown) {
     console.error("Data Extract Tool API Error:", error);

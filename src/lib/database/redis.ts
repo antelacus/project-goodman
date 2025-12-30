@@ -269,6 +269,77 @@ class RedisWithFallback {
             memoryCacheSize: this.memoryCache.size,
         };
     }
+
+    /**
+     * Scan for keys matching a pattern
+     * Used for admin operations like listing all sessions
+     */
+    async keys(pattern: string): Promise<string[]> {
+        // Try Redis first
+        if (this.redis && this.isRedisAvailable) {
+            try {
+                const keys: string[] = [];
+                let cursor = '0';
+
+                // Use SCAN for production safety (doesn't block)
+                do {
+                    const [newCursor, results] = await this.redis.scan(
+                        cursor,
+                        'MATCH',
+                        pattern,
+                        'COUNT',
+                        100
+                    );
+                    cursor = newCursor;
+                    keys.push(...results);
+                } while (cursor !== '0');
+
+                return keys;
+            } catch (err) {
+                console.error('[Redis] SCAN failed, falling back to memory:', err);
+                this.isRedisAvailable = false;
+            }
+        }
+
+        // Fallback to memory - match keys manually
+        const matchingKeys: string[] = [];
+        const regexPattern = pattern
+            .replace(/\*/g, '.*')
+            .replace(/\?/g, '.');
+        const regex = new RegExp(`^${regexPattern}$`);
+
+        for (const key of this.memoryCache.keys()) {
+            if (regex.test(key)) {
+                // Check expiry
+                const entry = this.memoryCache.get(key);
+                if (entry && (entry.expiry === 0 || Date.now() < entry.expiry)) {
+                    matchingKeys.push(key);
+                }
+            }
+        }
+
+        return matchingKeys;
+    }
+
+    /**
+     * Get multiple values at once (MGET)
+     */
+    async mget(keys: string[]): Promise<(string | null)[]> {
+        if (keys.length === 0) return [];
+
+        // Try Redis first
+        if (this.redis && this.isRedisAvailable) {
+            try {
+                return await this.redis.mget(...keys);
+            } catch (err) {
+                console.error('[Redis] MGET failed, falling back to memory:', err);
+                this.isRedisAvailable = false;
+            }
+        }
+
+        // Fallback to memory
+        return keys.map(key => this.getFromMemory(key));
+    }
 }
 
 // =============================================================================
