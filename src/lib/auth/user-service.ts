@@ -194,6 +194,10 @@ export async function authenticateUser(credentials: UserCredentials): Promise<Au
  *
  * If ADMIN_USERNAME and ADMIN_PASSWORD are set in environment,
  * creates the admin account if it doesn't exist.
+ *
+ * ADMIN_PASSWORD can be either:
+ * - Plaintext password (will be hashed with bcrypt)
+ * - Already a bcrypt hash (starts with $2a$, $2b$, or $2y$)
  */
 export async function ensureAdminAccount(): Promise<void> {
     const adminUsername = process.env.ADMIN_USERNAME || 'admin';
@@ -219,7 +223,9 @@ export async function ensureAdminAccount(): Promise<void> {
     }
 
     // Create admin account
-    const passwordHash = await hashPassword(adminPassword);
+    // If ADMIN_PASSWORD is already a bcrypt hash, use it directly
+    const isBcryptHash = adminPassword.startsWith('$2');
+    const passwordHash = isBcryptHash ? adminPassword : await hashPassword(adminPassword);
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const { error } = await (supabase.from('users') as any).insert({

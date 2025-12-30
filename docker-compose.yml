@@ -1,7 +1,7 @@
 services:
   goodman:
     build:
-      context: ./project-goodman
+      context: .
       dockerfile: Dockerfile
       args:
         - NEXT_PUBLIC_SUPABASE_URL=${NEXT_PUBLIC_SUPABASE_URL}
@@ -16,3 +16,4 @@ services:
       - .env
     environment:
       - NODE_ENV=production
+      - REDIS_HOST=goodman-redis
