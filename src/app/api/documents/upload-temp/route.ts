@@ -23,7 +23,12 @@ import {
   checkGuestRate,
   incrementGuestRate,
 } from "@/lib/security";
-import { parseDocumentSections, createSectionAwareChunks } from "@/lib/documents";
+import {
+  parseDocumentSections,
+  createSectionAwareChunks,
+  uploadFileToStorage,
+  deleteFileFromStorage
+} from "@/lib/documents";
 
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
@@ -253,7 +258,23 @@ export async function POST(req: NextRequest) {
       ? new Date(Date.now() + 60 * 60 * 1000).toISOString()
       : null;
 
-    // Create document record (NO file_url - privacy protection)
+    // V3.11: Upload file to storage for data extraction support
+    let fileUrl: string | null = null;
+    try {
+      console.log(`[upload-temp] Uploading original file to storage...`);
+      // We pass the base64 data directly to the upload utility
+      // Note: uploadFileToStorage expects base64 without the data: scheme prefix if it's raw content,
+      // but here we already have raw base64 data in fileData (from req.json)
+      fileUrl = await uploadFileToStorage(documentId, fileName, fileData);
+      console.log(`[upload-temp] File uploaded: ${fileUrl}`);
+    } catch (storageError) {
+      console.error(`[upload-temp] Storage upload failed:`, storageError);
+      // Non-fatal? If storage fails, extract API won't work.
+      // We should probably fail the whole request since the user might expect extraction to work.
+      throw new Error(`文件存储失败: ${storageError instanceof Error ? storageError.message : String(storageError)}`);
+    }
+
+    // Create document record
     const { error: docError } = await supabase
       .from('documents')
       .insert({
@@ -261,8 +282,8 @@ export async function POST(req: NextRequest) {
         name: fileName,
         doc_category: 'business',
         doc_type: fileType.includes('pdf') ? 'pdf' :
-                  fileType.includes('image') ? 'image' :
-                  fileType.includes('excel') || fileType.includes('spreadsheet') ? 'excel' : 'txt',
+          fileType.includes('image') ? 'image' :
+            fileType.includes('excel') || fileType.includes('spreadsheet') ? 'excel' : 'txt',
         status: 'ready',
         size: estimatedSize,
         summary: {
@@ -286,11 +307,20 @@ export async function POST(req: NextRequest) {
         owner_id: ownerId,
         owner_type: ownerType,
         expires_at: expiresAt,
-        // file_url is intentionally NOT set - no original file storage
+        // V3.11: Store file_url
+        file_url: fileUrl,
       } as any);
 
     if (docError) {
       console.error('[upload-temp] Document insert error:', docError);
+      // V3.11: Cleanup uploaded file if DB insert fails
+      if (fileUrl) {
+        try {
+          await deleteFileFromStorage(fileUrl);
+        } catch (cleanupError) {
+          console.error('[upload-temp] Failed to cleanup file after DB error:', cleanupError);
+        }
+      }
       throw new Error(`数据库存储失败: ${docError.message}`);
     }
 
