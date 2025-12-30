@@ -9,9 +9,52 @@ export type Json =
   | { [key: string]: Json | undefined }
   | Json[]
 
+// V3.10: User role types
+export type UserRole = 'admin' | 'user' | 'guest'
+export type OwnerType = 'system' | 'admin' | 'user' | 'guest'
+
 export interface Database {
   public: {
     Tables: {
+      // V3.10: Users table
+      users: {
+        Row: {
+          id: string
+          username: string
+          password_hash: string
+          role: UserRole
+          display_name: string | null
+          email: string | null
+          is_active: boolean
+          created_at: string
+          updated_at: string
+          last_login_at: string | null
+        }
+        Insert: {
+          id?: string
+          username: string
+          password_hash: string
+          role?: UserRole
+          display_name?: string | null
+          email?: string | null
+          is_active?: boolean
+          created_at?: string
+          updated_at?: string
+          last_login_at?: string | null
+        }
+        Update: {
+          id?: string
+          username?: string
+          password_hash?: string
+          role?: UserRole
+          display_name?: string | null
+          email?: string | null
+          is_active?: boolean
+          created_at?: string
+          updated_at?: string
+          last_login_at?: string | null
+        }
+      }
       documents: {
         Row: {
           id: string
@@ -23,11 +66,15 @@ export interface Database {
           size: number
           summary: Json | null
           created_at: string
-          // New columns
+          // Structured columns
           section_structure?: Json | null
           structure_quality?: string | null
           year?: string | null
           period?: string | null
+          // V3.10: Ownership columns
+          owner_id?: string | null
+          owner_type?: OwnerType
+          expires_at?: string | null
         }
         Insert: {
           id: string
@@ -39,6 +86,10 @@ export interface Database {
           size: number
           summary?: Json | null
           created_at?: string
+          // V3.10: Ownership columns
+          owner_id?: string | null
+          owner_type?: OwnerType
+          expires_at?: string | null
         }
         Update: {
           id?: string
@@ -50,6 +101,49 @@ export interface Database {
           size?: number
           summary?: Json | null
           created_at?: string
+          // V3.10: Ownership columns
+          owner_id?: string | null
+          owner_type?: OwnerType
+          expires_at?: string | null
+        }
+      }
+      // V3.10: Guest activity tracking
+      guest_activity: {
+        Row: {
+          id: string
+          session_id: string
+          ip_address: string | null
+          user_agent: string | null
+          message_count: number
+          upload_count: number
+          extract_count: number
+          created_at: string
+          last_activity_at: string
+          expired_at: string | null
+        }
+        Insert: {
+          id?: string
+          session_id: string
+          ip_address?: string | null
+          user_agent?: string | null
+          message_count?: number
+          upload_count?: number
+          extract_count?: number
+          created_at?: string
+          last_activity_at?: string
+          expired_at?: string | null
+        }
+        Update: {
+          id?: string
+          session_id?: string
+          ip_address?: string | null
+          user_agent?: string | null
+          message_count?: number
+          upload_count?: number
+          extract_count?: number
+          created_at?: string
+          last_activity_at?: string
+          expired_at?: string | null
         }
       }
       document_chunks: {

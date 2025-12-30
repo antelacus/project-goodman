@@ -18,26 +18,43 @@ export interface SessionData {
     expiresAt: string;       // ISO 8601
     ip: string;
     userAgent: string;
-    // V3.7 extension fields (for future multi-user support)
-    userId?: string;
-    role?: 'admin' | 'user' | 'guest';
+    // V3.10: User management fields
+    sessionId: string;                      // UUID for document association
+    role: 'admin' | 'user' | 'guest';       // User role
+    userId?: string;                        // users.id for admin/user (undefined for guest)
+    username?: string;                      // For admin/user
+    displayName?: string;                   // Display name
 }
 
 // =============================================================================
 // Constants
 // =============================================================================
 
-const SESSION_TTL = 24 * 60 * 60;  // 24 hours in seconds
+// V3.10: Different TTLs for admin and guest sessions
+const ADMIN_SESSION_TTL = 24 * 60 * 60;  // 24 hours in seconds
+const GUEST_SESSION_TTL = 60 * 60;       // 1 hour in seconds
 const SESSION_KEY_PREFIX = 'session:';
 
 export const COOKIE_NAME = 'session';
 
+export function getCookieOptions(role: 'admin' | 'user' | 'guest') {
+    const ttl = role === 'guest' ? GUEST_SESSION_TTL : ADMIN_SESSION_TTL;
+    return {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'strict' as const,
+        path: '/',
+        maxAge: ttl,
+    };
+}
+
+// Legacy constant for backward compatibility
 export const COOKIE_OPTIONS = {
     httpOnly: true,
     secure: process.env.NODE_ENV === 'production',
     sameSite: 'strict' as const,
     path: '/',
-    maxAge: SESSION_TTL,
+    maxAge: ADMIN_SESSION_TTL,
 };
 
 // =============================================================================
@@ -45,29 +62,99 @@ export const COOKIE_OPTIONS = {
 // =============================================================================
 
 /**
- * Create a new session and store in Redis
+ * Create an admin session for authenticated users
  * @param ip - Client IP address
  * @param userAgent - Client User-Agent string
+ * @param user - User info from database
  * @returns Session data including token
  */
-export async function createSession(ip: string, userAgent: string): Promise<SessionData> {
+export async function createAdminSession(
+    ip: string,
+    userAgent: string,
+    user: { id: string; username: string; displayName?: string | null }
+): Promise<SessionData> {
     const token = uuidv4();
+    const sessionId = uuidv4();
     const now = new Date();
-    const expiresAt = new Date(now.getTime() + SESSION_TTL * 1000);
+    const expiresAt = new Date(now.getTime() + ADMIN_SESSION_TTL * 1000);
 
     const session: SessionData = {
         token,
+        sessionId,
         createdAt: now.toISOString(),
         expiresAt: expiresAt.toISOString(),
         ip,
         userAgent,
-        role: 'admin',  // Current single-admin model
+        role: 'admin',
+        userId: user.id,
+        username: user.username,
+        displayName: user.displayName || undefined,
     };
 
     await redis.set(
         `${SESSION_KEY_PREFIX}${token}`,
         JSON.stringify(session),
-        SESSION_TTL
+        ADMIN_SESSION_TTL
+    );
+
+    return session;
+}
+
+/**
+ * Create a guest session (auto-created on first interaction)
+ * @param ip - Client IP address
+ * @param userAgent - Client User-Agent string
+ * @returns Session data including token
+ */
+export async function createGuestSession(ip: string, userAgent: string): Promise<SessionData> {
+    const token = uuidv4();
+    const sessionId = uuidv4();
+    const now = new Date();
+    const expiresAt = new Date(now.getTime() + GUEST_SESSION_TTL * 1000);
+
+    const session: SessionData = {
+        token,
+        sessionId,
+        createdAt: now.toISOString(),
+        expiresAt: expiresAt.toISOString(),
+        ip,
+        userAgent,
+        role: 'guest',
+    };
+
+    await redis.set(
+        `${SESSION_KEY_PREFIX}${token}`,
+        JSON.stringify(session),
+        GUEST_SESSION_TTL
+    );
+
+    return session;
+}
+
+/**
+ * Legacy: Create a new session (defaults to admin for backward compatibility)
+ * @deprecated Use createAdminSession or createGuestSession instead
+ */
+export async function createSession(ip: string, userAgent: string): Promise<SessionData> {
+    const token = uuidv4();
+    const sessionId = uuidv4();
+    const now = new Date();
+    const expiresAt = new Date(now.getTime() + ADMIN_SESSION_TTL * 1000);
+
+    const session: SessionData = {
+        token,
+        sessionId,
+        createdAt: now.toISOString(),
+        expiresAt: expiresAt.toISOString(),
+        ip,
+        userAgent,
+        role: 'admin',
+    };
+
+    await redis.set(
+        `${SESSION_KEY_PREFIX}${token}`,
+        JSON.stringify(session),
+        ADMIN_SESSION_TTL
     );
 
     return session;
@@ -113,6 +200,7 @@ export async function destroySession(token: string): Promise<void> {
 
 /**
  * Renew a session's TTL for active users
+ * Uses appropriate TTL based on session role
  * @param token - Session token to renew
  * @returns true if renewed, false if session not found
  */
@@ -120,13 +208,14 @@ export async function renewSession(token: string): Promise<boolean> {
     const session = await verifySession(token);
     if (!session) return false;
 
-    const newExpiresAt = new Date(Date.now() + SESSION_TTL * 1000);
+    const ttl = session.role === 'guest' ? GUEST_SESSION_TTL : ADMIN_SESSION_TTL;
+    const newExpiresAt = new Date(Date.now() + ttl * 1000);
     session.expiresAt = newExpiresAt.toISOString();
 
     await redis.set(
         `${SESSION_KEY_PREFIX}${token}`,
         JSON.stringify(session),
-        SESSION_TTL
+        ttl
     );
 
     return true;
@@ -143,4 +232,66 @@ export async function getSessionRemainingTime(token: string): Promise<number | n
 
     const remainingMs = new Date(session.expiresAt).getTime() - Date.now();
     return Math.max(0, Math.floor(remainingMs / 1000));
+}
+
+/**
+ * List all active sessions (admin only)
+ * @returns Array of session data
+ */
+export async function listAllSessions(): Promise<SessionData[]> {
+    const keys = await redis.keys(`${SESSION_KEY_PREFIX}*`);
+    if (keys.length === 0) return [];
+
+    const values = await redis.mget(keys);
+    const sessions: SessionData[] = [];
+
+    for (const value of values) {
+        if (!value) continue;
+        try {
+            const session: SessionData = JSON.parse(value);
+            // Skip expired sessions
+            if (new Date(session.expiresAt) > new Date()) {
+                sessions.push(session);
+            }
+        } catch {
+            // Skip invalid entries
+        }
+    }
+
+    // Sort by createdAt descending (newest first)
+    sessions.sort((a, b) =>
+        new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+    );
+
+    return sessions;
+}
+
+/**
+ * Destroy a session by its sessionId (not token)
+ * Used by admin to terminate specific sessions
+ * @param sessionId - The sessionId field (not the token)
+ * @returns true if session was found and destroyed
+ */
+export async function destroySessionById(sessionId: string): Promise<boolean> {
+    const keys = await redis.keys(`${SESSION_KEY_PREFIX}*`);
+    if (keys.length === 0) return false;
+
+    const values = await redis.mget(keys);
+
+    for (let i = 0; i < values.length; i++) {
+        const value = values[i];
+        if (!value) continue;
+
+        try {
+            const session: SessionData = JSON.parse(value);
+            if (session.sessionId === sessionId) {
+                await redis.del(keys[i]);
+                return true;
+            }
+        } catch {
+            // Skip invalid entries
+        }
+    }
+
+    return false;
 }

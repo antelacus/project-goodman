@@ -46,6 +46,8 @@ const nextConfig: NextConfig = {
   eslint: {
     ignoreDuringBuilds: true,
   },
+  // V3.10: instrumentation.ts is used for cleanup scheduler and admin init
+  // Note: In Next.js 15.3+, instrumentation works by default (no experimental flag needed)
   async headers() {
     return [
       {

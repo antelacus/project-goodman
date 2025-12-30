@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { cn } from '@/lib/utils';
 import {
     ChevronsLeft,
@@ -12,6 +12,9 @@ import {
     Mail,
     Plus,
     X,
+    Settings,
+    LogIn,
+    LogOut,
 } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
@@ -36,6 +39,21 @@ export default function Sidebar() {
     const pathname = usePathname();
     const router = useRouter();
     const [isExtractionOpen, setIsExtractionOpen] = useState(false);
+    const [isAdmin, setIsAdmin] = useState(false);
+
+    // Check admin status on mount
+    useEffect(() => {
+        const checkAdmin = async () => {
+            try {
+                const res = await fetch('/api/auth/session');
+                const data = await res.json();
+                setIsAdmin(data.authenticated && data.user?.role === 'admin');
+            } catch {
+                setIsAdmin(false);
+            }
+        };
+        checkAdmin();
+    }, []);
 
     // Handle "New Chat" - for now, just reload /chat or push to /chat if elsewhere
     const handleNewChat = () => {
@@ -181,11 +199,67 @@ export default function Sidebar() {
                                 </Link>
                             )
                         })}
+
+                        {/* Admin Panel Link - Only visible to admins */}
+                        {isAdmin && (
+                            <Link
+                                href="/admin"
+                                onClick={handleNavigation}
+                                className={cn(
+                                    "flex items-center rounded-lg p-2 transition-colors",
+                                    pathname.startsWith('/admin')
+                                        ? "bg-yellow-50 text-yellow-700 font-medium"
+                                        : "text-neutral-600 hover:bg-neutral-100 hover:text-neutral-900",
+                                    isCollapsed && "justify-center",
+                                    pathname.startsWith('/admin') && isCollapsed && "bg-yellow-50"
+                                )}
+                                title="管理面板"
+                            >
+                                <Settings size={20} className={cn(!isCollapsed && "mr-3")} />
+                                {!isCollapsed && <span>管理面板</span>}
+                            </Link>
+                        )}
                     </nav>
                 </div>
 
                 {/* Footer / User Section */}
-                <div className="border-t border-neutral-200 p-3">
+                <div className="border-t border-neutral-200 p-3 space-y-1">
+                    {/* Login/Logout Button */}
+                    {isAdmin ? (
+                        <button
+                            onClick={async () => {
+                                try {
+                                    await fetch('/api/auth/logout', { method: 'POST' });
+                                    setIsAdmin(false);
+                                    router.push('/chat');
+                                } catch {
+                                    // Ignore errors
+                                }
+                            }}
+                            className={cn(
+                                "flex w-full items-center rounded-lg p-2 text-neutral-500 hover:bg-neutral-100 hover:text-neutral-900 transition-colors",
+                                isCollapsed && "justify-center"
+                            )}
+                            title="登出"
+                        >
+                            <LogOut size={20} className={cn(!isCollapsed && "mr-3")} />
+                            {!isCollapsed && <span>登出</span>}
+                        </button>
+                    ) : (
+                        <Link
+                            href="/login"
+                            onClick={handleNavigation}
+                            className={cn(
+                                "flex items-center rounded-lg p-2 text-neutral-500 hover:bg-neutral-100 hover:text-neutral-900 transition-colors",
+                                isCollapsed && "justify-center"
+                            )}
+                            title="管理员登录"
+                        >
+                            <LogIn size={20} className={cn(!isCollapsed && "mr-3")} />
+                            {!isCollapsed && <span>管理员登录</span>}
+                        </Link>
+                    )}
+
                     <a
                         href="mailto:me@antelacus.com"
                         className={cn(

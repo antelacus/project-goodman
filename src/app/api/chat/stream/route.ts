@@ -1,10 +1,48 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { unifiedAgentGraph } from '@/lib/workflows/unified/graph';
+import {
+    ensureSession,
+    checkGuestRate,
+    incrementGuestRate,
+    getCookieOptions,
+    COOKIE_NAME,
+} from '@/lib/security';
 
 export const runtime = 'nodejs'; // Ensure Node.js runtime for LangGraph
 
 export async function POST(req: NextRequest) {
     try {
+        // V3.10: Ensure session exists (creates guest session if needed)
+        const sessionResult = await ensureSession(req);
+        const { session, isNewSession } = sessionResult;
+
+        // V3.10: Check rate limit for guest users
+        if (session.role === 'guest') {
+            const rateCheck = await checkGuestRate(session.sessionId, 'message');
+            if (!rateCheck.allowed) {
+                const response = NextResponse.json(
+                    {
+                        error: '已达到消息数量限制，请1小时后重试',
+                        resetsAt: rateCheck.resetsAt,
+                        remaining: rateCheck.remaining,
+                        total: rateCheck.total,
+                    },
+                    { status: 429 }
+                );
+
+                // Set cookie for new sessions even on rate limit error
+                if (isNewSession && sessionResult.setCookieHeader) {
+                    response.cookies.set(
+                        sessionResult.setCookieHeader.name,
+                        sessionResult.setCookieHeader.value,
+                        sessionResult.setCookieHeader.options
+                    );
+                }
+
+                return response;
+            }
+        }
+
         const body = await req.json();
         const { question, sessionId, files, documentIds } = body;
 
@@ -13,6 +51,11 @@ export async function POST(req: NextRequest) {
                 { error: 'Missing question in request body' },
                 { status: 400 }
             );
+        }
+
+        // V3.10: Increment rate limit for guest after validation passes
+        if (session.role === 'guest') {
+            await incrementGuestRate(session.sessionId, 'message');
         }
 
         // Don't generate UUID here - let loadMemoryNode create/load the session
@@ -163,13 +206,29 @@ export async function POST(req: NextRequest) {
             }
         });
 
-        return new Response(stream, {
-            headers: {
-                'Content-Type': 'text/event-stream',
-                'Cache-Control': 'no-cache',
-                'Connection': 'keep-alive',
-            },
-        });
+        // Build response headers
+        const headers: HeadersInit = {
+            'Content-Type': 'text/event-stream',
+            'Cache-Control': 'no-cache',
+            'Connection': 'keep-alive',
+        };
+
+        // V3.10: Add session cookie for new guest sessions
+        if (isNewSession && sessionResult.setCookieHeader) {
+            const { name, value, options } = sessionResult.setCookieHeader;
+            const cookieParts = [
+                `${name}=${value}`,
+                `Path=${options.path}`,
+                `Max-Age=${options.maxAge}`,
+                options.httpOnly ? 'HttpOnly' : '',
+                options.secure ? 'Secure' : '',
+                `SameSite=${options.sameSite}`,
+            ].filter(Boolean);
+
+            headers['Set-Cookie'] = cookieParts.join('; ');
+        }
+
+        return new Response(stream, { headers });
     } catch (error: any) {
         console.error('Request handler error:', error);
         return NextResponse.json(
