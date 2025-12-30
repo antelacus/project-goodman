@@ -41,9 +41,10 @@ export async function GET(
             );
         }
 
-        // Filter messages to only return user and assistant messages (not tool/system)
+        // Filter messages to only return user and assistant messages with content
+        // (excludes tool/system messages and empty intermediate assistant messages)
         const displayMessages = conversationSession.messages
-            .filter(m => m.role === 'user' || m.role === 'assistant')
+            .filter(m => (m.role === 'user' || m.role === 'assistant') && m.content.trim() !== '')
             .map(m => ({
                 role: m.role,
                 content: m.content,
