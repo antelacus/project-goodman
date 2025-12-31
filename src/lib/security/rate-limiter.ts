@@ -3,10 +3,15 @@
  *
  * Provides rate limiting using in-memory storage to prevent
  * API abuse and control request rates per endpoint category.
- * 
- * Note: Uses in-memory Map for Edge Runtime compatibility in middleware.
- * For distributed deployments, rate limiting should be moved to API routes
- * with Redis storage.
+ *
+ * ARCHITECTURE NOTE (V3.9):
+ * Uses in-memory Map because this runs in Next.js Edge Runtime (middleware).
+ * Edge Runtime doesn't support Node.js modules like ioredis.
+ *
+ * For single-VPS deployment (current architecture): In-memory is acceptable.
+ * For distributed/multi-instance deployment: Consider:
+ *   1. Use Upstash Redis (Edge-compatible, fetch-based client)
+ *   2. Move rate limiting to API routes with Node.js runtime
  */
 
 // In-memory storage for rate limiting (Edge Runtime compatible)

@@ -11,7 +11,7 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { createServerSupabaseClient } from "@/lib/database";
-import { verifyAdminPassword, generateRequestId, createErrorResponse } from "@/lib/security";
+import { verifySession, COOKIE_NAME, generateRequestId, createErrorResponse } from "@/lib/security";
 import { deleteDocumentFiles } from "@/lib/documents";
 
 // DELETE: Delete a document and all related data
@@ -68,30 +68,31 @@ export async function PATCH(req: NextRequest) {
   const requestId = req.headers.get('x-request-id') || generateRequestId();
 
   try {
+    // Verify admin session via cookie
+    const token = req.cookies.get(COOKIE_NAME)?.value;
+    if (!token) {
+      return NextResponse.json(
+        { error: "Authentication required" },
+        { status: 401 }
+      );
+    }
+
+    const session = await verifySession(token);
+    if (!session || session.role !== 'admin') {
+      return NextResponse.json(
+        { error: "Admin access required" },
+        { status: 403 }
+      );
+    }
+
     const body = await req.json();
-    const { documentId, adminPassword, updates } = body;
+    const { documentId, updates } = body;
 
     // Validate required fields
     if (!documentId) {
       return NextResponse.json(
         { error: "Document ID is required" },
         { status: 400 }
-      );
-    }
-
-    if (!adminPassword) {
-      return NextResponse.json(
-        { error: "Admin password is required" },
-        { status: 400 }
-      );
-    }
-
-    // Verify admin password
-    const isValidPassword = await verifyAdminPassword(adminPassword);
-    if (!isValidPassword) {
-      return NextResponse.json(
-        { error: "Invalid admin password" },
-        { status: 401 }
       );
     }
 

@@ -225,15 +225,11 @@ export default function DocumentsPage() {
       updates.name = value;
     }
 
-    // Get admin password from session storage or prompt
-    const adminPassword = sessionStorage.getItem('adminPassword') || prompt('请输入管理员密码：');
-    if (!adminPassword) return;
-
     try {
       const response = await fetch('/api/documents', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ documentId: id, adminPassword, updates }),
+        body: JSON.stringify({ documentId: id, updates }),
       });
 
       if (!response.ok) {
