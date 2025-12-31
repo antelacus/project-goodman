@@ -4,8 +4,27 @@
  * Provides functions for uploading, downloading, and managing files
  * in the document-files bucket.
  *
- * Uses service role key for server-side operations (bypasses RLS).
+ * ⚠️ SERVER-SIDE ONLY ⚠️
+ * This module uses SUPABASE_SERVICE_ROLE_KEY and must NEVER be imported
+ * in Client Components. Doing so would expose the service key to the browser.
+ *
+ * Safe to import in:
+ * - API routes (src/app/api/*)
+ * - Server Components
+ * - Server Actions
+ *
+ * NOT safe to import in:
+ * - Client Components ('use client')
+ * - Anything that runs in the browser
  */
+
+// Runtime check to prevent accidental client-side import
+if (typeof window !== 'undefined') {
+  throw new Error(
+    '[SECURITY] storage.ts must not be imported in client-side code. ' +
+    'This module uses SUPABASE_SERVICE_ROLE_KEY which must never be exposed to the browser.'
+  );
+}
 
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
 

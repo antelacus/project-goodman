@@ -2,22 +2,12 @@
 
 import { useState, useEffect, useRef } from 'react';
 
-interface AdminPasswordTriggerProps {
-  onAuthSuccess?: () => void;
-  onAuthFailure?: () => void;
-}
-
-interface AdminSession {
-  token: string;
-  expiresAt: number;
-}
-
 /**
  * AdminPasswordTrigger Component
  *
  * Provides an easter egg for admin authentication via triple-click.
  * When the trigger element is triple-clicked, shows a password modal.
- * On successful authentication, stores session token.
+ * Session is managed via HttpOnly cookies (set by API).
  *
  * Usage:
  * ```tsx
@@ -40,14 +30,20 @@ export function useAdminAuth() {
   const clickCountRef = useRef(0);
   const clickTimerRef = useRef<NodeJS.Timeout | null>(null);
 
-  // Check if already authenticated on mount
+  // Check if already authenticated on mount via API
   useEffect(() => {
-    const session = getAdminSession();
-    if (session && session.expiresAt > Date.now()) {
-      setIsAuthenticated(true);
-    } else {
-      clearAdminSession();
+    async function checkSession() {
+      try {
+        const response = await fetch('/api/auth/session');
+        const data = await response.json();
+        if (data.authenticated && data.user?.role === 'admin') {
+          setIsAuthenticated(true);
+        }
+      } catch (err) {
+        console.error('Session check error:', err);
+      }
     }
+    checkSession();
   }, []);
 
   // Triple-click detection
@@ -103,12 +99,7 @@ export function useAdminAuth() {
       const data = await response.json();
 
       if (data.valid) {
-        // Session is now managed via HTTP-only cookie (set by API)
-        // Store minimal client-side state for UI purposes
-        setAdminSession({
-          token: 'cookie-session', // Token is in HTTP-only cookie, this is just a marker
-          expiresAt: data.expiresAt,
-        });
+        // Session is managed via HTTP-only cookie (set by API)
         setIsAuthenticated(true);
         setShowModal(false);
         setPassword('');
@@ -129,8 +120,12 @@ export function useAdminAuth() {
     setError('');
   };
 
-  const logout = () => {
-    clearAdminSession();
+  const logout = async () => {
+    try {
+      await fetch('/api/auth/logout', { method: 'POST' });
+    } catch (err) {
+      console.error('Logout error:', err);
+    }
     setIsAuthenticated(false);
   };
 
@@ -214,68 +209,4 @@ function AdminPasswordModal({
       </div>
     </div>
   );
-}
-
-// Session management utilities
-const ADMIN_SESSION_KEY = 'admin_session';
-
-// Helper to check if localStorage is available and functional
-function isLocalStorageAvailable(): boolean {
-  try {
-    return typeof window !== 'undefined' &&
-      typeof window.localStorage !== 'undefined' &&
-      typeof window.localStorage.getItem === 'function';
-  } catch {
-    return false;
-  }
-}
-
-function setAdminSession(session: AdminSession) {
-  if (!isLocalStorageAvailable()) return;
-  try {
-    window.localStorage.setItem(ADMIN_SESSION_KEY, JSON.stringify(session));
-  } catch (err) {
-    console.error('Failed to store admin session:', err);
-  }
-}
-
-function getAdminSession(): AdminSession | null {
-  if (!isLocalStorageAvailable()) return null;
-  try {
-    const stored = window.localStorage.getItem(ADMIN_SESSION_KEY);
-    if (!stored) return null;
-    return JSON.parse(stored) as AdminSession;
-  } catch (err) {
-    console.error('Failed to retrieve admin session:', err);
-    return null;
-  }
-}
-
-function clearAdminSession() {
-  if (!isLocalStorageAvailable()) return;
-  try {
-    window.localStorage.removeItem(ADMIN_SESSION_KEY);
-  } catch (err) {
-    console.error('Failed to clear admin session:', err);
-  }
-}
-
-/**
- * Get admin token for authenticated API requests
- */
-export function getAdminToken(): string | null {
-  const session = getAdminSession();
-  if (!session || session.expiresAt <= Date.now()) {
-    clearAdminSession();
-    return null;
-  }
-  return session.token;
-}
-
-/**
- * Check if user is currently authenticated as admin
- */
-export function isAdminAuthenticated(): boolean {
-  const session = getAdminSession();
-  return session !== null && session.expiresAt > Date.now();
 }

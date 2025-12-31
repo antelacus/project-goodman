@@ -139,10 +139,10 @@ export async function POST(req: NextRequest) {
     // Create Redis-backed session
     const session: SessionData = await createSession(clientIP, userAgent);
 
-    // Audit: Log successful login
+    // Audit: Log successful login (no sensitive data)
     logAuthEvent('login_success', clientIP, userAgent, {
       requestId,
-      sessionId: session.token.substring(0, 8) + '...',  // Log partial token only
+      sessionCreated: true,
     });
 
     // Build response with session cookie

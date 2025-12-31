@@ -12,27 +12,16 @@
  * - session: Session management
  */
 
-// Admin Auth
+// Admin Auth (V3.9: Legacy in-memory sessions removed, use session.ts for Redis sessions)
 export {
   verifyAdminPassword,
-  createAdminSession,
-  verifyAdminSession,
-  revokeAdminSession,
-  getAdminSession,
-  cleanupExpiredSessions,
-  getActiveSessionCount,
-  clearAllSessions,
-  extractAdminToken,
-  isAdminAuthenticated,
-  getSessionRemainingTime as getAdminSessionRemainingTime,
-  type AdminSession,
   type PasswordVerificationResult,
 } from "./admin-auth";
 
 // Session (V3.10: Redis-backed sessions with role support)
 export {
   createSession,
-  createAdminSession as createRedisAdminSession,  // Renamed to avoid conflict with legacy admin-auth
+  createAdminSession,
   createGuestSession,
   verifySession,
   destroySession,

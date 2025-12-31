@@ -31,8 +31,8 @@ const securityHeaders = [
     key: 'Content-Security-Policy',
     value: [
       "default-src 'self'",
-      "script-src 'self' 'unsafe-inline' 'unsafe-eval'",  // Next.js requires unsafe-inline/eval
-      "style-src 'self' 'unsafe-inline'",                  // Tailwind CSS requires unsafe-inline
+      "script-src 'self' 'unsafe-inline'",  // Next.js 15 hydration requires unsafe-inline; unsafe-eval removed
+      "style-src 'self' 'unsafe-inline'",   // Tailwind CSS requires unsafe-inline
       "img-src 'self' data: https:",
       "font-src 'self'",
       "connect-src 'self' https://api.openai.com https://*.supabase.co",
