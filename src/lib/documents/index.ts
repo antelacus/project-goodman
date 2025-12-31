@@ -51,7 +51,16 @@ export {
   type ParseResult,
 } from "./parser";
 
-// Storage
+// File Utilities (client-safe)
+export {
+  getFileExtension,
+  isPreviewable,
+  isImage,
+  isPdf,
+  isExcel,
+} from "./file-utils";
+
+// Storage (server-side only - do NOT import in client components)
 export {
   uploadFileToStorage,
   downloadFileAsBase64,
@@ -60,9 +69,4 @@ export {
   deleteFileFromStorage,
   deleteDocumentFiles,
   getFirstFileForDocument,
-  getFileExtension,
-  isPreviewable,
-  isImage,
-  isPdf,
-  isExcel,
 } from "./storage";
