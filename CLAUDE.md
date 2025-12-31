@@ -1,10 +1,10 @@
 # CLAUDE.md
 
-> **Document Purpose**: Instructions for AI assistants on how to collaborate with the project lead. This is a **reusable template** - copy to new projects and customize the Project Context section.
+> **Document Purpose**: Project-specific instructions for AI assistants. Universal preferences are in `~/.claude/CLAUDE.md`.
 >
 > | Audience | Update Frequency | Related Docs |
 > |----------|------------------|--------------|
-> | AI Assistant | When process changes | `.claude/rules/` for details |
+> | AI Assistant | When project changes | `.claude/rules/` for details |
 
 ---
 
@@ -37,59 +37,6 @@ docker logs -f goodman                                   # View logs
 | **6. Deployment** | Final review, deploy to production | → Wait for approval |
 
 **Key Rule**: Wait for user confirmation after each task completion (context window management).
-
----
-
-## Collaboration Guidelines
-
-### About You (Project Lead)
-
-- **Background**: Economics/Finance degree, self-taught tech (Python, SQL, JS, ML/LLM)
-- **Languages**: English, 汉语普通话, Français, Español
-- **Technical Level**: Strong analytical skills, learning coding
-
-### My Role (Claude)
-
-- **Question**: Ask clarifying questions freely
-- **Suggest**: Propose better approaches
-- **Correct**: Point out issues or better practices
-- **Teach**: Explain technical concepts clearly
-- **Guide**: Step-by-step through complex tasks
-
-### Tool Usage
-
-- **TodoWrite**: Track all tasks and progress
-- **Task/Agents**: Complex research, exploration, parallel work
-- **MCP Tools**: External services (Supabase, etc.)
-
-### Development Guidelines
-
-*These apply universally to all projects.*
-
-#### Security
-
-- Never store tokens/passwords in localStorage/sessionStorage (use HttpOnly cookies)
-- Use `crypto.timingSafeEqual` for secret/token validation
-- Zero-knowledge logging: log outcomes, never secrets or hints
-- Server-only code needs explicit markers + runtime `typeof window` check
-
-#### TypeScript
-
-- Avoid `as any`; if unavoidable, add `// REASON: ...` comment
-- Define shared types once in `src/types/`, never duplicate
-- Wrap all `JSON.parse` in try-catch with graceful fallback
-
-#### Error Handling
-
-- Use single error response helper for consistent API format
-- Validate all external inputs with schema validation (Zod)
-- Propagate errors to users; never swallow silently
-
-#### Code Hygiene
-
-- Delete replaced code immediately; Git is your backup
-- External configs belong in environment variables
-- Expensive initializations happen once at startup, not per-request
 
 ---
 
@@ -140,12 +87,13 @@ docker logs -f goodman                                   # View logs
 
 | File | Contents |
 |------|----------|
-| `.claude/rules/development-process.md` | Phase-gated workflow, checkpoints, PRD vs Requirement Declaration |
-| `.claude/rules/project-context.md` | Product vision, tech stack, deployment, directory structure |
-| `.claude/rules/code-conventions.md` | Coding standards, documentation, language rules |
+| `~/.claude/CLAUDE.md` | Personal preferences, universal guidelines (applies to all projects) |
+| `.claude/rules/development-process.md` | Phase-gated workflow, checkpoints |
+| `.claude/rules/project-context.md` | Product vision, tech stack, deployment |
+| `.claude/rules/code-conventions.md` | Coding standards, documentation |
 | `.claude/rules/known-issues.md` | Gotchas and limitations |
 
 ---
 
-*Template Version: 2.0*
+*Template Version: 2.1*
 *Origin: Project Goodman (2025)*
