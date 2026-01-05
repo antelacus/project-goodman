@@ -5,10 +5,12 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { ensureSession } from '@/lib/security';
+import { ensureSession, generateRequestId, createErrorResponse } from '@/lib/security';
 import { conversationMemory } from '@/lib/memory';
 
 export async function GET(req: NextRequest) {
+    const requestId = req.headers.get('x-request-id') || generateRequestId();
+
     try {
         // Get current session
         const sessionResult = await ensureSession(req);
@@ -47,11 +49,8 @@ export async function GET(req: NextRequest) {
         }
 
         return response;
-    } catch (error: any) {
+    } catch (error: unknown) {
         console.error('Error fetching sessions:', error);
-        return NextResponse.json(
-            { error: error.message || 'Failed to fetch sessions' },
-            { status: 500 }
-        );
+        return createErrorResponse(error, requestId, 500);
     }
 }

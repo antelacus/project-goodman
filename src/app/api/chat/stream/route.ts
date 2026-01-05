@@ -6,11 +6,16 @@ import {
     incrementGuestRate,
     getCookieOptions,
     COOKIE_NAME,
+    generateRequestId,
+    createErrorResponse,
 } from '@/lib/security';
+import { ChatMessageSchema, validateRequest } from '@/lib/validation/api-schemas';
 
 export const runtime = 'nodejs'; // Ensure Node.js runtime for LangGraph
 
 export async function POST(req: NextRequest) {
+    const requestId = req.headers.get('x-request-id') || generateRequestId();
+
     try {
         // V3.10: Ensure session exists (creates guest session if needed)
         const sessionResult = await ensureSession(req);
@@ -44,14 +49,17 @@ export async function POST(req: NextRequest) {
         }
 
         const body = await req.json();
-        const { question, sessionId, files, documentIds } = body;
 
-        if (!question) {
+        // V3.9: Validate request with Zod schema
+        const validation = validateRequest(ChatMessageSchema, body);
+        if (!validation.success) {
             return NextResponse.json(
-                { error: 'Missing question in request body' },
+                { error: validation.error },
                 { status: 400 }
             );
         }
+
+        const { question, sessionId, files, documentIds } = validation.data;
 
         // V3.10: Increment rate limit for guest after validation passes
         if (session.role === 'guest') {
@@ -237,11 +245,8 @@ export async function POST(req: NextRequest) {
         }
 
         return new Response(stream, { headers });
-    } catch (error: any) {
+    } catch (error: unknown) {
         console.error('Request handler error:', error);
-        return NextResponse.json(
-            { error: error.message || 'Internal Server Error' },
-            { status: 500 }
-        );
+        return createErrorResponse(error, requestId, 500);
     }
 }

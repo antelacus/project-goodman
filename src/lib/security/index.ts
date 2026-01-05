@@ -87,3 +87,16 @@ export {
   type GuestAction,
   type GuestRateResult,
 } from "./guest-rate";
+
+// CSRF Protection (V3.9)
+export {
+  generateCsrfToken,
+  setCsrfCookie,
+  getCsrfTokenFromCookie,
+  getCsrfTokenFromHeader,
+  validateCsrf,
+  requiresCsrfProtection,
+  createCsrfErrorResponse,
+  CSRF_COOKIE_NAME,
+  CSRF_HEADER_NAME,
+} from "./csrf";

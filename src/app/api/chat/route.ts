@@ -1,8 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { unifiedAgentGraph } from "@/lib/workflows/unified/graph";
 import { createServerSupabaseClient } from "@/lib/database";
+import { generateRequestId, createErrorResponse } from "@/lib/security";
 
 export async function POST(req: NextRequest) {
+    const requestId = req.headers.get('x-request-id') || generateRequestId();
+
     try {
         const body = await req.json();
         const { message, sessionId, documentIds } = body;
@@ -71,11 +74,8 @@ export async function POST(req: NextRequest) {
             }
         });
 
-    } catch (error) {
+    } catch (error: unknown) {
         console.error("Chat API Error:", error);
-        return NextResponse.json(
-            { error: "Internal Server Error", details: error instanceof Error ? error.message : "Unknown" },
-            { status: 500 }
-        );
+        return createErrorResponse(error, requestId, 500);
     }
 }
