@@ -60,13 +60,5 @@ export {
   isExcel,
 } from "./file-utils";
 
-// Storage (server-side only - do NOT import in client components)
-export {
-  uploadFileToStorage,
-  downloadFileAsBase64,
-  getSignedFileUrl,
-  getSignedFileUrls,
-  deleteFileFromStorage,
-  deleteDocumentFiles,
-  getFirstFileForDocument,
-} from "./storage";
+// Storage functions are NOT exported from barrel to prevent client-side imports.
+// Server-side code should import directly: import { ... } from "@/lib/documents/storage";

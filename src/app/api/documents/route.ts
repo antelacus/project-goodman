@@ -12,7 +12,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createServerSupabaseClient } from "@/lib/database";
 import { verifySession, COOKIE_NAME, generateRequestId, createErrorResponse } from "@/lib/security";
-import { deleteDocumentFiles } from "@/lib/documents";
+import { deleteDocumentFiles } from "@/lib/documents/storage";
 
 // DELETE: Delete a document and all related data
 export async function DELETE(req: NextRequest) {
