@@ -3,5 +3,36 @@
     "supabase@claude-plugins-official": true,
     "context7@claude-plugins-official": true,
     "typescript-lsp@claude-plugins-official": true
+  },
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "if echo \"$TOOL_INPUT\" | grep -q '\\.tsx\\?$\\|\\.jsx\\?$\\|\\.json$\\|\\.md$\\|\\.css$'; then FILE_PATH=$(echo \"$TOOL_INPUT\" | jq -r '.file_path // empty'); if [ -n \"$FILE_PATH\" ] && [ -f \"$FILE_PATH\" ]; then npx prettier --write \"$FILE_PATH\" 2>/dev/null || true; fi; fi"
+          }
+        ]
+      },
+      {
+        "matcher": "Edit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "FILE_PATH=$(echo \"$TOOL_INPUT\" | jq -r '.file_path // empty'); if echo \"$FILE_PATH\" | grep -qE '\\.tsx?$'; then echo '{\"feedback\": \"TypeScript file modified. Consider running type check: npx tsc --noEmit\"}'; fi"
+          }
+        ]
+      },
+      {
+        "matcher": "Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "FILE_PATH=$(echo \"$TOOL_INPUT\" | jq -r '.file_path // empty'); if echo \"$FILE_PATH\" | grep -q 'supabase/migrations/'; then echo '{\"feedback\": \"Migration file created! Remember to: 1) Apply migration to database, 2) Regenerate types: npx supabase gen types typescript --project-id PROJECT_ID > src/lib/database/types.ts, 3) Verify compilation: npx tsc --noEmit\"}'; fi"
+          }
+        ]
+      }
+    ]
   }
 }

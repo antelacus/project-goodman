@@ -39,56 +39,13 @@
 
 ## Code Documentation Standards
 
-**Philosophy**: The project lead reviews rather than writes code. Documentation should enable understanding of **architecture and intent**, not line-by-line mechanics. Well-named code is self-documenting; comments explain "why", not "what".
+> **Full guidelines**: See `~/.claude/CLAUDE.md` → Documentation Philosophy section.
+> This avoids duplication - the global file has the complete documentation standards.
 
-**Three Levels of Documentation**:
-
-1. **Architecture Level** (in `docs/` folder)
-   - System overview and data flows
-   - Key concepts and patterns used
-   - For external libraries: explanation of core concepts (e.g., "What is a LangGraph StateGraph?")
-
-2. **File Level** (only for complex/entry-point files)
-   - Brief header: purpose + key exports
-   - Skip for simple utility files where the filename is self-explanatory
-
-3. **Code Level** (minimal, targeted)
-   - **DO comment**: Non-obvious business logic, workarounds, "why" decisions
-   - **DON'T comment**: Obvious operations, standard patterns, self-explanatory code
-
-**For External Libraries**:
-
-- Create ONE reference doc (e.g., `docs/LANGGRAPH_CONCEPTS.md`) explaining key concepts
-- In code, use descriptive naming that maps to those concepts
-- Don't repeat library documentation in every file
-
-**Example - Good vs Over-documented**:
-
-```typescript
-// ❌ Over-documented (noisy)
-/**
- * Calculates the debt-to-equity ratio
- * @param totalDebt - The total debt amount
- * @param totalEquity - The total equity amount
- * @returns The debt-to-equity ratio as a number
- */
-function calculateDebtToEquity(totalDebt: number, totalEquity: number): number {
-  // Divide debt by equity to get ratio
-  return totalDebt / totalEquity;
-}
-
-// ✅ Self-documenting (clean)
-function calculateDebtToEquity(totalDebt: number, totalEquity: number): number {
-  return totalDebt / totalEquity;
-}
-
-// ✅ Comment only when "why" is non-obvious
-function calculateDebtToEquity(totalDebt: number, totalEquity: number): number {
-  // Return 0 instead of Infinity when equity is zero (company-specific rule)
-  if (totalEquity === 0) return 0;
-  return totalDebt / totalEquity;
-}
-```
+**Quick Reference**:
+- Architecture docs in `docs/`
+- File-level comments only for complex/entry files
+- Code comments: explain "why", not "what"
 
 ## Language Standards
 
