@@ -20,7 +20,7 @@ import {
   incrementGuestRate,
 } from "@/lib/security";
 import { createServerSupabaseClient } from "@/lib/database";
-import { downloadFileAsBase64, getFirstFileForDocument } from "@/lib/documents";
+import { downloadFileAsBase64, getFirstFileForDocument } from "@/lib/documents/storage";
 
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,

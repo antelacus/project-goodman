@@ -38,7 +38,7 @@ import {
   validateIncomeStatement,
   validateCashFlow,
 } from "@/lib/financial";
-import { uploadFileToStorage } from "@/lib/documents";
+import { uploadFileToStorage } from "@/lib/documents/storage";
 
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,

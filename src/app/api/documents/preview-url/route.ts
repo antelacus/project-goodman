@@ -5,7 +5,7 @@
  */
 
 import { NextRequest, NextResponse } from "next/server";
-import { getSignedFileUrl } from "@/lib/documents";
+import { getSignedFileUrl } from "@/lib/documents/storage";
 import { generateRequestId, createErrorResponse } from "@/lib/security";
 
 export async function GET(req: NextRequest) {

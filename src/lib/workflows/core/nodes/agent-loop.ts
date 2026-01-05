@@ -34,9 +34,12 @@ function convertToOpenAIMessages(
 
         if (msgType === "ai") {
             const aiMsg = msg as AIMessage;
+            // Content can be empty string for tool-calling messages
+            // Use null only when content is actually null/undefined, not for empty string
+            const content = typeof aiMsg.content === "string" ? aiMsg.content : null;
             const result: OpenAI.Chat.ChatCompletionAssistantMessageParam = {
                 role: "assistant" as const,
-                content: aiMsg.content as string || null,
+                content: content,
             };
 
             // Preserve tool_calls if present
@@ -123,10 +126,19 @@ export async function agentLoopNode(
     const choice = completion.choices[0];
     const message = choice.message;
 
-    // Create AIMessage
+    // Convert OpenAI tool_calls format to LangChain format
+    // OpenAI: { id, type, function: { name, arguments } }
+    // LangChain: { id, name, args }
+    const langchainToolCalls = message.tool_calls?.map(tc => ({
+        id: tc.id,
+        name: tc.function.name,
+        args: parseToolArguments(tc.function.arguments, tc.function.name),
+    }));
+
+    // Create AIMessage with properly formatted tool_calls
     const aiMessage = new AIMessage({
         content: message.content || "",
-        tool_calls: message.tool_calls as any,
+        tool_calls: langchainToolCalls,
     });
 
     // 3. Update State
@@ -145,16 +157,15 @@ export async function agentLoopNode(
 
     newMessages.push(aiMessage);
 
-    const toolCalls = message.tool_calls || [];
-
-    // Update pending tool calls (with safe JSON parsing)
-    const pendingToolCalls = toolCalls.map(tc => ({
+    // Convert langchainToolCalls to pendingToolCalls format
+    // Reuse already-parsed data from langchainToolCalls
+    const pendingToolCalls = (langchainToolCalls || []).map(tc => ({
         id: tc.id,
-        name: tc.function.name,
-        arguments: parseToolArguments(tc.function.arguments, tc.function.name),
+        name: tc.name,
+        arguments: tc.args,
     }));
 
-    const isComplete = toolCalls.length === 0;
+    const isComplete = pendingToolCalls.length === 0;
 
     return {
         agent: {

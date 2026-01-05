@@ -26,9 +26,11 @@ import {
 import {
   parseDocumentSections,
   createSectionAwareChunks,
+} from "@/lib/documents";
+import {
   uploadFileToStorage,
   deleteFileFromStorage
-} from "@/lib/documents";
+} from "@/lib/documents/storage";
 
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
