@@ -13,12 +13,17 @@ import { listAllSessions, destroySessionById } from '@/lib/security/session';
 import { getGuestRateLimits } from '@/lib/security/guest-rate';
 import { logSecurityEvent } from '@/lib/security/audit-logger';
 import { getClientIP } from '@/lib/security/guest-session';
+import { validateCsrf, createCsrfErrorResponse } from '@/lib/security/csrf';
+import { generateRequestId, createErrorResponse } from '@/lib/security/error-handler';
+import { SessionTerminateSchema, validateRequest } from '@/lib/validation/api-schemas';
 
 /**
  * GET /api/admin/sessions
  * List all active sessions with their rate limit info
  */
 export async function GET(request: NextRequest) {
+    const requestId = request.headers.get('x-request-id') || generateRequestId();
+
     const adminResult = await requireAdmin(request);
     if (isErrorResponse(adminResult)) {
         return adminResult;
@@ -70,12 +75,9 @@ export async function GET(request: NextRequest) {
                 guest: guestCount,
             },
         });
-    } catch (error) {
+    } catch (error: unknown) {
         console.error('[Admin Sessions] Failed to list sessions:', error);
-        return NextResponse.json(
-            { error: '获取会话列表失败' },
-            { status: 500 }
-        );
+        return createErrorResponse(error, requestId, 500);
     }
 }
 
@@ -84,6 +86,14 @@ export async function GET(request: NextRequest) {
  * Terminate a session by sessionId (passed in body)
  */
 export async function DELETE(request: NextRequest) {
+    const requestId = request.headers.get('x-request-id') || generateRequestId();
+
+    // V3.9: Validate CSRF token
+    const csrfValid = await validateCsrf(request);
+    if (!csrfValid) {
+        return createCsrfErrorResponse();
+    }
+
     const adminResult = await requireAdmin(request);
     if (isErrorResponse(adminResult)) {
         return adminResult;
@@ -91,14 +101,17 @@ export async function DELETE(request: NextRequest) {
 
     try {
         const body = await request.json();
-        const { sessionId } = body;
 
-        if (!sessionId) {
+        // V3.9: Validate request with Zod schema
+        const validation = validateRequest(SessionTerminateSchema, body);
+        if (!validation.success) {
             return NextResponse.json(
-                { error: '缺少 sessionId' },
+                { error: validation.error },
                 { status: 400 }
             );
         }
+
+        const { sessionId } = validation.data;
 
         // Prevent admin from terminating their own session
         if (sessionId === adminResult.sessionId) {
@@ -124,11 +137,8 @@ export async function DELETE(request: NextRequest) {
         });
 
         return NextResponse.json({ success: true });
-    } catch (error) {
+    } catch (error: unknown) {
         console.error('[Admin Sessions] Failed to terminate session:', error);
-        return NextResponse.json(
-            { error: '终止会话失败' },
-            { status: 500 }
-        );
+        return createErrorResponse(error, requestId, 500);
     }
 }

@@ -11,14 +11,45 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { createServerSupabaseClient } from "@/lib/database";
-import { verifySession, COOKIE_NAME, generateRequestId, createErrorResponse } from "@/lib/security";
+import {
+  verifySession,
+  COOKIE_NAME,
+  generateRequestId,
+  createErrorResponse,
+  validateCsrf,
+  createCsrfErrorResponse,
+} from "@/lib/security";
 import { deleteDocumentFiles } from "@/lib/documents/storage";
+import { DocumentUpdateSchema, validateRequest } from "@/lib/validation/api-schemas";
 
-// DELETE: Delete a document and all related data
+// DELETE: Delete a document and all related data (admin only)
 export async function DELETE(req: NextRequest) {
   const requestId = req.headers.get('x-request-id') || generateRequestId();
 
   try {
+    // V3.9: Validate CSRF token
+    const csrfValid = await validateCsrf(req);
+    if (!csrfValid) {
+      return createCsrfErrorResponse();
+    }
+
+    // V3.9: Verify admin session
+    const token = req.cookies.get(COOKIE_NAME)?.value;
+    if (!token) {
+      return NextResponse.json(
+        { error: "Authentication required" },
+        { status: 401 }
+      );
+    }
+
+    const session = await verifySession(token);
+    if (!session || session.role !== 'admin') {
+      return NextResponse.json(
+        { error: "Admin access required" },
+        { status: 403 }
+      );
+    }
+
     const { searchParams } = new URL(req.url);
     const documentId = searchParams.get('id');
 
@@ -68,6 +99,12 @@ export async function PATCH(req: NextRequest) {
   const requestId = req.headers.get('x-request-id') || generateRequestId();
 
   try {
+    // V3.9: Validate CSRF token
+    const csrfValid = await validateCsrf(req);
+    if (!csrfValid) {
+      return createCsrfErrorResponse();
+    }
+
     // Verify admin session via cookie
     const token = req.cookies.get(COOKIE_NAME)?.value;
     if (!token) {
@@ -86,63 +123,31 @@ export async function PATCH(req: NextRequest) {
     }
 
     const body = await req.json();
-    const { documentId, updates } = body;
 
-    // Validate required fields
-    if (!documentId) {
+    // V3.9: Validate request with Zod schema
+    const validation = validateRequest(DocumentUpdateSchema, body);
+    if (!validation.success) {
       return NextResponse.json(
-        { error: "Document ID is required" },
+        { error: validation.error },
         { status: 400 }
       );
     }
 
-    // Validate updates object
-    if (!updates || typeof updates !== 'object') {
-      return NextResponse.json(
-        { error: "Updates object is required" },
-        { status: 400 }
-      );
+    const { documentId, updates } = validation.data;
+
+    // Build update data from validated updates
+    const updateData: Record<string, unknown> = {};
+    if (updates.name !== undefined) {
+      updateData.name = updates.name.trim();
     }
-
-    // Only allow specific fields to be updated
-    const allowedFields = ['name', 'doc_type', 'year', 'period'];
-    const updateData: Record<string, any> = {};
-
-    for (const field of allowedFields) {
-      if (field in updates) {
-        // Validate field values
-        if (field === 'name' && updates.name) {
-          if (typeof updates.name !== 'string' || updates.name.trim().length === 0) {
-            return NextResponse.json(
-              { error: "Name must be a non-empty string" },
-              { status: 400 }
-            );
-          }
-          updateData.name = updates.name.trim();
-        } else if (field === 'doc_type') {
-          // Allow null or valid string
-          updateData.doc_type = updates.doc_type || null;
-        } else if (field === 'year') {
-          // Validate year format (4 digits or null)
-          if (updates.year && !/^\d{4}$/.test(updates.year)) {
-            return NextResponse.json(
-              { error: "Year must be a 4-digit string (e.g., '2024')" },
-              { status: 400 }
-            );
-          }
-          updateData.year = updates.year || null;
-        } else if (field === 'period') {
-          // Allow null or valid string
-          updateData.period = updates.period || null;
-        }
-      }
+    if (updates.doc_type !== undefined) {
+      updateData.doc_type = updates.doc_type;
     }
-
-    if (Object.keys(updateData).length === 0) {
-      return NextResponse.json(
-        { error: "No valid fields to update" },
-        { status: 400 }
-      );
+    if (updates.year !== undefined) {
+      updateData.year = updates.year;
+    }
+    if (updates.period !== undefined) {
+      updateData.period = updates.period;
     }
 
     const supabase = createServerSupabaseClient();

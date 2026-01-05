@@ -10,6 +10,7 @@ import {
     resetBruteForce,
     logAuthEvent,
     logSecurityEvent,
+    setCsrfCookie,
 } from "@/lib/security";
 import { createAdminSession } from "@/lib/security/session";
 import { authenticateUser } from "@/lib/auth";
@@ -156,8 +157,12 @@ export async function POST(req: NextRequest) {
             { status: 200 }
         );
 
-        // Set HTTP-only cookie
+        // Set HTTP-only session cookie
         response.cookies.set(COOKIE_NAME, session.token, getCookieOptions('admin'));
+
+        // V3.9: Set CSRF cookie for authenticated requests
+        await setCsrfCookie();
+
         response.headers.set('X-Request-ID', requestId);
 
         return response;

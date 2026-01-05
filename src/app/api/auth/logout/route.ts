@@ -6,7 +6,10 @@ import {
     verifySession,
     destroySession,
     COOKIE_NAME,
+    CSRF_COOKIE_NAME,
     logAuthEvent,
+    validateCsrf,
+    createCsrfErrorResponse,
 } from "@/lib/security";
 
 /**
@@ -31,6 +34,12 @@ export async function POST(req: NextRequest) {
     const userAgent = req.headers.get('user-agent') || 'unknown';
 
     try {
+        // V3.9: Validate CSRF token
+        const csrfValid = await validateCsrf(req);
+        if (!csrfValid) {
+            return createCsrfErrorResponse();
+        }
+
         // Get session token from cookie
         const token = req.cookies.get(COOKIE_NAME)?.value;
 
@@ -56,8 +65,17 @@ export async function POST(req: NextRequest) {
             { status: 200 }
         );
 
-        // Clear the cookie
+        // Clear the session cookie
         response.cookies.set(COOKIE_NAME, '', {
+            httpOnly: true,
+            secure: process.env.NODE_ENV === 'production',
+            sameSite: 'strict',
+            path: '/',
+            maxAge: 0,
+        });
+
+        // V3.9: Clear the CSRF cookie
+        response.cookies.set(CSRF_COOKIE_NAME, '', {
             httpOnly: true,
             secure: process.env.NODE_ENV === 'production',
             sameSite: 'strict',

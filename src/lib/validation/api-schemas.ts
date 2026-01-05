@@ -18,6 +18,9 @@ export const VALIDATION_LIMITS = {
     MAX_MESSAGES_TOTAL_LENGTH: 20000,
     MAX_PASSWORD_LENGTH: 128,
     MAX_USERNAME_LENGTH: 50,
+    MAX_FILENAME_LENGTH: 255,
+    MAX_DOCUMENT_IDS: 10,
+    MAX_BASE64_SIZE: 3 * 1024 * 1024, // 3MB in base64
 } as const;
 
 // =============================================================================
@@ -69,6 +72,107 @@ export const LoginSchema = z.object({
 });
 
 export type LoginRequest = z.infer<typeof LoginSchema>;
+
+/**
+ * Chat Message Request (V3.9)
+ * POST /api/chat and /api/chat/stream
+ */
+export const ChatMessageSchema = z.object({
+    question: z
+        .string()
+        .min(1, '问题不能为空')
+        .max(
+            VALIDATION_LIMITS.MAX_QUESTION_LENGTH,
+            `问题长度不能超过 ${VALIDATION_LIMITS.MAX_QUESTION_LENGTH} 字符`
+        ),
+    sessionId: z.string().uuid().optional(),
+    files: z.array(z.string()).max(5, '最多上传5个文件').optional(),
+    documentIds: z
+        .array(z.string().uuid())
+        .max(VALIDATION_LIMITS.MAX_DOCUMENT_IDS, `最多选择 ${VALIDATION_LIMITS.MAX_DOCUMENT_IDS} 个文档`)
+        .optional(),
+});
+
+export type ChatMessageRequest = z.infer<typeof ChatMessageSchema>;
+
+/**
+ * Data Extraction Request (V3.9)
+ * POST /api/quick-actions/extract
+ */
+export const ExtractRequestSchema = z.object({
+    // Either fileData or documentId is required
+    fileData: z
+        .string()
+        .max(VALIDATION_LIMITS.MAX_BASE64_SIZE, '文件大小超过限制')
+        .optional(),
+    fileType: z.string().optional(),
+    fileName: z
+        .string()
+        .max(VALIDATION_LIMITS.MAX_FILENAME_LENGTH, '文件名过长')
+        .optional(),
+    documentId: z.string().uuid().optional(),
+}).refine(
+    (data) => data.fileData || data.documentId,
+    { message: '必须提供文件数据或文档ID' }
+);
+
+export type ExtractRequest = z.infer<typeof ExtractRequestSchema>;
+
+/**
+ * Temporary Document Upload Request (V3.9)
+ * POST /api/documents/upload-temp
+ */
+export const TempUploadSchema = z.object({
+    fileData: z
+        .string()
+        .min(1, '文件数据不能为空')
+        .max(VALIDATION_LIMITS.MAX_BASE64_SIZE, '文件大小超过限制'),
+    fileName: z
+        .string()
+        .min(1, '文件名不能为空')
+        .max(VALIDATION_LIMITS.MAX_FILENAME_LENGTH, '文件名过长'),
+    fileType: z.string().optional(),
+    source: z.string().optional(),
+});
+
+export type TempUploadRequest = z.infer<typeof TempUploadSchema>;
+
+/**
+ * Document Update Request (V3.9)
+ * PATCH /api/documents
+ */
+export const DocumentUpdateSchema = z.object({
+    documentId: z.string().uuid('无效的文档ID'),
+    updates: z.object({
+        name: z
+            .string()
+            .min(1, '名称不能为空')
+            .max(VALIDATION_LIMITS.MAX_FILENAME_LENGTH, '名称过长')
+            .optional(),
+        doc_type: z.string().nullable().optional(),
+        year: z
+            .string()
+            .regex(/^\d{4}$/, '年份格式错误')
+            .nullable()
+            .optional(),
+        period: z.string().nullable().optional(),
+    }).refine(
+        (updates) => Object.keys(updates).length > 0,
+        { message: '至少需要更新一个字段' }
+    ),
+});
+
+export type DocumentUpdateRequest = z.infer<typeof DocumentUpdateSchema>;
+
+/**
+ * Session Termination Request (V3.9)
+ * DELETE /api/admin/sessions
+ */
+export const SessionTerminateSchema = z.object({
+    sessionId: z.string().uuid('无效的会话ID'),
+});
+
+export type SessionTerminateRequest = z.infer<typeof SessionTerminateSchema>;
 
 // =============================================================================
 // Validation Helper
