@@ -131,35 +131,21 @@ const DocumentSelectModal: React.FC<DocumentSelectModalProps> = ({
   };
 
   return (
-    <div style={{
-      position: "fixed",
-      top: 0,
-      left: 0,
-      width: "100vw",
-      height: "100vh",
-      background: "rgba(0,0,0,0.18)",
-      zIndex: 1000,
-      display: "flex",
-      alignItems: "center",
-      justifyContent: "center"
-    }}
+    <div
+      className="fixed inset-0 w-screen h-screen bg-black/[0.18] z-[1000] flex items-center justify-center"
       onClick={onClose}
     >
-      <div style={{
-        background: "#fff",
-        borderRadius: 8,
-        boxShadow: "0 4px 24px 0 rgba(0,0,0,0.10)",
-        padding: 32,
-        minWidth: 340,
-        maxWidth: 480,
-        maxHeight: "90vh",
-        overflowY: "auto",
-        position: "relative"
-      }}
+      <div
+        className="bg-white rounded-lg shadow-xl p-8 min-w-[340px] max-w-[480px] max-h-[90vh] overflow-y-auto relative"
         onClick={e => e.stopPropagation()}
       >
-        <button onClick={onClose} style={{ position: "absolute", top: 16, right: 16, background: "none", border: "none", fontSize: 20, cursor: "pointer" }}>&times;</button>
-        <h3 style={{ fontWeight: 700, fontSize: 18, marginBottom: 16 }}>选择文档</h3>
+        <button
+          onClick={onClose}
+          className="absolute top-4 right-4 bg-transparent border-none text-xl cursor-pointer hover:text-gray-600"
+        >
+          &times;
+        </button>
+        <h3 className="font-bold text-lg mb-4">选择文档</h3>
         <input
           type="text"
           placeholder="搜索文档名称..."
@@ -208,7 +194,7 @@ const DocumentSelectModal: React.FC<DocumentSelectModalProps> = ({
         {showUpload && (
           <div className="mb-4">
             <label className="block mb-2 font-medium">补充上传待处理文档（PDF 格式，小于1MB）</label>
-            <div style={{ position: 'relative', display: 'inline-block' }}>
+            <div className="relative inline-block">
               <button
                 type="button"
                 className="border border-black rounded px-4 py-2 font-medium bg-white hover:bg-gray-100 transition-colors focus:outline-none focus:ring-2 focus:ring-black"
@@ -226,7 +212,7 @@ const DocumentSelectModal: React.FC<DocumentSelectModalProps> = ({
                 accept=".pdf,.png,.jpg,.jpeg,.webp,.gif,.txt,.md"
                 onChange={handleUpload}
                 disabled={uploading}
-                style={{ display: 'none' }}
+                className="hidden"
               />
             </div>
             {/* Simple Help Text */}
