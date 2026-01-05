@@ -1,26 +1,11 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, memo } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkMath from 'remark-math';
 import rehypeKatex from 'rehype-katex';
 import { Bot } from 'lucide-react';
 import 'katex/dist/katex.min.css';
 import ThinkingIndicator from './ThinkingIndicator';
-
-/* 
-   Assuming Message type. 
-   If not explicitly defined in a shared type file yet, I'll define a local interface 
-   that matches what we store in the hook.
-*/
-interface Message {
-    role: 'user' | 'assistant';
-    content: string;
-    id?: string;
-}
-
-interface MessageListProps {
-    messages: Message[];
-    currentThinking?: string | null;
-}
+import type { ChatMessage, MessageListProps } from '@/types/message';
 
 const MessageList: React.FC<MessageListProps> = ({ messages, currentThinking }) => {
     const bottomRef = useRef<HTMLDivElement>(null);
@@ -84,4 +69,5 @@ const MessageList: React.FC<MessageListProps> = ({ messages, currentThinking }) 
     );
 };
 
-export default MessageList;
+// V3.9: Memoize to prevent unnecessary re-renders (REQ-015)
+export default memo(MessageList);

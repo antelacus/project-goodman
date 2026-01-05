@@ -6,18 +6,13 @@ import { useStreamingChat } from '@/hooks/useStreamingChat';
 import MessageList from './MessageList';
 import ChatInput from './ChatInput';
 import GuestBanner from './GuestBanner';
-
-interface Message {
-    role: 'user' | 'assistant';
-    content: string;
-    id?: string;
-}
+import type { ChatMessage } from '@/types/message';
 
 export default function ChatWorkspace() {
     const searchParams = useSearchParams();
     const urlSessionId = searchParams.get('session');
 
-    const [messages, setMessages] = useState<Message[]>([]);
+    const [messages, setMessages] = useState<ChatMessage[]>([]);
     const [isLoadingSession, setIsLoadingSession] = useState(false);
     const [loadedSessionId, setLoadedSessionId] = useState<string | null>(null);
 
@@ -92,7 +87,7 @@ export default function ChatWorkspace() {
 
     const handleSendMessage = async (text: string, files: File[], documentIds: string[]) => {
         // 1. Optimistically add user message
-        const userMsg: Message = {
+        const userMsg: ChatMessage = {
             role: 'user',
             content: text + (files.length > 0 ? `\n\n[Attached ${files.length} files]` : '') + (documentIds.length > 0 ? `\n\n[Attached ${documentIds.length} existing documents]` : ''),
             id: Date.now().toString()
