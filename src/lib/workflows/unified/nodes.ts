@@ -1,6 +1,6 @@
 /**
  * Unified Agent Nodes
- * 
+ *
  * Wrappers for core nodes to inject specific configuration (like tool registration).
  */
 
@@ -13,12 +13,22 @@ export { loadMemoryNode } from "../core/nodes/load-memory";
 export { toolExecutorNode } from "../core/nodes/tool-executor";
 export { saveMemoryNode } from "../core/nodes/save-memory";
 
+// Module-level tool registration (runs once when module is first imported)
+let toolsRegistered = false;
+
+function ensureToolsRegistered(): void {
+    if (!toolsRegistered) {
+        registerUnifiedTools();
+        toolsRegistered = true;
+    }
+}
+
 /**
  * Unified Agent Loop Wrapper
  */
 export async function unifiedAgentLoop(state: UnifiedAgentState) {
-    // Ensure tools are registered
-    registerUnifiedTools();
+    // Ensure tools are registered (idempotent, only runs once per process)
+    ensureToolsRegistered();
 
     // Call core loop with specific prompt
     return coreAgentLoop(state, {

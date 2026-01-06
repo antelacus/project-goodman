@@ -5,7 +5,7 @@
  * Standardized for use in Unified Agent.
  */
 
-import { BaseAgentState } from "../state/base-state";
+import { BaseAgentState, DocumentLoadError } from "../state/base-state";
 import { conversationMemory } from "@/lib/memory/conversation-memory";
 import { SystemMessage, HumanMessage, AIMessage, ToolMessage, BaseMessage } from "@langchain/core/messages";
 import { createServerSupabaseClient } from "@/lib/database";
@@ -40,6 +40,8 @@ export async function loadMemoryNode(
 
     // 2. Fetch Document Context if documentIds are present
     let contextMessage: SystemMessage | null = null;
+    const documentLoadErrors: DocumentLoadError[] = [];
+
     if (documentIds && documentIds.length > 0) {
         try {
             const supabase = createServerSupabaseClient();
@@ -52,9 +54,19 @@ export async function loadMemoryNode(
 
                 if (error) {
                     console.error(`Failed to fetch chunks for doc ${docId}:`, error);
+                    documentLoadErrors.push({
+                        documentId: docId,
+                        error: error.message || "Unknown database error",
+                    });
                     return null;
                 }
-                if (!chunks || chunks.length === 0) return null;
+                if (!chunks || chunks.length === 0) {
+                    documentLoadErrors.push({
+                        documentId: docId,
+                        error: "Document has no content chunks",
+                    });
+                    return null;
+                }
 
                 return `Document ID: ${docId}\n\n${chunks.map((c: { content: string }) => c.content).join("\n")}`;
             });
@@ -70,6 +82,11 @@ export async function loadMemoryNode(
             }
         } catch (err) {
             console.error("Error fetching document context:", err);
+            // Add a general error for the entire operation
+            documentLoadErrors.push({
+                documentId: -1, // -1 indicates general error
+                error: err instanceof Error ? err.message : "Failed to fetch document context",
+            });
         }
     }
 
@@ -120,5 +137,7 @@ export async function loadMemoryNode(
         },
         // Reset tool results for this turn
         toolResults: [],
+        // Propagate any document loading errors for downstream handling
+        documentLoadErrors: documentLoadErrors.length > 0 ? documentLoadErrors : undefined,
     };
 }

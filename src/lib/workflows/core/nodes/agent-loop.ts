@@ -15,6 +15,9 @@ const openai = new OpenAI({
     baseURL: process.env.OPENAI_BASE_URL,
 });
 
+// Configurable model via environment variable with sensible default
+const OPENAI_MODEL = process.env.OPENAI_MODEL || "gpt-4o";
+
 /**
  * Convert LangChain messages to OpenAI format
  * Properly handles AIMessage tool_calls and ToolMessage tool_call_id
@@ -117,7 +120,7 @@ export async function agentLoopNode(
     const tools = toolRegistry.toOpenAIFunctionDefs();
 
     const completion = await openai.chat.completions.create({
-        model: "gpt-4o", // Or config.model
+        model: OPENAI_MODEL,
         messages: responseMessages,
         tools: tools.length > 0 ? tools : undefined,
         tool_choice: tools.length > 0 ? "auto" : undefined,
