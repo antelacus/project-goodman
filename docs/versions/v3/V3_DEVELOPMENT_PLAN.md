@@ -452,7 +452,7 @@ V2 阶段 6 审计期间识别的安全改进。这些建议用于超出 MVP 演
 
 - PRD: `docs/V3.7_PHASE1_PRD.md`
 - 设计: `docs/V3.7_PHASE2_DESIGN.md`
-- 开发记录: `docs/V3.7_PHASE3-6_DEVELOPMENT_TRACK.md`
+- 开发记录: `docs/V3.7_PHASE3-6_TRACK.md`
 
 ---
 

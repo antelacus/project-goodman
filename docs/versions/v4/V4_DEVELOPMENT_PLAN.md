@@ -33,7 +33,7 @@ docs/development-documentation/
 │   ├── management-reports/
 │   │   ├── PHASE1_PRD.md
 │   │   ├── PHASE2_DESIGN.md
-│   │   └── PHASE3-6_DEVELOPMENT_TRACK.md
+│   │   └── PHASE3-6_TRACK.md
 │   └── report-generation/
 │       └── ...
 └── V4.x.x_RELEASE_NOTES.md         # 发布时创建
