@@ -92,6 +92,15 @@ export interface ToolResultEntry {
     timestamp: number;
 }
 
+/**
+ * Document Load Error Entry
+ * Records errors encountered when loading document context
+ */
+export interface DocumentLoadError {
+    documentId: number;
+    error: string;
+}
+
 // ============================================================================
 // Unified State Interface
 // ============================================================================
@@ -108,6 +117,8 @@ export interface BaseAgentState {
     toolResults: ToolResultEntry[];
     /** Final output construction */
     output?: WorkflowOutput;
+    /** Errors encountered while loading document context */
+    documentLoadErrors?: DocumentLoadError[];
     /** System metadata (errors, logs, etc.) */
     meta?: {
         error?: Error;
