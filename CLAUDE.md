@@ -15,21 +15,103 @@ docker logs -f goodman                                   # View logs
 
 ---
 
-## Project Rules
+## Project Context
 
-All project-specific conventions are in `.claude/rules/`:
+**Product**: AI-powered financial assistant for enterprise accounting departments
 
-| Rule File | Contents |
-|-----------|----------|
-| [project-context.md](.claude/rules/project-context.md) | Product vision, tech stack, target users, deployment architecture, key directories |
-| [code-conventions.md](.claude/rules/code-conventions.md) | Coding standards, API patterns, styling rules, language standards |
+**Project Stage**: Evolving from demonstration project to production-ready tool
+
+**Target Users**:
+- **Primary**: Financial personnel in accounting departments (会计部门财务人员)
+- **Secondary**: Recruiters, hiring managers evaluating the project
+
+**Core Value**:
+- Reduce time on repetitive financial calculations and compliance lookups
+- AI-guided workflows instead of complex menu navigation
+- Natural language interaction with financial data and regulations
+- Transparency in AI reasoning, document sources, calculation steps
+
+**Design Philosophy**:
+- **Unified workspace**: Single entry point (工作台), AI routes to capabilities
+- **Fewer choices, more guidance**: AI decides tools, user focuses on questions
+- **Professional aesthetic**: Corporate style conveying security and reliability
+
+---
+
+## Tech Stack
+
+| Category | Choice |
+|----------|--------|
+| Frontend | Next.js 15, React 19, Tailwind CSS |
+| Backend | Supabase (PostgreSQL + pgvector) |
+| AI | OpenAI GPT-4o |
+| Storage | Supabase Storage (`document-files` bucket) |
+| Cache/Sessions | Redis |
+| Libraries | Zod, bcryptjs, expr-eval, xlsx |
+
+---
+
+## Deployment
+
+**Production**: Docker on VPS
+- `goodman` container (Next.js app)
+- `goodman-redis` container (Redis)
+- nginx reverse proxy + SSL
+- `docker-compose.yml` in `/home/deploy/goodman/`
+
+**Development**: `npm run dev` (local Node.js with hot reload)
+
+---
+
+## Key Directories
+
+```
+src/app/                    # Next.js App Router
+  ├── (landing)/            # Public landing page
+  ├── (workspace)/          # Workspace (chat, documents, help)
+  └── api/                  # API routes (chat, admin, documents, quick-actions)
+
+src/lib/                    # Core business logic
+  ├── database/             # Supabase, Redis clients
+  ├── documents/            # Document processing (search, chunker, parser)
+  ├── financial/            # Financial domain (preset-functions, metrics)
+  ├── security/             # Auth, session, rate-limiter
+  ├── tools/                # Agent tool definitions
+  ├── workflows/            # LangGraph workflows
+  └── prompts/              # Prompt templates (.txt files)
+
+src/components/             # React components
+  ├── chat/                 # Chat UI
+  ├── layout/               # Navbar, Sidebar
+  └── documents/            # Document UI
+
+supabase/migrations/        # Database migrations
+docs/                       # Development documentation
+tests/                      # Test scripts
+```
+
+---
+
+## Code Conventions
+
+See [.claude/rules/code-conventions.md](.claude/rules/code-conventions.md) for:
+- File organization patterns
+- Supabase conventions
+- API standards
+- Styling rules
+- Language standards (code: English, UI: Chinese)
+
+---
 
 ## Living Documentation
 
 | Document | Contents |
 |----------|----------|
-| [docs/KNOWN_ISSUES.md](docs/issues/KNOWN_ISSUES.md) | Current bugs, gotchas, limitations (updated during development) |
+| [docs/KNOWN_ISSUES.md](docs/KNOWN_ISSUES.md) | Current bugs, gotchas, limitations |
+| [docs/PRODUCT_ROADMAP.md](docs/PRODUCT_ROADMAP.md) | Product roadmap, version planning |
+| [docs/TECHNICAL_DEBT.md](docs/TECHNICAL_DEBT.md) | Technical debt registry |
+| [docs/DEPLOYMENT_CHECKLIST.md](docs/DEPLOYMENT_CHECKLIST.md) | Deployment checklist |
 
 ---
 
-*Template Version: 2.3 | Project Goodman (2025)*
+*Project Goodman (2025)*

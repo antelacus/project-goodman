@@ -69,7 +69,7 @@
 
 - 任务 30：更新 README.md 以包含新功能和架构
 - 任务 31：更新 CLAUDE.md 以包含双重存储、预设函数和 API 端点
-- 任务 32：更新 DEVELOPMENT_TRACK.md 以包含阶段 3 完成情况
+- 任务 32：更新 TRACK.md 以包含阶段 3 完成情况
 
 #### 手动测试后的增强功能 ✅
 
@@ -204,7 +204,7 @@
 
 - README.md 已更新包含新功能 ✅
 - CLAUDE.md 已更新包含架构更改 ✅
-- DEVELOPMENT_TRACK.md 已整理并归档 ✅
+- TRACK.md 已整理并归档 ✅
 - PHASE2_DESIGN.md 合规性：100% ✅
 
 ---

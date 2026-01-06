@@ -181,7 +181,7 @@
 
 - 新增 `docs/V3.0_PHASE1_REQUIREMENT_DECLARATION.md` - 需求声明
 - 新增 `docs/V3.0_PHASE2_DESIGN.md` - 设计文档 (含配置模板)
-- 新增 `docs/V3.0_PHASE3-5_DEVELOPMENT_TRACK.md` - 实施记录
+- 新增 `docs/V3.0_PHASE3-5_TRACK.md` - 实施记录
 
 ---
 
