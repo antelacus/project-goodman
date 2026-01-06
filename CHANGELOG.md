@@ -16,9 +16,54 @@
 
 ## [Unreleased]
 
-### V3.9 进行中的修复
+*暂无*
 
-*V3.9 安全增强与代码质量修复仍在进行中。以下为已完成的部分。*
+---
+
+## [3.9.0] - 2026-01-06
+
+### 安全增强
+
+#### P0 紧急修复
+- **CSP 加固**: 移除 `unsafe-eval`，防止动态代码执行攻击
+- **敏感数据清理**: 移除 localStorage/sessionStorage 中的敏感数据存储
+- **Service Role 隔离**: 添加运行时检查防止客户端意外导入服务端模块
+- **日志脱敏**: 移除日志中的 session token 片段
+
+#### P1 API 层加固
+- **CSRF 保护**: 实现 Double Submit Cookie 模式，保护所有状态变更操作
+- **错误处理统一**: 所有 API 使用 `createErrorResponse()` 标准化响应
+- **Zod 验证补全**: 为 chat、extract、documents 等 API 添加输入验证
+
+### 修复
+
+#### Agent 工作流修复
+- **消息转换**: 正确处理 LangChain ↔ OpenAI 消息格式转换
+- **JSON.parse 安全**: 添加 try-catch 防止工具参数解析失败导致崩溃
+- **历史消息加载**: 修复 `tool_calls` 和 `tool_call_id` 从数据库恢复
+
+#### 数据库修复
+- **临时文档清理**: 更新清理函数使用 V3.10 所有权模型 (`owner_type` + `expires_at`)
+- **类型同步**: 完善 `src/lib/database/types.ts` 与实际 schema 一致
+
+### 优化
+
+#### 前端优化
+- **Tailwind 统一**: `DocumentSelectModal` 移除内联样式，使用 Tailwind 类
+- **MessageList memo**: 添加 React.memo 减少不必要重渲染
+- **共享类型**: 创建 `src/types/message.ts` 统一消息类型定义
+
+#### 代码质量
+- **常量时间比较**: 密码验证使用 `crypto.timingSafeEqual` 防止时序攻击
+- **工具注册优化**: 模块级标志确保只注册一次
+- **模型配置化**: 支持 `OPENAI_MODEL` 环境变量切换模型
+- **文档错误传播**: 文档加载失败时错误信息传递到状态供下游处理
+
+### 技术细节
+
+- 6 个批次共 21 项需求 (REQ-001 ~ REQ-021)
+- REQ-017 (减少 as any) 移至 V3.11
+- 安全审计通过，无高危漏洞
 
 ---
 
