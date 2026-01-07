@@ -1,8 +1,17 @@
 # Project Goodman - Deployment Checklist
 
-**Version**: V2.0
-**Last Updated**: 2025-12-03
-**Target Platform**: Vercel + Supabase
+**Version**: V3.11
+**Last Updated**: 2026-01-07
+**Target Platform**: Docker on VPS + Supabase Cloud
+
+---
+
+## Quick Deploy
+
+```bash
+cd /home/deploy/goodman && docker compose up -d --build goodman
+docker logs -f goodman
+```
 
 ---
 
@@ -10,209 +19,158 @@
 
 ### 1. Environment Variables
 
-Ensure the following environment variables are set in Vercel:
+Ensure the following are set in `/home/deploy/goodman/.env`:
 
 | Variable | Required | Description |
 |----------|----------|-------------|
-| `OPENAI_API_KEY` | ✅ Yes | OpenAI API key for GPT-4.1 and embeddings |
+| `OPENAI_API_KEY` | ✅ Yes | OpenAI API key |
+| `OPENAI_MODEL` | Optional | Model name (default: gpt-4o) |
 | `NEXT_PUBLIC_SUPABASE_URL` | ✅ Yes | Supabase project URL |
-| `SUPABASE_SERVICE_ROLE_KEY` | ✅ Yes | Supabase service role key (keep secure!) |
-| `ADMIN_PASSWORD` | ✅ Yes | Admin password for database uploads (use strong password!) |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | ✅ Yes | Supabase anon key (public) |
+| `SUPABASE_SERVICE_ROLE_KEY` | ✅ Yes | Supabase service role key (server only) |
+| `ADMIN_PASSWORD` | ✅ Yes | Bcrypt hash for admin authentication |
+| `REDIS_URL` | ✅ Yes | Redis connection URL |
 
-**Important**:
-- Use a strong `ADMIN_PASSWORD` in production (not the development password)
-- Never commit `.env.local` to version control
-
-### 2. Database Status
-
-| Item | Status | Notes |
-|------|--------|-------|
-| All migrations applied | ✅ | 7 migrations total |
-| RLS enabled on all tables | ✅ | Basic permissive policies for MVP |
-| Vector extension installed | ✅ | v0.8.0 |
-| Storage bucket created | ✅ | `document-files` bucket |
-| Database functions created | ✅ | `match_documents`, `search_financial_data`, etc. |
-
-### 3. Build Verification
+### 2. Build Verification
 
 ```bash
-# Run locally before deploying
-npm run build
+npm run build  # Should complete with 0 errors
 ```
 
-Expected: Build completes without errors.
+### 3. Database Status
+
+| Item | Verification Command |
+|------|---------------------|
+| Migrations applied | `supabase db diff` or check Supabase dashboard |
+| Types in sync | `npx supabase gen types typescript` |
+| RLS policies | Check Supabase → Authentication → Policies |
 
 ---
 
-## Vercel Deployment Steps
+## Docker Deployment
 
-### Step 1: Connect Repository
-
-1. Go to [vercel.com](https://vercel.com)
-2. Import the GitHub repository
-3. Select the `main` branch for production
-
-### Step 2: Configure Environment Variables
-
-In Vercel project settings → Environment Variables:
+### Infrastructure
 
 ```
-OPENAI_API_KEY=sk-...
-NEXT_PUBLIC_SUPABASE_URL=https://xxx.supabase.co
-SUPABASE_SERVICE_ROLE_KEY=eyJ...
-ADMIN_PASSWORD=<strong-production-password>
+/home/deploy/goodman/
+├── docker-compose.yml    # Container orchestration
+├── .env                  # Environment variables
+└── project-goodman/      # Application code
 ```
 
-### Step 3: Configure Build Settings
+### Containers
 
-| Setting | Value |
-|---------|-------|
-| Framework Preset | Next.js |
-| Build Command | `npm run build` |
-| Output Directory | `.next` |
-| Install Command | `npm install` |
-| Node.js Version | 20.x |
+| Container | Port | Purpose |
+|-----------|------|---------|
+| `goodman` | 3000 | Next.js application |
+| `goodman-redis` | 6379 | Session & rate limit storage |
 
-### Step 4: Deploy
+### Deploy Commands
 
-1. Click "Deploy"
-2. Wait for build to complete
-3. Verify deployment at the generated URL
+```bash
+# Full rebuild and deploy
+cd /home/deploy/goodman && docker compose up -d --build goodman
+
+# View logs
+docker logs -f goodman
+
+# Restart without rebuild
+docker compose restart goodman
+
+# Check container status
+docker ps --filter "name=goodman"
+```
 
 ---
 
 ## Post-Deployment Verification
 
-### Functional Testing Checklist
+### Health Check
 
-- [ ] **Homepage**: Landing page loads, chat interface works
-- [ ] **Data Extract**: File upload and extraction works
-- [ ] **Financial Analysis**: Document selection and calculations work
-- [ ] **Guidance Chat**: Hybrid search and citations work
-- [ ] **Admin Mode**: Triple-click unlock and database upload work
-- [ ] **Document Management**: List, preview, edit, delete work
+```bash
+curl http://localhost:3000/api/health
+# Expected: {"status":"ok","timestamp":"..."}
+```
 
-### API Endpoints to Test
+### Functional Testing
 
-| Endpoint | Method | Test |
-|----------|--------|------|
-| `/api/landing-chat` | POST | Send a test question |
-| `/api/data-extract` | POST | Upload a test PDF |
-| `/api/financial-analysis-v2` | POST | Query a financial ratio |
-| `/api/guidance-chat-v2` | POST | Ask a compliance question |
-| `/api/documents` | GET | List all documents |
-| `/api/preset-functions` | GET | List available functions |
+| Test | Command/Action | Expected |
+|------|----------------|----------|
+| Health | `curl localhost:3000/api/health` | `{"status":"ok"}` |
+| Auth API | `curl -X POST localhost:3000/api/auth/login` | Returns JSON response |
+| Sessions | `curl localhost:3000/api/sessions` | Returns `{"sessions":[]}` |
+| Documents | `curl localhost:3000/api/local-documents?sessionId=test` | Returns document list |
 
-### Performance Check
+### Log Monitoring
 
-- [ ] Page load time < 3s
-- [ ] API response time < 10s (for AI calls)
-- [ ] No console errors in browser
+```bash
+# Watch for errors (15 min recommended)
+docker logs -f goodman 2>&1 | grep -i "error\|warn"
 
----
-
-## Monitoring & Maintenance
-
-### Cost Monitoring
-
-| Service | Monitor | Free Tier Limit |
-|---------|---------|-----------------|
-| OpenAI | [platform.openai.com](https://platform.openai.com/usage) | Pay as you go |
-| Supabase | Dashboard → Usage | 500MB storage, 5GB bandwidth |
-| Vercel | Dashboard → Usage | 100GB bandwidth |
-
-### Key Metrics to Watch
-
-1. **OpenAI API Costs**
-   - GPT-4.1 calls (financial analysis, guidance)
-   - GPT-4o-mini calls (landing page routing)
-   - Embedding calls (document vectorization)
-
-2. **Supabase Usage**
-   - Database storage (structured + vector data)
-   - File storage (document-files bucket)
-   - API requests
-
-3. **Vercel Usage**
-   - Function invocations
-   - Bandwidth consumption
-
-### Supabase Auto-Pause
-
-**Important**: Supabase free tier pauses after 7 days of inactivity.
-- First request after pause takes ~10s to wake up
-- Consider upgrading for production use
-
----
-
-## Security Checklist
-
-- [x] RLS enabled on all tables
-- [x] Admin password required for sensitive operations
-- [x] Service role key only on server-side
-- [x] No secrets in client-side code
-- [ ] Consider rate limiting for production
-- [ ] Consider Redis for session storage (if scaling)
-
-### Security Warnings (Acceptable for MVP)
-
-The following warnings are acknowledged and acceptable for MVP deployment:
-
-1. **Function search_path mutable** (6 functions)
-   - Low risk for single-tenant demo
-   - Fix by adding `SET search_path = public` to functions
-
-2. **Extension in public schema** (vector)
-   - Standard Supabase setup
-   - Can be moved to `extensions` schema if needed
+# Check Redis connection
+docker logs goodman 2>&1 | grep -i "redis"
+```
 
 ---
 
 ## Rollback Plan
 
-If deployment fails:
+### Quick Rollback
 
-1. **Vercel**: Use "Redeploy" on previous successful deployment
-2. **Database**: Migrations are forward-only; backup before major changes
+```bash
+# Revert to previous commit
+git checkout HEAD~1
+cd /home/deploy/goodman && docker compose up -d --build goodman
+```
 
----
+### Database Rollback
 
-## Seed Data (Optional)
-
-After deployment, upload knowledge base documents via admin mode:
-
-1. Access `/data-extract`
-2. Triple-click the 📄 icon to unlock admin mode
-3. Enter the admin password
-4. Upload financial statements and regulations
-
-### Recommended Initial Documents
-
-- Sample balance sheet (资产负债表)
-- Sample income statement (利润表)
-- Sample cash flow statement (现金流量表)
-- Tax regulations (增值税法, 企业所得税法)
-- Accounting standards (企业会计准则)
+Migrations are forward-only. For schema changes:
+1. Backup data before migration
+2. Test migrations on branch first
+3. Use Supabase branching for major changes
 
 ---
 
-## Support & Troubleshooting
+## Monitoring
 
-### Common Issues
+### Container Health
+
+```bash
+docker stats goodman goodman-redis
+```
+
+### Service Costs
+
+| Service | Monitor | Notes |
+|---------|---------|-------|
+| OpenAI | platform.openai.com/usage | Pay-as-you-go |
+| Supabase | Dashboard → Usage | Check storage & bandwidth |
+| VPS | Provider dashboard | Monitor CPU/memory |
+
+---
+
+## Security Checklist
+
+- [x] Environment variables in `.env` (not in code)
+- [x] Service role key server-side only
+- [x] Admin password bcrypt hashed
+- [x] CSRF protection on state-changing operations
+- [x] Rate limiting via Redis
+- [x] Security headers in next.config.ts
+- [x] RLS enabled on Supabase tables
+
+---
+
+## Troubleshooting
 
 | Issue | Solution |
 |-------|----------|
-| "Database connection failed" | Check Supabase URL and service key |
-| "OpenAI API error" | Verify API key and billing status |
-| "Admin mode not unlocking" | Check ADMIN_PASSWORD env var |
-| "Upload failed" | Check file size (< 2MB) and format |
-| "Slow response" | Supabase may be waking from pause |
-
-### Logs
-
-- **Vercel Logs**: Dashboard → Deployments → Logs
-- **Supabase Logs**: Dashboard → Logs
-- **Browser Console**: F12 → Console tab
+| Container won't start | Check `docker logs goodman` |
+| Redis connection refused | Verify `goodman-redis` is running |
+| Database errors | Check Supabase dashboard for status |
+| Build fails | Run `npm run build` locally first |
+| Slow startup | Normal ~10s for cold start |
 
 ---
 
@@ -220,8 +178,9 @@ After deployment, upload knowledge base documents via admin mode:
 
 | Version | Date | Changes |
 |---------|------|---------|
-| V2.0 | 2025-12-03 | Initial production deployment |
+| V3.11 | 2026-01-07 | Updated for Docker/VPS, removed Vercel references |
+| V2.0 | 2025-12-03 | Initial Vercel deployment |
 
 ---
 
-*Generated for Project Goodman V2 deployment*
+*Project Goodman V3.11*
