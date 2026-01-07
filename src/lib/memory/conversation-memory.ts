@@ -1,22 +1,20 @@
 import { createServerSupabaseClient } from "@/lib/database";
+import type { SupabaseClient } from "@supabase/supabase-js";
+import type {
+    Database,
+    MessageRole,
+    DbToolCall,
+    ConversationMessage as DbConversationMessage
+} from "@/lib/database/types";
 
 export interface ConversationMessage {
     id?: string;
-    role: "user" | "assistant" | "tool" | "system";
+    role: MessageRole;
     content: string;
-    tool_calls?: ToolCall[];
+    tool_calls?: DbToolCall[];
     tool_call_id?: string;
     created_at?: string;
     sequence_number?: number;
-}
-
-export interface ToolCall {
-    id: string;
-    type: string;
-    function: {
-        name: string;
-        arguments: string;
-    };
 }
 
 export interface ConversationSession {
@@ -41,13 +39,9 @@ export interface SessionListItem {
 
 /**
  * Service for managing conversation history and state persistence.
- *
- * Note: Uses type assertions for tables not yet in generated Supabase types.
- * The tables were created via migration (20251222_conversation_memory.sql).
  */
 export class ConversationMemory {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    private supabase: any = createServerSupabaseClient();
+    private supabase: SupabaseClient<Database> = createServerSupabaseClient();
 
     /**
      * Creates a new conversation session.
@@ -62,7 +56,7 @@ export class ConversationMemory {
             .from("conversation_sessions")
             .insert({
                 workflow_type: workflowType,
-                metadata,
+                metadata: metadata as Database['public']['Tables']['conversation_sessions']['Insert']['metadata'],
                 owner_id: ownerId || null,
                 owner_type: ownerType || null,
             })
@@ -120,13 +114,15 @@ export class ConversationMemory {
             workflowType: session.workflow_type,
             title: session.title || undefined,
             ownerId: session.owner_id || undefined,
-            ownerType: session.owner_type || undefined,
-            messages: orderedMessages.map((m: any) => ({
+            ownerType: session.owner_type as ConversationSession['ownerType'],
+            messages: orderedMessages.map((m) => ({
                 id: m.id,
-                role: m.role as any,
+                role: m.role as MessageRole,
                 content: m.content,
-                tool_calls: m.tool_calls ? (m.tool_calls as any) : undefined,
-                tool_call_id: m.tool_call_id,
+                // REASON: Database JSONB column returns generic Json type,
+                // but structure is validated as DbToolCall[] on insert.
+                tool_calls: m.tool_calls ? (m.tool_calls as unknown as DbToolCall[]) : undefined,
+                tool_call_id: m.tool_call_id ?? undefined,
                 created_at: m.created_at,
                 sequence_number: m.sequence_number,
             })),
@@ -263,7 +259,7 @@ export class ConversationMemory {
             return [];
         }
 
-        return (data || []).map((s: any) => ({
+        return (data || []).map((s) => ({
             id: s.id,
             title: s.title,
             workflowType: s.workflow_type,
