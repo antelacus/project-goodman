@@ -34,11 +34,17 @@ import {
   type RegulationExtractionResult,
   type ColumnMapping,
   type ColumnExtractionOptions,
+  type FinancialExtractionWithType,
+  type FinancialStatementType,
+  type FinancialStatementContent,
 } from "@/lib/extraction";
 import {
   validateBalanceSheet,
   validateIncomeStatement,
   validateCashFlow,
+  type StandardBalanceSheet,
+  type StandardIncomeStatement,
+  type StandardCashFlow,
 } from "@/lib/financial";
 import { uploadFileToStorage } from "@/lib/documents/storage";
 
@@ -442,7 +448,7 @@ export async function POST(request: NextRequest) {
       documentType === "income_statement" ||
       documentType === "cash_flow"
     ) {
-      let aiResult;
+      let aiResult: FinancialExtractionWithType;
 
       if (columnMapping) {
         console.log("[Admin Upload] Starting Column-based extraction...");
@@ -457,7 +463,7 @@ export async function POST(request: NextRequest) {
           endDate: endDate
         };
 
-        aiResult = await performColumnBasedExtraction(
+        const columnResult = await performColumnBasedExtraction(
           fileBuffer,
           columnMapping,
           startDate || '',
@@ -465,8 +471,11 @@ export async function POST(request: NextRequest) {
           documentType,
           extractionOptions
         );
-        // Manually set type for column extraction result
-        (aiResult as any).type = documentType;
+        // Add type to column extraction result
+        aiResult = {
+          type: documentType as FinancialStatementType,
+          data: columnResult.data
+        };
       } else {
         console.log("[Admin Upload] Starting AI-driven extraction...");
         // Perform AI Extraction
@@ -474,20 +483,27 @@ export async function POST(request: NextRequest) {
       }
 
       let totalMetricsStored = 0;
-      const validationReports: any[] = [];
+      const validationReports: Array<{
+        year: string;
+        period: string;
+        isValid: boolean;
+        errors: string[];
+        warnings: string[];
+      }> = [];
 
       // 2. Process each extracted period (e.g., 2021, 2020)
       for (const item of aiResult.data) {
         console.log(`[Admin Upload] Processing data for ${item.year} (${item.period})...`);
 
-        // 3. Validate Data
+        // 3. Validate Data based on document type
+        // Content uses same Chinese key names as Standard schemas, safe to cast
         let validationResult;
-        if ((aiResult as any).type === 'balance_sheet') {
-          validationResult = validateBalanceSheet(item.content as any);
-        } else if ((aiResult as any).type === 'income_statement') {
-          validationResult = validateIncomeStatement(item.content as any);
+        if (aiResult.type === 'balance_sheet') {
+          validationResult = validateBalanceSheet(item.content as unknown as StandardBalanceSheet);
+        } else if (aiResult.type === 'income_statement') {
+          validationResult = validateIncomeStatement(item.content as unknown as StandardIncomeStatement);
         } else {
-          validationResult = validateCashFlow(item.content as any);
+          validationResult = validateCashFlow(item.content as unknown as StandardCashFlow);
         }
 
         validationReports.push({
