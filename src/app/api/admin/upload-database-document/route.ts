@@ -500,7 +500,8 @@ export async function POST(request: NextRequest) {
         console.log(`[Admin Upload] Processing data for ${item.year} (${item.period})...`);
 
         // 3. Validate Data based on document type
-        // Content uses same Chinese key names as Standard schemas, safe to cast
+        // REASON: AI extraction returns FinancialStatementContent with Chinese keys matching
+        // Standard schema structure. Cast via `unknown` is safer than `any` for validation.
         let validationResult;
         if (aiResult.type === 'balance_sheet') {
           validationResult = validateBalanceSheet(item.content as unknown as StandardBalanceSheet);
