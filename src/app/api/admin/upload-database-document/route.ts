@@ -109,6 +109,8 @@ async function extractTextFromFile(
 
       for (const sheetName of workbook.SheetNames) {
         const sheet = workbook.Sheets[sheetName];
+        // REASON: XLSX.utils.sheet_to_json() returns unknown[]. This is a system boundary
+        // where external untyped data enters. Runtime validation for each cell would be excessive.
         const data = XLSX.utils.sheet_to_json(sheet, { header: 1 }) as any[][];
         const rowCount = data.filter(row => row.some(cell => cell != null && cell !== '')).length;
         console.log(`[extractTextFromFile] Sheet "${sheetName}" has ${rowCount} non-empty rows`);
@@ -122,9 +124,11 @@ async function extractTextFromFile(
       console.log(`[extractTextFromFile] Using sheet: ${bestSheet} with ${bestRowCount} rows`);
       const sheet = workbook.Sheets[bestSheet];
       const jsonData = XLSX.utils.sheet_to_json(sheet, { header: 1 });
+      // REASON: XLSX returns unknown[], cast needed for .length access on untyped external data
       console.log(`[extractTextFromFile] Sheet parsed, rows: ${(jsonData as any[]).length}`);
 
       // Format as text
+      // REASON: XLSX returns unknown[], cast needed for row/cell operations on untyped external data
       const text = (jsonData as any[][])
         .filter(row => row.some(cell => cell != null && cell !== ''))
         .map(row => row.map(cell => cell ?? '').join('\t'))
