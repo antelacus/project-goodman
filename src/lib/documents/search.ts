@@ -1,4 +1,5 @@
-import { createServerSupabaseClient } from '@/lib/database';
+import { createServerSupabaseClient, searchDocumentsHybrid } from '@/lib/database';
+import type { SearchDocumentsHybridResult } from '@/lib/database';
 
 import { SearchResultDocument } from '@/lib/types/domain-types';
 
@@ -7,19 +8,6 @@ export interface DocumentSearchFilters {
     year?: number;
     docTypes?: string[];
     sections?: string[];
-}
-
-interface RpcSearchResultRow {
-    chunk_id: string;
-    document_id: string;
-    document_name: string;
-    doc_type: string;
-    content: string;
-    section_title: string;
-    section_path: string[];
-    year: number;
-    period: string;
-    rrf_score: number;
 }
 
 export interface DocumentSearchOptions {
@@ -71,27 +59,20 @@ export async function searchDocuments(
     }
 
     // 2. Call the RPC function `search_documents_hybrid`
-    // mapping inputs to RPC params
-    // RPC expects query_embedding as vector(1536), passed as string or array in JS client
-    const rpcParams = {
-        query_embedding: queryEmbedding,
-        query_text: query,
-        match_count: options.limit ?? 10,
-        section_filter: filters.sections?.[0] ?? null, // RPC currently supports single string match ILIKE
-        year_filter: filters.year ?? null,
-        doc_type_filter: filters.docTypes?.[0] ?? null, // RPC currently supports single type equality
-        // weights are defaulted in RPC
-    };
-
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { data: rpcResults, error } = await (supabase.rpc as any)(
-        'search_documents_hybrid',
-        rpcParams
-    );
-
-    if (error) {
+    // Use type-safe helper from database helpers
+    let rpcResults: SearchDocumentsHybridResult[];
+    try {
+        rpcResults = await searchDocumentsHybrid(supabase, {
+            query_embedding: JSON.stringify(queryEmbedding),
+            query_text: query,
+            match_count: options.limit ?? 10,
+            section_filter: filters.sections?.[0],
+            year_filter: filters.year,
+            doc_type_filter: filters.docTypes?.[0],
+        });
+    } catch (error) {
         console.error('Hybrid search error:', error);
-        throw new Error(`Search failed: ${error.message}`);
+        throw new Error(`Search failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
 
     // 3. Process and group results by Document
@@ -99,7 +80,7 @@ export async function searchDocuments(
 
     const documentsMap = new Map<string, SearchResultDocument>();
 
-    (rpcResults as RpcSearchResultRow[] || []).forEach((row) => {
+    rpcResults.forEach((row) => {
         // Normalize RRF score to 0-100 relevance
         // Max theoretical RRF (rank 1 in both lists) approx 0.033 -> 100
         // Min useful RRF (rank 20 in one list) approx 0.012 -> 40

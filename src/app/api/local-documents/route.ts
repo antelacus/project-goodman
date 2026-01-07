@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createServerSupabaseClient } from "@/lib/database";
+import type { Document, DocumentChunk } from "@/lib/database";
 import { generateRequestId, createErrorResponse, getSession } from "@/lib/security";
 
 export async function GET(req: NextRequest) {
@@ -42,7 +43,7 @@ export async function GET(req: NextRequest) {
     }
 
     // 获取所有知识型文档的chunks
-    const documentIds = (documents as any[]).map(doc => doc.id);
+    const documentIds = documents.map(doc => doc.id);
     const { data: chunks, error: chunksError } = await supabase
       .from('document_chunks')
       .select('*')
@@ -54,9 +55,15 @@ export async function GET(req: NextRequest) {
       throw chunksError;
     }
 
-    // 将chunks按文档分组
-    const chunksByDocId = new Map<string, any[]>();
-    ((chunks || []) as any[]).forEach(chunk => {
+    // 将chunks按文档分组 - using typed array
+    type ChunkSummary = {
+      id: string;
+      text: string;
+      embedding: string | null;
+      chunkIndex: number;
+    };
+    const chunksByDocId = new Map<string, ChunkSummary[]>();
+    (chunks ?? []).forEach(chunk => {
       if (!chunksByDocId.has(chunk.document_id)) {
         chunksByDocId.set(chunk.document_id, []);
       }
@@ -69,7 +76,7 @@ export async function GET(req: NextRequest) {
     });
 
     // 组合文档和chunks
-    const formattedDocuments = (documents as any[]).map(doc => ({
+    const formattedDocuments = documents.map(doc => ({
       id: doc.id,
       name: doc.name,
       type: doc.doc_type || "knowledge",
