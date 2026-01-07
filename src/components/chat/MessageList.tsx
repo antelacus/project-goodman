@@ -5,9 +5,10 @@ import rehypeKatex from 'rehype-katex';
 import { Bot } from 'lucide-react';
 import 'katex/dist/katex.min.css';
 import ThinkingIndicator from './ThinkingIndicator';
+import { ProcessLog } from './ProcessLog';
 import type { ChatMessage, MessageListProps } from '@/types/message';
 
-const MessageList: React.FC<MessageListProps> = ({ messages, currentThinking }) => {
+const MessageList: React.FC<MessageListProps> = ({ messages, currentThinking, processEvents = [] }) => {
     const bottomRef = useRef<HTMLDivElement>(null);
 
     useEffect(() => {
@@ -53,6 +54,16 @@ const MessageList: React.FC<MessageListProps> = ({ messages, currentThinking }) 
                     </div>
                 </div>
             ))}
+
+            {/* v4.0: Process Log - show after streaming completes */}
+            {!currentThinking && processEvents.length > 0 && (
+                <div className="flex items-start gap-4">
+                    <div className="flex-shrink-0 w-8 h-8" /> {/* Spacer to align with messages */}
+                    <div className="flex-1 max-w-[85%]">
+                        <ProcessLog events={processEvents} />
+                    </div>
+                </div>
+            )}
 
             {/* Thinking Indicator at the bottom if active */}
             {currentThinking && (

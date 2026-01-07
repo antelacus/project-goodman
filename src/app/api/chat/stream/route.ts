@@ -10,8 +10,86 @@ import {
     createErrorResponse,
 } from '@/lib/security';
 import { ChatMessageSchema, validateRequest } from '@/lib/validation/api-schemas';
+import { v4 as uuidv4 } from 'uuid';
+import {
+    formatToolCallEvent,
+    formatToolResultEvent,
+    formatThinkingEvent,
+} from '@/lib/workflows/shared/format-event';
+import type { ProcessEvent, SourceReference } from '@/types/process-events';
 
 export const runtime = 'nodejs'; // Ensure Node.js runtime for LangGraph
+
+// ============================================================================
+// v4.0: Process Event Helpers
+// ============================================================================
+
+/**
+ * Extract source reference from tool output if available.
+ * Source is constructed by tool code from database metadata, not LLM-generated.
+ */
+function extractSourceReference(output: unknown): SourceReference | undefined {
+    if (!output || typeof output !== 'object') return undefined;
+
+    const data = output as Record<string, unknown>;
+
+    // Check for source field in output.data (standard tool output structure)
+    if (data.data && typeof data.data === 'object') {
+        const innerData = data.data as Record<string, unknown>;
+        if (innerData.source && typeof innerData.source === 'object') {
+            const source = innerData.source as Record<string, unknown>;
+            return buildSourceReference(source);
+        }
+        // Check for sourceDocuments array (preset tools format)
+        if (innerData.sourceDocuments && Array.isArray(innerData.sourceDocuments)) {
+            const docName = innerData.sourceDocuments[0];
+            if (docName) {
+                return {
+                    documentId: '',
+                    documentName: String(docName),
+                    documentType: '',
+                };
+            }
+        }
+    }
+
+    // Direct source field (alternative structure)
+    if (data.source && typeof data.source === 'object') {
+        return buildSourceReference(data.source as Record<string, unknown>);
+    }
+
+    return undefined;
+}
+
+function buildSourceReference(source: Record<string, unknown>): SourceReference {
+    return {
+        documentId: String(source.documentId || source.document_id || ''),
+        documentName: String(source.documentName || source.document_name || ''),
+        documentType: String(source.documentType || source.document_type || ''),
+        year: source.year ? String(source.year) : undefined,
+        period: source.period ? String(source.period) : undefined,
+        fileUrl: source.fileUrl ? String(source.fileUrl) : undefined,
+    };
+}
+
+/**
+ * Create a ProcessEvent object
+ */
+function createProcessEvent(
+    type: ProcessEvent['type'],
+    content: string,
+    details?: Record<string, unknown>,
+    sourceReference?: SourceReference
+): ProcessEvent {
+    return {
+        id: uuidv4(),
+        timestamp: Date.now(),
+        type,
+        content,
+        details,
+        sourceReference,
+    };
+}
 
 export async function POST(req: NextRequest) {
     const requestId = req.headers.get('x-request-id') || generateRequestId();
@@ -125,16 +203,48 @@ export async function POST(req: NextRequest) {
                         // 1. Thinking: when a node starts (excluding the root graph and internal Runnables)
                         if (event.event === 'on_chain_start' && event.name && event.name !== 'LangGraph' && !event.name.startsWith('Runnable')) {
                             sendEvent('thinking', { node: event.name });
+
+                            // v4.0: Send humanized process event
+                            const humanized = formatThinkingEvent(event.name);
+                            sendEvent('process', createProcessEvent(
+                                'thinking',
+                                humanized,
+                                { node: event.name }
+                            ));
                         }
 
                         // 2. Tool Call: when the agent decides to call a tool
                         else if (event.event === 'on_tool_start') {
                             sendEvent('tool_call', { tool: event.name, input: event.data.input });
+
+                            // v4.0: Send humanized process event
+                            const humanized = formatToolCallEvent(
+                                event.name,
+                                event.data.input as Record<string, unknown>
+                            );
+                            sendEvent('process', createProcessEvent(
+                                'tool_call',
+                                humanized,
+                                { tool: event.name, input: event.data.input }
+                            ));
                         }
 
                         // 3. Tool Result: when a tool execution finishes
                         else if (event.event === 'on_tool_end') {
                             sendEvent('tool_result', { tool: event.name, output: event.data.output });
+
+                            // v4.0: Send humanized process event with source reference
+                            const humanized = formatToolResultEvent(
+                                event.name,
+                                event.data.output as Record<string, unknown>
+                            );
+                            const sourceRef = extractSourceReference(event.data.output);
+                            sendEvent('process', createProcessEvent(
+                                'tool_result',
+                                humanized,
+                                { tool: event.name, output: event.data.output },
+                                sourceRef
+                            ));
                         }
 
                         // 4. Capture sessionId from loadMemory node (this is the authoritative session ID)
@@ -212,7 +322,15 @@ export async function POST(req: NextRequest) {
 
                 } catch (err: any) {
                     console.error('Streaming error:', err);
-                    sendEvent('error', { message: err.message || 'An error occurred during streaming' });
+                    const errorMessage = err.message || 'An error occurred during streaming';
+                    sendEvent('error', { message: errorMessage });
+
+                    // v4.0: Send process error event
+                    sendEvent('process', createProcessEvent(
+                        'error',
+                        `错误: ${errorMessage}`,
+                        { error: errorMessage, stack: err.stack }
+                    ));
                 } finally {
                     controller.close();
                 }
