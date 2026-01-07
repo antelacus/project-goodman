@@ -84,7 +84,7 @@ export async function loadMemoryNode(
             console.error("Error fetching document context:", err);
             // Add a general error for the entire operation
             documentLoadErrors.push({
-                documentId: -1, // -1 indicates general error
+                documentId: null, // null indicates general error (not document-specific)
                 error: err instanceof Error ? err.message : "Failed to fetch document context",
             });
         }
