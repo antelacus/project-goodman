@@ -22,16 +22,19 @@ docker logs -f goodman                                   # View logs
 **Project Stage**: Evolving from demonstration project to production-ready tool
 
 **Target Users**:
+
 - **Primary**: Financial personnel in accounting departments (会计部门财务人员)
 - **Secondary**: Recruiters, hiring managers evaluating the project
 
 **Core Value**:
+
 - Reduce time on repetitive financial calculations and compliance lookups
 - AI-guided workflows instead of complex menu navigation
 - Natural language interaction with financial data and regulations
 - Transparency in AI reasoning, document sources, calculation steps
 
 **Design Philosophy**:
+
 - **Unified workspace**: Single entry point (工作台), AI routes to capabilities
 - **Fewer choices, more guidance**: AI decides tools, user focuses on questions
 - **Professional aesthetic**: Corporate style conveying security and reliability
@@ -54,6 +57,7 @@ docker logs -f goodman                                   # View logs
 ## Deployment
 
 **Production**: Docker on VPS
+
 - `goodman` container (Next.js app)
 - `goodman-redis` container (Redis)
 - nginx reverse proxy + SSL
@@ -89,17 +93,6 @@ supabase/migrations/        # Database migrations
 docs/                       # Development documentation
 tests/                      # Test scripts
 ```
-
----
-
-## Code Conventions
-
-See [.claude/rules/code-conventions.md](.claude/rules/code-conventions.md) for:
-- File organization patterns
-- Supabase conventions
-- API standards
-- Styling rules
-- Language standards (code: English, UI: Chinese)
 
 ---
 
