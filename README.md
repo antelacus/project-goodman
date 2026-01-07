@@ -30,7 +30,7 @@
 |------|------|
 | 前端 | Next.js 15 · React 19 · Tailwind CSS 4 |
 | 数据库 | Supabase (PostgreSQL + pgvector) |
-| AI | OpenAI GPT-5-mini · text-embedding-3-small |
+| AI | OpenAI GPT-4o · text-embedding-3-small |
 | 部署 | VPS + Docker + nginx (Cloudflare CDN) |
 
 ---
