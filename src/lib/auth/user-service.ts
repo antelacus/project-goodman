@@ -150,17 +150,17 @@ export async function authenticateUser(credentials: UserCredentials): Promise<Au
         return { success: false, error: '用户名或密码错误' };
     }
 
-    // Update last login time (using type assertion due to TypeScript type sync issues)
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    await (supabase.from('users') as any)
+    // Update last login time
+    await supabase
+        .from('users')
         .update({ last_login_at: new Date().toISOString() })
         .eq('id', row.id);
 
     // If password needs rehash, update it
     if (verification.needsRehash) {
         const newHash = await hashPassword(credentials.password);
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        await (supabase.from('users') as any)
+        await supabase
+            .from('users')
             .update({ password_hash: newHash, updated_at: new Date().toISOString() })
             .eq('id', row.id);
     }
@@ -227,8 +227,7 @@ export async function ensureAdminAccount(): Promise<void> {
     const isBcryptHash = adminPassword.startsWith('$2');
     const passwordHash = isBcryptHash ? adminPassword : await hashPassword(adminPassword);
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { error } = await (supabase.from('users') as any).insert({
+    const { error } = await supabase.from('users').insert({
         username: adminUsername,
         password_hash: passwordHash,
         role: 'admin',

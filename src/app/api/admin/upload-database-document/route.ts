@@ -16,6 +16,8 @@ import { NextRequest, NextResponse } from "next/server";
 import OpenAI from "openai";
 import * as XLSX from "xlsx";
 import { createServerSupabaseClient } from "@/lib/database";
+import type { InsertTables, Database } from "@/lib/database";
+import { SupabaseClient } from "@supabase/supabase-js";
 import {
   verifyAdminPassword,
   generateRequestId,
@@ -62,7 +64,16 @@ interface UploadRequest {
   endDate?: string;
   columnMapping?: ColumnMapping;
   adminPassword: string;
-  metadata?: Record<string, any>;
+  metadata?: Record<string, unknown>;
+}
+
+/**
+ * Type guard to check if extraction result has year/period (financial document)
+ */
+function isFinancialExtractionResult(
+  result: ExtractionResult
+): result is FinancialExtractionResult {
+  return 'year' in result && 'period' in result;
 }
 
 /**
@@ -363,26 +374,32 @@ export async function POST(request: NextRequest) {
       console.error(`[Admin Upload] Storage upload failed (non-fatal):`, storageError);
     }
 
+    // Build document insert with type-safe year/period extraction
+    const docYear = year || (isFinancialExtractionResult(extractionResult) ? extractionResult.year : undefined);
+    const docPeriod = period || (isFinancialExtractionResult(extractionResult) ? extractionResult.period : undefined);
+
+    const documentInsert: InsertTables<'documents'> = {
+      id: documentId,
+      name: fileName,
+      doc_category: "knowledge",
+      doc_type: documentType,
+      status: "ready",
+      size: documentSize,
+      is_structured: true,
+      year: docYear,
+      period: docPeriod,
+      file_url: fileUrl,
+      extraction_status: "completed",
+      extraction_metadata: {
+        confidence: extractionResult.confidence,
+        ...metadata,
+      },
+      processed_at: new Date().toISOString(),
+    };
+
     const { data: documentData, error: docError } = await supabase
       .from("documents")
-      .insert({
-        id: documentId,
-        name: fileName,
-        doc_category: "knowledge",
-        doc_type: documentType,
-        status: "ready",
-        size: documentSize,
-        is_structured: true,
-        year: year || (extractionResult as any).year,
-        period: period || (extractionResult as any).period,
-        file_url: fileUrl,
-        extraction_status: "completed",
-        extraction_metadata: {
-          confidence: extractionResult.confidence,
-          ...metadata,
-        },
-        processed_at: new Date().toISOString(),
-      } as any)
+      .insert(documentInsert)
       .select()
       .single();
 
@@ -393,19 +410,19 @@ export async function POST(request: NextRequest) {
 
     console.log(`[Admin Upload] Document created with ID: ${documentId}`);
 
-    // Step 5: Store vector chunks
-    const chunkRecords = chunks.map((chunk, index) => ({
+    // Step 5: Store vector chunks with proper typing
+    const chunkRecords: InsertTables<'document_chunks'>[] = chunks.map((chunk, index) => ({
       id: crypto.randomUUID(),
       document_id: documentId,
       chunk_index: index,
       content: chunk,
-      embedding: embeddings[index],
+      embedding: JSON.stringify(embeddings[index]),
       chunk_type: "general",
     }));
 
     const { error: chunksError } = await supabase
       .from("document_chunks")
-      .insert(chunkRecords as any);
+      .insert(chunkRecords);
 
     if (chunksError) {
       console.error("[Admin Upload] Chunks insert error:", chunksError);
@@ -502,24 +519,23 @@ export async function POST(request: NextRequest) {
           }
         }
 
-        // 5. Store in Database
-        // We reuse the existing storeFinancialMetrics logic but adapt the input
-        const records = metrics.map((metric) => ({
+        // 5. Store in Database with proper typing
+        const records: InsertTables<'financial_data'>[] = metrics.map((metric) => ({
           document_id: documentId,
           data_type: documentType,
           year: item.year,
           period: item.period,
-          metric_name: metric.name, // This needs to be Chinese name
+          metric_name: metric.name,
           metric_value: metric.value,
           unit: metric.unit,
           metadata: {
-            confidence: columnMapping ? 1.0 : 0.9, // Higher confidence for column extraction
+            confidence: columnMapping ? 1.0 : 0.9,
             validation_errors: validationResult.errors
           },
         }));
 
         if (records.length > 0) {
-          const { error } = await supabase.from("financial_data").insert(records as any);
+          const { error } = await supabase.from("financial_data").insert(records);
           if (error) throw error;
           totalMetricsStored += records.length;
         }
@@ -639,12 +655,12 @@ async function generateEmbeddings(chunks: string[]): Promise<number[][]> {
  * Store regulation articles in structured table
  */
 async function storeRegulationArticles(
-  supabase: any,
+  supabase: SupabaseClient<Database>,
   documentId: string,
   result: RegulationExtractionResult,
   regulationName: string
 ): Promise<number> {
-  const records = result.articles.map((article) => ({
+  const records: InsertTables<'structured_regulations'>[] = result.articles.map((article) => ({
     document_id: documentId,
     regulation_name: regulationName.replace(".pdf", "").replace(".txt", ""),
     article_number: article.articleNumber,
@@ -655,7 +671,7 @@ async function storeRegulationArticles(
     hierarchy: article.hierarchy || [],
     metadata: {
       effectiveDate: article.effectiveDate,
-      confidence: 0.8, // Default confidence for regulation extraction
+      confidence: 0.8,
     },
   }));
 

@@ -7,7 +7,8 @@
 
 import { z } from "zod";
 import { Tool } from "../types";
-import { createServerSupabaseClient } from "@/lib/database";
+import { createServerSupabaseClient, matchDocuments } from "@/lib/database";
+import type { MatchDocumentsResult } from "@/lib/database";
 import OpenAI from "openai";
 
 // ============================================================================
@@ -21,12 +22,23 @@ export const SearchRegulationsInputSchema = z.object({
 
 export type SearchRegulationsInput = z.infer<typeof SearchRegulationsInputSchema>;
 
+// Output data type for the search results (without the wrapper)
+interface SearchRegulationsData {
+  total: number;
+  documents: Array<{
+    id: string;
+    content: string;
+    similarity: number;
+    source: string;
+    article: string;
+  }>;
+}
+
 // ============================================================================
 // Tool Definition
 // ============================================================================
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export const searchRegulationsTool: Tool<SearchRegulationsInput, any> = {
+export const searchRegulationsTool: Tool<SearchRegulationsInput, SearchRegulationsData> = {
   name: "search_regulations",
   displayName: "搜索法规",
   displayNameEn: "Search Regulations",
@@ -48,29 +60,20 @@ export const searchRegulationsTool: Tool<SearchRegulationsInput, any> = {
       });
       const queryEmbedding = embeddingResponse.data[0].embedding;
 
-      // 2. Vector search via RPC
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const { data: vectorData, error: vectorError } = await (supabase.rpc as any)(
-        "match_documents",
-        {
-          query_embedding: queryEmbedding,
-          match_count: input.limit || 5,
-          filter_doc_ids: null,
-        }
-      );
+      // 2. Vector search via type-safe helper
+      const vectorData = await matchDocuments(supabase, {
+        query_embedding: JSON.stringify(queryEmbedding),
+        match_count: input.limit || 5,
+        filter_doc_ids: undefined,
+      });
 
-      if (vectorError)
-        throw new Error(`Vector search failed: ${vectorError.message}`);
-
-      // 3. Format results
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const documents = (vectorData || []).map((r: any) => ({
+      // 3. Format results with proper typing
+      const documents = vectorData.map((r: MatchDocumentsResult) => ({
         id: r.id,
         content: r.content,
         similarity: r.similarity,
-        source:
-          r.metadata?.regulation || r.metadata?.filename || "Unknown Source",
-        article: r.metadata?.article || "",
+        source: "Unknown Source", // metadata not available in match_documents result
+        article: "",
       }));
 
       return {

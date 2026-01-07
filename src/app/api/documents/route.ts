@@ -11,6 +11,7 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { createServerSupabaseClient } from "@/lib/database";
+import type { UpdateTables } from "@/lib/database";
 import {
   verifySession,
   COOKIE_NAME,
@@ -135,8 +136,8 @@ export async function PATCH(req: NextRequest) {
 
     const { documentId, updates } = validation.data;
 
-    // Build update data from validated updates
-    const updateData: Record<string, unknown> = {};
+    // Build update data from validated updates with proper typing
+    const updateData: UpdateTables<'documents'> = {};
     if (updates.name !== undefined) {
       updateData.name = updates.name.trim();
     }
@@ -152,9 +153,9 @@ export async function PATCH(req: NextRequest) {
 
     const supabase = createServerSupabaseClient();
 
-    // Update document
-    const { data, error } = await (supabase
-      .from('documents') as any)
+    // Update document with type-safe update
+    const { data, error } = await supabase
+      .from('documents')
       .update(updateData)
       .eq('id', documentId)
       .select('id, name, doc_type, year, period')

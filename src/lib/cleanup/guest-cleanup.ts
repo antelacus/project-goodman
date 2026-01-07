@@ -38,13 +38,6 @@ export function startCleanupScheduler() {
 /**
  * Clean up all expired guest documents
  */
-interface ExpiredDoc {
-    id: string;
-    file_url: string | null;
-    owner_id: string | null;
-    name: string;
-}
-
 export async function cleanupExpiredGuests(): Promise<{
     documentsDeleted: number;
     sessionsAffected: number;
@@ -54,19 +47,18 @@ export async function cleanupExpiredGuests(): Promise<{
 
     try {
         // 1. Query expired documents
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const { data: expiredDocs, error: queryError } = await (supabase
+        const { data: expiredDocs, error: queryError } = await supabase
             .from('documents')
             .select('id, file_url, owner_id, name')
             .eq('owner_type', 'guest')
-            .lt('expires_at', now) as any);
+            .lt('expires_at', now);
 
         if (queryError) {
             console.error('[Cleanup] Error querying expired documents:', queryError);
             return { documentsDeleted: 0, sessionsAffected: 0 };
         }
 
-        const docs = (expiredDocs || []) as ExpiredDoc[];
+        const docs = expiredDocs ?? [];
         if (docs.length === 0) {
             console.log('[Cleanup] No expired documents to clean');
             return { documentsDeleted: 0, sessionsAffected: 0 };
@@ -138,11 +130,6 @@ export async function cleanupExpiredGuests(): Promise<{
 // Lazy Cleanup
 // =============================================================================
 
-interface LazyCleanupDoc {
-    id: string;
-    file_url: string | null;
-}
-
 /**
  * Lazy cleanup for a specific session
  * Call this when a session is being used to clean up any expired documents
@@ -153,19 +140,18 @@ export async function lazyCleanupForSession(sessionId: string): Promise<number> 
 
     try {
         // Query expired documents for this session
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const { data: expiredDocs, error: queryError } = await (supabase
+        const { data: expiredDocs, error: queryError } = await supabase
             .from('documents')
             .select('id, file_url')
             .eq('owner_id', sessionId)
             .eq('owner_type', 'guest')
-            .lt('expires_at', now) as any);
+            .lt('expires_at', now);
 
         if (queryError || !expiredDocs || expiredDocs.length === 0) {
             return 0;
         }
 
-        const docs = expiredDocs as LazyCleanupDoc[];
+        const docs = expiredDocs;
         let deletedCount = 0;
 
         for (const doc of docs) {

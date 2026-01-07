@@ -16,6 +16,7 @@ import { NextRequest, NextResponse } from "next/server";
 import OpenAI from "openai";
 import * as XLSX from "xlsx";
 import { createServerSupabaseClient } from "@/lib/database";
+import type { InsertTables } from "@/lib/database";
 import {
   generateRequestId,
   createErrorResponse,
@@ -276,42 +277,42 @@ export async function POST(req: NextRequest) {
       throw new Error(`文件存储失败: ${storageError instanceof Error ? storageError.message : String(storageError)}`);
     }
 
-    // Create document record
+    // Create document record with proper typing
+    const documentInsert: InsertTables<'documents'> = {
+      id: documentId,
+      name: fileName,
+      doc_category: 'business',
+      doc_type: fileType.includes('pdf') ? 'pdf' :
+        fileType.includes('image') ? 'image' :
+          fileType.includes('excel') || fileType.includes('spreadsheet') ? 'excel' : 'txt',
+      status: 'ready',
+      size: estimatedSize,
+      summary: {
+        summary: extractedText.substring(0, 500),
+        document_type: 'temp_upload',
+        key_metrics: [],
+        time_period: '',
+        structure_metrics: {
+          quality: parseResult.quality,
+          sections: parseResult.sections.length
+        }
+      },
+      section_structure: {
+        hasToc: parseResult.hasToc,
+        quality: parseResult.quality,
+        sectionCount: parseResult.sections.length,
+        sections: parseResult.sections.slice(0, 20).map(s => ({ title: s.title, level: s.level }))
+      },
+      structure_quality: parseResult.quality,
+      owner_id: ownerId,
+      owner_type: ownerType,
+      expires_at: expiresAt,
+      file_url: fileUrl,
+    };
+
     const { error: docError } = await supabase
       .from('documents')
-      .insert({
-        id: documentId,
-        name: fileName,
-        doc_category: 'business',
-        doc_type: fileType.includes('pdf') ? 'pdf' :
-          fileType.includes('image') ? 'image' :
-            fileType.includes('excel') || fileType.includes('spreadsheet') ? 'excel' : 'txt',
-        status: 'ready',
-        size: estimatedSize,
-        summary: {
-          summary: extractedText.substring(0, 500),
-          document_type: 'temp_upload',
-          key_metrics: [],
-          time_period: '',
-          structure_metrics: {
-            quality: parseResult.quality,
-            sections: parseResult.sections.length
-          }
-        },
-        section_structure: JSON.stringify({
-          hasToc: parseResult.hasToc,
-          quality: parseResult.quality,
-          sectionCount: parseResult.sections.length,
-          sections: parseResult.sections.slice(0, 20).map(s => ({ title: s.title, level: s.level }))
-        }),
-        structure_quality: parseResult.quality,
-        // V3.10: Ownership fields
-        owner_id: ownerId,
-        owner_type: ownerType,
-        expires_at: expiresAt,
-        // V3.11: Store file_url
-        file_url: fileUrl,
-      } as any);
+      .insert(documentInsert);
 
     if (docError) {
       console.error('[upload-temp] Document insert error:', docError);
@@ -326,13 +327,13 @@ export async function POST(req: NextRequest) {
       throw new Error(`数据库存储失败: ${docError.message}`);
     }
 
-    // Create chunk records
-    const chunkRecords = chunks.map((chunk, index) => ({
+    // Create chunk records with proper typing
+    const chunkRecords: InsertTables<'document_chunks'>[] = chunks.map((chunk, index) => ({
       id: crypto.randomUUID(),
       document_id: documentId,
       chunk_index: index,
       content: chunk.content,
-      embedding: embeddings[index],
+      embedding: JSON.stringify(embeddings[index]),
       section_title: chunk.sectionTitle || null,
       section_level: chunk.sectionLevel || 0,
       section_path: chunk.sectionPath || null,
@@ -344,7 +345,7 @@ export async function POST(req: NextRequest) {
       const batch = chunkRecords.slice(i, i + BATCH_SIZE);
       const { error: chunksError } = await supabase
         .from('document_chunks')
-        .insert(batch as any);
+        .insert(batch);
 
       if (chunksError) {
         // Rollback document
