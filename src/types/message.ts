@@ -51,4 +51,6 @@ export interface MessageListProps {
   messages: ChatMessage[];
   currentThinking?: string | null;
   isLoading?: boolean;
+  // v4.0: Process events for transparency
+  processEvents?: import('./process-events').ProcessEvent[];
 }

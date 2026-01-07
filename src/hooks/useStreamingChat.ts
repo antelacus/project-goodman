@@ -1,17 +1,20 @@
 
 import { useState, useRef, useCallback } from 'react';
+import type { ProcessEvent } from '@/types/process-events';
 
 // Define event types based on what we implemented
-export type StreamEventType = 'thinking' | 'tool_call' | 'tool_result' | 'complete' | 'error' | 'debug';
+// v4.0: Added 'process' event type for transparency
+export type StreamEventType = 'thinking' | 'tool_call' | 'tool_result' | 'complete' | 'error' | 'debug' | 'process';
 
 export interface StreamEvent {
     type: StreamEventType;
-    data: any;
+    data: unknown;
     timestamp: number;
 }
 
 export interface UseStreamingChatProps {
     initialSessionId?: string;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     onComplete?: (data: any) => void;
     onError?: (error: string) => void;
 }
@@ -21,14 +24,18 @@ export function useStreamingChat({ initialSessionId, onComplete, onError }: UseS
     const [isStreaming, setIsStreaming] = useState(false);
     const [events, setEvents] = useState<StreamEvent[]>([]);
     const [currentThinking, setCurrentThinking] = useState<string | null>(null);
+    // v4.0: Process events for transparency
+    const [processEvents, setProcessEvents] = useState<ProcessEvent[]>([]);
 
     const abortControllerRef = useRef<AbortController | null>(null);
 
-    const sendMessage = useCallback(async (question: string, files: any[] = [], documentIds: string[] = []) => {
+    const sendMessage = useCallback(async (question: string, files: unknown[] = [], documentIds: string[] = []) => {
         // Reset state for new message
         setIsStreaming(true);
         setEvents([]);
         setCurrentThinking(null);
+        // v4.0: Clear process events for new message
+        setProcessEvents([]);
 
         // Abort previous request if any (optional)
         if (abortControllerRef.current) {
@@ -119,24 +126,30 @@ export function useStreamingChat({ initialSessionId, onComplete, onError }: UseS
         }
     }, [sessionId, onError]);
 
-    const handleEvent = (type: StreamEventType, data: any) => {
+    const handleEvent = (type: StreamEventType, data: unknown) => {
         // Add to event log
         const newEvent: StreamEvent = { type, data, timestamp: Date.now() };
         setEvents(prev => [...prev, newEvent]);
 
         if (type === 'thinking') {
-            setCurrentThinking(data.node);
+            const thinkingData = data as { node: string };
+            setCurrentThinking(thinkingData.node);
+        } else if (type === 'process') {
+            // v4.0: Accumulate process events for transparency
+            setProcessEvents(prev => [...prev, data as ProcessEvent]);
         } else if (type === 'complete') {
             setCurrentThinking(null);
             // Update session ID if returned
-            if (data.sessionId) {
-                setSessionId(data.sessionId);
+            const completeData = data as { sessionId?: string };
+            if (completeData.sessionId) {
+                setSessionId(completeData.sessionId);
             }
             if (onComplete) {
                 onComplete(data);
             }
         } else if (type === 'error') {
-            if (onError) onError(data.message);
+            const errorData = data as { message: string };
+            if (onError) onError(errorData.message);
         }
     };
 
@@ -145,6 +158,8 @@ export function useStreamingChat({ initialSessionId, onComplete, onError }: UseS
         sendMessage,
         isStreaming,
         events,
-        currentThinking
+        currentThinking,
+        // v4.0: Process events for transparency
+        processEvents,
     };
 }

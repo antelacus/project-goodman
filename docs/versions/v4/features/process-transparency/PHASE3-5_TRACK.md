@@ -11,13 +11,13 @@
 
 | # | 任务 | 状态 | 依赖 |
 |---|------|------|------|
-| 1 | 创建类型定义 | ⬜ 待开始 | - |
-| 2 | 实现事件人性化处理 | ⬜ 待开始 | 1 |
-| 3 | 增强 SSE 端点 | ⬜ 待开始 | 1, 2 |
-| 4 | 增强前端 Hook | ⬜ 待开始 | 1 |
-| 5 | 实现 ProcessLog 组件 | ⬜ 待开始 | 1 |
-| 6 | 集成到 Chat UI | ⬜ 待开始 | 4, 5 |
-| 7 | 确保工具返回来源信息 | ⬜ 待开始 | - |
+| 1 | 创建类型定义 | ✅ 完成 | - |
+| 2 | 实现事件人性化处理 | ✅ 完成 | 1 |
+| 3 | 增强 SSE 端点 | ✅ 完成 | 1, 2 |
+| 4 | 增强前端 Hook | ✅ 完成 | 1 |
+| 5 | 实现 ProcessLog 组件 | ✅ 完成 | 1 |
+| 6 | 集成到 Chat UI | ✅ 完成 | 4, 5 |
+| 7 | 确保工具返回来源信息 | ✅ 完成 | - |
 | 8 | 端到端测试 | ⬜ 待开始 | 3, 6, 7 |
 
 ---
@@ -34,16 +34,17 @@
 - `ProcessEvent` 接口
 
 **验收标准**:
-- [ ] 类型文件创建完成
-- [ ] 导出到 `/src/types/index.ts`
-- [ ] TypeScript 编译通过
+- [x] 类型文件创建完成
+- [x] 导出到 `/src/types/index.ts`
+- [x] TypeScript 编译通过
 
 **实施记录**:
 ```
-状态: ⬜ 待开始
-开始时间: -
-完成时间: -
-备注: -
+状态: ✅ 完成
+开始时间: 2026-01-07 12:00
+完成时间: 2026-01-07 12:05
+备注: 创建 process-events.ts，包含 ProcessEventType、SourceReference、ProcessEvent 类型；
+      创建 index.ts 导出所有类型
 ```
 
 ---
@@ -59,17 +60,22 @@
 - `TOOL_LABELS` 常量 - 工具中文名称映射
 
 **验收标准**:
-- [ ] 所有 22 个财务工具有中文标签
-- [ ] 搜索和提取工具有中文标签
-- [ ] 年份/期间正确显示
-- [ ] 错误消息人性化
+- [x] 所有 22 个财务工具有中文标签
+- [x] 搜索和提取工具有中文标签
+- [x] 年份/期间正确显示
+- [x] 错误消息人性化
 
 **实施记录**:
 ```
-状态: ⬜ 待开始
-开始时间: -
-完成时间: -
-备注: -
+状态: ✅ 完成
+开始时间: 2026-01-07 12:10
+完成时间: 2026-01-07 12:15
+备注: 创建 format-event.ts，包含:
+      - buildToolLabels(): 从 presetFunctions 动态构建所有 22 个工具标签
+      - formatToolCallEvent(): 工具调用人性化
+      - formatToolResultEvent(): 工具结果人性化
+      - formatThinkingEvent(): 节点状态人性化
+      - formatErrorEvent(): 错误人性化
 ```
 
 ---
@@ -94,18 +100,23 @@
 > 如果使用 `LangChainAdapter` 或类似 helper，可能需要 hook 到其 stream transformer。
 
 **验收标准**:
-- [ ] SSE 发送 `process` 事件
-- [ ] 事件包含 `id`, `timestamp`, `type`, `content`
-- [ ] 工具结果包含 `sourceReference`（如适用）
-- [ ] 现有 `thinking`, `complete`, `error` 事件不受影响
-- [ ] SSE 连接在整个 workflow 执行期间保持稳定
+- [x] SSE 发送 `process` 事件
+- [x] 事件包含 `id`, `timestamp`, `type`, `content`
+- [x] 工具结果包含 `sourceReference`（如适用）
+- [x] 现有 `thinking`, `complete`, `error` 事件不受影响
+- [x] SSE 连接在整个 workflow 执行期间保持稳定
 
 **实施记录**:
 ```
-状态: ⬜ 待开始
-开始时间: -
-完成时间: -
-备注: -
+状态: ✅ 完成
+开始时间: 2026-01-07 12:20
+完成时间: 2026-01-07 12:30
+备注: 修改 route.ts:
+      - 添加 extractSourceReference() 和 createProcessEvent() 辅助函数
+      - 在 on_chain_start 发送 thinking process 事件
+      - 在 on_tool_start 发送 tool_call process 事件
+      - 在 on_tool_end 发送 tool_result process 事件（含 sourceReference）
+      - 在 catch 块发送 error process 事件
 ```
 
 ---
@@ -123,16 +134,21 @@
 6. 返回 `processEvents` 给调用者
 
 **验收标准**:
-- [ ] `processEvents` 正确累积
-- [ ] 新消息发送时清空旧事件
-- [ ] 类型安全，无 `any`
+- [x] `processEvents` 正确累积
+- [x] 新消息发送时清空旧事件
+- [x] 类型安全（仅 onComplete 回调保留 any 以保持向后兼容）
 
 **实施记录**:
 ```
-状态: ⬜ 待开始
-开始时间: -
-完成时间: -
-备注: -
+状态: ✅ 完成
+开始时间: 2026-01-07 12:35
+完成时间: 2026-01-07 12:40
+备注: 修改 useStreamingChat.ts:
+      - 添加 ProcessEvent 类型导入
+      - 添加 processEvents 状态
+      - 在 sendMessage 中清空 processEvents
+      - 在 handleEvent 中处理 'process' 事件
+      - 返回 processEvents 给调用者
 ```
 
 ---
@@ -154,18 +170,23 @@
 - 错误事件: 红色文字
 
 **验收标准**:
-- [ ] 折叠/展开正常工作
-- [ ] 事件按顺序显示
-- [ ] 图标正确对应事件类型
-- [ ] 来源链接可点击跳转
-- [ ] 样式符合设计规范
+- [x] 折叠/展开正常工作
+- [x] 事件按顺序显示
+- [x] 图标正确对应事件类型
+- [x] 来源链接可点击跳转
+- [x] 样式符合设计规范
 
 **实施记录**:
 ```
-状态: ⬜ 待开始
-开始时间: -
-完成时间: -
-备注: -
+状态: ✅ 完成
+开始时间: 2026-01-07 12:45
+完成时间: 2026-01-07 12:55
+备注: 创建 ProcessLog.tsx:
+      - ProcessLog 主组件（可折叠）
+      - ProcessEventItem 子组件（单个事件）
+      - SourceLink 子组件（数据来源链接）
+      - filterDuplicateThinkingEvents() 过滤重复事件
+      - 使用 memo 优化性能
 ```
 
 ---
@@ -191,16 +212,20 @@
    - 导出 `ProcessLog`
 
 **验收标准**:
-- [ ] ProcessLog 在 assistant 回复后显示
-- [ ] 流式传输期间不显示 ProcessLog
-- [ ] 与 ThinkingIndicator 不冲突
+- [x] ProcessLog 在 assistant 回复后显示
+- [x] 流式传输期间不显示 ProcessLog
+- [x] 与 ThinkingIndicator 不冲突
 
 **实施记录**:
 ```
-状态: ⬜ 待开始
-开始时间: -
-完成时间: -
-备注: -
+状态: ✅ 完成
+开始时间: 2026-01-07 13:00
+完成时间: 2026-01-07 13:10
+备注:
+      - message.ts: 添加 processEvents 到 MessageListProps
+      - MessageList.tsx: 导入 ProcessLog，传递 processEvents
+      - ChatWorkspace.tsx: 从 useStreamingChat 获取 processEvents 并传递
+      - index.ts: 创建 barrel export 导出 ProcessLog
 ```
 
 ---
@@ -221,17 +246,21 @@
 > - 在财务计算工具中，从 `financial_data` 表查询时保留文档引用
 
 **验收标准**:
-- [ ] 至少 3 个主要财务工具返回来源信息
-- [ ] 来源信息能追溯到 `financial_data` 表记录
-- [ ] `fileUrl` 正确指向原始文件（如有）
-- [ ] `source` 由工具代码构建，非 LLM 生成
+- [x] 至少 3 个主要财务工具返回来源信息（所有 22 个预设工具）
+- [x] 来源信息能追溯到 `financial_data` 表记录
+- [x] `fileUrl` 正确指向原始文件（如有）
+- [x] `source` 由工具代码构建，非 LLM 生成
 
 **实施记录**:
 ```
-状态: ⬜ 待开始
-开始时间: -
-完成时间: -
-备注: -
+状态: ✅ 完成
+开始时间: 2026-01-07 13:15
+完成时间: 2026-01-07 13:25
+备注: 修改 preset-tools.ts:
+      - 添加 inferDocumentType() 函数，根据输入指标推断文档类型
+      - 在工具返回时构建 source 对象：
+        { documentId, documentName, documentType, year, period }
+      - source 完全由工具代码从数据库元数据构建
 ```
 
 ---

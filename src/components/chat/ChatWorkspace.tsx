@@ -79,7 +79,8 @@ export default function ChatWorkspace() {
         }]);
     };
 
-    const { sendMessage, isStreaming, currentThinking, sessionId } = useStreamingChat({
+    // v4.0: Get processEvents for transparency
+    const { sendMessage, isStreaming, currentThinking, sessionId, processEvents } = useStreamingChat({
         initialSessionId: urlSessionId || undefined,
         onComplete: handleComplete,
         onError: handleError
@@ -145,7 +146,8 @@ export default function ChatWorkspace() {
                 /* Active State: Chat Interface */
                 <div className="flex-1 flex flex-col max-w-4xl mx-auto w-full px-4 z-10 relative">
                     <div className="flex-1 overflow-y-auto py-4 scroll-smooth no-scrollbar" id="chat-scroll-area">
-                        <MessageList messages={messages} currentThinking={currentThinking} />
+                        {/* v4.0: Pass processEvents for transparency */}
+                        <MessageList messages={messages} currentThinking={currentThinking} processEvents={processEvents} />
                     </div>
 
                     <div className="w-full pb-4 pt-2">

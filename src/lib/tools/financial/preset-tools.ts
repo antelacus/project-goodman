@@ -37,6 +37,45 @@ const CATEGORY_MAP: Record<FunctionCategory, string> = {
 };
 
 // ============================================================================
+// v4.0: Source Reference Helpers
+// ============================================================================
+
+/**
+ * Infer document type based on required inputs
+ * Balance sheet items → 资产负债表
+ * Income statement items → 利润表
+ * Cash flow items → 现金流量表
+ */
+function inferDocumentType(requiredInputs: string[]): string {
+  const hasBalanceSheet = requiredInputs.some(
+    (input) =>
+      input.includes("资产") ||
+      input.includes("负债") ||
+      input.includes("权益") ||
+      input.includes("存货") ||
+      input.includes("应收")
+  );
+  const hasIncomeStatement = requiredInputs.some(
+    (input) =>
+      input.includes("收入") ||
+      input.includes("利润") ||
+      input.includes("费用") ||
+      input.includes("成本")
+  );
+  const hasCashFlow = requiredInputs.some(
+    (input) => input.includes("现金") || input.includes("现金流")
+  );
+
+  // If multiple types, return most specific one
+  if (hasCashFlow) return "现金流量表";
+  if (hasIncomeStatement && hasBalanceSheet) return "财务报表";
+  if (hasIncomeStatement) return "利润表";
+  if (hasBalanceSheet) return "资产负债表";
+
+  return "财务报表";
+}
+
+// ============================================================================
 // Tool Factory
 // ============================================================================
 
@@ -104,6 +143,16 @@ function createFinancialToolFromPreset(preset: PresetFunction): Tool {
         // Execute calculation
         const result = executeFunction(preset.name, inputs);
 
+        // v4.0: Build source reference from database metadata (not LLM-generated)
+        const primaryData = data[0];
+        const source = primaryData ? {
+          documentId: primaryData.document_id,
+          documentName: primaryData.documents.name,
+          documentType: inferDocumentType(preset.requiredInputs),
+          year: primaryData.year,
+          period: primaryData.period,
+        } : undefined;
+
         return {
           success: true,
           data: {
@@ -114,7 +163,9 @@ function createFinancialToolFromPreset(preset: PresetFunction): Tool {
             formula: result.formulaDisplay,
             interpretation: result.interpretation,
             warnings: result.result.warnings,
-            sourceDocuments: data.map(d => d.documents.name)
+            sourceDocuments: data.map(d => d.documents.name),
+            // v4.0: Structured source reference for transparency
+            source,
           }
         };
 
