@@ -175,6 +175,8 @@ export class ToolRegistry {
 
     // Try to extract shape from Zod object schema
     if (schema && typeof schema === "object" && "_def" in schema) {
+      // REASON: Accessing Zod internal _def property for runtime schema introspection.
+      // Required for converting Zod schemas to OpenAI function parameters. No public API exists.
       const def = (schema as any)._def;
 
       if (def.typeName === "ZodObject" && def.shape) {
@@ -185,6 +187,7 @@ export class ToolRegistry {
           typeof def.shape === "function" ? def.shape() : def.shape;
 
         for (const [key, value] of Object.entries(shape)) {
+          // REASON: Accessing Zod internal _def for field type introspection. No public API exists.
           const fieldDef = (value as any)?._def;
           if (!fieldDef) continue;
 

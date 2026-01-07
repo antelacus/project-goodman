@@ -234,6 +234,7 @@ export async function POST(req: NextRequest) {
       const jsonData = XLSX.utils.sheet_to_json(sheet, { header: 1 });
 
       // Format as text for LLM processing
+      // REASON: XLSX returns unknown[], cast needed for row/cell operations on untyped external data
       const textContent = (jsonData as any[][])
         .filter(row => row.some(cell => cell != null && cell !== ''))
         .map(row => row.map(cell => cell ?? '').join('\t'))
