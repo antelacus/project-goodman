@@ -26,8 +26,8 @@ export interface WorkflowInput {
         name: string;
         type: string;
     }>;
-    /** Optional specific document context */
-    documentIds?: number[];
+    /** Optional specific document context (UUIDs) */
+    documentIds?: string[];
     /** Optional workflow type override */
     workflowType?: string;
     /** Owner ID for session ownership (auth sessionId or userId) */
@@ -97,7 +97,8 @@ export interface ToolResultEntry {
  * Records errors encountered when loading document context
  */
 export interface DocumentLoadError {
-    documentId: number;
+    /** Document ID that failed to load (null for general errors) */
+    documentId: string | null;
     error: string;
 }
 
