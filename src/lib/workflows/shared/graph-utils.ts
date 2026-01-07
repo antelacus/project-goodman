@@ -1,4 +1,5 @@
 import type { WorkflowMeta } from "@/lib/types/workflow-states";
+import { extractStateSummary } from "./state-accessors";
 
 /**
  * 创建步骤日志记录器
@@ -9,36 +10,8 @@ export function createStepLogger(graphName: string) {
         const timestamp = new Date().toISOString();
         console.log(`[${graphName}] ${timestamp} | Node: ${nodeName}`);
 
-        // 只打印关键字段，避免输出过大
-        const summary: Record<string, unknown> = {};
-
-        if (state.routing) {
-            summary.routing = {
-                selectedFunction: (state.routing as any).selectedFunction,
-                confidence: (state.routing as any).confidence,
-                reasoning: (state.routing as any).functionArgs?._reasoning,
-            };
-        }
-
-        if (state.dataQuery) {
-            summary.dataQuery = {
-                missingMetrics: (state.dataQuery as any).missingMetrics?.length ?? 0,
-                hasError: !!(state.dataQuery as any).error,
-            };
-        }
-
-        if (state.confidence) {
-            summary.confidence = {
-                score: (state.confidence as any).score,
-                passed: (state.confidence as any).passed,
-            };
-        }
-
-        if (state.output) {
-            summary.output = {
-                type: (state.output as any).type,
-            };
-        }
+        // Use type-safe state summary extractor
+        const summary = extractStateSummary(state);
 
         console.log(`[${graphName}] State summary:`, JSON.stringify(summary, null, 2));
         console.log("---");
