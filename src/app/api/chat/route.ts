@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { unifiedAgentGraph } from "@/lib/workflows/unified/graph";
 import { createServerSupabaseClient } from "@/lib/database";
 import { generateRequestId, createErrorResponse } from "@/lib/security";
+import type { UnifiedAgentState } from "@/lib/workflows/unified/state";
 
 export async function POST(req: NextRequest) {
     const requestId = req.headers.get('x-request-id') || generateRequestId();
@@ -30,16 +31,15 @@ export async function POST(req: NextRequest) {
             return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
         }
 
-        // Initialize State
-        // We provide a minimal initial state conforming to UnifiedAgentState
-        const initialState = {
+        // Initialize State conforming to UnifiedAgentState
+        const initialState: UnifiedAgentState = {
             input: {
                 question: message,
                 sessionId: sessionId, // MUST be in input for loadMemoryNode to read
                 documentIds: documentIds || [],
             },
             agent: {
-                sessionId: "", // Placeholder
+                sessionId: "", // Placeholder, will be set by loadMemoryNode
                 messages: [],
                 currentIteration: 0,
                 maxIterations: 10,
@@ -47,21 +47,12 @@ export async function POST(req: NextRequest) {
                 isComplete: false,
                 pendingToolCalls: [],
             },
-            // Other fields like output, tools, search, toolResults can remain undefined/empty
-            // TypeScript might complain if we don't satisfy the interface fully.
-            // We can cast or provide defaults.
             toolResults: [],
-            output: {
-                answer: "",
-                type: "processing", // Initial status
-                confidence: 0,
-                sources: []
-            }
+            // output is optional in UnifiedAgentState, will be populated by workflow
         };
 
         // Invoke Graph
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const finalState = await unifiedAgentGraph.invoke(initialState as any) as any;
+        const finalState = await unifiedAgentGraph.invoke(initialState) as UnifiedAgentState;
 
         // Return Output
         return NextResponse.json({
