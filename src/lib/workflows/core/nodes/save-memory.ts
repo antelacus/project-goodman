@@ -5,9 +5,11 @@
  */
 
 import { BaseAgentState } from "../state/base-state";
-import { conversationMemory, ConversationMessage, ToolCall } from "@/lib/memory/conversation-memory";
+import { conversationMemory, ConversationMessage } from "@/lib/memory/conversation-memory";
 import { generateSessionTitle } from "@/lib/memory/session-title";
 import { AIMessage, HumanMessage, ToolMessage, BaseMessage } from "@langchain/core/messages";
+import type { DbToolCall, MessageRole } from "@/lib/database/types";
+import { convertToolCallsToDb } from "@/lib/database/helpers";
 
 /**
  * Saves new messages to the database
@@ -29,8 +31,8 @@ export async function saveMemoryNode(
 
     // Convert LangChain messages to ConversationMessage format
     const dbMessages: ConversationMessage[] = newMessages.map(msg => {
-        let role: "user" | "assistant" | "tool" | "system" = "user";
-        let tool_calls: ToolCall[] | undefined = undefined;
+        let role: MessageRole = "user";
+        let tool_calls: DbToolCall[] | undefined = undefined;
         let tool_call_id: string | undefined = undefined;
 
         const type = msg._getType();
@@ -40,14 +42,7 @@ export async function saveMemoryNode(
             role = "assistant";
             const aiMsg = msg as AIMessage;
             if (aiMsg.tool_calls && aiMsg.tool_calls.length > 0) {
-                tool_calls = aiMsg.tool_calls.map(tc => ({
-                    id: tc.id || "",
-                    type: "function",
-                    function: {
-                        name: tc.name, // LangChain stores name in .name often? No, .function.name usually but tc is abstract
-                        arguments: JSON.stringify(tc.args), // args is object
-                    }
-                })) as any; // Cast because types might mismatch slightly
+                tool_calls = convertToolCallsToDb(aiMsg.tool_calls);
             }
         } else if (type === "tool") {
             role = "tool";
