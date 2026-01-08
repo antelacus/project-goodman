@@ -30,6 +30,8 @@
 ## Styling
 
 - Use Tailwind CSS exclusively; no inline `style={{}}` objects
+- Prefer Lucide React icons over emoji for UI elements (better consistency and accessibility)
+- Exception: Process log event indicators may use emoji for quick visual distinction
 
 ## LangGraph / AI Agent
 

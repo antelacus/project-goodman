@@ -1,5 +1,5 @@
 
-import { useState, useRef, useCallback } from 'react';
+import { useState, useRef, useCallback, useEffect } from 'react';
 import type { ProcessEvent } from '@/types/process-events';
 
 // Define event types based on what we implemented
@@ -26,6 +26,12 @@ export function useStreamingChat({ initialSessionId, onComplete, onError }: UseS
     const [currentThinking, setCurrentThinking] = useState<string | null>(null);
     // v4.0: Process events for transparency
     const [processEvents, setProcessEvents] = useState<ProcessEvent[]>([]);
+
+    // Sync sessionId with initialSessionId prop when it changes
+    // This fixes the session switching bug where old sessionId was retained
+    useEffect(() => {
+        setSessionId(initialSessionId);
+    }, [initialSessionId]);
 
     const abortControllerRef = useRef<AbortController | null>(null);
 

@@ -200,8 +200,20 @@ export async function POST(req: NextRequest) {
                     for await (const event of eventStream) {
                         // Filter events to send meaningful updates to the client
 
-                        // 1. Thinking: when a node starts (excluding the root graph and internal Runnables)
-                        if (event.event === 'on_chain_start' && event.name && event.name !== 'LangGraph' && !event.name.startsWith('Runnable')) {
+                        // 1. Thinking: when a node starts (excluding internal LangGraph events)
+                        // Filter out: LangGraph, Runnable*, ChannelWrite*, Branch*, __start__
+                        const isInternalEvent = (name: string) => {
+                            return !name ||
+                                name === 'LangGraph' ||
+                                name === '__start__' ||
+                                name.startsWith('Runnable') ||
+                                name.startsWith('ChannelWrite') ||
+                                name.startsWith('ChannelRead') ||
+                                name.startsWith('Branch<') ||
+                                name.includes(':');  // e.g., "branch:to:loadMemory"
+                        };
+
+                        if (event.event === 'on_chain_start' && event.name && !isInternalEvent(event.name)) {
                             sendEvent('thinking', { node: event.name });
 
                             // v4.0: Send humanized process event
@@ -247,14 +259,75 @@ export async function POST(req: NextRequest) {
                             ));
                         }
 
-                        // 4. Capture sessionId from loadMemory node (this is the authoritative session ID)
+                        // 4. Capture tool calls from agentLoop node (when LLM decides to use tools)
+                        else if (event.event === 'on_chain_end' && event.name === 'agentLoop') {
+                            const pendingToolCalls = event.data?.output?.agent?.pendingToolCalls;
+                            if (Array.isArray(pendingToolCalls) && pendingToolCalls.length > 0) {
+                                for (const toolCall of pendingToolCalls) {
+                                    if (!toolCall.name) continue;
+
+                                    // Emit tool_call process event
+                                    const humanized = formatToolCallEvent(
+                                        toolCall.name,
+                                        toolCall.arguments || {}
+                                    );
+                                    sendEvent('process', createProcessEvent(
+                                        'tool_call',
+                                        humanized,
+                                        { tool: toolCall.name, input: toolCall.arguments }
+                                    ));
+                                }
+                            }
+                        }
+
+                        // 5. Capture tool results from toolExecutor node
+                        // Results include success/failure, data, and source information
+                        else if (event.event === 'on_chain_end' && event.name === 'toolExecutor') {
+                            const toolResults = event.data?.output?.toolResults;
+                            if (Array.isArray(toolResults) && toolResults.length > 0) {
+                                for (const resultEntry of toolResults) {
+                                    if (!resultEntry.toolName) continue;
+
+                                    const result = resultEntry.result || {};
+
+                                    // Check if tool execution failed
+                                    if (result.success === false) {
+                                        // Emit error process event for failed tool
+                                        const errorHumanized = formatToolResultEvent(
+                                            resultEntry.toolName,
+                                            result
+                                        );
+                                        sendEvent('process', createProcessEvent(
+                                            'error',
+                                            errorHumanized,
+                                            { tool: resultEntry.toolName, error: result.error }
+                                        ));
+                                    } else {
+                                        // Emit tool_result process event for successful tool
+                                        const humanized = formatToolResultEvent(
+                                            resultEntry.toolName,
+                                            result
+                                        );
+                                        const sourceRef = extractSourceReference(result);
+                                        sendEvent('process', createProcessEvent(
+                                            'tool_result',
+                                            humanized,
+                                            { tool: resultEntry.toolName, output: result },
+                                            sourceRef
+                                        ));
+                                    }
+                                }
+                            }
+                        }
+
+                        // 6. Capture sessionId from loadMemory node (this is the authoritative session ID)
                         else if (event.event === 'on_chain_end' && event.name === 'loadMemory') {
                             if (event.data?.output?.agent?.sessionId) {
                                 capturedSessionId = event.data.output.agent.sessionId;
                             }
                         }
 
-                        // 5. Capture Final Output: Look for the end of the main graph execution
+                        // 7. Capture Final Output: Look for the end of the main graph execution
                         // OR the end of the generateResponse node which produces the output
                         else if (event.event === 'on_chain_end' && event.name === 'generateResponse') {
                             if (event.data && event.data.output && event.data.output.output) {
