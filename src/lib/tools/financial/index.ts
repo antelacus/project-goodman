@@ -14,11 +14,12 @@ export {
   getPresetTool,
 } from "./preset-tools";
 
-// Utility tools (3 flexible query/calculation tools)
+// Utility tools (4 flexible query/calculation tools)
 export {
   getFinancialMetricTool,
   queryFinancialDataTool,
   calculateFinancialMetricTool,
+  evaluateExpressionTool,
   registerUtilityTools,
   buildGuidanceChatFunctionDefs,
 } from "./utility-tools";

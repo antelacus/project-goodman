@@ -5,9 +5,11 @@
  * - get_financial_metric: Query specific metrics by year
  * - query_financial_data: Batch query multiple metrics
  * - calculate_financial_metric: Execute preset calculations with provided data
+ * - evaluate_expression: Calculate arithmetic expressions with verified code
  */
 
 import { z } from "zod";
+import { Parser } from "expr-eval";
 import { presetFunctions, executeFunction } from "@/lib/financial";
 import type { Tool, ToolExecutionResult } from "../types";
 import {
@@ -16,6 +18,9 @@ import {
 } from "../types";
 import { toolRegistry } from "../registry";
 import { queryFinancialData } from "../../services/financial-data";
+
+// Expression parser instance (reused for performance)
+const expressionParser = new Parser();
 
 // ============================================================================
 // Get Financial Metric Tool
@@ -30,7 +35,7 @@ export const getFinancialMetricTool: Tool = {
   displayName: "获取财务指标",
   displayNameEn: "Get Financial Metric",
   description:
-    '获取特定财务指标在指定年份的数据。当用户询问的指标不在预设函数列表中（如"销售商品收到的现金"、"研发费用"等），或者需要计算增长率、同比变化时，使用此函数。',
+    '获取特定财务指标在多个年份的原始数值。适用场景：1) 获取不在预设函数列表中的指标（如"研发费用"、"销售费用"等）；2) 获取多年数据用于比较（如"2023年和2024年的净利润"）。获取数据后，使用 evaluate_expression 工具计算增长率或差值。',
   category: "query",
   inputSchema: z.object({
     metric_name: z
@@ -213,6 +218,124 @@ export const calculateFinancialMetricTool: Tool = {
 };
 
 // ============================================================================
+// Evaluate Expression Tool
+// ============================================================================
+
+/**
+ * For evaluating arithmetic expressions with verified code execution.
+ * Use this when you need to calculate differences, growth rates, or other
+ * arithmetic between values (e.g., comparing metrics across years).
+ */
+export const evaluateExpressionTool: Tool = {
+  name: "evaluate_expression",
+  displayName: "计算表达式",
+  displayNameEn: "Evaluate Expression",
+  description:
+    '使用代码计算数学表达式。当需要计算增长率、差值、百分比变化等数值运算时调用此函数。例如：计算"资产负债率从60%增长到65%，增长了多少"、"2024年比2023年增长了多少百分比"等。支持 +, -, *, /, %, ^（幂）运算符和括号。',
+  category: "financial",
+  inputSchema: z.object({
+    expression: z
+      .string()
+      .describe(
+        '数学表达式字符串，例如 "(65 - 60) / 60 * 100" 或 "1500000 / 1200000 - 1"。支持变量替换。'
+      ),
+    variables: z
+      .record(z.union([z.number(), z.string()]))
+      .optional()
+      .describe(
+        '变量值映射，例如 {"current": 65, "previous": 60}。表达式中可使用这些变量名。'
+      ),
+    description: z
+      .string()
+      .optional()
+      .describe("计算说明，用于结果展示，例如 '资产负债率增长百分比'。"),
+  }),
+  outputSchema: z.object({
+    result: z.number(),
+    formatted: z.string(),
+    expression: z.string(),
+    description: z.string().optional(),
+  }),
+
+  execute: async (input): Promise<ToolExecutionResult> => {
+    const { expression, variables: rawVariables, description } = input as {
+      expression: string;
+      variables?: Record<string, number | string>;
+      description?: string;
+    };
+
+    try {
+      // Normalize variables: convert string numbers to actual numbers
+      const variables: Record<string, number> = {};
+      if (rawVariables) {
+        for (const [key, value] of Object.entries(rawVariables)) {
+          if (typeof value === "number") {
+            variables[key] = value;
+          } else if (typeof value === "string") {
+            const parsed = parseFloat(value);
+            if (isNaN(parsed)) {
+              return {
+                success: false,
+                error: `变量 "${key}" 的值 "${value}" 不是有效数字`,
+              };
+            }
+            variables[key] = parsed;
+          }
+        }
+      }
+
+      // Parse and evaluate the expression
+      const parsedExpr = expressionParser.parse(expression);
+      const result = parsedExpr.evaluate(variables);
+
+      // Format the result based on magnitude
+      let formatted: string;
+      if (Math.abs(result) >= 10000) {
+        formatted = result.toLocaleString("zh-CN", {
+          maximumFractionDigits: 2,
+        });
+      } else if (Math.abs(result) < 0.01 && result !== 0) {
+        formatted = result.toExponential(2);
+      } else {
+        formatted = result.toLocaleString("zh-CN", {
+          minimumFractionDigits: 2,
+          maximumFractionDigits: 4,
+        });
+      }
+
+      // Build display expression with substituted values
+      let displayExpr = expression;
+      if (variables) {
+        for (const [name, value] of Object.entries(variables)) {
+          displayExpr = displayExpr.replace(
+            new RegExp(`\\b${name}\\b`, "g"),
+            value.toLocaleString("zh-CN")
+          );
+        }
+      }
+
+      return {
+        success: true,
+        data: {
+          result,
+          formatted,
+          expression: displayExpr,
+          description,
+        },
+      };
+    } catch (error) {
+      return {
+        success: false,
+        error:
+          error instanceof Error
+            ? `表达式计算失败: ${error.message}`
+            : "表达式计算失败",
+      };
+    }
+  },
+};
+
+// ============================================================================
 // Registration
 // ============================================================================
 
@@ -228,6 +351,9 @@ export function registerUtilityTools(): void {
   }
   if (!toolRegistry.has(calculateFinancialMetricTool.name)) {
     toolRegistry.register(calculateFinancialMetricTool);
+  }
+  if (!toolRegistry.has(evaluateExpressionTool.name)) {
+    toolRegistry.register(evaluateExpressionTool);
   }
 }
 
@@ -300,6 +426,34 @@ export function buildGuidanceChatFunctionDefs(
             },
           },
           required: ["metric_name", "inputs"],
+        },
+      },
+    },
+    {
+      type: "function" as const,
+      function: {
+        name: "evaluate_expression",
+        description:
+          '使用代码计算数学表达式。当需要计算增长率、差值、百分比变化时调用此函数。例如："资产负债率从60%增长到65%，增长了多少百分点"、"2024年比2023年增长了多少百分比"。这个工具使用验证过的代码执行计算，而不是 LLM 推测。',
+        parameters: {
+          type: "object",
+          properties: {
+            expression: {
+              type: "string",
+              description:
+                '数学表达式，例如 "(65 - 60)" 或 "(1500000 - 1200000) / 1200000 * 100"',
+            },
+            variables: {
+              type: "object",
+              description:
+                '可选的变量映射，例如 {"current": 65, "previous": 60}',
+            },
+            description: {
+              type: "string",
+              description: "计算说明，用于结果展示",
+            },
+          },
+          required: ["expression"],
         },
       },
     },

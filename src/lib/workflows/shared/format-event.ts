@@ -27,6 +27,7 @@ function buildToolLabels(): Record<string, string> {
   labels['get_financial_metric'] = '获取财务指标';
   labels['query_financial_data'] = '查询财务数据';
   labels['calculate_financial_metric'] = '计算财务指标';
+  labels['evaluate_expression'] = '计算表达式';
 
   // Search tools
   labels['search_documents'] = '搜索文档';
@@ -103,6 +104,14 @@ export function formatToolResultEvent(
 
   // Extract result data
   const data = output?.data as Record<string, unknown> | undefined;
+
+  // For evaluate_expression tool: show "expression = result"
+  if (data && 'result' in data && 'expression' in data && typeof data.result === 'number') {
+    const formatted = typeof data.formatted === 'string' ? data.formatted : String(data.result);
+    const expr = data.expression as string;
+    // Show: "38.07 - 29.92 = 8.15"
+    return `${expr} = ${formatted}`;
+  }
 
   // For financial calculations with numeric result
   if (data && 'value' in data && typeof data.value === 'number') {
@@ -237,5 +246,5 @@ export function getToolLabel(toolName: string): string {
  */
 export function isFinancialTool(toolName: string): boolean {
   return presetFunctions.some((f) => f.name === toolName) ||
-    ['get_financial_metric', 'query_financial_data', 'calculate_financial_metric'].includes(toolName);
+    ['get_financial_metric', 'query_financial_data', 'calculate_financial_metric', 'evaluate_expression'].includes(toolName);
 }
