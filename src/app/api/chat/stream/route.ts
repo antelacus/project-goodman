@@ -398,11 +398,11 @@ export async function POST(req: NextRequest) {
                     const errorMessage = err.message || 'An error occurred during streaming';
                     sendEvent('error', { message: errorMessage });
 
-                    // v4.0: Send process error event
+                    // v4.0: Send process error event (no stack trace to prevent info disclosure)
                     sendEvent('process', createProcessEvent(
                         'error',
                         `错误: ${errorMessage}`,
-                        { error: errorMessage, stack: err.stack }
+                        { error: errorMessage }
                     ));
                 } finally {
                     controller.close();
