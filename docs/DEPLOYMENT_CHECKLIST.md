@@ -1,6 +1,6 @@
 # Project Goodman - Deployment Checklist
 
-**Version**: v4.0
+**Version**: v4.1
 **Last Updated**: 2026-01-08
 **Target Platform**: Docker on VPS + Supabase Cloud
 
@@ -78,9 +78,26 @@ npm run build  # Must complete with 0 errors
 
 ---
 
-## 3. Deployment Execution
+## 3. Pre-Deployment Documentation
 
-### 3.1 Infrastructure
+> **Important**: Complete these steps BEFORE deployment to ensure deployed code is tracked in git.
+
+### 3.1 Version & Changelog
+
+- [ ] Update `package.json` version number
+- [ ] Update `CHANGELOG.md` with release notes
+- [ ] Update version docs (DEVELOPMENT_PLAN.md, TRACK.md status)
+
+### 3.2 Commit & Push
+
+- [ ] Commit all changes: `git add . && git commit -m "release(vX.X): description"`
+- [ ] Push to development: `git push origin development`
+
+---
+
+## 4. Deployment Execution
+
+### 4.1 Infrastructure
 
 ```
 /home/deploy/goodman/
@@ -94,9 +111,12 @@ npm run build  # Must complete with 0 errors
 | `goodman` | 3000 | Next.js application |
 | `goodman-redis` | 6379 | Session & rate limit storage |
 
-### 3.2 Deploy Commands
+### 4.2 Deploy Commands
 
 ```bash
+# Pull latest code
+cd /home/deploy/goodman/project-goodman && git pull origin development
+
 # Full rebuild and deploy
 cd /home/deploy/goodman && docker compose up -d --build goodman
 
@@ -112,16 +132,16 @@ docker ps --filter "name=goodman"
 
 ---
 
-## 4. Post-Deployment Verification
+## 5. Post-Deployment Verification
 
-### 4.1 Health Check
+### 5.1 Health Check
 
 ```bash
 curl http://localhost:3000/api/health
 # Expected: {"status":"ok","timestamp":"..."}
 ```
 
-### 4.2 Functional Testing
+### 5.2 Functional Testing
 
 | Test | Command | Expected |
 |------|---------|----------|
@@ -129,7 +149,7 @@ curl http://localhost:3000/api/health
 | Sessions | `curl localhost:3000/api/sessions` | `{"sessions":[]}` |
 | Auth | `curl -X POST localhost:3000/api/auth/login` | JSON response |
 
-### 4.3 Log Monitoring (15 min recommended)
+### 5.3 Log Monitoring (15 min recommended)
 
 ```bash
 # Watch for errors
@@ -141,23 +161,22 @@ docker logs goodman 2>&1 | grep -i "redis"
 
 ---
 
-## 5. Post-Deployment Documentation
+## 6. Release Finalization
 
-- [ ] Update `CHANGELOG.md` with release notes
-- [ ] Update `package.json` version
-- [ ] Update version docs (DEVELOPMENT_PLAN.md, TRACK.md status)
-- [ ] Commit all changes
-- [ ] Push to remote: `git push origin development`
+> **Only after deployment verification succeeds.**
+
 - [ ] Merge to main: `git checkout main && git merge development && git push`
 - [ ] Tag release: `git tag -a vX.X.X -m "Release notes" && git push origin vX.X.X`
+- [ ] Return to development: `git checkout development`
 
 ---
 
-## 6. Rollback Plan
+## 7. Rollback Plan
 
 ### Quick Rollback
 
 ```bash
+# Revert to previous commit
 git checkout HEAD~1
 cd /home/deploy/goodman && docker compose up -d --build goodman
 ```
@@ -171,7 +190,7 @@ Migrations are forward-only. For schema changes:
 
 ---
 
-## 7. Monitoring & Troubleshooting
+## 8. Monitoring & Troubleshooting
 
 ### Container Health
 
@@ -216,10 +235,11 @@ These should always be true:
 
 | Version | Date | Changes |
 |---------|------|---------|
+| v4.1 | 2026-01-08 | Fixed sequence: pre-deploy docs before deployment, post-deploy finalization after |
 | v4.0 | 2026-01-08 | Reorganized as Phase 6 execution guide |
-| V3.11 | 2026-01-07 | Updated for Docker/VPS |
-| V2.0 | 2025-12-03 | Initial Vercel deployment |
+| v3.11 | 2026-01-07 | Updated for Docker/VPS |
+| v2.0 | 2025-12-03 | Initial Vercel deployment |
 
 ---
 
-*Project Goodman v4.0*
+*Project Goodman v4.1*
