@@ -1,6 +1,6 @@
 # Known Issues & Gotchas
 
-> **Last Updated**: 2026-01-08
+> **Last Updated**: 2026-01-08 (v4.0.1: Fixed calculation formula display)
 
 ## Quick Actions
 
@@ -30,8 +30,8 @@
 ## Process Transparency
 
 - **Page-level sourcing not available**: Cannot link to specific page numbers where financial data was found
-- **Calculation formula not shown**: Process log shows tool calls but not the actual formula with values (e.g., "流动资产 1,000,000 / 流动负债 500,000 = 2.0")
 - **No process history**: Process events are only available during current response; not persisted for later review
+- **No expression calculator tool**: When agent needs to calculate differences, growth rates, or other arithmetic between values (e.g., "资产负债率增长了多少"), the LLM does the math via token prediction instead of verified code. Need to implement `evaluate_expression` tool using `expr-eval` library.
 
 ## UI/UX
 
