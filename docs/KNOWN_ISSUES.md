@@ -1,6 +1,6 @@
 # Known Issues & Gotchas
 
-> **Last Updated**: 2026-01-08 (v4.0.1: Fixed calculation formula display)
+> **Last Updated**: 2026-01-08 (v4.0.2: Added evaluate_expression tool)
 
 ## Quick Actions
 
@@ -9,7 +9,7 @@
 ## Document Processing
 
 - PDF parsing fails with plain text content; use `.md` files for testing
-- Excel parsing only supports `.xlsx` (not `.xls`), single sheet per file
+- Excel parsing only supports single sheet per file
 - TOC detection requires actual document body to be far enough from TOC (3000+ chars)
 - **OCR not supported**: PDFs must be searchable text format, not scanned images
 
@@ -31,7 +31,6 @@
 
 - **Page-level sourcing not available**: Cannot link to specific page numbers where financial data was found
 - **No process history**: Process events are only available during current response; not persisted for later review
-- **No expression calculator tool**: When agent needs to calculate differences, growth rates, or other arithmetic between values (e.g., "资产负债率增长了多少"), the LLM does the math via token prediction instead of verified code. Need to implement `evaluate_expression` tool using `expr-eval` library.
 
 ## UI/UX
 

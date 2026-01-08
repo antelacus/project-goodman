@@ -244,6 +244,7 @@ export class ToolRegistry {
       ZodBoolean: "boolean",
       ZodArray: "array",
       ZodObject: "object",
+      ZodRecord: "object", // z.record() maps to object type
     };
     return typeMap[typeName] || "string";
   }

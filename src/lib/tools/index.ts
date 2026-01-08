@@ -4,7 +4,7 @@
  * Unified tool system for the workflow architecture.
  *
  * Directory Structure:
- * - /financial  - Financial calculation & query tools (25 tools)
+ * - /financial  - Financial calculation & query tools (26 tools)
  * - /search     - Document & regulation search tools (2 tools)
  * - /extraction - Document extraction tools (1 tool)
  *
@@ -92,9 +92,10 @@ import { registerExtractionTools } from "./extraction";
 /**
  * Register all available tools (V3.6a Unified Agent)
  *
- * Call this at application startup to make all 28 tools available:
+ * Call this at application startup to make all 29 tools available:
  * - 22 preset financial calculations
- * - 3 financial utility tools
+ * - 4 financial utility tools (get_financial_metric, query_financial_data,
+ *   calculate_financial_metric, evaluate_expression)
  * - 2 search tools
  * - 1 extraction tool
  */
