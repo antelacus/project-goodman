@@ -62,3 +62,6 @@ debug_*.xlsx
 
 # supabase
 supabase/.temp/
+
+# manual test logs (local notes, not version controlled)
+docs/manual-test-log/
