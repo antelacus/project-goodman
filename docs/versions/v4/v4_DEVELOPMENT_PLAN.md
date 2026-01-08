@@ -36,10 +36,11 @@ docs/versions/v4/
     │   ├── PHASE1_PRD.md
     │   ├── PHASE2_DESIGN.md
     │   └── PHASE3-5_TRACK.md
-    ├── report-generation/           # v4.1
-    ├── quick-actions/               # v4.2
-    ├── ui-updates/                  # v4.3
-    └── management-reports/          # v4.4
+    ├── tool-rationalization/        # v4.1
+    ├── report-generation/           # v4.2
+    ├── quick-actions/               # v4.3
+    ├── ui-updates/                  # v4.4
+    └── management-reports/          # v4.5
 ```
 
 ### 1.3 发布流程
@@ -73,10 +74,11 @@ docs/versions/v4/
 | 版本 | 主题 | 描述 | 状态 |
 |------|------|------|------|
 | **v4.0** | Agent 过程透明化 | 展示推理过程，可折叠/展开，数据源链接（信任基础） | ✅ 已发布 (2026-01-08) |
-| **v4.1** | 报告生成系统 | 使用现有 22 个指标生成综合财务分析报告（核心展示功能） | 待规划 |
-| **v4.2** | 快捷操作扩展 | 财务计算器、财务日历提醒（易于实现） | 待规划 |
-| **v4.3** | UI 优化 | 界面微调和改进（非紧急） | 待规划 |
-| **v4.4** | 管理用财报体系 | 净经营资产、管理用 ROE 等（增强报告深度） | 待规划 |
+| **v4.1** | 工具体系精简 | 整合冗余工具，明确工具边界，提升 Agent 工具选择准确性 | 待规划 |
+| **v4.2** | 报告生成系统 | 使用现有 22 个指标生成综合财务分析报告（核心展示功能） | 待规划 |
+| **v4.3** | 快捷操作扩展 | 财务计算器、财务日历提醒（易于实现） | 待规划 |
+| **v4.4** | UI 优化 | 界面微调和改进（非紧急） | 待规划 |
+| **v4.5** | 管理用财报体系 | 净经营资产、管理用 ROE 等（增强报告深度） | 待规划 |
 
 ---
 
@@ -151,13 +153,77 @@ docs/versions/v4/
 
 ---
 
-### 3.2 [v4.1] 报告生成系统
+### 3.2 [v4.1] 工具体系精简
+
+| 属性 | 详情 |
+|------|------|
+| **目录** | `features/tool-rationalization/` |
+| **描述** | 整合冗余工具，明确工具边界，提升 Agent 工具选择准确性 |
+| **依赖** | v4.0 过程透明化 |
+| **状态** | 待规划 |
+
+**背景**:
+
+当前系统有 29 个工具，其中部分工具功能重叠，边界不清晰，导致 Agent 选择工具时可能出现混淆。
+
+**问题分析**:
+
+| 工具 | 数据源 | 问题 |
+|------|--------|------|
+| `get_financial_metric` | financial_data 表 | 与 query_financial_data 重叠 |
+| `query_financial_data` | financial_data 表 | 与 get_financial_metric 重叠 |
+| `calculate_financial_metric` | 用户提供数据 | 预设工具已含自动查询+计算 |
+
+**解决方案**:
+
+1. **合并**: `get_financial_metric` → 增强 `query_financial_data`（支持多年份）
+2. **移除**: `calculate_financial_metric`（预设工具已覆盖此场景）
+3. **保留**: 22 个预设工具、search_documents、extract_document、evaluate_expression
+
+**精简后工具体系**:
+
+```
+结构化数据 (financial_data 表):
+├── 22 个预设工具 (流动比率, ROE 等)
+└── query_financial_data (增强版: 支持多指标 + 多年份)
+
+非结构化数据 (documents 表):
+├── search_documents (向量/关键词搜索)
+└── extract_document (提取特定信息)
+
+计算工具:
+└── evaluate_expression (算术运算)
+
+总计: 26 个工具 (原 29 个)
+```
+
+**Agent 决策树**:
+
+```
+用户问题
+│
+├─ 标准比率? (流动比率, 资产负债率等)
+│   └─► 预设工具 (自动查询 financial_data)
+│
+├─ 原始指标数值? (货币资金, 净利润等)
+│   └─► query_financial_data
+│
+├─ 文档中的信息? (货币资金明细, 管理层讨论)
+│   └─► search_documents → extract_document
+│
+└─ 计算增长/变化/比较?
+    └─► evaluate_expression
+```
+
+---
+
+### 3.3 [v4.2] 报告生成系统
 
 | 属性 | 详情 |
 |------|------|
 | **目录** | `features/report-generation/` |
 | **描述** | AI Agent 自主编排多个财务分析工具，生成结构化专业报告（含完整过程可视化） |
-| **依赖** | v4.0 过程透明化 |
+| **依赖** | v4.1 工具体系精简 |
 | **状态** | 待规划 |
 
 **核心能力**:
@@ -182,7 +248,7 @@ docs/versions/v4/
 
 ---
 
-### 3.3 [v4.2] 快捷操作扩展
+### 3.4 [v4.3] 快捷操作扩展
 
 | 属性 | 详情 |
 |------|------|
@@ -198,7 +264,7 @@ docs/versions/v4/
 
 ---
 
-### 3.4 [v4.3] UI 优化
+### 3.5 [v4.4] UI 优化
 
 | 属性 | 详情 |
 |------|------|
@@ -210,7 +276,7 @@ docs/versions/v4/
 
 ---
 
-### 3.5 [v4.4] 管理用财报体系
+### 3.6 [v4.5] 管理用财报体系
 
 | 属性 | 详情 |
 |------|------|
@@ -235,7 +301,7 @@ docs/versions/v4/
 
 ---
 
-### 3.6 未来功能（v4.x+）
+### 3.7 未来功能（v4.x+）
 
 #### Rich UI / Artifacts
 
@@ -268,4 +334,4 @@ docs/versions/v4/
 ---
 
 *文档创建: 2026-01-05*
-*最后更新: 2026-01-08*
+*最后更新: 2026-01-08 (添加 v4.1 工具体系精简)*
