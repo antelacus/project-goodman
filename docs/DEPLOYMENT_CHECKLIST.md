@@ -1,7 +1,7 @@
 # Project Goodman - Deployment Checklist
 
-**Version**: V3.11
-**Last Updated**: 2026-01-07
+**Version**: v4.0
+**Last Updated**: 2026-01-08
 **Target Platform**: Docker on VPS + Supabase Cloud
 
 ---
@@ -178,9 +178,10 @@ docker stats goodman goodman-redis
 
 | Version | Date | Changes |
 |---------|------|---------|
+| v4.0 | 2026-01-08 | Updated for v4.0 release |
 | V3.11 | 2026-01-07 | Updated for Docker/VPS, removed Vercel references |
 | V2.0 | 2025-12-03 | Initial Vercel deployment |
 
 ---
 
-*Project Goodman V3.11*
+*Project Goodman v4.0*
