@@ -199,4 +199,5 @@ export const QueryFinancialDataInputSchema = z.object({
 
 *文档创建日期：2026-01-08*
 *实施完成日期：2026-01-08*
-*状态：Phase 3-5 代码实施完成，待手动测试验证*
+*发布日期：2026-01-08*
+*状态：✅ 已发布 v4.1.0*
