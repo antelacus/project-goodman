@@ -106,7 +106,16 @@ export function formatToolResultEvent(
 
   // For financial calculations with numeric result
   if (data && 'value' in data && typeof data.value === 'number') {
-    const formatted = data.formatted || formatValue(data.value, data.unit as string);
+    const formatted = typeof data.formatted === 'string'
+      ? data.formatted
+      : formatValue(data.value, data.unit as string | undefined);
+
+    // v4.0.1: If we have formula and inputs, show the calculation breakdown
+    if (data.formula && data.inputs && typeof data.formula === 'string') {
+      const inputs = data.inputs as Record<string, number>;
+      return formatCalculationWithValues(data.formula, inputs, formatted);
+    }
+
     return `${label} = ${formatted}`;
   }
 
@@ -148,6 +157,51 @@ export function formatErrorEvent(error: unknown): string {
 // ============================================================================
 // Helper Functions
 // ============================================================================
+
+/**
+ * Format a calculation with actual input values
+ * Takes a formula like "流动比率 = 流动资产合计 / 流动负债合计"
+ * and inputs like { "流动资产合计": 1000000, "流动负债合计": 500000 }
+ * Returns: "流动资产合计 1,000,000 / 流动负债合计 500,000 = 2.00倍"
+ */
+function formatCalculationWithValues(
+  formula: string,
+  inputs: Record<string, number>,
+  result: string
+): string {
+  // Parse formula: "指标名 = A / B" or "指标名 = (A - B) / C" etc.
+  const equalIndex = formula.indexOf('=');
+  if (equalIndex === -1) return result;
+
+  const rightSide = formula.substring(equalIndex + 1).trim();
+
+  // Build parts array showing each input with its value
+  const parts: string[] = [];
+  const sortedInputs = Object.entries(inputs).sort(
+    (a, b) => rightSide.indexOf(a[0]) - rightSide.indexOf(b[0])
+  );
+
+  for (const [metricName, value] of sortedInputs) {
+    if (rightSide.includes(metricName)) {
+      // Format the value nicely
+      const formattedValue = Math.abs(value) >= 10000
+        ? value.toLocaleString('zh-CN', { maximumFractionDigits: 0 })
+        : value.toLocaleString('zh-CN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+      parts.push(`${metricName} ${formattedValue}`);
+    }
+  }
+
+  if (parts.length === 0) return result;
+
+  // Determine the operator from the formula
+  let operator = '';
+  if (rightSide.includes('/')) operator = ' ÷ ';
+  else if (rightSide.includes('-')) operator = ' - ';
+  else if (rightSide.includes('+')) operator = ' + ';
+  else if (rightSide.includes('×') || rightSide.includes('*')) operator = ' × ';
+
+  return `${parts.join(operator)} = ${result}`;
+}
 
 /**
  * Format a numeric value with unit

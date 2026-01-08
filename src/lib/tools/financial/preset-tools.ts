@@ -166,6 +166,8 @@ function createFinancialToolFromPreset(preset: PresetFunction): Tool {
             sourceDocuments: data.map(d => d.documents.name),
             // v4.0: Structured source reference for transparency
             source,
+            // v4.0.1: Include input values for formula display in process log
+            inputs,
           }
         };
 

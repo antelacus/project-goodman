@@ -5,16 +5,6 @@
 
 ---
 
-## Quick Reference
-
-```bash
-npm run dev                                              # Local development
-cd /home/deploy/goodman && docker compose up -d --build goodman  # Deploy
-docker logs -f goodman                                   # View logs
-```
-
----
-
 ## Project Context
 
 **Product**: AI-powered financial assistant for enterprise accounting departments
