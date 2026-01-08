@@ -1,6 +1,10 @@
 # Known Issues & Gotchas
 
-> **Last Updated**: 2026-01-07
+> **Last Updated**: 2026-01-08
+
+## Quick Actions
+
+- **Data Extract**: Sometimes fails to extract data from documents; intermittent issue, needs more observation to identify root cause
 
 ## Document Processing
 
@@ -13,12 +17,18 @@
 - Vector index (IVFFlat) not yet created due to small data volume (<1000 chunks)
 - 12 database indexes currently unused - may optimize after production usage analysis
 - 3 RPC functions have mutable search_path warnings (documented, not critical)
+- Supabase monitoring emails report some errors/warnings; need to investigate dashboard for details
 
 ## Infrastructure
 
 - Redis in Docker container connects via `goodman-redis` hostname (not `localhost`)
 - Redis connection errors on startup are expected if Redis starts after app; app retries automatically
 - Docker networking requires proper `REDIS_URL` configuration in `.env`
+
+## UI/UX
+
+- **Process Log source links**: Clicking document link in collapsible process log navigates to /documents page instead of opening file preview directly
+- **Sidebar session sync**: New chat session doesn't appear in sidebar until page refresh; should show immediately when agent sends first response
 
 ## Development Notes
 
