@@ -20,6 +20,38 @@
 
 ---
 
+## [4.1.0] - 2026-01-08
+
+### 变更
+
+#### 工具体系精简 (Tool Rationalization)
+
+**目标**: 整合冗余工具，明确工具边界，提升 Agent 工具选择准确性。
+
+- **增强 `query_financial_data` 工具**:
+  - 支持多年份查询：`year` 参数改为 `years` 数组
+  - 新输出格式：`{ results: [], missing: [] }` 扁平列表结构
+  - 明确返回缺失指标，便于 Agent 决策
+
+- **移除冗余工具**:
+  - 删除 `get_financial_metric`（功能合并到 `query_financial_data`）
+  - 删除 `calculate_financial_metric`（22 个预设工具已覆盖此场景）
+
+- **System Prompt 增强**:
+  - 添加工具选择决策树，指导 Agent 选择正确工具
+  - 添加约束规则，防止 Agent 绕过预设工具手动计算
+  - 列出 22 个预设财务比率工具名称
+
+**工具数量**: 29 → 27（减少 2 个冗余工具）
+
+**技术实现**:
+- 修改 `src/lib/tools/types.ts` - Schema 更新
+- 修改 `src/lib/tools/financial/utility-tools.ts` - 工具实现
+- 修改 `src/lib/workflows/unified/prompts.ts` - System Prompt
+- 新增 `tests/unit/query-financial-data.test.ts` - 单元测试
+
+---
+
 ## [4.0.0] - 2026-01-08
 
 ### 新增
