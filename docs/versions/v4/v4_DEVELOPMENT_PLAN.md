@@ -179,6 +179,7 @@ docs/versions/v4/
 1. **合并**: `get_financial_metric` → 增强 `query_financial_data`（支持多年份）
 2. **移除**: `calculate_financial_metric`（预设工具已覆盖此场景）
 3. **保留**: 22 个预设工具、search_documents、extract_document、evaluate_expression
+4. **增强**: 增强system prompt，明确工具边界
 
 **精简后工具体系**:
 

@@ -180,7 +180,10 @@ export const QueryFinancialDataInputSchema = z.object({
   metric_names: z
     .array(z.string())
     .describe("要查询的财务指标名称列表（使用精确中文名称）"),
-  year: z.string().optional().describe("财务年份"),
+  years: z
+    .array(z.string())
+    .optional()
+    .describe("要查询的年份数组，如 ['2023', '2024']。如果未指定，返回当前年份数据。"),
   period: z.string().optional().describe("会计期间"),
 });
 
@@ -190,13 +193,17 @@ export type QueryFinancialDataInput = z.infer<
 
 /**
  * Output schema for financial data query tool
+ * Uses flat list format for easier LLM parsing (avoids nested Map structures)
  */
 export const QueryFinancialDataOutputSchema = z.object({
-  data: z.record(
+  results: z.array(
     z.object({
+      year: z.string(),
+      metric: z.string(),
       value: z.number(),
       unit: z.string(),
       source: z.string(),
+      period: z.string(),
     })
   ),
   missing: z.array(z.string()).describe("未找到的指标"),
