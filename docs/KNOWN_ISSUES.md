@@ -11,6 +11,7 @@
 - PDF parsing fails with plain text content; use `.md` files for testing
 - Excel parsing only supports `.xlsx` (not `.xls`), single sheet per file
 - TOC detection requires actual document body to be far enough from TOC (3000+ chars)
+- **OCR not supported**: PDFs must be searchable text format, not scanned images
 
 ## Database
 
@@ -24,6 +25,12 @@
 - Redis in Docker container connects via `goodman-redis` hostname (not `localhost`)
 - Redis connection errors on startup are expected if Redis starts after app; app retries automatically
 - Docker networking requires proper `REDIS_URL` configuration in `.env`
+
+## Process Transparency
+
+- **Page-level sourcing not available**: Cannot link to specific page numbers where financial data was found
+- **Calculation formula not shown**: Process log shows tool calls but not the actual formula with values (e.g., "流动资产 1,000,000 / 流动负债 500,000 = 2.0")
+- **No process history**: Process events are only available during current response; not persisted for later review
 
 ## UI/UX
 
