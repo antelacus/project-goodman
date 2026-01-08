@@ -20,6 +20,39 @@
 
 ---
 
+## [4.0.0] - 2026-01-08
+
+### 新增
+
+#### Agent 过程透明化 (Process Transparency)
+
+**目标**: 建立用户信任 —— 财务工作要求高精度，用户必须能够验证 Agent 执行的每一步操作。
+
+- **过程可视化组件**: 新增 `ProcessLog` 组件，在 AI 回复下方显示可折叠的工作过程
+  - 🤔 思考/推理步骤
+  - 🔧 工具调用（含参数）
+  - ✅ 工具执行结果
+  - ❌ 错误信息（红色高亮）
+
+- **数据溯源**: 所有财务计算显示数据来源链接
+  - 链接包含文档类型、年份、期间
+  - 点击可跳转到文档管理页面
+
+- **SSE 事件增强**: `/api/chat/stream` 端点新增 `process` 事件类型
+  - 实时推送 Agent 工作进度
+  - 支持工具调用、结果、错误事件
+
+- **安全修复**: 移除错误事件中的堆栈跟踪，防止信息泄露
+
+**技术实现**:
+- 新增 `src/types/process-events.ts` 类型定义
+- 新增 `src/lib/workflows/shared/format-event.ts` 事件格式化
+- 新增 `src/components/chat/ProcessLog.tsx` UI 组件
+- 修改 `src/hooks/useStreamingChat.ts` 处理 process 事件
+- 修改 `src/app/api/chat/stream/route.ts` 发送 process 事件
+
+---
+
 ## [3.11.0] - 2026-01-07
 
 ### 重构
