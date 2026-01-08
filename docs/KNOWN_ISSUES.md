@@ -16,9 +16,10 @@
 ## Database
 
 - Vector index (IVFFlat) not yet created due to small data volume (<1000 chunks)
-- 12 database indexes currently unused - may optimize after production usage analysis
-- 3 RPC functions have mutable search_path warnings (documented, not critical)
-- Supabase monitoring emails report some errors/warnings; need to investigate dashboard for details
+- 20 database indexes currently unused - may optimize after production usage analysis
+- 4 RPC functions have mutable search_path warnings (not critical for service-role access)
+- **RLS not enabled** on `users` and `guest_activity` tables - acceptable since app uses service role key server-side only
+- 9 tables have permissive RLS policies (`USING (true)`) - intentional for service role access
 
 ## Infrastructure
 
