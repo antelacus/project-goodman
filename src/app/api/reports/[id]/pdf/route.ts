@@ -1,0 +1,128 @@
+/**
+ * API Route: /api/reports/[id]/pdf
+ *
+ * Get a signed URL for downloading the report PDF.
+ * v4.2: PDF download endpoint.
+ */
+
+import { NextRequest, NextResponse } from 'next/server';
+import { createServerSupabaseClient } from '@/lib/database';
+import {
+  ensureSession,
+  generateRequestId,
+  createErrorResponse,
+} from '@/lib/security';
+import { getSignedFileUrl } from '@/lib/documents/storage';
+
+export const runtime = 'nodejs';
+
+// ============================================================================
+// GET Handler - Get PDF Download URL
+// ============================================================================
+
+export async function GET(
+  req: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  const requestId = req.headers.get('x-request-id') || generateRequestId();
+
+  try {
+    const { id: reportId } = await params;
+
+    // Validate UUID format
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    if (!uuidRegex.test(reportId)) {
+      return NextResponse.json(
+        { error: '无效的报告 ID 格式' },
+        { status: 400 }
+      );
+    }
+
+    // Ensure session exists
+    const sessionResult = await ensureSession(req);
+    const { session, isNewSession } = sessionResult;
+
+    // Determine owner info
+    const ownerId = session.userId || session.sessionId;
+    const ownerType = session.role;
+
+    // Query the report
+    const supabase = createServerSupabaseClient();
+
+    const { data: report, error } = await supabase
+      .from('reports')
+      .select('id, owner_id, owner_type, pdf_storage_path')
+      .eq('id', reportId)
+      .single();
+
+    if (error) {
+      if (error.code === 'PGRST116') {
+        return NextResponse.json(
+          { error: '报告不存在' },
+          { status: 404 }
+        );
+      }
+      console.error('[ReportPdf] Query error:', error);
+      throw new Error(`获取报告失败: ${error.message}`);
+    }
+
+    if (!report) {
+      return NextResponse.json(
+        { error: '报告不存在' },
+        { status: 404 }
+      );
+    }
+
+    // Verify ownership (unless admin)
+    const isOwner = report.owner_id === ownerId && report.owner_type === ownerType;
+    const isAdmin = session.role === 'admin';
+
+    if (!isOwner && !isAdmin) {
+      return NextResponse.json(
+        { error: '无权访问此报告' },
+        { status: 403 }
+      );
+    }
+
+    // Check if PDF exists
+    if (!report.pdf_storage_path) {
+      return NextResponse.json(
+        { error: 'PDF 文件尚未生成' },
+        { status: 404 }
+      );
+    }
+
+    // Generate signed URL (1 hour expiry)
+    const signedUrl = await getSignedFileUrl(report.pdf_storage_path, 3600);
+
+    if (!signedUrl) {
+      return NextResponse.json(
+        { error: '无法生成下载链接' },
+        { status: 500 }
+      );
+    }
+
+    // Build response
+    const response = NextResponse.json({
+      success: true,
+      data: {
+        url: signedUrl,
+      },
+    });
+
+    // Set cookie for new sessions
+    if (isNewSession && sessionResult.setCookieHeader) {
+      response.cookies.set(
+        sessionResult.setCookieHeader.name,
+        sessionResult.setCookieHeader.value,
+        sessionResult.setCookieHeader.options
+      );
+    }
+
+    return response;
+
+  } catch (error: unknown) {
+    console.error('[ReportPdf] Error:', error);
+    return createErrorResponse(error, requestId, 500);
+  }
+}

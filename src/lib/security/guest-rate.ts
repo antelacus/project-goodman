@@ -24,6 +24,10 @@ export const GUEST_RATE_LIMITS = {
         limit: 10,
         windowMs: 60 * 60 * 1000,
     },
+    report: {
+        limit: 3,
+        windowMs: 60 * 60 * 1000,  // 3 reports per hour for guests
+    },
 } as const;
 
 export type GuestAction = keyof typeof GUEST_RATE_LIMITS;
