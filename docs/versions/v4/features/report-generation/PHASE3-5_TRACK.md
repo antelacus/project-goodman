@@ -32,21 +32,35 @@
 
 ---
 
-### Task 2: 类型定义
+### Task 2: 类型定义 ✅
 **文件**:
 - `src/types/report.ts`
 - `src/types/report-events.ts`
 
-- [ ] 定义 ReportContent 接口
-- [ ] 定义 ReportSection 接口
-- [ ] 定义 ReportMetric 接口
-- [ ] 定义 SourceReference 接口
-- [ ] 定义 SSE 事件类型 (Phase, Section, Complete, Error)
-- [ ] 导出所有类型
+- [x] 定义 ReportContent 接口
+- [x] 定义 ReportSection 接口
+- [x] 定义 ReportMetric 接口
+- [x] 定义 ReportSourceReference 接口
+- [x] 定义 SSE 事件类型 (Phase, Section, Complete, Error, Process)
+- [x] 导出所有类型到 index.ts
 
 **实现细节**:
 ```
-待实现时补充
+report.ts:
+- ReportContent: 完整报告结构 (title, sections, summary)
+- ReportSection: 章节结构 (id, title, metrics, analysis)
+- ReportMetric: 单个指标 (name, toolName, value, formatted, change, sourceDocumentIds)
+- ReportSourceReference: 来源文档引用
+- ReportSectionId: 'liquidity' | 'solvency' | 'profitability' | 'efficiency' | 'comprehensive'
+- ReportListItem, ReportRecord: 数据库记录类型
+
+report-events.ts:
+- ReportPhaseEvent: 阶段进度 (check, gather, analyze, generate)
+- ReportSectionEvent: 章节完成
+- ReportCompleteEvent: 报告完成
+- ReportErrorEvent: 错误事件
+- ReportProcessEvent: 工具执行进度 (可选)
+- REPORT_PHASES: 默认阶段显示配置
 ```
 
 ---

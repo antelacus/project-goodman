@@ -18,3 +18,33 @@ export type {
   ProcessEvent,
   SSEProcessEventPayload,
 } from './process-events';
+
+// Report types (v4.2)
+export type {
+  ReportContent,
+  ReportSummary,
+  ReportSection,
+  ReportSectionId,
+  ReportMetric,
+  ReportSourceReference,
+  ReportType,
+  ReportOwnerType,
+  ReportListItem,
+  ReportRecord,
+} from './report';
+
+// Report SSE event types (v4.2)
+export type {
+  ReportPhase,
+  ReportPhaseStatus,
+  ReportPhaseEvent,
+  ReportSectionEvent,
+  ReportCompleteEvent,
+  ReportErrorEvent,
+  ReportProcessEvent,
+  ReportSSEEvent,
+  ReportSSEEventType,
+  PhaseDisplayInfo,
+} from './report-events';
+
+export { REPORT_PHASES } from './report-events';
