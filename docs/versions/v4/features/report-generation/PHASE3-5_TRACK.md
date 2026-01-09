@@ -57,6 +57,9 @@
 #### 3.3 节点实现
 - [ ] 创建 `nodes/check-data-availability.ts` - Phase 1 数据检查
 - [ ] 创建 `nodes/gather-metrics.ts` - Phase 2 并行工具执行
+  - **Implementation Note**: When collecting `sourceDocumentIds` for metrics with comparison years,
+    ensure document IDs from BOTH the primary year AND comparison year are pushed into the array.
+    This maintains complete data lineage for traceability.
 - [ ] 创建 `nodes/gather-context.ts` - Phase 2b 上下文获取
 - [ ] 创建 `nodes/analyze-sections.ts` - Phase 3 LLM 分析
 - [ ] 创建 `nodes/assemble-report.ts` - Phase 4 组装报告
@@ -233,6 +236,9 @@
 - [ ] 管理最终报告状态
 - [ ] 实现 startGeneration 方法
 - [ ] 实现 saveReport 方法
+  - **UX Note**: PDF generation with custom fonts + Supabase upload can take 2-4 seconds.
+    The `isSaving` state must trigger an explicit "正在生成PDF并保存..." message in the UI,
+    not a generic spinner. Users need to understand the system is doing heavy work.
 - [ ] 实现 reset 方法
 - [ ] 处理取消/中断
 
