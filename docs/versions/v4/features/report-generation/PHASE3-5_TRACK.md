@@ -65,38 +65,53 @@ report-events.ts:
 
 ---
 
-### Task 3: 报告工作流图
+### Task 3: 报告工作流图 ✅
 **文件**: `src/lib/workflows/report/`
 
 #### 3.1 状态定义
-- [ ] 创建 `state.ts` - ReportWorkflowState 接口
+- [x] 创建 `state.ts` - ReportWorkflowState 接口
 
 #### 3.2 常量配置
-- [ ] 创建 `constants.ts` - REPORT_SECTIONS 配置
+- [x] 创建 `constants.ts` - REPORT_SECTIONS 配置 (5 sections, 21+ metrics)
 
 #### 3.3 节点实现
-- [ ] 创建 `nodes/check-data-availability.ts` - Phase 1 数据检查
-- [ ] 创建 `nodes/gather-metrics.ts` - Phase 2 并行工具执行
-  - **Implementation Note**: When collecting `sourceDocumentIds` for metrics with comparison years,
-    ensure document IDs from BOTH the primary year AND comparison year are pushed into the array.
-    This maintains complete data lineage for traceability.
-- [ ] 创建 `nodes/gather-context.ts` - Phase 2b 上下文获取
-- [ ] 创建 `nodes/analyze-sections.ts` - Phase 3 LLM 分析
-- [ ] 创建 `nodes/assemble-report.ts` - Phase 4 组装报告
-- [ ] 创建 `nodes/index.ts` - 节点导出
+- [x] 创建 `nodes/check-data-availability.ts` - Phase 1 数据检查
+- [x] 创建 `nodes/gather-metrics.ts` - Phase 2 并行工具执行
+  - **Implementation Note**: sourceDocumentIds captures both primary AND comparison year documents
+- [x] 创建 `nodes/gather-context.ts` - Phase 2b 上下文获取
+- [x] 创建 `nodes/analyze-sections.ts` - Phase 3 LLM 分析
+- [x] 创建 `nodes/assemble-report.ts` - Phase 4 组装报告
+- [x] 创建 `nodes/index.ts` - 节点导出
 
 #### 3.4 边和路由
-- [ ] 创建 `edges.ts` - shouldProceed 条件函数
+- [x] 创建 `edges.ts` - shouldProceed 条件函数
 
 #### 3.5 提示词
-- [ ] 创建 `prompts.ts` - 章节分析提示词模板
+- [x] 创建 `prompts.ts` - 章节分析提示词模板
 
 #### 3.6 图定义
-- [ ] 创建 `graph.ts` - LangGraph StateGraph 定义
+- [x] 创建 `graph.ts` - LangGraph StateGraph 定义
 
 **实现细节**:
 ```
-待实现时补充
+文件结构:
+- src/lib/workflows/report/
+  ├── index.ts          - 模块导出
+  ├── state.ts          - ReportWorkflowState, MetricResult 类型
+  ├── constants.ts      - REPORT_SECTIONS (5), METRIC_DISPLAY_NAMES (21+)
+  ├── prompts.ts        - buildSectionAnalysisPrompt, buildSummaryPrompt
+  ├── edges.ts          - shouldProceed 条件路由
+  ├── graph.ts          - StateGraph 定义和编译
+  └── nodes/
+      ├── index.ts
+      ├── check-data-availability.ts  - 查询 financial_data 表
+      ├── gather-metrics.ts           - Promise.all 并行执行工具
+      ├── gather-context.ts           - 收集源文档引用
+      ├── analyze-sections.ts         - GPT-4o 生成分析文字
+      └── assemble-report.ts          - 组装 ReportContent
+
+流程: START → checkDataAvailability → [proceed?] → gatherMetrics
+      → gatherContext → analyzeSections → assembleReport → END
 ```
 
 ---
