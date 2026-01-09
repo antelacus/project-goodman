@@ -1,6 +1,6 @@
 # Known Issues & Gotchas
 
-> **Last Updated**: 2026-01-08 (v4.0.2: Added evaluate_expression tool)
+> **Last Updated**: 2026-01-09 (Merged UI issues into v4.4 planning)
 
 ## Quick Actions
 
@@ -29,13 +29,13 @@
 
 ## Process Transparency
 
-- **Page-level sourcing not available**: Cannot link to specific page numbers where financial data was found
-- **No process history**: Process events are only available during current response; not persisted for later review
+- **Page-level sourcing not available**: Cannot link to specific page numbers where financial data was found *(future enhancement)*
+- **No process history**: Process events are only available during current response; not persisted for later review *(future enhancement)*
 
 ## UI/UX
 
-- **Process Log source links**: Clicking document link in collapsible process log navigates to /documents page instead of opening file preview directly
-- **Sidebar session sync**: New chat session doesn't appear in sidebar until page refresh; should show immediately when agent sends first response
+- **Process Log source links**: Clicking document link in collapsible process log navigates to /documents page instead of opening file preview directly *(planned: v4.4)*
+- **Sidebar session sync**: New chat session doesn't appear in sidebar until page refresh; should show immediately when agent sends first response *(planned: v4.4)*
 
 ## Development Notes
 
