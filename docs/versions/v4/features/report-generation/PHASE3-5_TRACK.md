@@ -1,0 +1,292 @@
+# v4.2 报告生成系统 - Phase 3-5 实现追踪
+
+> **版本**: v4.2
+> **功能名称**: report-generation (财务分析报告生成)
+> **创建日期**: 2026-01-09
+> **状态**: 待实现
+
+---
+
+## 实现任务清单
+
+### Task 1: 数据库迁移
+**文件**: `supabase/migrations/20260109000000_add_reports_table.sql`
+
+- [ ] 创建 `reports` 表
+- [ ] 添加索引 (owner, created_at, expires_at)
+- [ ] 配置 RLS 策略
+- [ ] 添加 updated_at 触发器
+- [ ] 应用迁移到 Supabase
+- [ ] 重新生成 TypeScript 类型
+
+**实现细节**:
+```
+待实现时补充
+```
+
+---
+
+### Task 2: 类型定义
+**文件**:
+- `src/types/report.ts`
+- `src/types/report-events.ts`
+
+- [ ] 定义 ReportContent 接口
+- [ ] 定义 ReportSection 接口
+- [ ] 定义 ReportMetric 接口
+- [ ] 定义 SourceReference 接口
+- [ ] 定义 SSE 事件类型 (Phase, Section, Complete, Error)
+- [ ] 导出所有类型
+
+**实现细节**:
+```
+待实现时补充
+```
+
+---
+
+### Task 3: 报告工作流图
+**文件**: `src/lib/workflows/report/`
+
+#### 3.1 状态定义
+- [ ] 创建 `state.ts` - ReportWorkflowState 接口
+
+#### 3.2 常量配置
+- [ ] 创建 `constants.ts` - REPORT_SECTIONS 配置
+
+#### 3.3 节点实现
+- [ ] 创建 `nodes/check-data-availability.ts` - Phase 1 数据检查
+- [ ] 创建 `nodes/gather-metrics.ts` - Phase 2 并行工具执行
+- [ ] 创建 `nodes/gather-context.ts` - Phase 2b 上下文获取
+- [ ] 创建 `nodes/analyze-sections.ts` - Phase 3 LLM 分析
+- [ ] 创建 `nodes/assemble-report.ts` - Phase 4 组装报告
+- [ ] 创建 `nodes/index.ts` - 节点导出
+
+#### 3.4 边和路由
+- [ ] 创建 `edges.ts` - shouldProceed 条件函数
+
+#### 3.5 提示词
+- [ ] 创建 `prompts.ts` - 章节分析提示词模板
+
+#### 3.6 图定义
+- [ ] 创建 `graph.ts` - LangGraph StateGraph 定义
+
+**实现细节**:
+```
+待实现时补充
+```
+
+---
+
+### Task 4: API 路由
+**文件**: `src/app/api/reports/`
+
+#### 4.1 生成报告 (SSE)
+- [ ] 创建 `generate/route.ts`
+- [ ] 实现 SSE 流
+- [ ] 集成工作流图
+- [ ] 发送 phase/process/section/complete 事件
+- [ ] 处理错误
+
+#### 4.2 保存报告
+- [ ] 创建 `save/route.ts`
+- [ ] 生成 PDF
+- [ ] 上传到 Supabase Storage
+- [ ] 写入 reports 表
+- [ ] 返回签名 URL
+
+#### 4.3 报告列表
+- [ ] 创建 `route.ts` (GET)
+- [ ] 查询用户报告
+- [ ] 返回列表数据
+
+#### 4.4 单个报告
+- [ ] 创建 `[id]/route.ts` (GET)
+- [ ] 验证所有权
+- [ ] 返回报告详情
+
+#### 4.5 PDF 下载
+- [ ] 创建 `[id]/pdf/route.ts` (GET)
+- [ ] 生成签名 URL
+- [ ] 返回下载链接
+
+**实现细节**:
+```
+待实现时补充
+```
+
+---
+
+### Task 5: PDF 生成器
+**文件**: `src/lib/reports/pdf-generator.tsx`
+
+- [ ] 安装 `@react-pdf/renderer`
+- [ ] 注册中文字体 (Noto Sans SC)
+- [ ] 创建 PDF 模板组件
+- [ ] 实现 generateReportPDF 函数
+- [ ] 测试 PDF 输出
+
+**实现细节**:
+```
+待实现时补充
+```
+
+---
+
+### Task 6: React 组件
+**文件**: `src/components/reports/`
+
+#### 6.1 报告消息
+- [ ] 创建 `ReportMessage.tsx` - 主报告组件
+- [ ] 实现可折叠章节状态
+- [ ] 集成子组件
+
+#### 6.2 执行摘要
+- [ ] 创建 `ReportSummary.tsx`
+- [ ] 显示关键发现、风险警示、建议
+
+#### 6.3 报告章节
+- [ ] 创建 `ReportSection.tsx`
+- [ ] 实现展开/折叠
+- [ ] 指标表格
+- [ ] 分析文字
+- [ ] 来源链接
+
+#### 6.4 生成进度
+- [ ] 创建 `ReportProgress.tsx`
+- [ ] 阶段进度指示器
+- [ ] 章节完成状态
+
+#### 6.5 操作按钮
+- [ ] 创建 `ReportActions.tsx`
+- [ ] 保存按钮
+- [ ] 导出 PDF 按钮
+
+#### 6.6 导出
+- [ ] 创建 `index.ts` - Barrel export
+
+**实现细节**:
+```
+待实现时补充
+```
+
+---
+
+### Task 7: 聊天集成
+**修改文件**:
+- `src/components/chat/ChatInput.tsx`
+- `src/components/chat/ChatWorkspace.tsx`
+- `src/components/chat/MessageList.tsx`
+
+#### 7.1 ChatInput 修改
+- [ ] 添加"工具"下拉菜单
+- [ ] 添加"生成报告"选项
+- [ ] 添加报告模式指示器
+- [ ] 处理模式切换
+
+#### 7.2 ChatWorkspace 修改
+- [ ] 添加报告模式状态
+- [ ] 集成 useReportGeneration hook
+- [ ] 渲染 ReportProgress (生成中)
+- [ ] 渲染 ReportMessage (生成完成)
+
+#### 7.3 MessageList 修改
+- [ ] 检测报告类型消息
+- [ ] 渲染 ReportMessage 组件
+
+**实现细节**:
+```
+待实现时补充
+```
+
+---
+
+### Task 8: 文档页面集成
+**文件**:
+- `src/components/documents/ReportsList.tsx`
+- `src/app/(workspace)/documents/page.tsx`
+
+#### 8.1 ReportsList 组件
+- [ ] 创建报告列表组件
+- [ ] 获取报告列表
+- [ ] 显示报告卡片
+- [ ] 下载 PDF 功能
+
+#### 8.2 文档页面修改
+- [ ] 添加"分析报告"区域/标签
+- [ ] 集成 ReportsList 组件
+
+**实现细节**:
+```
+待实现时补充
+```
+
+---
+
+### Task 9: useReportGeneration Hook
+**文件**: `src/hooks/useReportGeneration.ts`
+
+- [ ] 创建 Hook
+- [ ] 实现 SSE 流解析
+- [ ] 管理阶段进度状态
+- [ ] 管理章节状态
+- [ ] 管理最终报告状态
+- [ ] 实现 startGeneration 方法
+- [ ] 实现 saveReport 方法
+- [ ] 实现 reset 方法
+- [ ] 处理取消/中断
+
+**实现细节**:
+```
+待实现时补充
+```
+
+---
+
+### Task 10: 验证 Schema
+**修改文件**: `src/lib/validation/api-schemas.ts`
+
+- [ ] 添加 ReportGenerateSchema
+- [ ] 添加 ReportSaveSchema
+- [ ] 添加 ReportIdParamSchema
+
+**实现细节**:
+```
+待实现时补充
+```
+
+---
+
+## 测试清单
+
+### 单元测试
+- [ ] 工作流节点单元测试
+- [ ] 变化值计算测试 (正、负、N/A)
+- [ ] PDF 生成测试
+
+### 集成测试
+- [ ] `/api/reports/generate` SSE 端到端测试
+- [ ] `/api/reports/save` 保存和 PDF 测试
+- [ ] 访客速率限制测试
+
+### 手动测试
+- [ ] 从工具菜单触发"生成报告"
+- [ ] 对话式配置（年份选择）
+- [ ] 报告在聊天区域渲染，章节可折叠
+- [ ] 保存报告 → 出现在文档页面
+- [ ] PDF 下载正常
+- [ ] 年度对比显示正确
+- [ ] 数据缺失时的优雅处理
+
+---
+
+## 相关文档
+
+- [Phase 1 PRD](./PHASE1_PRD.md)
+- [Phase 2 设计文档](./PHASE2_DESIGN.md)
+- [v4 开发计划](../../v4_DEVELOPMENT_PLAN.md)
+
+---
+
+*文档创建: 2026-01-09*
+*状态: 待实现*
