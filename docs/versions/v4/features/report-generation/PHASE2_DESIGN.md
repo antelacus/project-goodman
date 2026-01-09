@@ -282,9 +282,11 @@ export interface ReportWorkflowState {
   };
 
   // Phase 2: 指标数据
+  // Note: Using Record instead of Map for JSON serialization compatibility
+  // (LangGraph checkpoints serialize state to JSON)
   metricResults: {
-    primary: Map<string, MetricResult>;
-    comparison: Map<string, MetricResult>;
+    primary: Record<string, MetricResult>;
+    comparison: Record<string, MetricResult>;
     status: 'pending' | 'gathering' | 'gathered' | 'error';
   };
 
@@ -580,9 +582,13 @@ DocumentsPage
 interface ReportMessageProps {
   report: ReportContent;
   onSave?: () => void;
-  isSaving?: boolean;
+  isSaving?: boolean;           // Show "生成 PDF 并保存中..." spinner
   savedPdfUrl?: string;
 }
+
+// UX Note: PDF generation with Chinese fonts + upload can take 2-4 seconds.
+// The UI must show an explicit "正在生成PDF并保存..." state during save,
+// not a generic spinner, so users understand the system is doing heavy work.
 ```
 
 **功能**:
@@ -644,6 +650,9 @@ interface UseReportGenerationReturn {
   startGeneration: (year: string, comparisonYear?: string) => Promise<void>;
   saveReport: () => Promise<{ reportId: string; pdfUrl: string }>;
   reset: () => void;
+
+  // 保存状态 (PDF 生成 + 上传可能需要 2-4 秒)
+  isSaving: boolean;
 }
 ```
 
