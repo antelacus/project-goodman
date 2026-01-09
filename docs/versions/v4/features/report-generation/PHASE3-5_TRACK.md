@@ -116,41 +116,85 @@ report-events.ts:
 
 ---
 
-### Task 4: API 路由
+### Task 4: API 路由 ✅
 **文件**: `src/app/api/reports/`
 
 #### 4.1 生成报告 (SSE)
-- [ ] 创建 `generate/route.ts`
-- [ ] 实现 SSE 流
-- [ ] 集成工作流图
-- [ ] 发送 phase/process/section/complete 事件
-- [ ] 处理错误
+- [x] 创建 `generate/route.ts`
+- [x] 实现 SSE 流
+- [x] 集成工作流图
+- [x] 发送 phase/process/section/complete 事件
+- [x] 处理错误
 
 #### 4.2 保存报告
-- [ ] 创建 `save/route.ts`
-- [ ] 生成 PDF
-- [ ] 上传到 Supabase Storage
-- [ ] 写入 reports 表
-- [ ] 返回签名 URL
+- [x] 创建 `save/route.ts`
+- [x] 写入 reports 表
+- [ ] 生成 PDF (Task 5)
+- [ ] 上传到 Supabase Storage (Task 5)
+- [ ] 返回签名 URL (Task 5)
 
 #### 4.3 报告列表
-- [ ] 创建 `route.ts` (GET)
-- [ ] 查询用户报告
-- [ ] 返回列表数据
+- [x] 创建 `route.ts` (GET)
+- [x] 查询用户报告
+- [x] 返回列表数据
 
 #### 4.4 单个报告
-- [ ] 创建 `[id]/route.ts` (GET)
-- [ ] 验证所有权
-- [ ] 返回报告详情
+- [x] 创建 `[id]/route.ts` (GET)
+- [x] 验证所有权
+- [x] 返回报告详情
 
 #### 4.5 PDF 下载
-- [ ] 创建 `[id]/pdf/route.ts` (GET)
-- [ ] 生成签名 URL
-- [ ] 返回下载链接
+- [x] 创建 `[id]/pdf/route.ts` (GET)
+- [x] 生成签名 URL
+- [x] 返回下载链接
 
 **实现细节**:
 ```
-待实现时补充
+文件结构:
+- src/app/api/reports/
+  ├── generate/route.ts     - POST: SSE 流式生成报告
+  ├── save/route.ts         - POST: 保存报告到数据库 (PDF 生成待 Task 5)
+  ├── route.ts              - GET: 获取用户报告列表
+  └── [id]/
+      ├── route.ts          - GET: 获取单个报告详情
+      └── pdf/route.ts      - GET: 获取 PDF 签名下载 URL
+
+generate/route.ts:
+- 使用 reportWorkflowGraph.streamEvents() 获取工作流事件
+- 映射 LangGraph 事件到报告 SSE 事件 (phase/section/complete/error)
+- 支持 phase 事件: check, gather, analyze, generate
+- 支持 section 事件: 每个章节分析完成时发送
+- 错误处理: 捕获工作流错误并发送 error 事件
+- Guest 速率限制: 3 次/小时 (新增 'report' action 到 guest-rate.ts)
+
+save/route.ts:
+- CSRF 保护
+- 会话验证 (admin/user/guest)
+- 保存报告到 reports 表
+- Guest 报告 24 小时后过期
+- PDF 生成和上传待 Task 5 实现
+
+route.ts (报告列表):
+- 按 owner_id + owner_type 过滤
+- 按 created_at DESC 排序
+- 返回前 50 条
+
+[id]/route.ts (单个报告):
+- UUID 格式验证
+- 所有权验证 (owner 或 admin)
+- 返回完整 ReportRecord
+
+[id]/pdf/route.ts (PDF 下载):
+- 所有权验证
+- 检查 pdf_storage_path 是否存在
+- 使用 getSignedFileUrl() 生成 1 小时有效签名 URL
+
+验证 Schema (api-schemas.ts):
+- ReportGenerateSchema: year (必需), comparisonYear (可选)
+- ReportSaveSchema: content (ReportContent), year, comparisonYear
+- ReportIdParamSchema: id (UUID)
+
+TypeScript 编译: 通过 ✓
 ```
 
 ---

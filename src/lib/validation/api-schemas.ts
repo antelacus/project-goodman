@@ -175,6 +175,65 @@ export const SessionTerminateSchema = z.object({
 export type SessionTerminateRequest = z.infer<typeof SessionTerminateSchema>;
 
 // =============================================================================
+// Report Schemas (V4.2)
+// =============================================================================
+
+/**
+ * Report Generation Request
+ * POST /api/reports/generate
+ */
+export const ReportGenerateSchema = z.object({
+    year: z
+        .string()
+        .regex(/^\d{4}$/, '年份格式错误（需要4位数字）'),
+    comparisonYear: z
+        .string()
+        .regex(/^\d{4}$/, '对比年份格式错误（需要4位数字）')
+        .optional(),
+});
+
+export type ReportGenerateRequest = z.infer<typeof ReportGenerateSchema>;
+
+/**
+ * Report Save Request
+ * POST /api/reports/save
+ * Note: content validation is minimal since it comes from our workflow
+ */
+export const ReportSaveSchema = z.object({
+    content: z.object({
+        title: z.string().min(1),
+        generatedAt: z.string(),
+        year: z.string(),
+        comparisonYear: z.string().optional(),
+        sections: z.array(z.any()),
+        summary: z.object({
+            keyFindings: z.array(z.string()),
+            riskWarnings: z.array(z.string()),
+            recommendations: z.array(z.string()),
+        }),
+    }),
+    year: z
+        .string()
+        .regex(/^\d{4}$/, '年份格式错误'),
+    comparisonYear: z
+        .string()
+        .regex(/^\d{4}$/, '对比年份格式错误')
+        .optional(),
+});
+
+export type ReportSaveRequest = z.infer<typeof ReportSaveSchema>;
+
+/**
+ * Report ID Parameter
+ * GET /api/reports/[id]
+ */
+export const ReportIdParamSchema = z.object({
+    id: uuidSchema,
+});
+
+export type ReportIdParam = z.infer<typeof ReportIdParamSchema>;
+
+// =============================================================================
 // Validation Helper
 // =============================================================================
 
