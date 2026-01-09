@@ -3,25 +3,31 @@
 > **版本**: v4.2
 > **功能名称**: report-generation (财务分析报告生成)
 > **创建日期**: 2026-01-09
-> **状态**: 待实现
+> **状态**: 实现中
 
 ---
 
 ## 实现任务清单
 
-### Task 1: 数据库迁移
+### Task 1: 数据库迁移 ✅
 **文件**: `supabase/migrations/20260109000000_add_reports_table.sql`
 
-- [ ] 创建 `reports` 表
-- [ ] 添加索引 (owner, created_at, expires_at)
-- [ ] 配置 RLS 策略
-- [ ] 添加 updated_at 触发器
-- [ ] 应用迁移到 Supabase
-- [ ] 重新生成 TypeScript 类型
+- [x] 创建 `reports` 表
+- [x] 添加索引 (owner, created_at, expires_at, year)
+- [x] 配置 RLS 策略 (permissive, app-level auth)
+- [x] 添加 updated_at 触发器
+- [x] 应用迁移到 Supabase
+- [x] 重新生成 TypeScript 类型
 
 **实现细节**:
 ```
-待实现时补充
+- 表结构: id, owner_id, owner_type, title, report_type, year, comparison_year,
+  content (JSONB), summary_text, pdf_storage_path, generation_time_ms,
+  created_at, updated_at, expires_at
+- 索引: idx_reports_owner, idx_reports_created, idx_reports_expires (partial), idx_reports_year
+- RLS: "Allow all access to reports" (USING true) - 授权在 API 层处理
+- 触发器: update_reports_timestamp() 自动更新 updated_at
+- TypeScript 类型已同步到 src/lib/database/database.types.ts
 ```
 
 ---
