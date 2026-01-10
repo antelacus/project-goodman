@@ -16,6 +16,8 @@ import {
 } from '@/lib/security';
 import { ReportSaveSchema, validateRequest } from '@/lib/validation/api-schemas';
 import type { ReportContent, ReportOwnerType } from '@/types/report';
+import { generateAndSaveReportPdf } from '@/lib/reports';
+import { getSignedFileUrl } from '@/lib/documents/storage';
 
 export const runtime = 'nodejs';
 
@@ -90,16 +92,30 @@ export async function POST(req: NextRequest) {
 
     const reportId = insertedReport.id;
 
-    // TODO: Task 5 - Generate PDF and upload to storage
-    // For now, return without PDF URL
-    // const pdfUrl = await generateAndUploadPdf(reportId, reportContent);
+    // Generate PDF and upload to storage
+    let pdfUrl: string | null = null;
+    try {
+      const storagePath = await generateAndSaveReportPdf(
+        reportId,
+        reportContent,
+        year,
+        comparisonYear
+      );
+
+      // Generate signed URL for immediate download (1 hour expiry)
+      pdfUrl = await getSignedFileUrl(storagePath, 3600);
+    } catch (pdfError) {
+      // Log error but don't fail the request - report is already saved
+      console.error('[ReportSave] PDF generation failed:', pdfError);
+      // User can still access the report, PDF can be generated later
+    }
 
     // Build response
     const response = NextResponse.json({
       success: true,
       data: {
         reportId,
-        pdfUrl: null, // Will be available after Task 5
+        pdfUrl,
       },
     });
 
