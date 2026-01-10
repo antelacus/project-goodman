@@ -1,7 +1,10 @@
 /**
  * Shared message types for chat components
  * V3.9: Created to eliminate duplicate type definitions
+ * V4.2: Extended for report messages
  */
+
+import type { ReportContent } from './report';
 
 /**
  * Chat message displayed in the UI
@@ -12,6 +15,9 @@ export interface ChatMessage {
   content: string;
   timestamp?: string;
   metadata?: ChatMessageMetadata;
+  // v4.2: Report message support
+  messageType?: 'text' | 'report';
+  reportContent?: ReportContent;
 }
 
 /**
@@ -53,4 +59,8 @@ export interface MessageListProps {
   isLoading?: boolean;
   // v4.0: Process events for transparency
   processEvents?: import('./process-events').ProcessEvent[];
+  // v4.2: Report actions
+  onSaveReport?: () => void;
+  isSavingReport?: boolean;
+  savedReportPdfUrl?: string;
 }
