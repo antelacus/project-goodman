@@ -1,31 +1,37 @@
 import React, { useRef, useState } from 'react';
-import { Paperclip, Send, X, BarChart2 } from 'lucide-react';
+import { Paperclip, Send, X, BarChart2, FileText } from 'lucide-react';
 import { DocumentSelectModal } from '@/components/documents';
 import { useDocumentStore } from '../../store/documents';
 
 interface ChatInputProps {
     onSendMessage: (message: string, files: File[], documentIds: string[]) => void;
     disabled?: boolean;
+    onRequestReport?: () => void;
 }
 
-const ChatInput: React.FC<ChatInputProps> = ({ onSendMessage, disabled }) => {
+const ChatInput: React.FC<ChatInputProps> = ({ onSendMessage, disabled, onRequestReport }) => {
     const [message, setMessage] = useState('');
     const [selectedDocIds, setSelectedDocIds] = useState<string[]>([]);
     const [isDocModalOpen, setIsDocModalOpen] = useState(false);
 
     // Menu States
     const [isMenuOpen, setIsMenuOpen] = useState(false);
+    const [isToolsMenuOpen, setIsToolsMenuOpen] = useState(false);
 
     const textareaRef = useRef<HTMLTextAreaElement>(null);
     const menuRef = useRef<HTMLDivElement>(null);
+    const toolsMenuRef = useRef<HTMLDivElement>(null);
 
     const documents = useDocumentStore((s) => s.documents);
 
-    // Close menu on click outside
+    // Close menus on click outside
     React.useEffect(() => {
         const handleClickOutside = (event: MouseEvent) => {
             if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
                 setIsMenuOpen(false);
+            }
+            if (toolsMenuRef.current && !toolsMenuRef.current.contains(event.target as Node)) {
+                setIsToolsMenuOpen(false);
             }
         };
         document.addEventListener('mousedown', handleClickOutside);
@@ -53,6 +59,11 @@ const ChatInput: React.FC<ChatInputProps> = ({ onSendMessage, disabled }) => {
     const handleUploadClick = () => {
         setIsDocModalOpen(true);
         setIsMenuOpen(false);
+    };
+
+    const handleGenerateReportClick = () => {
+        setIsToolsMenuOpen(false);
+        onRequestReport?.();
     };
 
     const removeDocId = (idToRemove: string) => {
@@ -138,14 +149,36 @@ const ChatInput: React.FC<ChatInputProps> = ({ onSendMessage, disabled }) => {
                                 )}
                             </div>
 
-                            {/* Tools Button (Visual Only) */}
-                            <button
-                                className="flex items-center gap-2 h-10 px-4 rounded-full hover:bg-neutral-200/50 text-neutral-600 transition-colors opacity-50 cursor-not-allowed"
-                                title="工具 (即将推出)"
-                            >
-                                <BarChart2 size={18} />
-                                <span className="text-sm font-medium">工具</span>
-                            </button>
+                            {/* Tools Button with Dropdown */}
+                            <div className="relative" ref={toolsMenuRef}>
+                                <button
+                                    onClick={() => setIsToolsMenuOpen(!isToolsMenuOpen)}
+                                    className="flex items-center gap-2 h-10 px-4 rounded-full hover:bg-neutral-200/50 text-neutral-600 transition-colors"
+                                    disabled={disabled}
+                                    title="工具"
+                                >
+                                    <BarChart2 size={18} />
+                                    <span className="text-sm font-medium">工具</span>
+                                </button>
+
+                                {/* Tools Dropdown Menu */}
+                                {isToolsMenuOpen && (
+                                    <div className="absolute bottom-12 left-0 w-56 bg-white rounded-xl shadow-xl border border-neutral-100 overflow-hidden py-1 animate-in fade-in zoom-in-95 origin-bottom-left z-50">
+                                        <button
+                                            onClick={handleGenerateReportClick}
+                                            className="w-full text-left px-4 py-3 hover:bg-neutral-50 flex items-center gap-3 text-sm text-neutral-700"
+                                        >
+                                            <div className="w-8 h-8 rounded-full bg-blue-50 text-blue-500 flex items-center justify-center">
+                                                <FileText size={16} />
+                                            </div>
+                                            <div>
+                                                <div className="font-medium">生成报告</div>
+                                                <div className="text-[10px] text-neutral-400">生成年度财务分析报告</div>
+                                            </div>
+                                        </button>
+                                    </div>
+                                )}
+                            </div>
                         </div>
 
                         {/* Right: Send Button (Conditional) */}

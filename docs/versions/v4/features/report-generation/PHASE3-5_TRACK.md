@@ -341,31 +341,84 @@ TypeScript 编译: 通过 ✓
 
 ---
 
-### Task 7: 聊天集成
+### Task 7: 聊天集成 ✅
 **修改文件**:
 - `src/components/chat/ChatInput.tsx`
 - `src/components/chat/ChatWorkspace.tsx`
 - `src/components/chat/MessageList.tsx`
 
+**新增文件**:
+- `src/components/reports/ReportYearSelector.tsx`
+- `src/app/api/financial-data/years/route.ts`
+
 #### 7.1 ChatInput 修改
-- [ ] 添加"工具"下拉菜单
-- [ ] 添加"生成报告"选项
-- [ ] 添加报告模式指示器
-- [ ] 处理模式切换
+- [x] 添加"工具"下拉菜单
+- [x] 添加"生成报告"选项
+- [x] 添加 `onRequestReport` 回调 prop
+- [x] 处理模式切换
 
 #### 7.2 ChatWorkspace 修改
-- [ ] 添加报告模式状态
-- [ ] 集成 useReportGeneration hook
-- [ ] 渲染 ReportProgress (生成中)
-- [ ] 渲染 ReportMessage (生成完成)
+- [x] 添加报告模式状态
+- [x] 内联实现 SSE 流解析 (hook 提取在 Task 9)
+- [x] 渲染 ReportProgress (生成中)
+- [x] 渲染 ReportYearSelector (选择年度)
+- [x] 报告完成后添加为聊天消息
 
 #### 7.3 MessageList 修改
-- [ ] 检测报告类型消息
-- [ ] 渲染 ReportMessage 组件
+- [x] 检测 `messageType === 'report'` 类型消息
+- [x] 渲染 ReportMessage 组件
+- [x] 传递保存/下载 PDF 相关 props
+
+#### 7.4 ReportYearSelector 组件 (新增)
+- [x] 创建年份选择组件
+- [x] 从 `/api/financial-data/years` 获取可用年份
+- [x] 支持主年份和对比年份选择
+- [x] 生成按钮触发报告生成
+
+#### 7.5 API: /api/financial-data/years (新增)
+- [x] 查询 financial_data 表获取唯一年份
+- [x] 按年份降序排列
+- [x] 返回可用年份列表
 
 **实现细节**:
 ```
-待实现时补充
+ChatInput.tsx:
+- 新增 `onRequestReport?: () => void` prop
+- 将 "工具" 按钮从 disabled 改为可点击下拉菜单
+- 工具菜单包含 "生成报告" 选项 (FileText 图标，蓝色主题)
+- 点击触发 `onRequestReport` 回调
+- 新增 `isToolsMenuOpen` 状态和 `toolsMenuRef` 引用
+- 使用 click outside 关闭菜单
+
+ChatWorkspace.tsx:
+- 报告模式状态: showReportSelector, isGeneratingReport, reportPhases,
+  currentReportSection, reportError, currentReport, isSavingReport, savedReportPdfUrl
+- handleRequestReport: 显示年份选择器
+- handleCancelReport: 取消并重置状态
+- handleGenerateReport: 调用 /api/reports/generate，解析 SSE 流
+- handleReportSSEEvent: 处理 phase/section/complete/error 事件
+- handleSaveReport: 调用 /api/reports/save 保存报告和生成 PDF
+- UI: ReportYearSelector 模态框 (z-30), ReportProgress 在消息列表下方
+
+MessageList.tsx:
+- 新增 props: onSaveReport, isSavingReport, savedReportPdfUrl
+- 检测 msg.messageType === 'report' 并渲染 ReportMessage
+- 报告消息使用 95% 宽度以显示完整内容
+
+message.ts 类型扩展:
+- ChatMessage 新增 messageType?: 'text' | 'report'
+- ChatMessage 新增 reportContent?: ReportContent
+- MessageListProps 新增报告相关 props
+
+ReportYearSelector.tsx:
+- 蓝色渐变 header 设计
+- 自动从 API 获取可用年份
+- 默认选择最新年份和前一年作为对比
+- 年份验证 (主年份必填，对比年份不能与主年份相同)
+- 加载中/错误状态处理
+- "开始生成" 按钮带 Loader2 动画
+
+TypeScript 编译: 通过 ✓
 ```
 
 ---
