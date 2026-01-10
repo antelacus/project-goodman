@@ -129,9 +129,9 @@ report-events.ts:
 #### 4.2 保存报告
 - [x] 创建 `save/route.ts`
 - [x] 写入 reports 表
-- [ ] 生成 PDF (Task 5)
-- [ ] 上传到 Supabase Storage (Task 5)
-- [ ] 返回签名 URL (Task 5)
+- [x] 生成 PDF (Task 5)
+- [x] 上传到 Supabase Storage (Task 5)
+- [x] 返回签名 URL (Task 5)
 
 #### 4.3 报告列表
 - [x] 创建 `route.ts` (GET)
@@ -199,18 +199,66 @@ TypeScript 编译: 通过 ✓
 
 ---
 
-### Task 5: PDF 生成器
-**文件**: `src/lib/reports/pdf-generator.tsx`
+### Task 5: PDF 生成器 ✅
+**文件**:
+- `src/lib/reports/pdf-generator.tsx`
+- `src/lib/reports/pdf-upload.ts`
+- `src/lib/reports/index.ts`
 
-- [ ] 安装 `@react-pdf/renderer`
-- [ ] 注册中文字体 (Noto Sans SC)
-- [ ] 创建 PDF 模板组件
-- [ ] 实现 generateReportPDF 函数
-- [ ] 测试 PDF 输出
+- [x] 安装 `@react-pdf/renderer`
+- [x] 注册中文字体 (Noto Sans SC)
+- [x] 创建 PDF 模板组件
+- [x] 实现 generateReportPDF 函数
+- [x] 实现 uploadReportPdf 和 generateAndSaveReportPdf 函数
+- [x] 集成到 save route
+- [x] 测试 PDF 输出
 
 **实现细节**:
 ```
-待实现时补充
+文件结构:
+- src/lib/reports/
+  ├── index.ts             - 模块导出
+  ├── pdf-generator.tsx    - PDF 渲染组件和生成函数
+  └── pdf-upload.ts        - Storage 上传和数据库更新
+
+字体:
+- public/fonts/NotoSansSC-Regular.otf (8.3 MB)
+- public/fonts/NotoSansSC-Bold.otf (8.5 MB)
+- 使用本地字体文件确保可靠性
+- Font.registerHyphenationCallback 禁用中文连字符
+
+PDF 模板组件:
+- ReportDocument: 主文档组件
+- ExecutiveSummary: 执行摘要 (关键发现/风险警示/建议)
+- ReportSectionComponent: 章节组件 (可折叠)
+- MetricsTable: 指标表格 (名称/当期/上期/变化)
+
+样式:
+- 专业蓝色调配色方案 (#1a365d primary)
+- A4 纸张尺寸，40px 边距
+- 指标表格交替行背景色
+- 正值绿色/负值红色变化显示
+- 页脚页码和声明
+
+函数:
+- generateReportPDF(report: ReportContent): Promise<Buffer>
+- uploadReportPdf(reportId, buffer, year, comparisonYear?): Promise<string>
+- generateAndSaveReportPdf(reportId, content, year, comparisonYear?): Promise<string>
+
+save route 集成:
+- 保存报告后调用 generateAndSaveReportPdf
+- 生成 PDF → 上传到 Storage → 更新 pdf_storage_path
+- 返回签名 URL 供立即下载
+- PDF 生成失败不阻断保存 (graceful degradation)
+
+存储路径: reports/{reportId}/report_{year}_{timestamp}.pdf
+
+性能:
+- PDF 生成约 900ms (包含字体加载)
+- 大小约 140 KB (5 章节示例)
+
+测试: tests/test-pdf-generator.ts 通过 ✓
+TypeScript 编译: 通过 ✓
 ```
 
 ---
