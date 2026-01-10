@@ -423,24 +423,51 @@ TypeScript 编译: 通过 ✓
 
 ---
 
-### Task 8: 文档页面集成
+### Task 8: 文档页面集成 ✅
 **文件**:
 - `src/components/documents/ReportsList.tsx`
+- `src/components/documents/index.ts`
 - `src/app/(workspace)/documents/page.tsx`
 
 #### 8.1 ReportsList 组件
-- [ ] 创建报告列表组件
-- [ ] 获取报告列表
-- [ ] 显示报告卡片
-- [ ] 下载 PDF 功能
+- [x] 创建报告列表组件
+- [x] 获取报告列表 (从 /api/reports)
+- [x] 显示报告卡片
+- [x] 下载 PDF 功能 (调用 /api/reports/[id]/pdf)
 
 #### 8.2 文档页面修改
-- [ ] 添加"分析报告"区域/标签
-- [ ] 集成 ReportsList 组件
+- [x] 添加"分析报告"区域/标签
+- [x] 集成 ReportsList 组件
 
 **实现细节**:
 ```
-待实现时补充
+文件结构:
+- src/components/documents/
+  ├── index.ts             - 新增 ReportsList 导出
+  └── ReportsList.tsx      - 报告列表组件
+
+ReportsList.tsx:
+- 使用 useState 管理 reports, isLoading, error, downloadingId 状态
+- useEffect 在组件加载时自动获取报告列表
+- fetchReports: 调用 GET /api/reports 获取用户报告
+- handleDownloadPdf: 调用 GET /api/reports/[id]/pdf 获取签名 URL
+- 加载状态: Loader2 动画 + "加载中..."
+- 错误状态: AlertCircle 图标 + 错误信息 + 重试按钮
+- 空状态: FileText 图标 + "暂无分析报告" + 提示文字
+- 报告卡片: 标题、年份信息、生成时间、摘要文字、PDF 下载按钮
+- 下载按钮: 下载中状态显示 Loader2 动画
+
+documents/page.tsx 修改:
+- 导入 ReportsList 组件
+- 在"待处理文档"区域后添加"分析报告"区域
+- 使用 bg-gray-50 背景区分报告区域
+
+样式:
+- 报告卡片: 白色背景，圆角边框，hover 时边框变蓝
+- PDF 按钮: 蓝色主题，bg-blue-50 背景
+- 响应式布局，卡片间距 gap-4
+
+TypeScript 编译: 通过 ✓
 ```
 
 ---

@@ -19,6 +19,7 @@ import {
   isPdf,
   isExcel,
 } from "@/lib/documents";
+import { ReportsList } from "@/components/documents";
 
 // Generate year options (last 20 years)
 const YEAR_OPTIONS = Array.from({ length: 20 }, (_, i) => `${2025 - i}`);
@@ -757,6 +758,14 @@ export default function DocumentsPage() {
                     )
                   )}
                 </div>
+              </div>
+            </div>
+
+            {/* 分析报告 */}
+            <div className="mt-12">
+              <div className="text-lg font-bold mb-4">分析报告</div>
+              <div className="bg-gray-50 rounded-lg p-4">
+                <ReportsList />
               </div>
             </div>
           </div>
