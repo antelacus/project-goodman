@@ -263,41 +263,80 @@ TypeScript 编译: 通过 ✓
 
 ---
 
-### Task 6: React 组件
+### Task 6: React 组件 ✅
 **文件**: `src/components/reports/`
 
 #### 6.1 报告消息
-- [ ] 创建 `ReportMessage.tsx` - 主报告组件
-- [ ] 实现可折叠章节状态
-- [ ] 集成子组件
+- [x] 创建 `ReportMessage.tsx` - 主报告组件
+- [x] 实现可折叠章节状态
+- [x] 集成子组件
 
 #### 6.2 执行摘要
-- [ ] 创建 `ReportSummary.tsx`
-- [ ] 显示关键发现、风险警示、建议
+- [x] 创建 `ReportSummary.tsx`
+- [x] 显示关键发现、风险警示、建议
 
 #### 6.3 报告章节
-- [ ] 创建 `ReportSection.tsx`
-- [ ] 实现展开/折叠
-- [ ] 指标表格
-- [ ] 分析文字
-- [ ] 来源链接
+- [x] 创建 `ReportSection.tsx`
+- [x] 实现展开/折叠
+- [x] 指标表格
+- [x] 分析文字
+- [x] 来源链接
 
 #### 6.4 生成进度
-- [ ] 创建 `ReportProgress.tsx`
-- [ ] 阶段进度指示器
-- [ ] 章节完成状态
+- [x] 创建 `ReportProgress.tsx`
+- [x] 阶段进度指示器
+- [x] 章节完成状态
 
 #### 6.5 操作按钮
-- [ ] 创建 `ReportActions.tsx`
-- [ ] 保存按钮
-- [ ] 导出 PDF 按钮
+- [x] 创建 `ReportActions.tsx`
+- [x] 保存按钮
+- [x] 导出 PDF 按钮
 
 #### 6.6 导出
-- [ ] 创建 `index.ts` - Barrel export
+- [x] 创建 `index.ts` - Barrel export
 
 **实现细节**:
 ```
-待实现时补充
+文件结构:
+- src/components/reports/
+  ├── index.ts             - Barrel export
+  ├── ReportMessage.tsx    - 主报告组件 (collapsible sections, header, footer)
+  ├── ReportSummary.tsx    - 执行摘要 (keyFindings, riskWarnings, recommendations)
+  ├── ReportSection.tsx    - 可折叠章节 (metrics table, analysis, sources)
+  ├── ReportProgress.tsx   - 生成进度指示器 (4 phases with status)
+  └── ReportActions.tsx    - 操作按钮 (save, download PDF)
+
+ReportMessage.tsx:
+- 蓝色渐变 header 显示标题、年度、生成时间
+- 执行摘要区域 (ReportSummary)
+- 详细分析区域 (ReportSection ×5)
+- "全部展开/收起" 快捷按钮
+- 底部操作按钮 (ReportActions)
+- 灰色 footer 含免责声明
+
+ReportSummary.tsx:
+- 关键发现 (蓝色背景，TrendingUp 图标)
+- 风险警示 (琥珀色背景，AlertTriangle 图标)
+- 改进建议 (绿色背景，Lightbulb 图标)
+
+ReportSection.tsx:
+- 可折叠章节，点击 header 展开/收起
+- 指标表格: 名称、当期值、上期值、变化
+- 变化值显示: 上升(绿色)、下降(红色)、持平(灰色)、N/A
+- 分析文字区域
+- 数据来源文档链接
+
+ReportProgress.tsx:
+- 4 阶段垂直时间线: 检查数据、收集指标、分析数据、生成报告
+- 状态图标: pending(灰色圆圈)、in_progress(蓝色旋转)、completed(绿色勾)
+- 当前分析章节指示器
+
+ReportActions.tsx:
+- 保存按钮: 点击触发 PDF 生成 + 保存
+- 保存中状态: "正在生成PDF并保存..." (Loader2 动画)
+- 保存完成: "下载 PDF" 按钮 + "报告已保存" 状态文字
+
+TypeScript 编译: 通过 ✓
 ```
 
 ---
