@@ -3,14 +3,12 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { useStreamingChat } from '@/hooks/useStreamingChat';
+import { useReportGeneration } from '@/hooks/useReportGeneration';
 import MessageList from './MessageList';
 import ChatInput from './ChatInput';
 import GuestBanner from './GuestBanner';
-import { ReportYearSelector, ReportProgress, ReportMessage } from '@/components/reports';
+import { ReportYearSelector, ReportProgress } from '@/components/reports';
 import type { ChatMessage } from '@/types/message';
-import type { ReportContent } from '@/types/report';
-import type { PhaseDisplayInfo } from '@/types/report-events';
-import { REPORT_PHASES } from '@/types/report-events';
 
 export default function ChatWorkspace() {
     const searchParams = useSearchParams();
@@ -20,15 +18,19 @@ export default function ChatWorkspace() {
     const [isLoadingSession, setIsLoadingSession] = useState(false);
     const [loadedSessionId, setLoadedSessionId] = useState<string | null>(null);
 
-    // v4.2: Report generation state
+    // v4.2: Report generation via hook
     const [showReportSelector, setShowReportSelector] = useState(false);
-    const [isGeneratingReport, setIsGeneratingReport] = useState(false);
-    const [reportPhases, setReportPhases] = useState<PhaseDisplayInfo[]>([...REPORT_PHASES]);
-    const [currentReportSection, setCurrentReportSection] = useState<string | undefined>();
-    const [reportError, setReportError] = useState<string | undefined>();
-    const [currentReport, setCurrentReport] = useState<ReportContent | null>(null);
-    const [isSavingReport, setIsSavingReport] = useState(false);
-    const [savedReportPdfUrl, setSavedReportPdfUrl] = useState<string | undefined>();
+    const {
+        isGenerating: isGeneratingReport,
+        phases: reportPhases,
+        currentSection: currentReportSection,
+        error: reportError,
+        isSaving: isSavingReport,
+        savedPdfUrl: savedReportPdfUrl,
+        startGeneration,
+        saveReport,
+        cancel: cancelReport,
+    } = useReportGeneration();
 
     // Load session messages when URL session parameter changes
     useEffect(() => {
@@ -70,26 +72,17 @@ export default function ChatWorkspace() {
     // v4.2: Report request handler - shows year selector
     const handleRequestReport = useCallback(() => {
         setShowReportSelector(true);
-        setReportError(undefined);
     }, []);
 
     // v4.2: Cancel report generation
     const handleCancelReport = useCallback(() => {
         setShowReportSelector(false);
-        setIsGeneratingReport(false);
-        setReportPhases([...REPORT_PHASES]);
-        setCurrentReportSection(undefined);
-        setReportError(undefined);
-    }, []);
+        cancelReport();
+    }, [cancelReport]);
 
-    // v4.2: Start report generation
+    // v4.2: Start report generation using hook
     const handleGenerateReport = useCallback(async (year: string, comparisonYear?: string) => {
         setShowReportSelector(false);
-        setIsGeneratingReport(true);
-        setReportError(undefined);
-        setCurrentReport(null);
-        setSavedReportPdfUrl(undefined);
-        setReportPhases([...REPORT_PHASES]);
 
         // Add user message indicating report request
         const userMsg: ChatMessage = {
@@ -99,134 +92,26 @@ export default function ChatWorkspace() {
         };
         setMessages(prev => [...prev, userMsg]);
 
-        try {
-            const response = await fetch('/api/reports/generate', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ year, comparisonYear }),
-            });
+        // Start generation via hook - it handles SSE parsing internally
+        const generatedReport = await startGeneration(year, comparisonYear);
 
-            if (!response.ok) {
-                const errorData = await response.json().catch(() => ({}));
-                throw new Error(errorData.error || '报告生成请求失败');
-            }
-
-            if (!response.body) {
-                throw new Error('无法获取响应流');
-            }
-
-            const reader = response.body.getReader();
-            const decoder = new TextDecoder();
-            let buffer = '';
-
-            while (true) {
-                const { done, value } = await reader.read();
-                if (done) break;
-
-                buffer += decoder.decode(value, { stream: true });
-                const lines = buffer.split('\n');
-                buffer = lines.pop() || '';
-
-                for (const line of lines) {
-                    if (line.startsWith('data: ')) {
-                        try {
-                            const eventData = JSON.parse(line.slice(6));
-                            handleReportSSEEvent(eventData);
-                        } catch {
-                            // Ignore parse errors for malformed events
-                        }
-                    }
-                }
-            }
-        } catch (error) {
-            console.error('Report generation error:', error);
-            setReportError(error instanceof Error ? error.message : '报告生成失败');
-            setIsGeneratingReport(false);
+        // Add report as a message when complete
+        if (generatedReport) {
+            const reportMsg: ChatMessage = {
+                role: 'assistant',
+                content: '',
+                id: Date.now().toString(),
+                messageType: 'report',
+                reportContent: generatedReport,
+            };
+            setMessages(prev => [...prev, reportMsg]);
         }
-    }, []);
+    }, [startGeneration]);
 
-    // v4.2: Handle SSE events from report generation
-    const handleReportSSEEvent = useCallback((event: { type: string; data: unknown }) => {
-        switch (event.type) {
-            case 'phase': {
-                const { phase, status } = event.data as { phase: string; status: string };
-                setReportPhases(prev => prev.map(p => {
-                    if (p.id === phase) {
-                        return { ...p, status: status === 'completed' ? 'completed' : 'in_progress' };
-                    }
-                    // Mark previous phases as completed
-                    const phaseOrder = ['check', 'gather', 'analyze', 'generate'];
-                    const currentIndex = phaseOrder.indexOf(phase);
-                    const thisIndex = phaseOrder.indexOf(p.id);
-                    if (thisIndex < currentIndex) {
-                        return { ...p, status: 'completed' };
-                    }
-                    return p;
-                }));
-                break;
-            }
-            case 'section': {
-                const { sectionId, status } = event.data as { sectionId: string; status: string };
-                if (status === 'generating') {
-                    setCurrentReportSection(sectionId);
-                } else if (status === 'completed') {
-                    setCurrentReportSection(undefined);
-                }
-                break;
-            }
-            case 'complete': {
-                const { content } = event.data as { reportId: string; content: ReportContent };
-                setCurrentReport(content);
-                setIsGeneratingReport(false);
-                // Add report as a message
-                const reportMsg: ChatMessage = {
-                    role: 'assistant',
-                    content: '',
-                    id: Date.now().toString(),
-                    messageType: 'report',
-                    reportContent: content,
-                };
-                setMessages(prev => [...prev, reportMsg]);
-                break;
-            }
-            case 'error': {
-                const { message } = event.data as { message: string };
-                setReportError(message);
-                setIsGeneratingReport(false);
-                break;
-            }
-        }
-    }, []);
-
-    // v4.2: Save report handler
+    // v4.2: Save report handler using hook
     const handleSaveReport = useCallback(async () => {
-        if (!currentReport) return;
-
-        setIsSavingReport(true);
-        try {
-            const response = await fetch('/api/reports/save', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    content: currentReport,
-                    year: currentReport.year,
-                    comparisonYear: currentReport.comparisonYear,
-                }),
-            });
-
-            const data = await response.json();
-            if (data.success && data.data?.pdfUrl) {
-                setSavedReportPdfUrl(data.data.pdfUrl);
-            } else {
-                throw new Error(data.error || '保存失败');
-            }
-        } catch (error) {
-            console.error('Failed to save report:', error);
-            // Could show toast notification here
-        } finally {
-            setIsSavingReport(false);
-        }
-    }, [currentReport]);
+        await saveReport();
+    }, [saveReport]);
 
     const handleComplete = (data: { answer?: string; sessionId?: string }) => {
         // Add the final assistant response

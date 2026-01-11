@@ -472,25 +472,63 @@ TypeScript 编译: 通过 ✓
 
 ---
 
-### Task 9: useReportGeneration Hook
+### Task 9: useReportGeneration Hook ✅
 **文件**: `src/hooks/useReportGeneration.ts`
 
-- [ ] 创建 Hook
-- [ ] 实现 SSE 流解析
-- [ ] 管理阶段进度状态
-- [ ] 管理章节状态
-- [ ] 管理最终报告状态
-- [ ] 实现 startGeneration 方法
-- [ ] 实现 saveReport 方法
+- [x] 创建 Hook
+- [x] 实现 SSE 流解析
+- [x] 管理阶段进度状态
+- [x] 管理章节状态
+- [x] 管理最终报告状态
+- [x] 实现 startGeneration 方法
+- [x] 实现 saveReport 方法
   - **UX Note**: PDF generation with custom fonts + Supabase upload can take 2-4 seconds.
     The `isSaving` state must trigger an explicit "正在生成PDF并保存..." message in the UI,
     not a generic spinner. Users need to understand the system is doing heavy work.
-- [ ] 实现 reset 方法
-- [ ] 处理取消/中断
+- [x] 实现 reset 方法
+- [x] 处理取消/中断 (使用 AbortController)
 
 **实现细节**:
 ```
-待实现时补充
+文件结构:
+- src/hooks/useReportGeneration.ts  - 主 Hook 文件
+
+UseReportGenerationReturn 接口:
+- State:
+  - isGenerating: boolean          - 是否正在生成
+  - phases: PhaseDisplayInfo[]     - 4 阶段进度
+  - currentSection: string | undefined  - 当前分析章节
+  - report: ReportContent | null   - 生成的报告
+  - error: string | undefined      - 错误信息
+  - isSaving: boolean              - 是否正在保存
+  - savedPdfUrl: string | undefined - 已保存的 PDF URL
+  - generationYear/comparisonYear  - 生成参数
+
+- Operations:
+  - startGeneration(year, comparisonYear?): Promise<ReportContent | null>
+    - 调用 /api/reports/generate SSE 接口
+    - 解析 SSE 事件流 (phase/section/complete/error)
+    - 自动更新 phases 状态
+    - 返回生成的报告或 null
+
+  - saveReport(): Promise<{ reportId, pdfUrl } | null>
+    - 调用 /api/reports/save
+    - 自动管理 isSaving 状态
+    - 更新 savedPdfUrl
+
+  - reset(): void - 重置所有状态
+  - cancel(): void - 取消生成 (AbortController)
+
+SSE 事件处理:
+- 使用 handleSSEEvent 统一处理 phase/section/complete/error 事件
+- updatePhaseStatus 自动标记前序阶段为 completed
+
+ChatWorkspace 重构:
+- 移除 ~100 行内联 SSE 处理代码
+- 使用 hook 的 startGeneration/saveReport 方法
+- 组件代码从 ~385 行减少到 ~270 行
+
+TypeScript 编译: 通过 ✓
 ```
 
 ---
