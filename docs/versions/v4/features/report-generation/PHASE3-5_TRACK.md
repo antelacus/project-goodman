@@ -533,16 +533,37 @@ TypeScript 编译: 通过 ✓
 
 ---
 
-### Task 10: 验证 Schema
-**修改文件**: `src/lib/validation/api-schemas.ts`
+### Task 10: 验证 Schema ✅
+**修改文件**:
+- `src/lib/validation/api-schemas.ts`
+- `src/app/api/reports/[id]/route.ts`
+- `src/app/api/reports/[id]/pdf/route.ts`
 
-- [ ] 添加 ReportGenerateSchema
-- [ ] 添加 ReportSaveSchema
-- [ ] 添加 ReportIdParamSchema
+- [x] 添加 ReportGenerateSchema
+- [x] 添加 ReportSaveSchema
+- [x] 添加 ReportIdParamSchema
+- [x] 更新 [id] 路由使用 schema 验证（原使用 inline regex）
+- [x] 更新 [id]/pdf 路由使用 schema 验证（原使用 inline regex）
 
 **实现细节**:
 ```
-待实现时补充
+验证 Schema 定义 (api-schemas.ts):
+- ReportGenerateSchema: year (必需, 4位数字), comparisonYear (可选, 4位数字)
+- ReportSaveSchema: content (ReportContent 结构), year, comparisonYear
+- ReportIdParamSchema: id (UUID 格式)
+
+Schema 使用情况:
+- /api/reports/generate: ReportGenerateSchema (line 162)
+- /api/reports/save: ReportSaveSchema (line 44)
+- /api/reports/[id]: ReportIdParamSchema (line 34) - 重构：原 inline regex → schema
+- /api/reports/[id]/pdf: ReportIdParamSchema (line 34) - 重构：原 inline regex → schema
+
+错误消息:
+- '年份格式错误（需要4位数字）'
+- '对比年份格式错误（需要4位数字）'
+- '无效的文档 ID 格式'
+
+TypeScript 编译: 通过 ✓
 ```
 
 ---
