@@ -12,6 +12,7 @@ import {
   generateRequestId,
   createErrorResponse,
 } from '@/lib/security';
+import { ReportIdParamSchema, validateRequest } from '@/lib/validation/api-schemas';
 import { getSignedFileUrl } from '@/lib/documents/storage';
 
 export const runtime = 'nodejs';
@@ -29,11 +30,11 @@ export async function GET(
   try {
     const { id: reportId } = await params;
 
-    // Validate UUID format
-    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-    if (!uuidRegex.test(reportId)) {
+    // Validate UUID format using schema
+    const validation = validateRequest(ReportIdParamSchema, { id: reportId });
+    if (!validation.success) {
       return NextResponse.json(
-        { error: '无效的报告 ID 格式' },
+        { error: validation.error },
         { status: 400 }
       );
     }
