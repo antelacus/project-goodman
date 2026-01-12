@@ -31,11 +31,11 @@ const securityHeaders = [
     key: 'Content-Security-Policy',
     value: [
       "default-src 'self'",
-      "script-src 'self' 'unsafe-inline'",  // Next.js 15 hydration requires unsafe-inline; unsafe-eval removed
+      "script-src 'self' 'unsafe-inline' https://static.cloudflareinsights.com",  // Next.js 15 hydration requires unsafe-inline; Cloudflare Web Analytics
       "style-src 'self' 'unsafe-inline'",   // Tailwind CSS requires unsafe-inline
       "img-src 'self' data: https:",
       "font-src 'self'",
-      "connect-src 'self' https://api.openai.com https://*.supabase.co",
+      "connect-src 'self' https://api.openai.com https://*.supabase.co https://cloudflareinsights.com",  // Added Cloudflare analytics endpoint
       "frame-ancestors 'none'",
     ].join('; '),
   },

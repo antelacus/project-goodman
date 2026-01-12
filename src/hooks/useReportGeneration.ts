@@ -168,6 +168,7 @@ export function useReportGeneration(): UseReportGenerationReturn {
     let generatedReport: ReportContent | null = null;
 
     try {
+      console.log('[useReportGeneration] Starting fetch to /api/reports/generate');
       const response = await fetch('/api/reports/generate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -175,8 +176,11 @@ export function useReportGeneration(): UseReportGenerationReturn {
         signal: abortController.signal,
       });
 
+      console.log('[useReportGeneration] Response status:', response.status);
+
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
+        console.error('[useReportGeneration] Response not OK:', errorData);
         throw new Error(errorData.error || '报告生成请求失败');
       }
 
@@ -188,9 +192,13 @@ export function useReportGeneration(): UseReportGenerationReturn {
       const decoder = new TextDecoder();
       let buffer = '';
 
+      console.log('[useReportGeneration] Starting to read SSE stream');
       while (true) {
         const { done, value } = await reader.read();
-        if (done) break;
+        if (done) {
+          console.log('[useReportGeneration] SSE stream ended');
+          break;
+        }
 
         buffer += decoder.decode(value, { stream: true });
         const lines = buffer.split('\n');
@@ -200,26 +208,29 @@ export function useReportGeneration(): UseReportGenerationReturn {
           if (line.startsWith('data: ')) {
             try {
               const eventData = JSON.parse(line.slice(6));
+              console.log('[useReportGeneration] SSE event:', eventData.type);
               const result = handleSSEEvent(eventData);
               if (result) {
                 generatedReport = result;
               }
-            } catch {
-              // Ignore parse errors for malformed events
+            } catch (parseErr) {
+              console.warn('[useReportGeneration] Parse error for line:', line.substring(0, 100), parseErr);
             }
           }
         }
       }
     } catch (err) {
+      console.error('[useReportGeneration] Caught error:', err);
       if (err instanceof Error && err.name === 'AbortError') {
-        // Cancelled by user
+        console.log('[useReportGeneration] Request was aborted');
         setIsGenerating(false);
       } else {
-        console.error('Report generation error:', err);
+        console.error('[useReportGeneration] Setting error state:', err instanceof Error ? err.message : '报告生成失败');
         setError(err instanceof Error ? err.message : '报告生成失败');
         setIsGenerating(false);
       }
     } finally {
+      console.log('[useReportGeneration] Finally block, generatedReport:', !!generatedReport);
       abortControllerRef.current = null;
     }
 
