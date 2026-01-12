@@ -4,7 +4,7 @@
  * v4.2: Barrel export for all report workflow nodes.
  */
 
-export { checkDataAvailabilityNode } from './check-data-availability';
+export { checkDataAvailabilityNode } from './data-availability-check';
 export { gatherMetricsNode } from './gather-metrics';
 export { gatherContextNode } from './gather-context';
 export { analyzeSectionsNode } from './analyze-sections';
