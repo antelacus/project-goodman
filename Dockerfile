@@ -81,6 +81,9 @@ COPY --from=builder /app/public ./public
 COPY --from=builder /app/.next/standalone ./
 COPY --from=builder /app/.next/static ./.next/static
 
+# Copy prompt templates (required at runtime by src/lib/prompts/index.ts)
+COPY --from=builder /app/src/lib/prompts ./src/lib/prompts
+
 # Set correct permissions
 USER nextjs
 

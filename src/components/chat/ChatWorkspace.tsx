@@ -145,6 +145,9 @@ export default function ChatWorkspace() {
     });
 
     const handleSendMessage = async (text: string, files: File[], documentIds: string[]) => {
+        console.log('[ChatWorkspace] handleSendMessage called, text:', text);
+        console.log('[ChatWorkspace] reportConfig.state.isActive:', reportConfig.state.isActive);
+
         // 1. Optimistically add user message
         const userMsg: ChatMessage = {
             role: 'user',
@@ -155,8 +158,10 @@ export default function ChatWorkspace() {
 
         // v4.2: Check if in report configuration mode
         if (reportConfig.state.isActive) {
+            console.log('[ChatWorkspace] In report config mode, calling handleUserResponse');
             // Handle as report configuration response
             const result = await reportConfig.handleUserResponse(text);
+            console.log('[ChatWorkspace] handleUserResponse result:', result);
 
             // Add agent response if any
             if (result.agentResponse) {
@@ -247,8 +252,8 @@ export default function ChatWorkspace() {
                             savedReportPdfUrl={savedReportPdfUrl}
                         />
 
-                        {/* v4.2: Report Progress (shown during generation) */}
-                        {isGeneratingReport && (
+                        {/* v4.2: Report Progress (shown during generation or on error) */}
+                        {(isGeneratingReport || reportError) && (
                             <div className="flex items-start gap-4 mt-4">
                                 <div className="flex-shrink-0 w-8 h-8" />
                                 <div className="flex-1 max-w-[85%]">

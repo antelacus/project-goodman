@@ -183,13 +183,17 @@ export function useReportConfig(): UseReportConfigReturn {
    */
   const handleUserResponse = useCallback(
     async (message: string): Promise<HandleUserResponseResult> => {
+      console.log('[useReportConfig] handleUserResponse called, state.isActive:', state.isActive);
+
       if (!state.isActive) {
+        console.log('[useReportConfig] Config not active, returning empty');
         return {};
       }
 
       setState(prev => ({ ...prev, isProcessing: true }));
 
       try {
+        console.log('[useReportConfig] Making API call with:', { message, year: state.year, comparisonYear: state.comparisonYear });
         // Call parse-config API
         const response = await fetch('/api/reports/parse-config', {
           method: 'POST',

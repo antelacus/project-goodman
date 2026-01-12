@@ -34,22 +34,27 @@ const openai = new OpenAI({
 
 export async function POST(req: NextRequest) {
   const requestId = req.headers.get('x-request-id') || `parse-config-${Date.now()}`;
+  console.log('[parse-config] Request received:', requestId);
 
   try {
     // 1. Session validation - ensureSession creates guest session if needed
     // We don't need the session data for this endpoint, just need a valid session
     await ensureSession(req);
+    console.log('[parse-config] Session validated');
 
     // 2. Parse and validate request body
     let body: unknown;
     try {
       body = await req.json();
+      console.log('[parse-config] Body parsed:', JSON.stringify(body));
     } catch {
+      console.error('[parse-config] JSON parse failed');
       return createErrorResponse('无效的请求格式', requestId, 400);
     }
 
     const validation = validateRequest(ReportConfigParseSchema, body);
     if (!validation.success) {
+      console.error('[parse-config] Validation failed:', validation.error);
       return createErrorResponse(validation.error, requestId, 400);
     }
 

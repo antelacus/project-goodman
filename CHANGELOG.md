@@ -20,6 +20,22 @@
 
 ---
 
+## [4.2.1] - 2026-01-12
+
+### 修复
+
+- **报告生成 Docker 部署问题**: 修复生产环境中 prompt 模板文件未包含在 Docker 镜像中的问题
+  - 在 Dockerfile 中添加 `src/lib/prompts/` 目录的复制步骤
+
+- **报告生成进度条消失问题**: 修复生成过程中发生错误时进度条立即消失、无法显示错误信息的问题
+  - 进度条现在在出错时保持显示，并展示错误详情
+
+- **CSP 阻止 Cloudflare Analytics**: 更新 Content Security Policy 以允许 Cloudflare Web Analytics
+  - `script-src` 添加 `https://static.cloudflareinsights.com`
+  - `connect-src` 添加 `https://cloudflareinsights.com`
+
+---
+
 ## [4.2.0] - 2026-01-12
 
 ### 新增
