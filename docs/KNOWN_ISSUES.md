@@ -1,10 +1,15 @@
 # Known Issues & Gotchas
 
-> **Last Updated**: 2026-01-09 (Merged UI issues into v4.4 planning)
+> **Last Updated**: 2026-01-12 (Added Reports section)
 
 ## Quick Actions
 
 - **Data Extract**: Sometimes fails to extract data from documents; intermittent issue, needs more observation to identify root cause
+
+## Reports
+
+- **Generation time not tracked**: `generation_time_ms` field in reports table is not populated; the workflow doesn't track elapsed time *(minor enhancement)*
+- **PDF generation delay**: PDF generation with Chinese fonts takes 2-4 seconds; observable in dev environment but acceptable in production *(monitor post-deployment)*
 
 ## Document Processing
 
@@ -16,7 +21,7 @@
 ## Database
 
 - Vector index (IVFFlat) not yet created due to small data volume (<1000 chunks)
-- 20 database indexes currently unused - may optimize after production usage analysis
+- 23 database indexes currently unused - may optimize after production usage analysis
 - 4 RPC functions have mutable search_path warnings (not critical for service-role access)
 - **RLS not enabled** on `users` and `guest_activity` tables - acceptable since app uses service role key server-side only
 - 9 tables have permissive RLS policies (`USING (true)`) - intentional for service role access
@@ -42,3 +47,7 @@
 - Docker is for production only; use `npm run dev` for local development
 - Environment variables with `$` characters need escaping in `.env.local`
 - Supabase `.temp/` directory is gitignored; regenerated automatically
+
+## Testing
+
+- Some test scripts are outdated and may not work.
