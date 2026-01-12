@@ -233,6 +233,44 @@ export const ReportIdParamSchema = z.object({
 
 export type ReportIdParam = z.infer<typeof ReportIdParamSchema>;
 
+/**
+ * Report Configuration Parse Request
+ * POST /api/reports/parse-config
+ * Used for conversational report configuration
+ */
+export const ReportConfigParseSchema = z.object({
+    userMessage: z
+        .string()
+        .min(1, '消息不能为空')
+        .max(500, '消息过长'),
+    currentConfig: z.object({
+        year: z.string().regex(/^\d{4}$/, '年份格式错误'),
+        comparisonYear: z.string().regex(/^\d{4}$/).nullable(),
+    }),
+    availableYears: z.array(z.string().regex(/^\d{4}$/)),
+});
+
+export type ReportConfigParseRequest = z.infer<typeof ReportConfigParseSchema>;
+
+/**
+ * Report Configuration Parse Response Intent
+ */
+export const ReportConfigIntentSchema = z.object({
+    intent: z.enum([
+        'confirm',
+        'change_year',
+        'change_comparison',
+        'remove_comparison',
+        'cancel',
+        'unclear',
+    ]),
+    year: z.string().nullable(),
+    comparisonYear: z.string().nullable(),
+    clarificationNeeded: z.string().nullable(),
+});
+
+export type ReportConfigIntent = z.infer<typeof ReportConfigIntentSchema>;
+
 // =============================================================================
 // Validation Helper
 // =============================================================================

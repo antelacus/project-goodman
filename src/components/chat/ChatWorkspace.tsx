@@ -4,10 +4,11 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { useStreamingChat } from '@/hooks/useStreamingChat';
 import { useReportGeneration } from '@/hooks/useReportGeneration';
+import { useReportConfig } from '@/hooks/useReportConfig';
 import MessageList from './MessageList';
 import ChatInput from './ChatInput';
 import GuestBanner from './GuestBanner';
-import { ReportYearSelector, ReportProgress } from '@/components/reports';
+import { ReportProgress } from '@/components/reports';
 import type { ChatMessage } from '@/types/message';
 
 export default function ChatWorkspace() {
@@ -19,7 +20,6 @@ export default function ChatWorkspace() {
     const [loadedSessionId, setLoadedSessionId] = useState<string | null>(null);
 
     // v4.2: Report generation via hook
-    const [showReportSelector, setShowReportSelector] = useState(false);
     const {
         isGenerating: isGeneratingReport,
         phases: reportPhases,
@@ -29,8 +29,11 @@ export default function ChatWorkspace() {
         savedPdfUrl: savedReportPdfUrl,
         startGeneration,
         saveReport,
-        cancel: cancelReport,
+        reset: resetReportGeneration,
     } = useReportGeneration();
+
+    // v4.2: Conversational report configuration (PRD Section 3.5)
+    const reportConfig = useReportConfig();
 
     // Load session messages when URL session parameter changes
     useEffect(() => {
@@ -69,29 +72,24 @@ export default function ChatWorkspace() {
         }
     }, [urlSessionId, loadedSessionId]);
 
-    // v4.2: Report request handler - shows year selector
-    const handleRequestReport = useCallback(() => {
-        setShowReportSelector(true);
-    }, []);
+    // v4.2: Report request handler - start conversational configuration
+    const handleRequestReport = useCallback(async () => {
+        // Start conversational config flow
+        const initialMessage = await reportConfig.startConfig();
 
-    // v4.2: Cancel report generation
-    const handleCancelReport = useCallback(() => {
-        setShowReportSelector(false);
-        cancelReport();
-    }, [cancelReport]);
+        if (initialMessage) {
+            // Add agent's initial proposal to chat
+            const agentMsg: ChatMessage = {
+                role: 'assistant',
+                content: initialMessage,
+                id: Date.now().toString(),
+            };
+            setMessages(prev => [...prev, agentMsg]);
+        }
+    }, [reportConfig]);
 
-    // v4.2: Start report generation using hook
+    // v4.2: Start report generation (called after user confirms config)
     const handleGenerateReport = useCallback(async (year: string, comparisonYear?: string) => {
-        setShowReportSelector(false);
-
-        // Add user message indicating report request
-        const userMsg: ChatMessage = {
-            role: 'user',
-            content: `请生成${year}年度财务分析报告${comparisonYear ? `（与${comparisonYear}年对比）` : ''}`,
-            id: Date.now().toString(),
-        };
-        setMessages(prev => [...prev, userMsg]);
-
         // Start generation via hook - it handles SSE parsing internally
         const generatedReport = await startGeneration(year, comparisonYear);
 
@@ -155,6 +153,32 @@ export default function ChatWorkspace() {
         };
         setMessages(prev => [...prev, userMsg]);
 
+        // v4.2: Check if in report configuration mode
+        if (reportConfig.state.isActive) {
+            // Handle as report configuration response
+            const result = await reportConfig.handleUserResponse(text);
+
+            // Add agent response if any
+            if (result.agentResponse) {
+                const agentMsg: ChatMessage = {
+                    role: 'assistant',
+                    content: result.agentResponse,
+                    id: Date.now().toString(),
+                };
+                setMessages(prev => [...prev, agentMsg]);
+            }
+
+            // Start generation if user confirmed
+            if (result.shouldStartGeneration && result.finalConfig) {
+                await handleGenerateReport(
+                    result.finalConfig.year,
+                    result.finalConfig.comparisonYear
+                );
+            }
+
+            return; // Don't send to regular chat flow
+        }
+
         // 2. Convert files to expected format
         const fileData = await Promise.all(files.map(async (file) => {
             return new Promise<{ name: string; type: string; content: string | ArrayBuffer | null }>((resolve) => {
@@ -170,12 +194,12 @@ export default function ChatWorkspace() {
             });
         }));
 
-        // 3. Send
+        // 3. Send to regular chat flow
         await sendMessage(text, fileData, documentIds);
     };
 
     const hasMessages = messages.length > 0;
-    const isDisabled = isStreaming || isGeneratingReport;
+    const isDisabled = isStreaming || isGeneratingReport || reportConfig.state.isProcessing;
 
     return (
         <div className="flex flex-col h-full bg-neutral-50 relative overflow-hidden font-sans">
@@ -192,18 +216,6 @@ export default function ChatWorkspace() {
                 </div>
             )}
 
-            {/* v4.2: Report Year Selector Modal */}
-            {showReportSelector && (
-                <div className="absolute inset-0 z-30 flex items-center justify-center bg-black/20 backdrop-blur-sm">
-                    <div className="max-w-md w-full mx-4">
-                        <ReportYearSelector
-                            onGenerate={handleGenerateReport}
-                            onCancel={handleCancelReport}
-                            isGenerating={false}
-                        />
-                    </div>
-                </div>
-            )}
 
             {!hasMessages && !isLoadingSession ? (
                 /* Zero State: Centered */
@@ -251,12 +263,21 @@ export default function ChatWorkspace() {
                     </div>
 
                     <div className="w-full pb-4 pt-2">
+                        {/* v4.2: Report config mode indicator (above input) */}
+                        {reportConfig.state.isActive && (
+                            <div className="text-center mb-2">
+                                <span className="inline-flex items-center gap-1.5 text-xs text-blue-600 bg-blue-50 px-2.5 py-1 rounded-full border border-blue-100">
+                                    <span className="w-1.5 h-1.5 bg-blue-500 rounded-full animate-pulse"></span>
+                                    报告配置中 · 输入"确认"开始生成，或调整年份设置
+                                </span>
+                            </div>
+                        )}
                         <ChatInput
                             onSendMessage={handleSendMessage}
                             disabled={isDisabled}
                             onRequestReport={handleRequestReport}
                         />
-                        {sessionId && (
+                        {sessionId && !reportConfig.state.isActive && (
                             <div className="text-[10px] text-center text-slate-300 mt-2 font-mono">
                                 会话 ID: {sessionId}
                             </div>
