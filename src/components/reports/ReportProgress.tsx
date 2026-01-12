@@ -21,7 +21,7 @@ export const ReportProgress: React.FC<ReportProgressProps> = ({
   return (
     <div className="bg-white border border-neutral-200 rounded-lg p-4 shadow-sm">
       <h3 className="text-sm font-medium text-neutral-700 mb-4">
-        正在生成报告...
+        {error ? '报告生成失败' : '正在生成报告...'}
       </h3>
 
       {/* Phase Progress */}
