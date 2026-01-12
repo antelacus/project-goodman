@@ -8,8 +8,20 @@
  * Shown when user clicks "生成报告" from tools menu.
  */
 export function getInitialConfigMessage(year: string, comparisonYear?: string): string {
-  return `我将为您生成综合财务分析报告，默认配置如下：
+  return `**财务分析报告生成工具**
 
+此工具将基于您上传的财务报表数据，自动生成一份综合财务分析报告，包含：
+• **流动性分析** - 流动比率、速动比率、现金比率等
+• **偿债能力分析** - 资产负债率、利息保障倍数等
+• **盈利能力分析** - 净利润率、ROE、ROA等
+• **运营效率分析** - 应收账款周转率、存货周转率等
+• **综合评价** - 关键发现、风险警示、改进建议
+
+报告生成后，您可以将其保存为 **PDF 格式** 下载留存。
+
+---
+
+默认配置如下：
 • 分析年份: ${year}
 • 对比年份: ${comparisonYear || '无'} (可选)
 

@@ -8,4 +8,3 @@ export { ReportSummary } from './ReportSummary';
 export { ReportSection } from './ReportSection';
 export { ReportProgress } from './ReportProgress';
 export { ReportActions } from './ReportActions';
-export { ReportYearSelector } from './ReportYearSelector';

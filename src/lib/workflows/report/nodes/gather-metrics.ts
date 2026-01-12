@@ -9,13 +9,26 @@
  * comparison year are pushed into the array for complete data lineage.
  */
 
-import { toolRegistry } from '@/lib/tools/registry';
+import { toolRegistry, registerUnifiedTools } from '@/lib/tools';
 import type { ReportWorkflowState, MetricResult } from '../state';
 import {
   getAllMetricNames,
   getMetricDisplayName,
   formatMetricValue,
 } from '../constants';
+
+// ============================================================================
+// Tool Registration (runs once per process)
+// ============================================================================
+
+let toolsRegistered = false;
+
+function ensureToolsRegistered(): void {
+  if (!toolsRegistered) {
+    registerUnifiedTools();
+    toolsRegistered = true;
+  }
+}
 
 /**
  * Execute a single metric tool for a given year
@@ -106,6 +119,9 @@ async function gatherMetricsForYear(
 export async function gatherMetricsNode(
   state: ReportWorkflowState
 ): Promise<Partial<ReportWorkflowState>> {
+  // Ensure tools are registered before execution
+  ensureToolsRegistered();
+
   const { year, comparisonYear } = state.input;
 
   try {
