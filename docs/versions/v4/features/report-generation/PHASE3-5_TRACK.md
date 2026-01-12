@@ -341,82 +341,121 @@ TypeScript 编译: 通过 ✓
 
 ---
 
-### Task 7: 聊天集成 ✅
+### Task 7: 聊天集成 🔄 (重构为对话式配置)
 **修改文件**:
 - `src/components/chat/ChatInput.tsx`
 - `src/components/chat/ChatWorkspace.tsx`
 - `src/components/chat/MessageList.tsx`
 
 **新增文件**:
-- `src/components/reports/ReportYearSelector.tsx`
 - `src/app/api/financial-data/years/route.ts`
+- `src/app/api/reports/parse-config/route.ts` (NEW: 对话式配置)
+- `src/hooks/useReportConfig.ts` (NEW: 配置状态管理)
+- `src/lib/prompts/report-config-intent.txt` (NEW: 意图解析提示词)
+- `src/lib/prompts/report-config-messages.ts` (NEW: 消息模板)
 
-#### 7.1 ChatInput 修改
+**废弃文件** (对话式配置完成后删除):
+- `src/components/reports/ReportYearSelector.tsx`
+
+#### 7.1 ChatInput 修改 ✅
 - [x] 添加"工具"下拉菜单
 - [x] 添加"生成报告"选项
 - [x] 添加 `onRequestReport` 回调 prop
 - [x] 处理模式切换
 
-#### 7.2 ChatWorkspace 修改
+#### 7.2 ChatWorkspace 修改 ✅
 - [x] 添加报告模式状态
-- [x] 内联实现 SSE 流解析 (hook 提取在 Task 9)
 - [x] 渲染 ReportProgress (生成中)
-- [x] 渲染 ReportYearSelector (选择年度)
 - [x] 报告完成后添加为聊天消息
+- [x] ~~渲染 ReportYearSelector 模态框~~ → 改为对话式配置
+- [x] 集成 useReportConfig hook
+- [x] 拦截用户消息用于配置解析
+- [x] 添加 Agent 配置提议消息
 
-#### 7.3 MessageList 修改
+#### 7.3 MessageList 修改 ✅
 - [x] 检测 `messageType === 'report'` 类型消息
 - [x] 渲染 ReportMessage 组件
 - [x] 传递保存/下载 PDF 相关 props
 
-#### 7.4 ReportYearSelector 组件 (新增)
-- [x] 创建年份选择组件
-- [x] 从 `/api/financial-data/years` 获取可用年份
-- [x] 支持主年份和对比年份选择
-- [x] 生成按钮触发报告生成
+#### 7.4 对话式配置系统 (PRD Section 3.5) ✅
+**原设计**: 用户点击"生成报告" → Agent 在聊天中提议配置 → 用户自然语言回复 → 开始生成
 
-#### 7.5 API: /api/financial-data/years (新增)
+- [x] 创建 `/api/reports/parse-config` - LLM 解析用户意图
+- [x] 创建 `useReportConfig` hook - 配置状态机
+- [x] 创建 `report-config-intent.txt` - 意图解析提示词
+- [x] 创建 `report-config-messages.ts` - Agent 回复模板
+- [x] 修改 ChatWorkspace 支持对话式配置流程
+- [ ] 删除 ReportYearSelector 模态框 (待测试完成后删除)
+
+**对话流程示例**:
+```
+User: [点击 工具 > 生成报告]
+
+Agent: 我将为您生成综合财务分析报告，默认配置如下：
+       • 分析年份: 2024
+       • 对比年份: 2023 (可选)
+       如需调整请告诉我，或回复"确认"开始生成。
+
+User: 改成2023年
+Agent: 已更新配置：分析年份: 2023，对比年份: 2022。确认无误请回复"确认"。
+
+User: 不要对比年份
+Agent: 已移除对比年份，将只分析 2023 年数据。确认无误请回复"确认"开始生成。
+
+User: 确认
+[开始 SSE 流式生成...]
+```
+
+#### 7.5 API: /api/financial-data/years ✅
 - [x] 查询 financial_data 表获取唯一年份
 - [x] 按年份降序排列
 - [x] 返回可用年份列表
 
-**实现细节**:
+**实现细节** (2026-01-12 对话式配置重构完成):
 ```
-ChatInput.tsx:
+ChatInput.tsx: ✅ (无需修改)
 - 新增 `onRequestReport?: () => void` prop
-- 将 "工具" 按钮从 disabled 改为可点击下拉菜单
-- 工具菜单包含 "生成报告" 选项 (FileText 图标，蓝色主题)
+- 工具菜单包含 "生成报告" 选项 (FileText 图标)
 - 点击触发 `onRequestReport` 回调
-- 新增 `isToolsMenuOpen` 状态和 `toolsMenuRef` 引用
-- 使用 click outside 关闭菜单
 
-ChatWorkspace.tsx:
-- 报告模式状态: showReportSelector, isGeneratingReport, reportPhases,
-  currentReportSection, reportError, currentReport, isSavingReport, savedReportPdfUrl
-- handleRequestReport: 显示年份选择器
-- handleCancelReport: 取消并重置状态
-- handleGenerateReport: 调用 /api/reports/generate，解析 SSE 流
-- handleReportSSEEvent: 处理 phase/section/complete/error 事件
-- handleSaveReport: 调用 /api/reports/save 保存报告和生成 PDF
-- UI: ReportYearSelector 模态框 (z-30), ReportProgress 在消息列表下方
+ChatWorkspace.tsx: ✅ (重构完成)
+- 移除: showReportSelector 状态, ReportYearSelector 模态框导入
+- 新增: useReportConfig hook 集成
+- handleRequestReport: 调用 reportConfig.startConfig()，添加 Agent 配置消息
+- handleSendMessage: 拦截配置模式中的消息，调用 reportConfig.handleUserResponse()
+- 根据返回结果添加 Agent 回复或开始生成
+- 新增配置模式指示器 "报告配置中 - 请在聊天中输入您的选择"
 
-MessageList.tsx:
-- 新增 props: onSaveReport, isSavingReport, savedReportPdfUrl
+MessageList.tsx: ✅ (无需修改)
 - 检测 msg.messageType === 'report' 并渲染 ReportMessage
-- 报告消息使用 95% 宽度以显示完整内容
 
-message.ts 类型扩展:
-- ChatMessage 新增 messageType?: 'text' | 'report'
-- ChatMessage 新增 reportContent?: ReportContent
-- MessageListProps 新增报告相关 props
+useReportConfig.ts: ✅ (新建)
+- startConfig(): 获取可用年份，返回初始配置消息
+- handleUserResponse(msg): 调用 parse-config API，返回 Agent 回复或 shouldStartGeneration
+- cancel(): 重置状态
+- state: { isActive, year, comparisonYear, availableYears, isProcessing }
 
-ReportYearSelector.tsx:
-- 蓝色渐变 header 设计
-- 自动从 API 获取可用年份
-- 默认选择最新年份和前一年作为对比
-- 年份验证 (主年份必填，对比年份不能与主年份相同)
-- 加载中/错误状态处理
-- "开始生成" 按钮带 Loader2 动画
+/api/reports/parse-config: ✅ (新建)
+- POST 接收用户消息 + 当前配置 + 可用年份
+- 使用 GPT-4o-mini 解析意图 (temperature: 0.1, JSON 模式)
+- 支持意图: confirm/change_year/change_comparison/remove_comparison/cancel/unclear
+- 返回解析结果和新配置
+
+report-config-intent.txt: ✅ (新建)
+- 中文提示词模板，支持年份提取和意图识别
+- 处理"去年"、"前年"等相对年份表达
+
+report-config-messages.ts: ✅ (新建)
+- getInitialConfigMessage(): 初始配置提议
+- getConfigUpdatedMessage(): 配置更新确认
+- getComparisonRemovedMessage(): 移除对比年份
+- getCancelledMessage(): 取消配置
+- getUnclearIntentMessage(): 澄清请求
+- getGenerationStartingMessage(): 开始生成提示
+
+src/lib/validation/api-schemas.ts: ✅ (更新)
+- ReportConfigParseSchema: 请求验证
+- ReportConfigIntentSchema: 响应验证
 
 TypeScript 编译: 通过 ✓
 ```

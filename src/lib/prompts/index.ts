@@ -14,3 +14,22 @@ export function getDataExtractPrompt(): string {
   const promptTemplate = loadPromptTemplate('data-extract.txt');
   return promptTemplate.replace(/\r\n/g, '\n');
 }
+
+/**
+ * 生成报告配置意图解析的提示词。
+ * Used by: /api/reports/parse-config
+ */
+export function getReportConfigIntentPrompt(
+  year: string,
+  comparisonYear: string | null,
+  availableYears: string[],
+  userMessage: string
+): string {
+  const promptTemplate = loadPromptTemplate('report-config-intent.txt');
+  return promptTemplate
+    .replace('{{year}}', year)
+    .replace('{{comparisonYear}}', comparisonYear || '无')
+    .replace('{{availableYears}}', availableYears.join('、'))
+    .replace('{{userMessage}}', userMessage)
+    .replace(/\r\n/g, '\n');
+}
