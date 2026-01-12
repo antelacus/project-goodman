@@ -227,6 +227,20 @@ export function useReportGeneration(): UseReportGenerationReturn {
   }, [handleSSEEvent]);
 
   /**
+   * Fetch CSRF token from the server
+   */
+  const fetchCsrfToken = useCallback(async (): Promise<string | null> => {
+    try {
+      const response = await fetch('/api/auth/csrf');
+      const data = await response.json();
+      return data.success ? data.token : null;
+    } catch {
+      console.error('Failed to fetch CSRF token');
+      return null;
+    }
+  }, []);
+
+  /**
    * Save the current report to database and generate PDF
    *
    * Note: PDF generation with Chinese fonts + Supabase upload takes 2-4 seconds.
@@ -242,9 +256,18 @@ export function useReportGeneration(): UseReportGenerationReturn {
 
     setIsSaving(true);
     try {
+      // Fetch CSRF token for the request
+      const csrfToken = await fetchCsrfToken();
+      if (!csrfToken) {
+        throw new Error('无法获取安全令牌，请刷新页面重试');
+      }
+
       const response = await fetch('/api/reports/save', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          'x-csrf-token': csrfToken,
+        },
         body: JSON.stringify({
           content: report,
           year: report.year,
@@ -270,7 +293,7 @@ export function useReportGeneration(): UseReportGenerationReturn {
     } finally {
       setIsSaving(false);
     }
-  }, [report]);
+  }, [report, fetchCsrfToken]);
 
   /**
    * Reset all state to initial values

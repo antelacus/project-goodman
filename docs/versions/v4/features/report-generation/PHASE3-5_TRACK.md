@@ -3,7 +3,8 @@
 > **版本**: v4.2
 > **功能名称**: report-generation (财务分析报告生成)
 > **创建日期**: 2026-01-09
-> **状态**: 实现中
+> **完成日期**: 2026-01-12
+> **状态**: ✅ 完成
 
 ---
 
@@ -354,8 +355,8 @@ TypeScript 编译: 通过 ✓
 - `src/lib/prompts/report-config-intent.txt` (NEW: 意图解析提示词)
 - `src/lib/prompts/report-config-messages.ts` (NEW: 消息模板)
 
-**废弃文件** (对话式配置完成后删除):
-- `src/components/reports/ReportYearSelector.tsx`
+**废弃文件** (已删除 2026-01-12):
+- ~~`src/components/reports/ReportYearSelector.tsx`~~ ✅ 已删除
 
 #### 7.1 ChatInput 修改 ✅
 - [x] 添加"工具"下拉菜单
@@ -385,7 +386,7 @@ TypeScript 编译: 通过 ✓
 - [x] 创建 `report-config-intent.txt` - 意图解析提示词
 - [x] 创建 `report-config-messages.ts` - Agent 回复模板
 - [x] 修改 ChatWorkspace 支持对话式配置流程
-- [ ] 删除 ReportYearSelector 模态框 (待测试完成后删除)
+- [x] 删除 ReportYearSelector 模态框 (2026-01-12 已删除)
 
 **对话流程示例**:
 ```
@@ -609,24 +610,88 @@ TypeScript 编译: 通过 ✓
 
 ## 测试清单
 
-### 单元测试
-- [ ] 工作流节点单元测试
-- [ ] 变化值计算测试 (正、负、N/A)
-- [ ] PDF 生成测试
+### 单元测试 ✅ (19/19 通过)
+**文件**: `tests/unit/report-workflow.test.ts`
+**命令**: `npx tsx tests/unit/report-workflow.test.ts`
 
-### 集成测试
-- [ ] `/api/reports/generate` SSE 端到端测试
-- [ ] `/api/reports/save` 保存和 PDF 测试
-- [ ] 访客速率限制测试
+- [x] REPORT_SECTIONS 常量结构 (5 sections, 22 metrics)
+- [x] 指标显示名称映射 (中文名称)
+- [x] 指标值格式化 (倍数、百分比、天数)
+- [x] 配置消息生成 (初始、更新、取消等)
+- [x] 工具注册 (27 tools including financial metrics)
+- [x] 工具元数据验证
 
-### 手动测试
-- [ ] 从工具菜单触发"生成报告"
-- [ ] 对话式配置（年份选择）
-- [ ] 报告在聊天区域渲染，章节可折叠
-- [ ] 保存报告 → 出现在文档页面
-- [ ] PDF 下载正常
-- [ ] 年度对比显示正确
-- [ ] 数据缺失时的优雅处理
+### 集成测试 ✅ (12/12 通过)
+**文件**: `tests/integration/report-generation.test.ts`
+**命令**: `TEST_URL=http://localhost:3001 npx tsx tests/integration/report-generation.test.ts`
+
+- [x] `GET /api/financial-data/years` - 返回可用年份
+- [x] `POST /api/reports/parse-config` - 确认意图解析
+- [x] `POST /api/reports/parse-config` - 年份变更解析
+- [x] `POST /api/reports/parse-config` - 取消意图解析
+- [x] `POST /api/reports/generate` - SSE 流式生成
+- [x] 生成报告结构验证 (5 sections)
+- [x] `POST /api/reports/save` - CSRF 验证 (无 token 返回 403)
+- [x] `POST /api/reports/save` - 正常保存 + PDF 生成
+- [x] `GET /api/reports` - 报告列表
+- [x] `GET /api/reports/[id]` - 单个报告详情
+- [x] `GET /api/reports/[id]` - 无效 ID 返回 404
+- [x] `GET /api/reports/[id]` - 无效 UUID 格式返回 400
+
+### 手动测试 ✅ (2026-01-12)
+- [x] 从工具菜单触发"生成报告"
+- [x] 对话式配置（年份选择）
+- [x] 报告在聊天区域渲染，章节可折叠
+- [x] 保存报告 → 出现在文档页面
+- [x] PDF 下载正常
+- [x] 年度对比显示正确
+- [x] 数据缺失时的优雅处理
+
+### 手动测试期间发现并修复的问题
+
+#### Issue 1: 配置消息缺少工具介绍 ✅
+**问题**: 点击"生成报告"后，Agent 直接显示配置选项，没有介绍报告功能。
+**修复**: 更新 `src/lib/prompts/report-config-messages.ts` 中的 `getInitialConfigMessage()`，添加：
+- 工具功能介绍（5类分析内容）
+- PDF 保存说明
+- 分隔线后显示配置选项
+
+#### Issue 2: 财务数据检索失败 ✅
+**问题**: 报告生成后所有指标显示 "N/A"，无法获取 2024/2023 年数据。
+**原因**: `gather-metrics.ts` 使用 `toolRegistry.execute()` 但未先注册工具。
+**修复**: 在 `src/lib/workflows/report/nodes/gather-metrics.ts` 添加：
+```typescript
+import { toolRegistry, registerUnifiedTools } from '@/lib/tools';
+
+let toolsRegistered = false;
+function ensureToolsRegistered(): void {
+  if (!toolsRegistered) {
+    registerUnifiedTools();
+    toolsRegistered = true;
+  }
+}
+
+// 在 gatherMetricsNode 开头调用 ensureToolsRegistered()
+```
+
+#### Issue 3: CSRF 验证失败 ✅
+**问题**: 保存报告时控制台报错 "CSRF validation failed"。
+**原因**: `useReportGeneration.ts` 中 `saveReport()` 未获取和发送 CSRF token。
+**修复**: 在 `src/hooks/useReportGeneration.ts` 添加：
+```typescript
+const fetchCsrfToken = useCallback(async (): Promise<string | null> => {
+  const response = await fetch('/api/auth/csrf');
+  const data = await response.json();
+  return data.success ? data.token : null;
+}, []);
+
+// saveReport() 中在请求前获取 token 并添加 x-csrf-token header
+```
+
+#### Issue 4: PDF 生成性能 ⏸️
+**状态**: 延后到部署后观察
+**问题**: 开发环境下 PDF 生成耗时较长，可能导致 dev server 重载。
+**计划**: 部署到生产环境后再评估是否需要优化。
 
 ---
 
@@ -639,4 +704,5 @@ TypeScript 编译: 通过 ✓
 ---
 
 *文档创建: 2026-01-09*
-*状态: 待实现*
+*Phase 3-5 完成: 2026-01-12*
+*状态: ✅ 完成 - 准备进入 Phase 6 部署*
