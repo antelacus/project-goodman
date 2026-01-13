@@ -1,53 +1,55 @@
-# Known Issues & Gotchas
+# 已知问题
 
-> **Last Updated**: 2026-01-12 (Added Reports section)
+> **最后更新**: 2026-01-13
 
-## Quick Actions
+---
 
-- **Data Extract**: Sometimes fails to extract data from documents; intermittent issue, needs more observation to identify root cause
+## 快捷操作
 
-## Reports
+- **数据提取**: 偶尔无法从文档中提取数据；间歇性问题，需要更多观察以确定根本原因
 
-- **Generation time not tracked**: `generation_time_ms` field in reports table is not populated; the workflow doesn't track elapsed time *(minor enhancement)*
-- **PDF generation delay**: PDF generation with Chinese fonts takes 2-4 seconds; observable in dev environment but acceptable in production *(monitor post-deployment)*
+## 报告生成
 
-## Document Processing
+- **生成时间未记录**: reports 表中的 `generation_time_ms` 字段未填充；工作流未追踪耗时 *(小优化)*
+- **PDF 生成延迟**: 使用中文字体生成 PDF 需要 2-4 秒；在开发环境中可观察到，但生产环境可接受 *(部署后监控)*
 
-- PDF parsing fails with plain text content; use `.md` files for testing
-- Excel parsing only supports single sheet per file
-- TOC detection requires actual document body to be far enough from TOC (3000+ chars)
-- **OCR not supported**: PDFs must be searchable text format, not scanned images
+## 文档处理
 
-## Database
+- PDF 解析对纯文本内容会失败；测试时使用 `.md` 文件
+- Excel 解析每个文件仅支持单个工作表
+- 目录检测要求实际文档正文与目录距离足够远（3000+ 字符）
+- **不支持 OCR**: PDF 必须是可搜索文本格式，不能是扫描图片
 
-- Vector index (IVFFlat) not yet created due to small data volume (<1000 chunks)
-- 23 database indexes currently unused - may optimize after production usage analysis
-- 4 RPC functions have mutable search_path warnings (not critical for service-role access)
-- **RLS not enabled** on `users` and `guest_activity` tables - acceptable since app uses service role key server-side only
-- 9 tables have permissive RLS policies (`USING (true)`) - intentional for service role access
+## 数据库
 
-## Infrastructure
+- 由于数据量小（<1000 chunks），尚未创建向量索引（IVFFlat）
+- 23 个数据库索引目前未使用 - 可能在生产使用分析后优化
+- 4 个 RPC 函数有 mutable search_path 警告（对 service-role 访问非关键）
+- `users` 和 `guest_activity` 表**未启用 RLS** - 可接受，因为应用仅在服务端使用 service role key
+- 9 个表有宽松的 RLS 策略（`USING (true)`）- 这是为 service role 访问有意设置的
 
-- Redis in Docker container connects via `goodman-redis` hostname (not `localhost`)
-- Redis connection errors on startup are expected if Redis starts after app; app retries automatically
-- Docker networking requires proper `REDIS_URL` configuration in `.env`
+## 基础设施
 
-## Process Transparency
+- Docker 容器中的 Redis 通过 `goodman-redis` 主机名连接（非 `localhost`）
+- 如果 Redis 在应用之后启动，启动时 Redis 连接错误是预期的；应用会自动重试
+- Docker 网络需要在 `.env` 中正确配置 `REDIS_URL`
 
-- **Page-level sourcing not available**: Cannot link to specific page numbers where financial data was found *(future enhancement)*
-- **No process history**: Process events are only available during current response; not persisted for later review *(future enhancement)*
+## 过程透明化
+
+- **页面级溯源不可用**: 无法链接到找到财务数据的具体页码 *(未来增强)*
+- **无过程历史**: 过程事件仅在当前响应期间可用；不会持久化供后续查看 *(未来增强)*
 
 ## UI/UX
 
-- **Process Log source links**: Clicking document link in collapsible process log navigates to /documents page instead of opening file preview directly *(planned: v4.4)*
-- **Sidebar session sync**: New chat session doesn't appear in sidebar until page refresh; should show immediately when agent sends first response *(planned: v4.4)*
+- **过程日志来源链接**: 点击可折叠过程日志中的文档链接会导航到 /documents 页面，而非直接打开文件预览 *(计划: v4.3)*
+- **侧边栏会话同步**: 新聊天会话在刷新页面前不会出现在侧边栏；应在 Agent 发送第一条响应时立即显示 *(计划: v4.3)*
 
-## Development Notes
+## 开发说明
 
-- Docker is for production only; use `npm run dev` for local development
-- Environment variables with `$` characters need escaping in `.env.local`
-- Supabase `.temp/` directory is gitignored; regenerated automatically
+- Docker 仅用于生产环境；本地开发使用 `npm run dev`
+- `.env.local` 中包含 `$` 字符的环境变量需要转义
+- Supabase `.temp/` 目录已 gitignore；会自动重新生成
 
-## Testing
+## 测试
 
-- Some test scripts are outdated and may not work.
+- 部分测试脚本已过时，可能无法运行

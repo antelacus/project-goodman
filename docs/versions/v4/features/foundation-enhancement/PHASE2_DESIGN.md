@@ -28,21 +28,15 @@
 **方法**：审查现有文档结构，提出简化建议。
 
 **当前状态**：
-- `docs/` 目录下 58 个 markdown 文件
-- 版本文档分散在 `docs/versions/v*/features/` 下
+
+- 项目目录下存在大量 markdown 文件
+- 文件分散在不同目录之下
 - 每次版本更新需同步多个文档
+- 文档之间存在内容重叠、冲突、不一致等情况
 
 **输出**：在 PHASE3-5_TRACK.md 中记录建议。
 
-### A2: 更新 PRODUCT_ROADMAP.md
-
-**文件**：`docs/PRODUCT_ROADMAP.md`
-
-**变更内容**：
-- 更新"最后更新"日期
-- 标记 v4.0、v4.1、v4.2 为已发布（含日期）
-- 添加 v4.3、v4.4、v4.5 为计划项
-- 更正指标（报告类型：1，非 3）
+### A2: 更新过时的、多余的文档或其内容
 
 ---
 
@@ -68,6 +62,7 @@ export default defineConfig({
 ```
 
 **package.json 变更**：
+
 ```json
 {
   "devDependencies": {
@@ -94,6 +89,7 @@ npx lint-staged
 ```
 
 **package.json 变更**：
+
 ```json
 {
   "devDependencies": {
@@ -123,6 +119,7 @@ npx lint-staged
 | `src/hooks/useStreamingChat.ts` | 3+1 | Hook 依赖问题 |
 
 **修复策略**：
+
 1. 移除未使用的 imports/variables
 2. 使用库类型替换 `any`（Supabase、OpenAI 等）
 3. 修复 `prefer-const` 违规
@@ -137,6 +134,7 @@ npx lint-staged
 ### C1: 重新生成 TypeScript 类型
 
 **命令**：
+
 ```bash
 npx supabase gen types typescript --project-id mxybrzuxlsioqwsxyjeb > src/lib/database/types.ts
 ```
@@ -186,6 +184,7 @@ npx supabase gen types typescript --project-id mxybrzuxlsioqwsxyjeb > src/lib/da
 **文件变更**：
 
 1. **SidebarProvider.tsx**：
+
 ```typescript
 interface SidebarContextType {
   // 现有字段...
@@ -198,7 +197,8 @@ const refreshSessions = useCallback(() => {
 }, []);
 ```
 
-2. **Sidebar.tsx**：
+1. **Sidebar.tsx**：
+
 ```typescript
 const { refreshTrigger } = useSidebar();
 
@@ -207,7 +207,8 @@ useEffect(() => {
 }, [refreshTrigger]);
 ```
 
-3. **ChatWorkspace.tsx**：
+1. **ChatWorkspace.tsx**：
+
 ```typescript
 const { refreshSessions } = useSidebar();
 
@@ -227,6 +228,7 @@ useEffect(() => {
 **文件**：`src/components/chat/ProcessLog.tsx`
 
 **变更**：
+
 ```typescript
 // 之前
 const href = source.fileUrl || (source.documentId ? `/documents?id=${source.documentId}` : '#');
@@ -295,6 +297,7 @@ export function SkeletonMessage() {
 ```
 
 **使用位置**：
+
 - `ChatWorkspace.tsx` - 消息加载时
 - `Sidebar.tsx` - 会话列表加载时
 - `DocumentSelectModal.tsx` - 文档列表加载时
@@ -459,6 +462,7 @@ export default function GlobalError({
 ```
 
 **集成位置**：
+
 - `src/app/(workspace)/layout.tsx` - 包裹客户端 ErrorBoundary
 - `src/app/(workspace)/error.tsx` - 自动捕获服务端错误
 - `src/app/global-error.tsx` - 根布局错误兜底
@@ -562,11 +566,13 @@ export function useModalAccessibility({
 ```
 
 **应用到的模态框**：
+
 - `ExtractionModal.tsx`
 - `PasswordModal.tsx`
 - `DocumentSelectModal.tsx`
 
 **移动端视口处理**：
+
 ```typescript
 // 模态框内容容器
 className="max-h-[85dvh] overflow-y-auto"
