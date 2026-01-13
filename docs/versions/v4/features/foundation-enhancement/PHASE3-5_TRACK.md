@@ -13,17 +13,24 @@
 
 ## 实现任务
 
-### A. 文档更新
+### A. 文档更新 ✅
 
-#### A1: 文档系统审查
+#### A1: 文档系统审查 ✅
 
-- [ ] 审查现有文档结构（从 `~/.claude/CLAUDE.md` 开始）
-- [ ] 识别冗余、缺乏或过时的文档
-- [ ] 记录简化建议
+- [x] 审查全局 `~/.claude/CLAUDE.md` 结构
+- [x] 审查项目根目录文档 (`README.md`, `CLAUDE.md`, `CHANGELOG.md`)
+- [x] 审查 `docs/` 目录文档 (`PRODUCT_ROADMAP.md`, `KNOWN_ISSUES.md`, `TECHNICAL_DEBT.md`, `DEPLOYMENT_CHECKLIST.md`)
+- [x] 审查 `v4_DEVELOPMENT_PLAN.md`
+- [x] 识别问题：文档同步负担、职责不清、版本映射错误
 
-#### A2: 更新过时的、多余的文档或其内容
+#### A2: 更新过时的、多余的文档或其内容 ✅
 
-- [ ] 根据简化建议更新并实施
+- [x] 全局 CLAUDE.md：添加 "Sources of Truth" 表、"Changelog Management" 章节、"Post-Release Documentation"
+- [x] README.md：重写为用户指南（非技术文档）
+- [x] PRODUCT_ROADMAP.md：简化为战略层面，移除版本详情
+- [x] KNOWN_ISSUES.md：翻译为简体中文
+- [x] DEPLOYMENT_CHECKLIST.md：添加 Post-Release Documentation 章节
+- [x] v4_DEVELOPMENT_PLAN.md：修正 v4.3/v4.4 版本映射
 
 ---
 
@@ -144,9 +151,61 @@
 
 ## 实现记录
 
-### 2026-01-13
+### 2026-01-13 - 文档系统审查与重构
 
-*记录实现过程中的详细变更...*
+#### A1: 文档系统审查
+
+**审查范围**：
+- 全局 `~/.claude/CLAUDE.md`
+- 项目根目录：`README.md`, `CLAUDE.md`, `CHANGELOG.md`
+- `docs/` 目录：`PRODUCT_ROADMAP.md`, `KNOWN_ISSUES.md`, `TECHNICAL_DEBT.md`, `DEPLOYMENT_CHECKLIST.md`
+- `docs/versions/v4/v4_DEVELOPMENT_PLAN.md`
+
+**发现的问题**：
+
+1. **文档同步负担过重**：PRODUCT_ROADMAP.md 包含版本详情，与 DEVELOPMENT_PLAN.md 重复
+2. **缺少文档职责定义**：不清楚哪个文档是哪类信息的 "source of truth"
+3. **CHANGELOG.md 未被定义**：虽然在使用，但未在流程中正式定义
+4. **Phase 6 缺少文档更新步骤**：部署后应更新哪些文档不明确
+5. **v4_DEVELOPMENT_PLAN.md 版本映射错误**：v4.3 错误标记为 quick-actions
+
+#### A2: 文档更新实施
+
+**全局 CLAUDE.md 更新**：
+- 新增 "Documentation Sources of Truth" 表格，明确各文档职责
+- 简化 PRODUCT_ROADMAP.md 结构定义（仅保留战略层面）
+- 新增 "Changelog Management" 章节
+- Phase 6 新增 "Post-Release Documentation" 清单
+- 更新日期：2026-01-08 → 2026-01-13
+
+**README.md 重写**：
+- 从技术文档转型为用户指南
+- 新增用户角色说明（访客、管理员）
+- 新增功能详解（智能对话、报告生成、文档提取、文档管理）
+- 移除所有技术内容（技术栈、目录结构等移至 CLAUDE.md）
+
+**PRODUCT_ROADMAP.md 简化**：
+- 移除 "现状评估" 章节（版本特定）
+- 移除 "优先级排序的待办列表"（移至 DEVELOPMENT_PLAN）
+- 移除 "版本路线图" 详情（移至 DEVELOPMENT_PLAN）
+- 新增 "战略优先级" 章节（高层次主题，无版本绑定）
+- 更新用户反馈状态
+
+**KNOWN_ISSUES.md**：
+- 翻译为简体中文
+- 更新 UI/UX 问题计划版本：v4.4 → v4.3
+
+**DEPLOYMENT_CHECKLIST.md**：
+- 新增 6.1 "Post-Release Documentation" 子章节
+- 版本更新：v4.1 → v4.2
+
+**v4_DEVELOPMENT_PLAN.md 修正**：
+- 修正文档结构图：quick-actions → foundation-enhancement (v4.3)
+- 修正版本路线图：v4.3 = 项目基础增强，v4.4 = 快捷操作扩展
+- 重写 3.4 章节为 foundation-enhancement
+- 重写 3.5 章节为 quick-actions
+
+**提交**: `9491bdb` - docs(v4.3): comprehensive documentation review and restructuring
 
 ---
 
