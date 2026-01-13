@@ -1,7 +1,7 @@
 # Project Goodman - Deployment Checklist
 
-**Version**: v4.1
-**Last Updated**: 2026-01-08
+**Version**: v4.2
+**Last Updated**: 2026-01-13
 **Target Platform**: Docker on VPS + Supabase Cloud
 
 > This checklist covers the complete Phase 6 deployment process.
@@ -165,6 +165,15 @@ docker logs goodman 2>&1 | grep -i "redis"
 
 > **Only after deployment verification succeeds.**
 
+### 6.1 Post-Release Documentation
+
+- [ ] Update `CHANGELOG.md` with release details (if not done in pre-deployment)
+- [ ] Update `v*_DEVELOPMENT_PLAN.md` to mark feature as released
+- [ ] Remove resolved items from `KNOWN_ISSUES.md`
+- [ ] Archive completed PHASE3-5_TRACK.md tasks
+
+### 6.2 Merge & Tag
+
 - [ ] Merge to main: `git checkout main && git merge development && git push`
 - [ ] Tag release: `git tag -a vX.X.X -m "Release notes" && git push origin vX.X.X`
 - [ ] Return to development: `git checkout development`
@@ -235,6 +244,7 @@ These should always be true:
 
 | Version | Date | Changes |
 |---------|------|---------|
+| v4.2 | 2026-01-13 | Added post-release documentation section (6.1) to align with global CLAUDE.md |
 | v4.1 | 2026-01-08 | Fixed sequence: pre-deploy docs before deployment, post-deploy finalization after |
 | v4.0 | 2026-01-08 | Reorganized as Phase 6 execution guide |
 | v3.11 | 2026-01-07 | Updated for Docker/VPS |
@@ -242,4 +252,4 @@ These should always be true:
 
 ---
 
-*Project Goodman v4.1*
+*Project Goodman v4.2*
