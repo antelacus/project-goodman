@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
+import { useModalAccessibility } from '@/hooks/useModalAccessibility';
 
 /**
  * AdminPasswordTrigger Component
@@ -163,10 +164,24 @@ function AdminPasswordModal({
   onSubmit,
   onCancel,
 }: AdminPasswordModalProps) {
+  // Modal accessibility (focus trap, Escape key, ARIA)
+  const { modalRef, handleBackdropClick, ariaProps } = useModalAccessibility({
+    isOpen: true, // Always true when this component is rendered
+    onClose: onCancel,
+  });
+
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-white rounded-lg shadow-xl p-6 w-96">
-        <h2 className="text-xl font-bold mb-4 text-gray-800">管理员模式</h2>
+    <div
+      className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
+      onClick={handleBackdropClick}
+    >
+      <div
+        ref={modalRef}
+        className="bg-white rounded-lg shadow-xl p-6 w-96 max-h-[85dvh] overflow-y-auto"
+        {...ariaProps}
+        aria-labelledby="admin-modal-title"
+      >
+        <h2 id="admin-modal-title" className="text-xl font-bold mb-4 text-gray-800">管理员模式</h2>
 
         <form onSubmit={onSubmit}>
           <div className="mb-4">

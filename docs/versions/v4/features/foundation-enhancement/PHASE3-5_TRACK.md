@@ -114,38 +114,38 @@
 
 ---
 
-### F. 健壮性与可访问性
+### F. 健壮性与可访问性 ✅
 
-#### F1: Error Boundary 组件（关键优先）
+#### F1: Error Boundary 组件（关键优先） ✅
 
 > **重要性**：此功能为关键优先项，需优先实现。
 
 **客户端错误边界**：
 
-- [ ] 创建 `src/components/providers/ErrorBoundary.tsx`
-- [ ] 实现错误捕获逻辑
-- [ ] 实现 console.error 日志
-- [ ] 实现默认错误 UI（重试按钮）
-- [ ] 开发模式显示错误详情
-- [ ] 在 `layout.tsx` 中包裹内容
+- [x] 创建 `src/components/providers/ErrorBoundary.tsx`
+- [x] 实现错误捕获逻辑
+- [x] 实现 console.error 日志
+- [x] 实现默认错误 UI（重试按钮）
+- [x] 开发模式显示错误详情
+- [x] 在 `layout.tsx` 中包裹内容
 
 **服务端/异步组件错误**：
 
-- [ ] 创建 `src/app/(workspace)/error.tsx`
-- [ ] 创建 `src/app/global-error.tsx`
+- [x] 创建 `src/app/(workspace)/error.tsx`
+- [x] 创建 `src/app/global-error.tsx`
 
-#### F2-F4: 模态框可访问性
+#### F2-F4: 模态框可访问性 ✅
 
-- [ ] 创建 `src/hooks/useModalAccessibility.ts`
-- [ ] 实现 Escape 键关闭
-- [ ] 实现焦点陷阱（Tab 循环）
-- [ ] 实现焦点保存/恢复
-- [ ] 实现点击外部关闭
-- [ ] 更新 `ExtractionModal.tsx`
-- [ ] 更新 `PasswordModal.tsx`
-- [ ] 更新 `DocumentSelectModal.tsx`
-- [ ] 添加 ARIA 属性
-- [ ] 添加移动端视口处理 (`max-h-[85dvh]`)
+- [x] 创建 `src/hooks/useModalAccessibility.ts`
+- [x] 实现 Escape 键关闭
+- [x] 实现焦点陷阱（Tab 循环）
+- [x] 实现焦点保存/恢复
+- [x] 实现点击外部关闭
+- [x] 更新 `ExtractionModal.tsx`
+- [x] 更新 `PasswordModal.tsx`
+- [x] 更新 `DocumentSelectModal.tsx`
+- [x] 添加 ARIA 属性
+- [x] 添加移动端视口处理 (`max-h-[85dvh]`)
 
 ---
 
@@ -249,6 +249,63 @@
 - `src/app/api/chat/stream/route.ts` - 移除未使用导入，修复 any 类型
 - `src/hooks/useStreamingChat.ts` - 重构 useCallback 依赖，修复 error 类型
 - 其他文件：移除未使用导入/变量
+
+**验证**：
+- `npm run lint` → 0 errors
+- `npm run build` → 成功
+
+### 2026-01-14 - 健壮性与可访问性实现
+
+#### F1: Error Boundary 组件
+
+**创建的文件**：
+
+1. `src/components/providers/ErrorBoundary.tsx` - React class 组件，客户端错误边界
+   - `getDerivedStateFromError` 捕获渲染错误
+   - `componentDidCatch` 记录错误日志
+   - 默认错误 UI：品牌黄色警告图标、重试按钮
+   - 开发模式显示错误详情
+
+2. `src/app/(workspace)/error.tsx` - Next.js 服务端错误页
+   - 捕获工作区路由的服务端/异步错误
+   - 使用 `reset` 函数提供重新加载功能
+
+3. `src/app/global-error.tsx` - 全局错误兜底
+   - 根布局错误的最终兜底
+   - 包含完整 html/body 结构
+
+**集成位置**：
+- `src/app/(workspace)/layout.tsx` - ErrorBoundary 包裹主内容区域
+- 导出更新：`src/components/providers/index.ts`
+
+#### F2-F4: 模态框可访问性
+
+**创建的文件**：
+
+`src/hooks/useModalAccessibility.ts` - 统一的模态框可访问性 Hook
+
+**功能实现**：
+- Escape 键关闭：监听 `keydown` 事件
+- 焦点陷阱：Tab 键在可聚焦元素间循环
+- 焦点保存/恢复：打开时保存、关闭时恢复
+- 点击外部关闭：`handleBackdropClick` 处理
+
+**更新的模态框**：
+
+1. `ExtractionModal.tsx`
+   - 添加 `useModalAccessibility` hook
+   - 添加 `aria-labelledby="extraction-modal-title"`
+   - 更新 `max-h-[85vh]` → `max-h-[85dvh]`
+
+2. `PasswordModal.tsx`
+   - 添加 `useModalAccessibility` hook
+   - 添加 `aria-labelledby="admin-modal-title"`
+   - 添加 `max-h-[85dvh]` 移动端视口处理
+
+3. `DocumentSelectModal.tsx`
+   - 添加 `useModalAccessibility` hook
+   - 添加 `aria-labelledby="document-select-modal-title"`
+   - 更新 `max-h-[90vh]` → `max-h-[85dvh]`
 
 **验证**：
 - `npm run lint` → 0 errors
