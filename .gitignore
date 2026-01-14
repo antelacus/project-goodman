@@ -65,3 +65,6 @@ supabase/.temp/
 
 # manual test logs (local notes, not version controlled)
 docs/manual-test-log/
+
+# claude code (user-specific settings)
+.claude/settings.local.json
