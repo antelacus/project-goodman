@@ -73,6 +73,34 @@
 - [ ] 验证 `reports` 表定义存在
 - [ ] 验证 TypeScript 编译通过
 
+#### C2: 审查未使用索引
+
+> **来源**: TD-009
+
+- [ ] 运行 Supabase 性能顾问获取索引使用报告
+- [ ] 分析 23 个未使用索引
+- [ ] 为每个索引做出决策（保留/删除/文档化）
+- [ ] 在实现记录中记录决策及理由
+- [ ] 如需删除，创建迁移脚本
+
+#### C3: 处理 RPC 警告
+
+> **来源**: TD-011
+
+- [ ] 识别 4 个有 mutable search_path 警告的函数
+- [ ] 创建迁移添加 `SET search_path = public`
+- [ ] 应用迁移
+- [ ] 运行 `get_advisors` 验证警告已消除
+
+#### C4: 文档化 RLS 设计决策
+
+> **来源**: TD-012, TD-013
+
+- [ ] 分析 `users` 和 `guest_activity` 表为何不需要 RLS
+- [ ] 分析 9 个表的 `USING(true)` 策略原因
+- [ ] 在 `.claude/rules/code-conventions.md` 添加 Database Security 章节
+- [ ] 记录每个表的 RLS 设计决策
+
 ---
 
 ### D. 页面文案更新
@@ -81,6 +109,17 @@
 
 - [ ] 更新 AI 模型名称：GPT-5-mini → GPT-4o
 - [ ] 更新版本号：V3.7 (Phase 1) → V4.2.1
+
+#### D2: 修复报告生成时间记录
+
+> **来源**: TD-008
+
+- [ ] 定位报告生成工具代码 `src/lib/tools/generate-report.ts`
+- [ ] 在报告生成开始时记录 `startTime`
+- [ ] 计算生成耗时 `generationTimeMs = Date.now() - startTime`
+- [ ] 更新数据库插入逻辑包含 `generation_time_ms`
+- [ ] 生成测试报告验证字段已填充
+- [ ] 查询 `reports` 表确认值正确
 
 ---
 
@@ -155,9 +194,11 @@
 ### G. 测试基础设施
 
 > **新增于 2026-01-14**：扩展 v4.3 范围以建立测试模式。
+> **同时解决**: TD-006（测试覆盖不完整）、TD-010（部分测试脚本已过时）
 
 #### G1: 单元测试
 
+- [ ] 审查并清理过时的测试脚本（TD-010）
 - [ ] 创建 `tests/unit/financial/` 目录结构
 - [ ] 编写流动比率计算测试
 - [ ] 编写资产负债率计算测试
@@ -174,6 +215,7 @@
 ### H. 安全审计
 
 > **新增于 2026-01-14**：确保无已知漏洞。
+> **同时解决**: TD-012, TD-013（RLS 设计决策文档化，与 C4 协同）
 
 #### H1: 依赖安全检查
 
@@ -215,6 +257,49 @@
 
 ---
 
+### J. 性能基线
+
+> **新增于 2026-01-14**：源自 TD-005，建立性能基线数据。
+
+#### J1: 打包分析器
+
+- [ ] 安装 `@next/bundle-analyzer` 依赖
+- [ ] 修改 `next.config.ts` 集成 bundle-analyzer
+- [ ] 添加 `npm run analyze` 脚本
+- [ ] 验证打包分析报告可生成
+
+#### J2: API 响应时间追踪
+
+- [ ] 在 `logger.ts` 添加 `logRequest` 函数
+- [ ] 在关键 API 路由集成响应时间追踪
+- [ ] 验证日志包含响应时间
+
+#### J3: Web Vitals 组件
+
+- [ ] 创建 `src/components/providers/WebVitals.tsx`
+- [ ] 在 `src/app/layout.tsx` 集成 WebVitals 组件
+- [ ] 更新 `src/components/providers/index.ts` 导出
+- [ ] 验证开发模式下 Web Vitals 输出到控制台
+- [ ] 记录首次基线数据
+
+---
+
+### K. 健康检查端点
+
+> **新增于 2026-01-14**：源自 TD-007，提供服务健康状态检查。
+
+#### K1: 健康检查 API
+
+- [ ] 创建 `src/app/api/health/route.ts`
+- [ ] 实现数据库连接检查
+- [ ] 实现 Redis 连接检查（可选）
+- [ ] 返回服务版本信息
+- [ ] 返回适当的 HTTP 状态码（200/503）
+- [ ] 测试 `curl http://localhost:3000/api/health`
+- [ ] 验证响应格式正确
+
+---
+
 ## 实现记录
 
 ### 2026-01-13 - 文档系统审查与重构
@@ -222,6 +307,7 @@
 #### A1: 文档系统审查
 
 **审查范围**：
+
 - 全局 `~/.claude/CLAUDE.md`
 - 项目根目录：`README.md`, `CLAUDE.md`, `CHANGELOG.md`
 - `docs/` 目录：`PRODUCT_ROADMAP.md`, `KNOWN_ISSUES.md`, `TECHNICAL_DEBT.md`, `DEPLOYMENT_CHECKLIST.md`
@@ -238,6 +324,7 @@
 #### A2: 文档更新实施
 
 **全局 CLAUDE.md 更新**：
+
 - 新增 "Documentation Sources of Truth" 表格，明确各文档职责
 - 简化 PRODUCT_ROADMAP.md 结构定义（仅保留战略层面）
 - 新增 "Changelog Management" 章节
@@ -245,12 +332,14 @@
 - 更新日期：2026-01-08 → 2026-01-13
 
 **README.md 重写**：
+
 - 从技术文档转型为用户指南
 - 新增用户角色说明（访客、管理员）
 - 新增功能详解（智能对话、报告生成、文档提取、文档管理）
 - 移除所有技术内容（技术栈、目录结构等移至 CLAUDE.md）
 
 **PRODUCT_ROADMAP.md 简化**：
+
 - 移除 "现状评估" 章节（版本特定）
 - 移除 "优先级排序的待办列表"（移至 DEVELOPMENT_PLAN）
 - 移除 "版本路线图" 详情（移至 DEVELOPMENT_PLAN）
@@ -258,14 +347,17 @@
 - 更新用户反馈状态
 
 **KNOWN_ISSUES.md**：
+
 - 翻译为简体中文
 - 更新 UI/UX 问题计划版本：v4.4 → v4.3
 
 **DEPLOYMENT_CHECKLIST.md**：
+
 - 新增 6.1 "Post-Release Documentation" 子章节
 - 版本更新：v4.1 → v4.2
 
 **v4_DEVELOPMENT_PLAN.md 修正**：
+
 - 修正文档结构图：quick-actions → foundation-enhancement (v4.3)
 - 修正版本路线图：v4.3 = 项目基础增强，v4.4 = 快捷操作扩展
 - 重写 3.4 章节为 foundation-enhancement
@@ -278,6 +370,7 @@
 #### B1: Vitest 测试框架
 
 **安装的依赖**：
+
 - vitest
 - @vitest/coverage-v8
 - @vitejs/plugin-react
@@ -285,16 +378,19 @@
 - jsdom
 
 **创建的文件**：
+
 - `vitest.config.ts` - 配置 React 插件、TypeScript 路径别名、jsdom 环境
 - `tests/unit/example.test.ts` - 示例测试验证配置
 
 **添加的脚本**：
+
 - `npm run test` - 运行 vitest
 - `npm run test:coverage` - 运行 vitest 并生成覆盖率报告
 
 #### B2: Husky + lint-staged 预提交钩子
 
 **配置**：
+
 - `.husky/pre-commit` - 调用 `npx lint-staged`
 - `package.json` lint-staged 配置：
   - `*.ts, *.tsx` → `eslint --fix`
@@ -303,6 +399,7 @@
 #### B3: ESLint 错误修复
 
 **修复策略**：
+
 - 移除未使用的导入（unused imports）
 - 移除未使用的变量（unused variables）
 - 对必要的 `any` 类型添加 `// REASON:` 注释和 eslint-disable
@@ -310,6 +407,7 @@
 - 修复 TypeScript 类型不匹配
 
 **主要修复文件**：
+
 - `src/lib/extraction/structured.ts` - 导出用于类型推断的 schema，添加 XLSX/Zod any 注释
 - `src/app/api/admin/upload-database-document/route.ts` - 移除未使用导入，修复类型
 - `src/app/api/chat/stream/route.ts` - 移除未使用导入，修复 any 类型
@@ -317,6 +415,7 @@
 - 其他文件：移除未使用导入/变量
 
 **验证**：
+
 - `npm run lint` → 0 errors
 - `npm run build` → 成功
 
@@ -341,6 +440,7 @@
    - 包含完整 html/body 结构
 
 **集成位置**：
+
 - `src/app/(workspace)/layout.tsx` - ErrorBoundary 包裹主内容区域
 - 导出更新：`src/components/providers/index.ts`
 
@@ -351,6 +451,7 @@
 `src/hooks/useModalAccessibility.ts` - 统一的模态框可访问性 Hook
 
 **功能实现**：
+
 - Escape 键关闭：监听 `keydown` 事件
 - 焦点陷阱：Tab 键在可聚焦元素间循环
 - 焦点保存/恢复：打开时保存、关闭时恢复
@@ -374,6 +475,7 @@
    - 更新 `max-h-[90vh]` → `max-h-[85dvh]`
 
 **验证**：
+
 - `npm run lint` → 0 errors
 - `npm run build` → 成功
 
@@ -418,6 +520,7 @@
 `src/components/ui/Skeleton.tsx` - 完整的骨架屏组件库
 
 **组件列表**：
+
 - `Skeleton` - 基础组件，品牌黄色 (`bg-yellow-100`)
 - `SkeletonText` - 多行文本骨架
 - `SkeletonSessionList` - 侧边栏会话列表骨架
@@ -432,6 +535,7 @@
 3. `DocumentSelectModal.tsx` - 文档加载时显示 `SkeletonDocumentList`
 
 **验证**：
+
 - `npm run lint` → 0 errors
 - `npm run build` → 成功
 
@@ -461,10 +565,18 @@
 - [ ] 打开模态框 → Tab 键在内部循环
 - [ ] 移动端模态框 → 内容可滚动
 
-#### 数据库
+#### 数据库 (C)
 
 - [ ] `types.ts` 包含 `reports` 表
 - [ ] TypeScript 编译无错误
+- [ ] 未使用索引已审查并记录决策
+- [ ] RPC mutable search_path 警告已处理
+- [ ] RLS 设计决策已文档化
+
+#### 页面文案 (D)
+
+- [ ] About 页面版本信息正确
+- [ ] 报告生成时间正确记录到数据库
 
 #### 测试基础设施 (G)
 
@@ -484,8 +596,20 @@
 - [ ] 关键 API 有请求日志
 - [ ] 无敏感数据泄露
 
+#### 性能基线 (J)
+
+- [ ] `npm run analyze` 可生成打包分析报告
+- [ ] API 响应时间记录在日志中
+- [ ] Web Vitals 基线数据已记录
+
+#### 健康检查 (K)
+
+- [ ] `/api/health` 返回 200 状态
+- [ ] 响应包含数据库连接状态
+- [ ] 响应包含服务版本信息
+
 ---
 
 *文档创建日期：2026-01-13*
-*最后更新：2026-01-14（添加 G、H、I 任务）*
+*最后更新：2026-01-14（扩展范围：解决 9 项技术债务 TD-005~TD-013，添加 K 任务）*
 *状态：实现中*
