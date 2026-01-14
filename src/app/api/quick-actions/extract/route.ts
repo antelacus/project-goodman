@@ -79,7 +79,8 @@ export async function POST(req: NextRequest) {
     }
 
     const body = await req.json();
-    let { fileData, fileType, fileName, documentId } = body;
+    let { fileData, fileType, fileName } = body;
+    const { documentId } = body;
 
     // Logic: If documentId is provided, fetch fileData from storage
     if (documentId) {
@@ -235,6 +236,7 @@ export async function POST(req: NextRequest) {
 
       // Format as text for LLM processing
       // REASON: XLSX returns unknown[], cast needed for row/cell operations on untyped external data
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const textContent = (jsonData as any[][])
         .filter(row => row.some(cell => cell != null && cell !== ''))
         .map(row => row.map(cell => cell ?? '').join('\t'))

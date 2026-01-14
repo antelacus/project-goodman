@@ -29,7 +29,6 @@ export default function ChatWorkspace() {
         savedPdfUrl: savedReportPdfUrl,
         startGeneration,
         saveReport,
-        reset: resetReportGeneration,
     } = useReportGeneration();
 
     // v4.2: Conversational report configuration (PRD Section 3.5)
@@ -46,7 +45,7 @@ export default function ChatWorkspace() {
                 if (res.ok) {
                     const data = await res.json();
                     if (data.messages && data.messages.length > 0) {
-                        setMessages(data.messages.map((m: any) => ({
+                        setMessages(data.messages.map((m: { role: string; content: string; id?: string }) => ({
                             role: m.role,
                             content: m.content,
                             id: m.id || Date.now().toString(),
@@ -273,7 +272,7 @@ export default function ChatWorkspace() {
                             <div className="text-center mb-2">
                                 <span className="inline-flex items-center gap-1.5 text-xs text-blue-600 bg-blue-50 px-2.5 py-1 rounded-full border border-blue-100">
                                     <span className="w-1.5 h-1.5 bg-blue-500 rounded-full animate-pulse"></span>
-                                    报告配置中 · 输入"确认"开始生成，或调整年份设置
+                                    报告配置中 · 输入&quot;确认&quot;开始生成，或调整年份设置
                                 </span>
                             </div>
                         )}

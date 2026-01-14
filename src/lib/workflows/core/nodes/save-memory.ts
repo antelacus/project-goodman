@@ -7,7 +7,7 @@
 import { BaseAgentState } from "../state/base-state";
 import { conversationMemory, ConversationMessage } from "@/lib/memory/conversation-memory";
 import { generateSessionTitle } from "@/lib/memory/session-title";
-import { AIMessage, HumanMessage, ToolMessage, BaseMessage } from "@langchain/core/messages";
+import { AIMessage, ToolMessage } from "@langchain/core/messages";
 import type { DbToolCall, MessageRole } from "@/lib/database/types";
 import { convertToolCallsToDb } from "@/lib/database/helpers";
 

@@ -15,6 +15,7 @@ const SidebarContext = createContext<SidebarContextType | undefined>(undefined);
 export function SidebarProvider({ children }: { children: React.ReactNode }) {
     const [isCollapsed, setIsCollapsed] = useState(false);
     const [isMobileOpen, setIsMobileOpen] = useState(false);
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const [isInitialized, setIsInitialized] = useState(false);
 
     // Load state from localStorage on mount

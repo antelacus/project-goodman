@@ -64,7 +64,7 @@ export async function GET(request: NextRequest) {
 
     // Extract bucket and path from fileUrl
     // fileUrl format: "document-files/path/to/file.pdf" or just the path
-    let bucketName = "document-files";
+    const bucketName = "document-files";
     let filePath = fileUrl;
 
     if (fileUrl.startsWith("document-files/")) {
@@ -165,7 +165,7 @@ export async function POST(request: NextRequest) {
     // Get the PDF file from Supabase storage
     const supabase = createServerSupabaseClient();
 
-    let bucketName = "document-files";
+    const bucketName2 = "document-files";
     let filePath = fileUrl;
 
     if (fileUrl.startsWith("document-files/")) {
@@ -173,7 +173,7 @@ export async function POST(request: NextRequest) {
     }
 
     const { data: fileData, error: downloadError } = await supabase.storage
-      .from(bucketName)
+      .from(bucketName2)
       .download(filePath);
 
     if (downloadError || !fileData) {

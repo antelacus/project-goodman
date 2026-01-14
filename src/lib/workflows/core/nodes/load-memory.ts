@@ -25,7 +25,7 @@ export async function loadMemoryNode(
         // Fallback or throw
         throw new Error("State.input is undefined in loadMemoryNode");
     }
-    const { sessionId: requestedSessionId, question, workflowType, documentIds, ownerId, ownerType } = state.input;
+    const { sessionId: requestedSessionId, workflowType, documentIds, ownerId, ownerType } = state.input;
 
     // 1. Get or create session
     // Default to 'unified' if not specified

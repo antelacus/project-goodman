@@ -83,6 +83,7 @@ async function extractTextFromFile(
       const sheet = workbook.Sheets[sheetName];
       // REASON: XLSX.utils.sheet_to_json() returns unknown[]. This is a system boundary
       // where external untyped data enters. Runtime validation for each cell would be excessive.
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const data = XLSX.utils.sheet_to_json(sheet, { header: 1 }) as any[][];
       const rowCount = data.filter(row => row.some(cell => cell != null && cell !== '')).length;
       if (rowCount > bestRowCount) {
@@ -93,6 +94,7 @@ async function extractTextFromFile(
 
     const sheet = workbook.Sheets[bestSheet];
     // REASON: XLSX returns unknown[], cast needed for row/cell operations on untyped external data
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const jsonData = XLSX.utils.sheet_to_json(sheet, { header: 1 }) as any[][];
 
     return jsonData

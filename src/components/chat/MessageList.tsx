@@ -7,7 +7,7 @@ import 'katex/dist/katex.min.css';
 import ThinkingIndicator from './ThinkingIndicator';
 import { ProcessLog } from './ProcessLog';
 import { ReportMessage } from '@/components/reports';
-import type { ChatMessage, MessageListProps } from '@/types/message';
+import type { MessageListProps } from '@/types/message';
 
 const MessageList: React.FC<MessageListProps> = ({
     messages,

@@ -16,9 +16,9 @@ v[MAJOR].[MINOR].[PATCH]
 
 | Phase | Deliverable | Action |
 |-------|-------------|--------|
-| **Phase 1** | `v*.*_PHASE1_PRD.md` or `_REQ.md` | Requirements → pause for approval |
-| **Phase 2** | `v*.*_PHASE2_DESIGN.md` | Design → create TRACK → pause for approval |
-| **Phase 3-5** | `v*.*_PHASE3-5_TRACK.md` | Implement → document (per task) → test(all tasks)|
+| **Phase 1** | `PHASE1_PRD.md` or `_REQ.md` | Requirements → pause for approval |
+| **Phase 2** | `PHASE2_DESIGN.md` | Design → create TRACK → pause for approval |
+| **Phase 3-5** | `PHASE3-5_TRACK.md` | Implement → document (per task) → test(all tasks)|
 | **Phase 6** | Release | Quality gates → deploy → update docs → tag |
 
 ## Patch Version (v*.*.*)

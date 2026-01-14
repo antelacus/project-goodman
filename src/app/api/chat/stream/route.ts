@@ -4,8 +4,6 @@ import {
     ensureSession,
     checkGuestRate,
     incrementGuestRate,
-    getCookieOptions,
-    COOKIE_NAME,
     generateRequestId,
     createErrorResponse,
 } from '@/lib/security';
@@ -156,6 +154,7 @@ export async function POST(req: NextRequest) {
         // Initialize state
         // We cast to any to avoid strict type checking on DeepPartial,
         // but the structure matches UnifiedAgentState.
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const initialState: any = {
             input: {
                 question,
@@ -182,7 +181,7 @@ export async function POST(req: NextRequest) {
 
         const stream = new ReadableStream({
             async start(controller) {
-                const sendEvent = (type: string, data: any) => {
+                const sendEvent = (type: string, data: unknown) => {
                     const formattedData = JSON.stringify(data);
                     controller.enqueue(`event: ${type}\ndata: ${formattedData}\n\n`);
                 };
@@ -393,9 +392,9 @@ export async function POST(req: NextRequest) {
                         }
                     }
 
-                } catch (err: any) {
+                } catch (err: unknown) {
                     console.error('Streaming error:', err);
-                    const errorMessage = err.message || 'An error occurred during streaming';
+                    const errorMessage = err instanceof Error ? err.message : 'An error occurred during streaming';
                     sendEvent('error', { message: errorMessage });
 
                     // v4.0: Send process error event (no stack trace to prevent info disclosure)
