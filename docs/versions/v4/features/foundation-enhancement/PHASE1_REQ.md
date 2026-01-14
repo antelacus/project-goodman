@@ -384,6 +384,82 @@ npx supabase gen types typescript --project-id mxybrzuxlsioqwsxyjeb > src/lib/da
 
 ---
 
+### REQ-G1: 测试基础设施
+
+**当前状态**：Vitest 已安装但无实际测试用例。
+
+**目标状态**：编写核心功能的单元测试，验证测试框架有效，建立测试模式。
+
+**范围**：
+
+- 5-10 个财务计算函数的单元测试
+- 2-3 个工具函数的测试
+- 建立测试文件组织模式
+
+**涉及文件**：
+
+- `src/lib/financial/preset-functions.ts` - 财务指标计算
+- `src/lib/utils.ts` - 工具函数
+- `src/lib/validation/api-schemas.ts` - Zod 验证
+
+**验收标准**：
+
+- [ ] 至少 10 个测试用例通过
+- [ ] 测试覆盖核心财务计算逻辑
+- [ ] `npm run test` 全部通过
+- [ ] 测试文件组织清晰（`tests/unit/`）
+
+---
+
+### REQ-H1: 安全审计
+
+**当前状态**：无依赖漏洞扫描，安全实践未文档化。
+
+**目标状态**：确认无已知漏洞，记录安全实践。
+
+**范围**：
+
+- 运行 `npm audit`，修复高危/严重问题
+- 审查认证/授权代码路径
+- 验证 API 输入验证覆盖率
+- 文档化安全实践
+
+**验收标准**：
+
+- [ ] `npm audit` 无高危或严重漏洞
+- [ ] API 路由输入验证完整
+- [ ] 安全实践记录在 CLAUDE.md
+
+---
+
+### REQ-I1: 基础日志设施
+
+**当前状态**：仅 console.log，无结构化日志。
+
+**目标状态**：有结构化日志工具，关键 API 路由有请求日志。
+
+**范围**：
+
+- 创建结构化日志工具（`src/lib/logging/`）
+- 关键 API 路由添加请求日志
+- 错误日志包含上下文（请求 ID）
+- 确保不记录敏感数据
+
+**涉及文件**：
+
+- 创建 `src/lib/logging/logger.ts`
+- `src/app/api/chat/stream/route.ts` - 聊天 API 日志
+- `src/app/api/reports/generate/route.ts` - 报告生成 API 日志
+
+**验收标准**：
+
+- [ ] 日志工具支持不同级别（info, warn, error）
+- [ ] 关键 API 路由有请求/响应日志
+- [ ] 错误日志包含请求 ID
+- [ ] 无敏感数据泄露（密码、tokens）
+
+---
+
 ## 需修改的文件汇总
 
 | 类别 | 文件 | 变更 |
@@ -401,6 +477,9 @@ npx supabase gen types typescript --project-id mxybrzuxlsioqwsxyjeb > src/lib/da
 | **组件** | 创建 `Skeleton.tsx` | 骨架屏组件 |
 | **组件** | 创建 `ErrorBoundary.tsx` | 错误边界 |
 | **组件** | 3 个模态框组件 | 可访问性 |
+| **测试** | 创建 `tests/unit/*.test.ts` | 单元测试 |
+| **工具** | 创建 `src/lib/logging/logger.ts` | 日志工具 |
+| **API** | 关键 API 路由 | 添加请求日志 |
 
 ---
 
@@ -438,7 +517,23 @@ npx supabase gen types typescript --project-id mxybrzuxlsioqwsxyjeb > src/lib/da
    - 模态框支持键盘操作
    - 模态框在移动端正常显示
 
+5. **测试覆盖**
+   - 至少 10 个单元测试通过
+   - 核心财务计算有测试覆盖
+   - 测试模式可供后续开发参考
+
+6. **安全**
+   - `npm audit` 无高危漏洞
+   - API 输入验证完整
+   - 安全实践已文档化
+
+7. **可观测性**
+   - 结构化日志工具可用
+   - 关键 API 有请求日志
+   - 错误日志包含追踪信息
+
 ---
 
 *文档创建日期：2026-01-13*
-*状态：等待审批后进入 Phase 2*
+*最后更新：2026-01-14（添加 G、H、I 任务）*
+*状态：Phase 3-5 实现中*

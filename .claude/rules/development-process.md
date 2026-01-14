@@ -12,6 +12,10 @@ v[MAJOR].[MINOR].[PATCH]
   └─────────────────── Major milestones or breaking changes
 ```
 
+## Major Version Workflow (v*)
+
+See `~/.claude/CLAUDE.md` for details.
+
 ## Minor Version Workflow (v*.*)
 
 | Phase | Deliverable | Action |
@@ -28,4 +32,4 @@ Quick fix process:
 1. **Assess** - Reproduce, identify root cause
 2. **Fix** - Minimal change, test the fix
 3. **Deploy** - Commit with `fix(hotfix): ...`, deploy, verify
-4. **Document** - Update KNOWN_ISSUES.md, CHANGELOG.md
+4. **Document** - Update CHANGELOG.md

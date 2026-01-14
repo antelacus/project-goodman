@@ -173,7 +173,7 @@ docker logs goodman 2>&1 | grep -i "redis"
 
 - [ ] Update `CHANGELOG.md` with release details (if not done in pre-deployment)
 - [ ] Update `v*_DEVELOPMENT_PLAN.md` to mark feature as released
-- [ ] Remove resolved items from `KNOWN_ISSUES.md`
+- [ ] Move resolved items to "已解决的债务" section in `TECHNICAL_DEBT.md`
 - [ ] Archive completed PHASE3-5_TRACK.md tasks
 
 ### 6.2 Merge & Tag
