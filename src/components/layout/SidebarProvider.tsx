@@ -1,6 +1,6 @@
 'use client';
 
-import React, { createContext, useContext, useEffect, useState } from 'react';
+import React, { createContext, useContext, useEffect, useState, useCallback } from 'react';
 
 interface SidebarContextType {
     isCollapsed: boolean;
@@ -8,6 +8,9 @@ interface SidebarContextType {
     isMobileOpen: boolean;
     openMobile: () => void;
     closeMobile: () => void;
+    // v4.3: Session sync support
+    refreshTrigger: number;
+    refreshSessions: () => void;
 }
 
 const SidebarContext = createContext<SidebarContextType | undefined>(undefined);
@@ -17,6 +20,8 @@ export function SidebarProvider({ children }: { children: React.ReactNode }) {
     const [isMobileOpen, setIsMobileOpen] = useState(false);
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const [isInitialized, setIsInitialized] = useState(false);
+    // v4.3: Trigger for sidebar to refresh sessions
+    const [refreshTrigger, setRefreshTrigger] = useState(0);
 
     // Load state from localStorage on mount
     useEffect(() => {
@@ -36,6 +41,11 @@ export function SidebarProvider({ children }: { children: React.ReactNode }) {
     const openMobile = () => setIsMobileOpen(true);
     const closeMobile = () => setIsMobileOpen(false);
 
+    // v4.3: Trigger session list refresh in Sidebar
+    const refreshSessions = useCallback(() => {
+        setRefreshTrigger(prev => prev + 1);
+    }, []);
+
     // Prevent hydration mismatch by not rendering transition states until initialized
     // or just accepting default false (expanded) is fine for SSR, but might jump.
     // For now, we render children, but might need to handle 'hidden' logic carefully.
@@ -48,6 +58,8 @@ export function SidebarProvider({ children }: { children: React.ReactNode }) {
                 isMobileOpen,
                 openMobile,
                 closeMobile,
+                refreshTrigger,
+                refreshSessions,
             }}
         >
             {children}

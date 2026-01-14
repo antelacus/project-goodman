@@ -22,6 +22,7 @@ import Link from 'next/link';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { useSidebar } from './SidebarProvider';
 import ExtractionModal from '../quick-actions/ExtractionModal';
+import { SkeletonSessionList } from '@/components/ui/Skeleton';
 
 interface SessionItem {
     id: string;
@@ -43,6 +44,7 @@ export default function Sidebar() {
         toggleCollapse,
         isMobileOpen,
         closeMobile,
+        refreshTrigger, // v4.3: Listen for session refresh triggers
     } = useSidebar();
     const pathname = usePathname();
     const router = useRouter();
@@ -50,7 +52,6 @@ export default function Sidebar() {
     const [isExtractionOpen, setIsExtractionOpen] = useState(false);
     const [isAdmin, setIsAdmin] = useState(false);
     const [sessions, setSessions] = useState<SessionItem[]>([]);
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const [sessionsLoading, setSessionsLoading] = useState(true);
 
     // Get current session ID from URL
@@ -71,7 +72,7 @@ export default function Sidebar() {
         }
     }, []);
 
-    // Check admin status and fetch sessions on mount
+    // Check admin status on mount
     useEffect(() => {
         const checkAdmin = async () => {
             try {
@@ -83,8 +84,12 @@ export default function Sidebar() {
             }
         };
         checkAdmin();
+    }, []);
+
+    // v4.3: Fetch sessions on mount and when refreshTrigger changes
+    useEffect(() => {
         fetchSessions();
-    }, [fetchSessions]);
+    }, [fetchSessions, refreshTrigger]);
 
     // Handle "New Chat" - navigate to /chat without session param
     const handleNewChat = () => {
@@ -185,33 +190,42 @@ export default function Sidebar() {
                     </button>
 
                     {/* Session History Section */}
-                    {!isCollapsed && sessions.length > 0 && (
+                    {!isCollapsed && (
                         <div className="mt-3 flex-1 overflow-y-auto max-h-48">
                             <div className="mb-2 px-2 text-xs font-semibold uppercase text-neutral-400">
                                 对话历史
                             </div>
-                            <div className="space-y-1">
-                                {sessions.slice(0, 10).map((session) => {
-                                    const isActive = currentSessionId === session.id ||
-                                        (pathname === '/chat' && !currentSessionId && sessions[0]?.id === session.id);
-                                    return (
-                                        <button
-                                            key={session.id}
-                                            onClick={() => handleSessionClick(session.id)}
-                                            className={cn(
-                                                "flex w-full items-center rounded-lg p-2 text-sm transition-colors text-left",
-                                                isActive
-                                                    ? "bg-yellow-50 text-yellow-700 font-medium"
-                                                    : "text-neutral-600 hover:bg-neutral-100 hover:text-neutral-900"
-                                            )}
-                                            title={session.title}
-                                        >
-                                            <MessageSquare size={16} className="mr-2 flex-shrink-0" />
-                                            <span className="truncate">{session.title}</span>
-                                        </button>
-                                    );
-                                })}
-                            </div>
+                            {/* v4.3: Show skeleton while loading */}
+                            {sessionsLoading ? (
+                                <SkeletonSessionList count={3} />
+                            ) : sessions.length > 0 ? (
+                                <div className="space-y-1">
+                                    {sessions.slice(0, 10).map((session) => {
+                                        const isActive = currentSessionId === session.id ||
+                                            (pathname === '/chat' && !currentSessionId && sessions[0]?.id === session.id);
+                                        return (
+                                            <button
+                                                key={session.id}
+                                                onClick={() => handleSessionClick(session.id)}
+                                                className={cn(
+                                                    "flex w-full items-center rounded-lg p-2 text-sm transition-colors text-left",
+                                                    isActive
+                                                        ? "bg-yellow-50 text-yellow-700 font-medium"
+                                                        : "text-neutral-600 hover:bg-neutral-100 hover:text-neutral-900"
+                                                )}
+                                                title={session.title}
+                                            >
+                                                <MessageSquare size={16} className="mr-2 flex-shrink-0" />
+                                                <span className="truncate">{session.title}</span>
+                                            </button>
+                                        );
+                                    })}
+                                </div>
+                            ) : (
+                                <div className="px-2 text-sm text-neutral-400">
+                                    暂无对话记录
+                                </div>
+                            )}
                         </div>
                     )}
 
