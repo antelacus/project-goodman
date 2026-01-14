@@ -84,33 +84,36 @@
 
 ---
 
-### E. UI/UX 改进
+### E. UI/UX 改进 ✅
 
-#### E1: 侧边栏会话同步
+#### E1: 侧边栏会话同步 ✅
 
-- [ ] 在 `SidebarProvider.tsx` 添加 `refreshSessions` 函数
-- [ ] 在 `SidebarProvider.tsx` 添加 `refreshTrigger` 状态
-- [ ] 更新 context type 定义
-- [ ] 在 `Sidebar.tsx` 监听 `refreshTrigger`
-- [ ] 在 `ChatWorkspace.tsx` 调用 `refreshSessions`
-- [ ] 测试新会话立即显示
+- [x] 在 `SidebarProvider.tsx` 添加 `refreshSessions` 函数
+- [x] 在 `SidebarProvider.tsx` 添加 `refreshTrigger` 状态
+- [x] 更新 context type 定义
+- [x] 在 `Sidebar.tsx` 监听 `refreshTrigger`
+- [x] 在 `ChatWorkspace.tsx` 调用 `refreshSessions`
+- [x] 测试新会话立即显示
 
-#### E2: 过程日志来源链接
+#### E2: 过程日志来源链接 ✅
 
-- [ ] 更新 `ProcessLog.tsx` 链接生成逻辑
-- [ ] 使用 PDF 预览 API 路径
-- [ ] 测试链接在新标签页打开
+- [x] 更新 `ProcessLog.tsx` 链接生成逻辑
+- [x] 使用 PDF 预览 API 路径
+- [x] 增强 pdf-preview API 支持 `id` 参数
+- [x] 测试链接在新标签页打开
 
-#### E3: 骨架屏组件
+#### E3: 骨架屏组件 ✅
 
-- [ ] 创建 `src/components/ui/Skeleton.tsx`
-- [ ] 实现基础 `Skeleton` 组件
-- [ ] 实现 `SkeletonText` 变体
-- [ ] 实现 `SkeletonSessionList` 变体
-- [ ] 实现 `SkeletonMessage` 变体
-- [ ] 在 `Sidebar.tsx` 使用骨架屏
-- [ ] 在 `ChatWorkspace.tsx` 使用骨架屏
-- [ ] 在 `DocumentSelectModal.tsx` 使用骨架屏
+- [x] 创建 `src/components/ui/Skeleton.tsx`
+- [x] 实现基础 `Skeleton` 组件
+- [x] 实现 `SkeletonText` 变体
+- [x] 实现 `SkeletonSessionList` 变体
+- [x] 实现 `SkeletonMessage` 变体
+- [x] 实现 `SkeletonDocumentItem` 变体
+- [x] 实现 `SkeletonDocumentList` 变体
+- [x] 在 `Sidebar.tsx` 使用骨架屏
+- [x] 在 `ChatWorkspace.tsx` 使用骨架屏
+- [x] 在 `DocumentSelectModal.tsx` 使用骨架屏
 
 ---
 
@@ -306,6 +309,64 @@
    - 添加 `useModalAccessibility` hook
    - 添加 `aria-labelledby="document-select-modal-title"`
    - 更新 `max-h-[90vh]` → `max-h-[85dvh]`
+
+**验证**：
+- `npm run lint` → 0 errors
+- `npm run build` → 成功
+
+### 2026-01-14 - UI/UX 改进实现
+
+#### E1: 侧边栏会话同步
+
+**修改的文件**：
+
+1. `src/components/layout/SidebarProvider.tsx`
+   - 新增 `refreshTrigger` 状态（number）
+   - 新增 `refreshSessions()` 函数，递增 trigger
+   - 更新 `SidebarContextType` 接口
+
+2. `src/components/layout/Sidebar.tsx`
+   - 从 context 获取 `refreshTrigger`
+   - useEffect 监听 `refreshTrigger` 变化，触发 `fetchSessions()`
+   - 分离 admin 检查和 session 加载为独立 useEffect
+
+3. `src/components/chat/ChatWorkspace.tsx`
+   - 从 context 获取 `refreshSessions`
+   - 使用 `previousSessionIdRef` 跟踪 sessionId 变化
+   - 新建会话时自动调用 `refreshSessions()`
+
+#### E2: 过程日志来源链接
+
+**修改的文件**：
+
+1. `src/components/chat/ProcessLog.tsx`
+   - 更新链接路径：`/documents?id=xxx` → `/api/documents/pdf-preview?id=xxx`
+   - 链接现在直接打开 PDF 预览而非导航到文档页面
+
+2. `src/app/api/documents/pdf-preview/route.ts`
+   - 新增 `id` 查询参数支持
+   - 当提供 `id` 时，从数据库查询 `file_url`
+   - 向后兼容：仍支持直接传递 `fileUrl`
+
+#### E3: 骨架屏组件
+
+**创建的文件**：
+
+`src/components/ui/Skeleton.tsx` - 完整的骨架屏组件库
+
+**组件列表**：
+- `Skeleton` - 基础组件，品牌黄色 (`bg-yellow-100`)
+- `SkeletonText` - 多行文本骨架
+- `SkeletonSessionList` - 侧边栏会话列表骨架
+- `SkeletonMessage` - 聊天消息骨架
+- `SkeletonDocumentItem` - 单个文档项骨架
+- `SkeletonDocumentList` - 文档列表骨架
+
+**集成位置**：
+
+1. `Sidebar.tsx` - 会话列表加载时显示 `SkeletonSessionList`
+2. `ChatWorkspace.tsx` - 会话加载时显示多个 `SkeletonMessage`
+3. `DocumentSelectModal.tsx` - 文档加载时显示 `SkeletonDocumentList`
 
 **验证**：
 - `npm run lint` → 0 errors

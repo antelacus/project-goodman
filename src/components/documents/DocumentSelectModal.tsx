@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { useDocumentStore, Document } from "@/store/documents";
 import { UploadFeedback, StructureAnalysis } from "./UploadFeedback";
 import { useModalAccessibility } from "@/hooks/useModalAccessibility";
+import { SkeletonDocumentList } from "@/components/ui/Skeleton";
 
 interface DocumentSelectModalProps {
   open: boolean;
@@ -25,7 +26,9 @@ const DocumentSelectModal: React.FC<DocumentSelectModalProps> = ({
   documents: customDocuments,
 }) => {
   const storeDocuments = useDocumentStore((s) => s.documents);
+  const isStoreLoading = useDocumentStore((s) => s.isLoading); // v4.3: Loading state for skeleton
   const documents = customDocuments || storeDocuments;
+  const isLoading = !customDocuments && isStoreLoading; // Only show loading if using store documents
   const [search, setSearch] = useState("");
   const [uploading, setUploading] = useState(false);
   const [uploadAnalysis, setUploadAnalysis] = useState<StructureAnalysis | null>(null);
@@ -176,7 +179,10 @@ const DocumentSelectModal: React.FC<DocumentSelectModalProps> = ({
         {categories.filter(c => c === 'business').map(cat => (
           <div key={cat} className="mb-4">
             <div className="font-bold mb-2 text-gray-700">待处理文档</div>
-            {filtered(cat).length === 0 ? (
+            {/* v4.3: Show skeleton while loading */}
+            {isLoading ? (
+              <SkeletonDocumentList count={3} />
+            ) : filtered(cat).length === 0 ? (
               <div className="text-gray-400 mb-2">暂无文档</div>
             ) : (
               <div className="space-y-2">

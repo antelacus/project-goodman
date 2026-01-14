@@ -1,23 +1,27 @@
 'use client';
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { useStreamingChat } from '@/hooks/useStreamingChat';
 import { useReportGeneration } from '@/hooks/useReportGeneration';
 import { useReportConfig } from '@/hooks/useReportConfig';
+import { useSidebar } from '@/components/layout/SidebarProvider';
 import MessageList from './MessageList';
 import ChatInput from './ChatInput';
 import GuestBanner from './GuestBanner';
 import { ReportProgress } from '@/components/reports';
+import { SkeletonMessage } from '@/components/ui/Skeleton';
 import type { ChatMessage } from '@/types/message';
 
 export default function ChatWorkspace() {
     const searchParams = useSearchParams();
     const urlSessionId = searchParams.get('session');
+    const { refreshSessions } = useSidebar(); // v4.3: For sidebar session sync
 
     const [messages, setMessages] = useState<ChatMessage[]>([]);
     const [isLoadingSession, setIsLoadingSession] = useState(false);
     const [loadedSessionId, setLoadedSessionId] = useState<string | null>(null);
+    const previousSessionIdRef = useRef<string | null>(null); // v4.3: Track previous sessionId
 
     // v4.2: Report generation via hook
     const {
@@ -143,6 +147,17 @@ export default function ChatWorkspace() {
         onError: handleError
     });
 
+    // v4.3: Refresh sidebar sessions when a new session is created
+    useEffect(() => {
+        if (sessionId && sessionId !== previousSessionIdRef.current) {
+            previousSessionIdRef.current = sessionId;
+            // Only refresh if this is a new session (not initial load)
+            if (previousSessionIdRef.current !== urlSessionId) {
+                refreshSessions();
+            }
+        }
+    }, [sessionId, urlSessionId, refreshSessions]);
+
     const handleSendMessage = async (text: string, files: File[], documentIds: string[]) => {
         console.log('[ChatWorkspace] handleSendMessage called, text:', text);
         console.log('[ChatWorkspace] reportConfig.state.isActive:', reportConfig.state.isActive);
@@ -213,10 +228,14 @@ export default function ChatWorkspace() {
             {/* Background decoration - Simplified */}
             <div className="absolute inset-0 bg-white/50 opacity-10 pointer-events-none" />
 
-            {/* Loading indicator for session loading */}
+            {/* v4.3: Skeleton loading for session loading */}
             {isLoadingSession && (
-                <div className="absolute inset-0 flex items-center justify-center z-20 bg-white/80">
-                    <div className="text-neutral-500">加载对话中...</div>
+                <div className="absolute inset-0 z-20 bg-white/95 overflow-hidden">
+                    <div className="max-w-4xl mx-auto px-4 py-8 space-y-4">
+                        <SkeletonMessage />
+                        <SkeletonMessage />
+                        <SkeletonMessage />
+                    </div>
                 </div>
             )}
 
