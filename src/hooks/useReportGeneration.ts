@@ -6,7 +6,7 @@
  */
 
 import { useState, useRef, useCallback } from 'react';
-import type { ReportContent, ReportSection } from '@/types/report';
+import type { ReportContent } from '@/types/report';
 import type { PhaseDisplayInfo, ReportPhase } from '@/types/report-events';
 import { REPORT_PHASES } from '@/types/report-events';
 

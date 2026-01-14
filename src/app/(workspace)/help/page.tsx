@@ -6,7 +6,6 @@ import {
   BookOpen,
   FileSpreadsheet,
   Database,
-  Search,
   Upload
 } from 'lucide-react';
 

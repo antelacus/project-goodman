@@ -36,7 +36,6 @@ import {
   type ColumnExtractionOptions,
   type FinancialExtractionWithType,
   type FinancialStatementType,
-  type FinancialStatementContent,
 } from "@/lib/extraction";
 import {
   validateBalanceSheet,
@@ -51,11 +50,6 @@ import { uploadFileToStorage } from "@/lib/documents/storage";
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 });
-
-// Supported file types for text extraction
-const SUPPORTED_IMAGE_TYPES = ['image/png', 'image/jpeg', 'image/webp', 'image/gif'];
-const SUPPORTED_PDF_TYPE = 'application/pdf';
-const SUPPORTED_EXCEL_TYPE = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
 
 /**
  * Request body schema
@@ -111,6 +105,7 @@ async function extractTextFromFile(
         const sheet = workbook.Sheets[sheetName];
         // REASON: XLSX.utils.sheet_to_json() returns unknown[]. This is a system boundary
         // where external untyped data enters. Runtime validation for each cell would be excessive.
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const data = XLSX.utils.sheet_to_json(sheet, { header: 1 }) as any[][];
         const rowCount = data.filter(row => row.some(cell => cell != null && cell !== '')).length;
         console.log(`[extractTextFromFile] Sheet "${sheetName}" has ${rowCount} non-empty rows`);
@@ -125,10 +120,12 @@ async function extractTextFromFile(
       const sheet = workbook.Sheets[bestSheet];
       const jsonData = XLSX.utils.sheet_to_json(sheet, { header: 1 });
       // REASON: XLSX returns unknown[], cast needed for .length access on untyped external data
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       console.log(`[extractTextFromFile] Sheet parsed, rows: ${(jsonData as any[]).length}`);
 
       // Format as text
       // REASON: XLSX returns unknown[], cast needed for row/cell operations on untyped external data
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const text = (jsonData as any[][])
         .filter(row => row.some(cell => cell != null && cell !== ''))
         .map(row => row.map(cell => cell ?? '').join('\t'))
@@ -407,7 +404,7 @@ export async function POST(request: NextRequest) {
       processed_at: new Date().toISOString(),
     };
 
-    const { data: documentData, error: docError } = await supabase
+    const { error: docError } = await supabase
       .from("documents")
       .insert(documentInsert)
       .select()
@@ -444,7 +441,7 @@ export async function POST(request: NextRequest) {
     console.log(`[Admin Upload] Stored ${chunks.length} vector chunks`);
 
     // Step 6: Store structured data based on document type
-    let structuredDataSummary: UploadResponse["structuredData"] = {};
+    const structuredDataSummary: UploadResponse["structuredData"] = {};
 
     // --- AI-Driven Extraction & Validation ---
     if (
@@ -527,7 +524,8 @@ export async function POST(request: NextRequest) {
 
         // 4. Transform to standard metrics format for DB storage
         // We need to flatten the object { "货币资金": 100 } -> [{ name: '货币资金', value: 100 }]
-        const metrics: any[] = [];
+        // Note: We filter out null values below, so the array only contains valid numbers
+        const metrics: Array<{ name: string; value: number; unit: string }> = [];
 
         for (const [key, value] of Object.entries(item.content)) {
           if (value !== null && value !== undefined) {

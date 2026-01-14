@@ -50,6 +50,7 @@ export default function Sidebar() {
     const [isExtractionOpen, setIsExtractionOpen] = useState(false);
     const [isAdmin, setIsAdmin] = useState(false);
     const [sessions, setSessions] = useState<SessionItem[]>([]);
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const [sessionsLoading, setSessionsLoading] = useState(true);
 
     // Get current session ID from URL

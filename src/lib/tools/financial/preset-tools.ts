@@ -5,7 +5,6 @@
  * Each preset function becomes a registered tool in the ToolRegistry.
  */
 
-import { z } from "zod";
 import {
   presetFunctions,
   executeFunction,

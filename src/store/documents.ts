@@ -100,6 +100,7 @@ export const useDocumentStore = create<DocumentStore>((set, get) => ({
         documents: allDocs,
         isLoading: false
       });
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     } catch (error) {
       set({ error: 'Failed to load documents', isLoading: false });
     }

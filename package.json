@@ -8,8 +8,11 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
+    "test": "vitest",
+    "test:coverage": "vitest --coverage",
     "migrate-data": "tsx scripts/migrate-to-supabase.ts",
-    "migrate-data:dry-run": "tsx scripts/migrate-to-supabase.ts --dry-run"
+    "migrate-data:dry-run": "tsx scripts/migrate-to-supabase.ts --dry-run",
+    "prepare": "husky"
   },
   "dependencies": {
     "@langchain/core": "^1.1.7",
@@ -54,10 +57,23 @@
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "@types/uuid": "^10.0.0",
+    "@vitejs/plugin-react": "^5.1.2",
+    "@vitest/coverage-v8": "^4.0.17",
     "eslint": "^9",
     "eslint-config-next": "15.3.3",
+    "husky": "^9.1.7",
+    "jsdom": "^27.4.0",
+    "lint-staged": "^16.2.7",
     "tailwindcss": "^4",
     "tsx": "^4.20.6",
-    "typescript": "^5"
+    "typescript": "^5",
+    "vite-tsconfig-paths": "^6.0.4",
+    "vitest": "^4.0.17"
+  },
+  "lint-staged": {
+    "*.{ts,tsx}": [
+      "eslint --fix",
+      "bash -c 'npx tsc --noEmit'"
+    ]
   }
 }

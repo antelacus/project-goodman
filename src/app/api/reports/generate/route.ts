@@ -14,7 +14,6 @@ import {
   incrementGuestRate,
   generateRequestId,
   createErrorResponse,
-  COOKIE_NAME,
 } from '@/lib/security';
 import { ReportGenerateSchema, validateRequest } from '@/lib/validation/api-schemas';
 import type {
@@ -200,7 +199,6 @@ export async function POST(req: NextRequest) {
         // Track which phases we've already started/completed
         const phasesSent = new Map<string, Set<string>>();
         let currentPhase: ReportPhase | null = null;
-        let lastSectionId: string | null = null;
 
         try {
           // Stream events from the workflow

@@ -1,5 +1,7 @@
 # Code Conventions
 
+This file is for project-scope code conventions and best practices. For global code conventions, see `~/.claude/CLAUDE.md`.
+
 ## File Organization
 
 - Prompt templates stored in `src/lib/prompts/*.txt`, loaded via `src/lib/prompts/index.ts`
@@ -39,12 +41,59 @@
 - Tool registrations should happen once at module load, not per-request
 - Document search uses hybrid retrieval (vector + keyword) with RRF fusion scoring
 
+## ESLint & TypeScript
+
+### Handling `any` Types
+
+When `any` is unavoidable (external library types, Zod internals, XLSX parsing), use this pattern:
+
+```typescript
+// REASON: XLSX returns unknown[], cast needed for row/cell operations on untyped external data
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const jsonData = XLSX.utils.sheet_to_json(sheet, { header: 1 }) as any[][];
+```
+
+Common justified cases:
+
+- XLSX library parsing (returns untyped data)
+- Zod internal `_def` access for schema introspection
+- LangGraph DeepPartial state initialization
+
+### Unused Variables
+
+ESLint does not recognize underscore prefix (`_unused`) in this project. For unused parameters that must remain in function signature:
+
+```typescript
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+export async function GET(req: NextRequest) {
+  // req unused but required by Next.js signature
+}
+```
+
+### React Hooks Dependencies
+
+When a callback depends on another callback, define the dependency first:
+
+```typescript
+// ✅ Correct: handleEvent defined with useCallback before sendMessage
+const handleEvent = useCallback((event: StreamEvent) => { ... }, [deps]);
+const sendMessage = useCallback((msg: string) => {
+  // uses handleEvent
+}, [handleEvent, ...otherDeps]);
+
+// ❌ Wrong: handleEvent used before defined
+const sendMessage = useCallback((msg: string) => {
+  handleEvent(event);  // ESLint warning: handleEvent not in deps
+}, []);
+```
+
 ## Code Documentation Standards
 
 > **Full guidelines**: See `~/.claude/CLAUDE.md` → Documentation Philosophy section.
 > This avoids duplication - the global file has the complete documentation standards.
 
 **Quick Reference**:
+
 - Architecture docs in `docs/`
 - File-level comments only for complex/entry files
 - Code comments: explain "why", not "what"
@@ -53,5 +102,6 @@
 
 - **Code**: English for all code (functions, variables, comments)
 - **User-facing content**: Chinese (中文) for UI strings, labels, business domain terms (财务指标名称)
-- **Documentation in `/docs`**: **Simplified Chinese (简体中文)** for all documents (PRDs, design docs, development tracks), while keeping code examples and technical terminology in English
-- **CLAUDE.md, README.md, CHANGELOG.md**: English (for broader accessibility)
+- **Documentation in `/docs`**: **Simplified Chinese (简体中文)** for all documents (PRDs, design docs, development tracks), while keeping code examples and technical terminology in English. `docs/DEPLOYMENT_CHECKLIST.md` is an exception.
+- **CLAUDE.md, CHANGELOG.md**: English (for broader accessibility)
+- **README.md**: Chinese (中文) for user familiarization

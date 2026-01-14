@@ -1,7 +1,7 @@
 # Project Goodman - Deployment Checklist
 
-**Version**: v4.2
-**Last Updated**: 2026-01-13
+**Version**: v4.3
+**Last Updated**: 2026-01-14
 **Target Platform**: Docker on VPS + Supabase Cloud
 
 > This checklist covers the complete Phase 6 deployment process.
@@ -57,11 +57,15 @@ Verify in `$GOODMAN_PROD_DIR/.env`:
 
 ## 2. Quality Gates
 
-### 2.1 Build Verification
+### 2.1 Lint & Test Verification
 
 ```bash
-npm run build  # Must complete with 0 errors
+npm run lint   # Must return 0 errors (enforced by pre-commit hooks)
+npm run test   # Must pass (Vitest)
+npm run build  # Must complete with 0 errors (includes ESLint check)
 ```
+
+> **Note**: Pre-commit hooks (Husky + lint-staged) automatically run ESLint and Prettier on staged files. If commits are failing, run `npm run lint -- --fix` to auto-fix issues.
 
 ### 2.2 Security Audit
 
@@ -244,6 +248,7 @@ These should always be true:
 
 | Version | Date | Changes |
 |---------|------|---------|
+| v4.3 | 2026-01-14 | Added lint/test commands to Quality Gates (2.1), added pre-commit hooks note |
 | v4.2 | 2026-01-13 | Added post-release documentation section (6.1) to align with global CLAUDE.md |
 | v4.1 | 2026-01-08 | Fixed sequence: pre-deploy docs before deployment, post-deploy finalization after |
 | v4.0 | 2026-01-08 | Reorganized as Phase 6 execution guide |
@@ -252,4 +257,4 @@ These should always be true:
 
 ---
 
-*Project Goodman v4.2*
+*Project Goodman v4.3*

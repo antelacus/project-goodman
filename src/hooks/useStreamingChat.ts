@@ -35,6 +35,34 @@ export function useStreamingChat({ initialSessionId, onComplete, onError }: UseS
 
     const abortControllerRef = useRef<AbortController | null>(null);
 
+    // Define handleEvent with useCallback before sendMessage
+    const handleEvent = useCallback((type: StreamEventType, data: unknown) => {
+        // Add to event log
+        const newEvent: StreamEvent = { type, data, timestamp: Date.now() };
+        setEvents(prev => [...prev, newEvent]);
+
+        if (type === 'thinking') {
+            const thinkingData = data as { node: string };
+            setCurrentThinking(thinkingData.node);
+        } else if (type === 'process') {
+            // v4.0: Accumulate process events for transparency
+            setProcessEvents(prev => [...prev, data as ProcessEvent]);
+        } else if (type === 'complete') {
+            setCurrentThinking(null);
+            // Update session ID if returned
+            const completeData = data as { sessionId?: string };
+            if (completeData.sessionId) {
+                setSessionId(completeData.sessionId);
+            }
+            if (onComplete) {
+                onComplete(data);
+            }
+        } else if (type === 'error') {
+            const errorData = data as { message: string };
+            if (onError) onError(errorData.message);
+        }
+    }, [onComplete, onError]);
+
     const sendMessage = useCallback(async (question: string, files: unknown[] = [], documentIds: string[] = []) => {
         // Reset state for new message
         setIsStreaming(true);
@@ -98,7 +126,7 @@ export function useStreamingChat({ initialSessionId, onComplete, onError }: UseS
 
                     const lines = block.split('\n');
                     let eventType: StreamEventType | null = null;
-                    let eventData: any = null;
+                    let eventData: unknown = null;
 
                     for (const line of lines) {
                         if (line.startsWith('event: ')) {
@@ -118,46 +146,19 @@ export function useStreamingChat({ initialSessionId, onComplete, onError }: UseS
                 }
             }
 
-        } catch (error: any) {
-            if (error.name === 'AbortError') {
+        } catch (error: unknown) {
+            if (error instanceof Error && error.name === 'AbortError') {
                 console.log('Request aborted');
             } else {
                 console.error('Streaming error:', error);
-                if (onError) onError(error.message);
+                if (onError) onError(error instanceof Error ? error.message : 'Unknown error');
             }
         } finally {
             setIsStreaming(false);
             setCurrentThinking(null);
             abortControllerRef.current = null;
         }
-    }, [sessionId, onError]);
-
-    const handleEvent = (type: StreamEventType, data: unknown) => {
-        // Add to event log
-        const newEvent: StreamEvent = { type, data, timestamp: Date.now() };
-        setEvents(prev => [...prev, newEvent]);
-
-        if (type === 'thinking') {
-            const thinkingData = data as { node: string };
-            setCurrentThinking(thinkingData.node);
-        } else if (type === 'process') {
-            // v4.0: Accumulate process events for transparency
-            setProcessEvents(prev => [...prev, data as ProcessEvent]);
-        } else if (type === 'complete') {
-            setCurrentThinking(null);
-            // Update session ID if returned
-            const completeData = data as { sessionId?: string };
-            if (completeData.sessionId) {
-                setSessionId(completeData.sessionId);
-            }
-            if (onComplete) {
-                onComplete(data);
-            }
-        } else if (type === 'error') {
-            const errorData = data as { message: string };
-            if (onError) onError(errorData.message);
-        }
-    };
+    }, [sessionId, onError, handleEvent]);
 
     return {
         sessionId,

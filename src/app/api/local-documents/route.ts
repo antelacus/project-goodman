@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createServerSupabaseClient } from "@/lib/database";
-import type { Document, DocumentChunk } from "@/lib/database";
 import { generateRequestId, createErrorResponse, getSession } from "@/lib/security";
 
 export async function GET(req: NextRequest) {

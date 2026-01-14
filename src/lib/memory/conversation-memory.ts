@@ -4,7 +4,6 @@ import type {
     Database,
     MessageRole,
     DbToolCall,
-    ConversationMessage as DbConversationMessage
 } from "@/lib/database/types";
 
 export interface ConversationMessage {

@@ -34,34 +34,34 @@
 
 ---
 
-### B. 代码质量
+### B. 代码质量 ✅
 
-#### B1: 安装配置 Vitest
+#### B1: 安装配置 Vitest ✅
 
-- [ ] 安装依赖：vitest, @vitest/coverage-v8, @vitejs/plugin-react, vite-tsconfig-paths, jsdom
-- [ ] 创建 `vitest.config.ts`
-- [ ] 添加 `npm run test` 脚本
-- [ ] 添加 `npm run test:coverage` 脚本
-- [ ] 创建示例测试验证配置
+- [x] 安装依赖：vitest, @vitest/coverage-v8, @vitejs/plugin-react, vite-tsconfig-paths, jsdom
+- [x] 创建 `vitest.config.ts`
+- [x] 添加 `npm run test` 脚本
+- [x] 添加 `npm run test:coverage` 脚本
+- [x] 创建示例测试验证配置
 
-#### B2: 安装配置 Husky + lint-staged
+#### B2: 安装配置 Husky + lint-staged ✅
 
-- [ ] 安装依赖：husky, lint-staged
-- [ ] 运行 `npx husky init`
-- [ ] 创建 `.husky/pre-commit` 钩子
-- [ ] 配置 lint-staged 规则
-- [ ] 测试预提交钩子
+- [x] 安装依赖：husky, lint-staged
+- [x] 运行 `npx husky init`
+- [x] 创建 `.husky/pre-commit` 钩子
+- [x] 配置 lint-staged 规则
+- [x] 测试预提交钩子
 
-#### B3: 修复 ESLint 错误
+#### B3: 修复 ESLint 错误 ✅
 
-- [ ] 修复 `src/lib/extraction/structured.ts` (13 errors)
-- [ ] 修复 `src/app/api/admin/upload-database-document/route.ts` (11 errors)
-- [ ] 修复 `src/app/api/chat/stream/route.ts` (5 errors)
-- [ ] 修复 `src/hooks/useStreamingChat.ts` (3 errors + 1 warning)
-- [ ] 修复剩余文件的错误
-- [ ] 移除 `next.config.ts` 中的 `ignoreDuringBuilds: true`
-- [ ] 验证 `npm run lint` 返回 0 错误
-- [ ] 验证 `npm run build` 成功
+- [x] 修复 `src/lib/extraction/structured.ts` (13 errors)
+- [x] 修复 `src/app/api/admin/upload-database-document/route.ts` (11 errors)
+- [x] 修复 `src/app/api/chat/stream/route.ts` (5 errors)
+- [x] 修复 `src/hooks/useStreamingChat.ts` (3 errors + 1 warning)
+- [x] 修复剩余文件的错误
+- [x] 移除 `next.config.ts` 中的 `ignoreDuringBuilds: true`
+- [x] 验证 `npm run lint` 返回 0 错误
+- [x] 验证 `npm run build` 成功
 
 ---
 
@@ -207,6 +207,53 @@
 
 **提交**: `9491bdb` - docs(v4.3): comprehensive documentation review and restructuring
 
+### 2026-01-14 - 代码质量工具配置
+
+#### B1: Vitest 测试框架
+
+**安装的依赖**：
+- vitest
+- @vitest/coverage-v8
+- @vitejs/plugin-react
+- vite-tsconfig-paths
+- jsdom
+
+**创建的文件**：
+- `vitest.config.ts` - 配置 React 插件、TypeScript 路径别名、jsdom 环境
+- `tests/unit/example.test.ts` - 示例测试验证配置
+
+**添加的脚本**：
+- `npm run test` - 运行 vitest
+- `npm run test:coverage` - 运行 vitest 并生成覆盖率报告
+
+#### B2: Husky + lint-staged 预提交钩子
+
+**配置**：
+- `.husky/pre-commit` - 调用 `npx lint-staged`
+- `package.json` lint-staged 配置：
+  - `*.ts, *.tsx` → `eslint --fix`
+  - `*.ts, *.tsx, *.json, *.md` → `prettier --write`
+
+#### B3: ESLint 错误修复
+
+**修复策略**：
+- 移除未使用的导入（unused imports）
+- 移除未使用的变量（unused variables）
+- 对必要的 `any` 类型添加 `// REASON:` 注释和 eslint-disable
+- 修复 React Hooks 依赖数组（useCallback）
+- 修复 TypeScript 类型不匹配
+
+**主要修复文件**：
+- `src/lib/extraction/structured.ts` - 导出用于类型推断的 schema，添加 XLSX/Zod any 注释
+- `src/app/api/admin/upload-database-document/route.ts` - 移除未使用导入，修复类型
+- `src/app/api/chat/stream/route.ts` - 移除未使用导入，修复 any 类型
+- `src/hooks/useStreamingChat.ts` - 重构 useCallback 依赖，修复 error 类型
+- 其他文件：移除未使用导入/变量
+
+**验证**：
+- `npm run lint` → 0 errors
+- `npm run build` → 成功
+
 ---
 
 ## 测试清单
@@ -215,9 +262,9 @@
 
 #### 代码质量
 
-- [ ] `npm run lint` 返回 0 错误
-- [ ] `npm run build` 成功（ESLint 启用）
-- [ ] `npm run test` 可运行并通过
+- [x] `npm run lint` 返回 0 错误
+- [x] `npm run build` 成功（ESLint 启用）
+- [x] `npm run test` 可运行并通过
 - [ ] Git commit 测试 lint 错误阻止
 
 #### UI/UX
