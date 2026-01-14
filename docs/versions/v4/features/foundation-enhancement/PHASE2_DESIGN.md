@@ -141,6 +141,70 @@ npx supabase gen types typescript --project-id mxybrzuxlsioqwsxyjeb > src/lib/da
 
 **验证**：确保输出包含 `reports` 表定义。
 
+### C2: 审查未使用索引
+
+> **来源**: TD-009
+
+**步骤**：
+
+1. 运行 Supabase 性能顾问获取索引使用情况
+2. 分析 23 个未使用索引
+3. 决策：保留、删除、或标记为"设计需要"
+4. 在 TRACK 中记录决策及理由
+
+**决策选项**：
+
+| 类型 | 处理方式 |
+|------|----------|
+| 确实无用 | 创建迁移删除 |
+| 低频使用但必要 | 保留并文档化 |
+| 未来需要 | 保留并添加注释 |
+
+### C3: 处理 RPC 警告
+
+> **来源**: TD-011
+
+**问题**：4 个函数有 mutable search_path 警告
+
+**解决方案**：创建迁移，为每个函数添加：
+
+```sql
+ALTER FUNCTION function_name SET search_path = public;
+```
+
+**验证**：运行 `get_advisors` 确认警告已消除。
+
+### C4: 文档化 RLS 设计决策
+
+> **来源**: TD-012, TD-013
+
+**问题**：
+
+- TD-012: `users` 和 `guest_activity` 表未启用 RLS
+- TD-013: 9 个表有 `USING(true)` 宽松策略
+
+**这些都是设计决策，需要文档化而非修复。**
+
+**输出位置**：`.claude/rules/code-conventions.md` 添加数据库安全部分
+
+**文档模板**：
+
+```markdown
+## Database Security (RLS Design Decisions)
+
+### Tables Without RLS (by design)
+| Table | Reason |
+|-------|--------|
+| users | Server-only access via service role |
+| guest_activity | Anonymous tracking, no user data |
+
+### Tables with USING(true) (by design)
+| Table | Reason |
+|-------|--------|
+| financial_data | Read-only demo data, no user-specific content |
+| ... | ... |
+```
+
 ---
 
 ## D. 页面文案更新
@@ -153,6 +217,35 @@ npx supabase gen types typescript --project-id mxybrzuxlsioqwsxyjeb > src/lib/da
 |------|--------|--------|
 | 25 | "GPT-5-mini" | "GPT-4o" |
 | 59 | "V3.7 (Phase 1)" | "V4.2.1" |
+
+### D2: 修复报告生成时间记录
+
+> **来源**: TD-008
+
+**问题**：`reports` 表中的 `generation_time_ms` 字段未填充
+
+**位置**：报告生成工具 `src/lib/tools/generate-report.ts`
+
+**修复方案**：
+
+```typescript
+const startTime = Date.now();
+
+// ... 报告生成逻辑 ...
+
+const generationTimeMs = Date.now() - startTime;
+
+// 保存报告时包含 generation_time_ms
+await supabase.from('reports').insert({
+  // ... 其他字段 ...
+  generation_time_ms: generationTimeMs,
+});
+```
+
+**验证**：
+
+1. 生成新报告
+2. 查询 `reports` 表确认 `generation_time_ms` 有值
 
 ---
 
@@ -582,9 +675,15 @@ className="max-h-[85dvh] overflow-y-auto"
 
 ## G. 测试基础设施
 
+> **同时解决**: TD-006（测试覆盖不完整）、TD-010（部分测试脚本已过时）
+
 ### G1: 单元测试
 
-**目标**：验证 Vitest 配置有效，建立测试模式。
+**目标**：验证 Vitest 配置有效，建立测试模式，清理过时脚本，扩展关键模块覆盖。
+
+**步骤 1：审查并清理过时脚本**
+
+检查 `tests/` 目录中的现有脚本，移除或更新无法运行的测试。
 
 **测试文件结构**：
 
@@ -813,19 +912,218 @@ function sanitizeContext(context: LogContext): LogContext {
 
 ---
 
+## J. 性能基线
+
+> **来源**: TD-005（技术债务）
+
+### J1: 打包分析器
+
+**安装依赖**：
+
+```bash
+npm install -D @next/bundle-analyzer
+```
+
+**修改 `next.config.ts`**：
+
+```typescript
+import bundleAnalyzer from '@next/bundle-analyzer';
+
+const withBundleAnalyzer = bundleAnalyzer({
+  enabled: process.env.ANALYZE === 'true',
+});
+
+// 现有配置...
+export default withBundleAnalyzer(nextConfig);
+```
+
+**package.json 脚本**：
+
+```json
+{
+  "scripts": {
+    "analyze": "ANALYZE=true npm run build"
+  }
+}
+```
+
+### J2: API 响应时间追踪
+
+**与 I1 日志设施整合**：
+
+在 `logger.ts` 中添加：
+
+```typescript
+export function logRequest(
+  requestId: string,
+  method: string,
+  route: string,
+  status: number,
+  durationMs: number
+) {
+  logger.info(`${method} ${route} ${status} ${durationMs}ms`, {
+    requestId,
+    route,
+    duration: durationMs,
+  });
+}
+```
+
+**使用方式**（在 API 路由中）：
+
+```typescript
+const startTime = Date.now();
+// ... 处理逻辑 ...
+logRequest(requestId, 'POST', '/api/chat/stream', 200, Date.now() - startTime);
+```
+
+### J3: Web Vitals 组件
+
+**新文件**：`src/components/providers/WebVitals.tsx`
+
+```typescript
+'use client';
+
+import { useReportWebVitals } from 'next/web-vitals';
+
+export function WebVitals() {
+  useReportWebVitals((metric) => {
+    // 仅在开发环境或生产环境首次加载时记录
+    if (process.env.NODE_ENV === 'development') {
+      console.log('[WebVitals]', metric.name, Math.round(metric.value));
+    }
+
+    // 生产环境：可选发送到分析服务
+    // 目前仅建立基线，console.log 记录即可
+  });
+
+  return null;
+}
+```
+
+**集成到 layout.tsx**：
+
+```typescript
+import { WebVitals } from '@/components/providers';
+
+export default function RootLayout({ children }) {
+  return (
+    <html>
+      <body>
+        <WebVitals />
+        {children}
+      </body>
+    </html>
+  );
+}
+```
+
+**基线指标目标**（参考 Google 标准）：
+
+| 指标 | 良好 | 需改进 | 差 |
+|------|------|--------|-----|
+| LCP (Largest Contentful Paint) | ≤2.5s | ≤4s | >4s |
+| FID (First Input Delay) | ≤100ms | ≤300ms | >300ms |
+| CLS (Cumulative Layout Shift) | ≤0.1 | ≤0.25 | >0.25 |
+
+---
+
+## K. 健康检查端点
+
+> **来源**: TD-007
+
+### K1: 健康检查 API
+
+**新文件**：`src/app/api/health/route.ts`
+
+```typescript
+import { NextResponse } from 'next/server';
+import { supabase } from '@/lib/database/supabase';
+import { getRedisClient } from '@/lib/database/redis';
+
+interface HealthCheckResult {
+  status: 'healthy' | 'degraded' | 'unhealthy';
+  version: string;
+  timestamp: string;
+  checks: {
+    database: { status: 'ok' | 'error'; latency?: number };
+    redis: { status: 'ok' | 'error' | 'skipped'; latency?: number };
+  };
+}
+
+export async function GET(): Promise<NextResponse<HealthCheckResult>> {
+  const startTime = Date.now();
+  const checks: HealthCheckResult['checks'] = {
+    database: { status: 'error' },
+    redis: { status: 'skipped' },
+  };
+
+  // 检查数据库连接
+  try {
+    const dbStart = Date.now();
+    const { error } = await supabase.from('users').select('id').limit(1);
+    checks.database = {
+      status: error ? 'error' : 'ok',
+      latency: Date.now() - dbStart,
+    };
+  } catch {
+    checks.database = { status: 'error' };
+  }
+
+  // 检查 Redis 连接（如果可用）
+  try {
+    const redis = await getRedisClient();
+    if (redis) {
+      const redisStart = Date.now();
+      await redis.ping();
+      checks.redis = {
+        status: 'ok',
+        latency: Date.now() - redisStart,
+      };
+    }
+  } catch {
+    checks.redis = { status: 'error' };
+  }
+
+  // 确定整体状态
+  const allOk = checks.database.status === 'ok' &&
+    (checks.redis.status === 'ok' || checks.redis.status === 'skipped');
+  const status = allOk ? 'healthy' : checks.database.status === 'ok' ? 'degraded' : 'unhealthy';
+
+  return NextResponse.json({
+    status,
+    version: process.env.npm_package_version || '4.3.0',
+    timestamp: new Date().toISOString(),
+    checks,
+  }, {
+    status: status === 'unhealthy' ? 503 : 200,
+  });
+}
+```
+
+**验证**：
+
+1. `curl http://localhost:3000/api/health`
+2. 确认返回状态码 200 和 JSON 响应
+3. 停止数据库后确认返回 503
+
+---
+
 ## 实现顺序
 
-| 优先级 | 任务 | 依赖 | 状态 |
-|--------|------|------|------|
-| 1 | A1-A2: 文档更新 | 无 | ✅ 完成 |
-| 2 | B1-B3: 代码质量 | 无 | ✅ 完成 |
-| 3 | C1: 重新生成类型 | 无 | ⏳ 待办 |
-| 4 | D1: 修复 About 页面 | 无 | ⏳ 待办 |
-| 5 | E1-E3: UI/UX 改进 | 无 | ✅ 完成 |
-| 6 | F1-F4: 健壮性/可访问性 | 无 | ✅ 完成 |
-| 7 | G1: 测试基础设施 | B1 (Vitest) | ⏳ 待办 |
-| 8 | H1-H3: 安全审计 | 无 | ⏳ 待办 |
-| 9 | I1-I2: 基础日志 | 无 | ⏳ 待办 |
+| 优先级 | 任务 | 依赖 | 解决的 TD | 状态 |
+|--------|------|------|-----------|------|
+| 1 | A1-A2: 文档更新 | 无 | - | ✅ 完成 |
+| 2 | B1-B3: 代码质量 | 无 | - | ✅ 完成 |
+| 3 | C1-C4: 数据库维护 | 无 | TD-009, TD-011, TD-012, TD-013 | ⏳ 待办 |
+| 4 | D1-D2: 页面文案 | 无 | TD-008 | ⏳ 待办 |
+| 5 | E1-E3: UI/UX 改进 | 无 | - | ✅ 完成 |
+| 6 | F1-F4: 健壮性/可访问性 | 无 | - | ✅ 完成 |
+| 7 | G1: 测试基础设施 | B1 (Vitest) | TD-006, TD-010 | ⏳ 待办 |
+| 8 | H1-H3: 安全审计 | 无 | TD-012, TD-013 | ⏳ 待办 |
+| 9 | I1-I2: 基础日志 | 无 | - | ⏳ 待办 |
+| 10 | J1-J3: 性能基线 | I1 (日志设施) | TD-005 | ⏳ 待办 |
+| 11 | K1: 健康检查端点 | 无 | TD-007 | ⏳ 待办 |
 
 ---
 
@@ -845,13 +1143,15 @@ function sanitizeContext(context: LogContext): LogContext {
 | `tests/unit/financial/*.test.ts` | 财务计算测试 | ⏳ 待办 |
 | `tests/unit/utils/*.test.ts` | 工具函数测试 | ⏳ 待办 |
 | `src/lib/logging/logger.ts` | 结构化日志工具 | ⏳ 待办 |
+| `src/components/providers/WebVitals.tsx` | Web Vitals 报告组件 | ⏳ 待办 |
+| `src/app/api/health/route.ts` | 健康检查端点 | ⏳ 待办 |
 
 ### 修改文件
 
 | 文件 | 变更 |
 |------|------|
-| `package.json` | 添加依赖、脚本、lint-staged 配置 |
-| `next.config.ts` | 移除 `ignoreDuringBuilds: true` |
+| `package.json` | 添加依赖、脚本、lint-staged 配置、analyze 脚本 |
+| `next.config.ts` | 移除 `ignoreDuringBuilds: true`、集成 bundle-analyzer |
 | `docs/PRODUCT_ROADMAP.md` | 更新版本状态 |
 | `src/app/(workspace)/about/page.tsx` | 修复版本信息 |
 | `src/lib/database/types.ts` | 从 Supabase 重新生成 |
@@ -863,6 +1163,9 @@ function sanitizeContext(context: LogContext): LogContext {
 | `src/components/admin/PasswordModal.tsx` | 添加可访问性 |
 | `src/components/documents/DocumentSelectModal.tsx` | 添加可访问性、骨架屏 |
 | `src/app/(workspace)/layout.tsx` | 包裹 ErrorBoundary |
+| `src/app/layout.tsx` | 集成 WebVitals 组件 |
+| `src/lib/tools/generate-report.ts` | 添加 generation_time_ms 记录 |
+| `.claude/rules/code-conventions.md` | 添加 RLS 设计决策文档 |
 | ~25 个源文件 | ESLint 错误修复 |
 
 ---
@@ -912,8 +1215,27 @@ function sanitizeContext(context: LogContext): LogContext {
 - [ ] 关键 API 有请求日志
 - [ ] 无敏感数据泄露
 
+### 性能基线
+
+- [ ] `npm run analyze` 可生成打包分析报告
+- [ ] API 响应时间记录在日志中
+- [ ] Web Vitals 基线数据已记录
+
+### 数据库维护
+
+- [ ] 未使用索引已审查并记录决策
+- [ ] RPC mutable search_path 警告已处理
+- [ ] RLS 设计决策已文档化
+- [ ] 报告生成时间正确记录
+
+### 健康检查
+
+- [ ] `/api/health` 返回 200 状态
+- [ ] 响应包含数据库连接状态
+- [ ] 响应包含服务版本信息
+
 ---
 
 *文档创建日期：2026-01-13*
-*最后更新：2026-01-14（添加 G、H、I 设计）*
+*最后更新：2026-01-14（扩展范围：解决 9 项技术债务 TD-005~TD-013，添加 K 任务）*
 *状态：Phase 2 完成，Phase 3-5 实现中*

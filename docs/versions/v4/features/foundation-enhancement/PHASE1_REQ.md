@@ -41,13 +41,17 @@ v4.0-4.2 完成后，核心功能（过程透明化、工具精简、报告生�
 2. 安装配置 Husky + lint-staged 预提交钩子
 3. 修复 40+ ESLint 错误，移除 `ignoreDuringBuilds` 配置
 
-**C. 数据库维护（Database）** *— 协作完成，用于学习*
+**C. 数据库维护（Database）** *— 解决 TD-009, TD-011, TD-012, TD-013*
 
 1. 重新生成 Supabase TypeScript 类型
+2. 审查并文档化 23 个未使用索引（TD-009）
+3. 修复或文档化 RPC mutable search_path 警告（TD-011）
+4. 文档化 RLS 设计决策（TD-012, TD-013）
 
-**D. 页面文案更新（Page Text/Copy）** *— 用户主导*
+**D. 页面文案更新（Page Text/Copy）** *— 解决 TD-008*
 
 1. 修复 About 页面版本和模型信息
+2. 修复 reports 表 `generation_time_ms` 字段未填充问题（TD-008）
 
 **E. UI/UX 改进（UI/UX Improvements）**
 
@@ -61,6 +65,40 @@ v4.0-4.2 完成后，核心功能（过程透明化、工具精简、报告生�
 2. 添加模态框可访问性（焦点陷阱、键盘支持）
 3. 添加模态框移动端视口处理
 4. 添加模态框错误状态
+
+**G. 测试基础设施（Testing Infrastructure）** *— 解决 TD-006, TD-010*
+
+1. 审查并清理过时的测试脚本（TD-010）
+2. 编写核心财务计算函数的单元测试
+3. 编写工具函数测试
+4. 编写提取模块测试（TD-006）
+5. 编写关键 API 路由测试（TD-006）
+6. 建立测试文件组织模式
+
+**H. 安全审计（Security Audit）** *— 含 TD-012, TD-013 文档化*
+
+1. 运行依赖漏洞扫描
+2. 审查认证/授权代码路径
+3. 文档化安全实践
+4. 文档化 RLS 设计决策（TD-012, TD-013 - "by design" 说明）
+
+**I. 基础日志设施（Logging Infrastructure）**
+
+1. 创建结构化日志工具
+2. 关键 API 路由添加请求日志
+
+**J. 性能基线（Performance Baseline）** *— 解决 TD-005*
+
+1. 集成打包分析器（Bundle Analyzer）
+2. API 响应时间追踪（与日志设施整合）
+3. Web Vitals 基线记录
+
+**K. 健康检查端点（Health Check）** *— 解决 TD-007*
+
+1. 创建 `/api/health` 端点
+2. 检查数据库连接状态
+3. 检查 Redis 连接状态
+4. 返回服务版本信息
 
 ### 范围外
 
@@ -219,6 +257,56 @@ npx supabase gen types typescript --project-id mxybrzuxlsioqwsxyjeb > src/lib/da
 
 ---
 
+### REQ-C2: 审查未使用索引
+
+> **来源**: TD-009
+
+**当前状态**：23 个数据库索引未被使用。
+
+**目标状态**：审查索引使用情况，文档化保留/移除决策。
+
+**验收标准**：
+
+- [ ] 运行 Supabase advisors 检查索引使用情况
+- [ ] 记录每个索引的用途或移除原因
+- [ ] 更新 TECHNICAL_DEBT.md 或 CLAUDE.md 记录决策
+
+---
+
+### REQ-C3: 处理 RPC 警告
+
+> **来源**: TD-011
+
+**当前状态**：4 个函数有 mutable search_path 警告。
+
+**目标状态**：修复警告或文档化为已接受风险。
+
+**验收标准**：
+
+- [ ] 审查 4 个 RPC 函数的 search_path 设置
+- [ ] 修复或文档化每个警告
+- [ ] 更新 TECHNICAL_DEBT.md 记录决策
+
+---
+
+### REQ-C4: 文档化 RLS 设计决策
+
+> **来源**: TD-012, TD-013
+
+**当前状态**：
+- users/guest_activity 表未启用 RLS
+- 9 个表有 USING(true) 宽松策略
+
+**目标状态**：在安全实践文档中说明这些是有意设计。
+
+**验收标准**：
+
+- [ ] 在 CLAUDE.md 或 .claude/rules/ 记录 RLS 设计决策
+- [ ] 说明 service role key 的使用场景
+- [ ] 标记 TD-012, TD-013 为 "by design"
+
+---
+
 ### REQ-D1: 修复 About 页面版本信息
 
 > **用户主导任务**：用户将主导此任务，逐页检查和更新文案。
@@ -241,6 +329,26 @@ npx supabase gen types typescript --project-id mxybrzuxlsioqwsxyjeb > src/lib/da
 
 - [ ] About 页面显示正确的 AI 模型名称
 - [ ] About 页面显示正确的版本号
+
+---
+
+### REQ-D2: 修复报告生成时间记录
+
+> **来源**: TD-008
+
+**当前状态**：reports 表中的 `generation_time_ms` 字段未填充。
+
+**目标状态**：报告生成时记录实际耗时。
+
+**涉及文件**：
+
+- `src/lib/tools/report-generator.ts` 或相关报告生成逻辑
+
+**验收标准**：
+
+- [ ] 报告生成时记录开始和结束时间
+- [ ] `generation_time_ms` 字段正确填充
+- [ ] 验证数据库中有正确的值
 
 ---
 
@@ -386,36 +494,49 @@ npx supabase gen types typescript --project-id mxybrzuxlsioqwsxyjeb > src/lib/da
 
 ### REQ-G1: 测试基础设施
 
-**当前状态**：Vitest 已安装但无实际测试用例。
+> **同时解决**: TD-006（测试覆盖不完整）, TD-010（部分测试脚本已过时）
 
-**目标状态**：编写核心功能的单元测试，验证测试框架有效，建立测试模式。
+**当前状态**：Vitest 已安装但无实际测试用例；提取逻辑、API 路由等关键模块无测试覆盖。
+
+**目标状态**：建立完整测试覆盖，验证测试框架有效，清理过时脚本。
 
 **范围**：
 
+- 审查并清理过时的测试脚本（TD-010）
 - 5-10 个财务计算函数的单元测试
 - 2-3 个工具函数的测试
+- 提取模块测试（TD-006）
+- 关键 API 路由集成测试（TD-006）
 - 建立测试文件组织模式
 
 **涉及文件**：
 
+- `tests/` - 审查并清理过时脚本
 - `src/lib/financial/preset-functions.ts` - 财务指标计算
 - `src/lib/utils.ts` - 工具函数
 - `src/lib/validation/api-schemas.ts` - Zod 验证
+- `src/lib/extraction/` - 提取模块测试
+- `src/app/api/` - API 路由测试
 
 **验收标准**：
 
-- [ ] 至少 10 个测试用例通过
+- [ ] 过时测试脚本已清理或更新
+- [ ] 至少 15 个测试用例通过
 - [ ] 测试覆盖核心财务计算逻辑
+- [ ] 测试覆盖提取模块关键函数
+- [ ] 测试覆盖至少 2 个关键 API 路由
 - [ ] `npm run test` 全部通过
-- [ ] 测试文件组织清晰（`tests/unit/`）
+- [ ] 测试文件组织清晰（`tests/unit/`, `tests/integration/`）
 
 ---
 
 ### REQ-H1: 安全审计
 
-**当前状态**：无依赖漏洞扫描，安全实践未文档化。
+> **同时解决**: TD-012, TD-013（RLS 设计决策文档化）
 
-**目标状态**：确认无已知漏洞，记录安全实践。
+**当前状态**：无依赖漏洞扫描，安全实践未文档化，RLS 设计决策未记录。
+
+**目标状态**：确认无已知漏洞，记录安全实践，文档化 RLS 设计决策。
 
 **范围**：
 
@@ -423,12 +544,15 @@ npx supabase gen types typescript --project-id mxybrzuxlsioqwsxyjeb > src/lib/da
 - 审查认证/授权代码路径
 - 验证 API 输入验证覆盖率
 - 文档化安全实践
+- 文档化 RLS "by design" 决策（TD-012, TD-013）
 
 **验收标准**：
 
 - [ ] `npm audit` 无高危或严重漏洞
 - [ ] API 路由输入验证完整
 - [ ] 安全实践记录在 CLAUDE.md
+- [ ] RLS 设计决策（service role key 使用场景）已文档化
+- [ ] TD-012, TD-013 标记为 "by design - documented"
 
 ---
 
@@ -460,6 +584,65 @@ npx supabase gen types typescript --project-id mxybrzuxlsioqwsxyjeb > src/lib/da
 
 ---
 
+### REQ-J1: 性能基线
+
+> **来源**: TD-005（技术债务）
+
+**当前状态**：无打包大小分析、API 响应时间监控、Web Vitals 追踪。
+
+**目标状态**：建立性能基线数据，为未来优化提供参考。
+
+**范围**：
+
+- 打包分析器集成（@next/bundle-analyzer）
+- API 响应时间日志（与 I1 日志设施整合）
+- Web Vitals 基线记录
+
+**涉及文件**：
+
+- `next.config.ts` - 集成 bundle-analyzer
+- `package.json` - 添加分析脚本
+- `src/lib/logging/logger.ts` - 添加响应时间追踪
+- `src/components/providers/WebVitals.tsx` - Web Vitals 报告组件
+
+**验收标准**：
+
+- [ ] `npm run analyze` 可生成打包分析报告
+- [ ] 关键 API 响应时间记录到日志
+- [ ] Web Vitals（LCP, FID, CLS）有基线数据
+- [ ] 首次基线数据记录到文档
+
+---
+
+### REQ-K1: 健康检查端点
+
+> **来源**: TD-007（健康检查端点缺失）
+
+**当前状态**：无健康检查端点，无法快速验证服务状态。
+
+**目标状态**：提供 `/api/health` 端点用于服务状态检查。
+
+**范围**：
+
+- 创建 `/api/health` 端点
+- 检查数据库连接状态
+- 检查 Redis 连接状态
+- 返回服务版本和状态
+
+**涉及文件**：
+
+- 创建 `src/app/api/health/route.ts`
+
+**验收标准**：
+
+- [ ] `/api/health` 端点返回 200 状态
+- [ ] 响应包含数据库连接状态
+- [ ] 响应包含 Redis 连接状态
+- [ ] 响应包含服务版本号
+- [ ] 连接失败时返回适当的错误状态
+
+---
+
 ## 需修改的文件汇总
 
 | 类别 | 文件 | 变更 |
@@ -480,6 +663,11 @@ npx supabase gen types typescript --project-id mxybrzuxlsioqwsxyjeb > src/lib/da
 | **测试** | 创建 `tests/unit/*.test.ts` | 单元测试 |
 | **工具** | 创建 `src/lib/logging/logger.ts` | 日志工具 |
 | **API** | 关键 API 路由 | 添加请求日志 |
+| **配置** | `next.config.ts` | 集成 bundle-analyzer |
+| **组件** | 创建 `src/components/providers/WebVitals.tsx` | Web Vitals 报告 |
+| **API** | 创建 `src/app/api/health/route.ts` | 健康检查端点 |
+| **测试** | 创建 `tests/integration/*.test.ts` | API 集成测试 |
+| **工具** | `src/lib/tools/report-generator.ts` | 修复 generation_time_ms |
 
 ---
 
@@ -517,23 +705,43 @@ npx supabase gen types typescript --project-id mxybrzuxlsioqwsxyjeb > src/lib/da
    - 模态框支持键盘操作
    - 模态框在移动端正常显示
 
-5. **测试覆盖**
+5. **测试覆盖**（TD-006, TD-010）
    - 至少 10 个单元测试通过
    - 核心财务计算有测试覆盖
    - 测试模式可供后续开发参考
+   - 过时测试脚本已清理或修复
 
-6. **安全**
+6. **安全**（TD-012, TD-013）
    - `npm audit` 无高危漏洞
    - API 输入验证完整
    - 安全实践已文档化
+   - RLS 设计决策已文档化
 
 7. **可观测性**
    - 结构化日志工具可用
    - 关键 API 有请求日志
    - 错误日志包含追踪信息
 
+8. **性能基线**（TD-005）
+   - 打包分析报告可生成
+   - API 响应时间有记录
+   - Web Vitals 基线已建立
+
+9. **数据库维护**（TD-009, TD-011）
+   - 未使用索引已审查并文档化
+   - RPC mutable search_path 警告已处理
+   - 数据库维护决策有文档记录
+
+10. **健康检查**（TD-007）
+    - `/api/health` 端点可用
+    - 检查数据库连接状态
+    - 返回服务版本信息
+
+11. **功能修复**（TD-008）
+    - 报告生成时间正确记录到数据库
+
 ---
 
 *文档创建日期：2026-01-13*
-*最后更新：2026-01-14（添加 G、H、I 任务）*
+*最后更新：2026-01-14（扩展范围：解决 9 项技术债务 TD-005~TD-013）*
 *状态：Phase 3-5 实现中*
