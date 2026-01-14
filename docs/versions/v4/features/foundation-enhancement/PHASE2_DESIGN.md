@@ -580,22 +580,252 @@ className="max-h-[85dvh] overflow-y-auto"
 
 ---
 
+## G. 测试基础设施
+
+### G1: 单元测试
+
+**目标**：验证 Vitest 配置有效，建立测试模式。
+
+**测试文件结构**：
+
+```
+tests/
+├── unit/
+│   ├── financial/
+│   │   └── preset-functions.test.ts
+│   ├── utils/
+│   │   └── utils.test.ts
+│   └── validation/
+│       └── api-schemas.test.ts
+└── setup.ts (如需要)
+```
+
+**财务计算测试**：`tests/unit/financial/preset-functions.test.ts`
+
+```typescript
+import { describe, it, expect } from 'vitest';
+import { calculateCurrentRatio, calculateDebtToEquityRatio } from '@/lib/financial/preset-functions';
+
+describe('财务指标计算', () => {
+  describe('流动比率', () => {
+    it('正常计算', () => {
+      expect(calculateCurrentRatio(200, 100)).toBe(2.0);
+    });
+
+    it('分母为零返回 0', () => {
+      expect(calculateCurrentRatio(200, 0)).toBe(0);
+    });
+  });
+
+  describe('资产负债率', () => {
+    it('正常计算', () => {
+      expect(calculateDebtToEquityRatio(100, 200)).toBe(0.5);
+    });
+  });
+});
+```
+
+**工具函数测试**：`tests/unit/utils/utils.test.ts`
+
+```typescript
+import { describe, it, expect } from 'vitest';
+import { cn, formatNumber } from '@/lib/utils';
+
+describe('工具函数', () => {
+  describe('cn (classnames)', () => {
+    it('合并类名', () => {
+      expect(cn('a', 'b')).toBe('a b');
+    });
+
+    it('条件类名', () => {
+      expect(cn('a', false && 'b', 'c')).toBe('a c');
+    });
+  });
+});
+```
+
+---
+
+## H. 安全审计
+
+### H1: 依赖安全检查
+
+**步骤**：
+
+1. 运行 `npm audit`
+2. 分析高危/严重漏洞
+3. 根据可行性修复或记录为已接受风险
+
+**审计输出格式**：
+
+```
+┌───────────────┬────────────────────────────┐
+│ 严重性        │ 数量                        │
+├───────────────┼────────────────────────────┤
+│ Critical      │ 0                          │
+│ High          │ 0                          │
+│ Moderate      │ x                          │
+│ Low           │ x                          │
+└───────────────┴────────────────────────────┘
+```
+
+### H2: 代码安全审查
+
+**检查清单**：
+
+- [ ] 认证：密码哈希（bcrypt）、会话管理（HttpOnly cookies）
+- [ ] 授权：Admin 路由保护、角色检查
+- [ ] 输入验证：所有 API 路由使用 Zod
+- [ ] 输出编码：React 自动 XSS 防护
+- [ ] 敏感数据：日志不含 tokens/passwords
+
+### H3: 安全实践文档
+
+在 `CLAUDE.md` 或 `.claude/rules/` 添加安全部分：
+
+```markdown
+## Security Practices
+
+- Passwords: bcrypt hashing (cost factor 12)
+- Sessions: HttpOnly cookies, Redis storage
+- API Validation: Zod schemas on all routes
+- Admin Auth: Password verification via /api/auth/verify-password
+- Rate Limiting: Redis-based, per-IP limits
+```
+
+---
+
+## I. 基础日志设施
+
+### I1: 结构化日志工具
+
+**新文件**：`src/lib/logging/logger.ts`
+
+```typescript
+type LogLevel = 'debug' | 'info' | 'warn' | 'error';
+
+interface LogContext {
+  requestId?: string;
+  userId?: string;
+  route?: string;
+  duration?: number;
+  [key: string]: unknown;
+}
+
+class Logger {
+  private level: LogLevel;
+
+  constructor(level: LogLevel = 'info') {
+    this.level = level;
+  }
+
+  private shouldLog(level: LogLevel): boolean {
+    const levels: LogLevel[] = ['debug', 'info', 'warn', 'error'];
+    return levels.indexOf(level) >= levels.indexOf(this.level);
+  }
+
+  private format(level: LogLevel, message: string, context?: LogContext): string {
+    const timestamp = new Date().toISOString();
+    const contextStr = context ? ` ${JSON.stringify(context)}` : '';
+    return `[${timestamp}] [${level.toUpperCase()}] ${message}${contextStr}`;
+  }
+
+  debug(message: string, context?: LogContext) {
+    if (this.shouldLog('debug')) console.debug(this.format('debug', message, context));
+  }
+
+  info(message: string, context?: LogContext) {
+    if (this.shouldLog('info')) console.info(this.format('info', message, context));
+  }
+
+  warn(message: string, context?: LogContext) {
+    if (this.shouldLog('warn')) console.warn(this.format('warn', message, context));
+  }
+
+  error(message: string, context?: LogContext) {
+    if (this.shouldLog('error')) console.error(this.format('error', message, context));
+  }
+}
+
+export const logger = new Logger(
+  process.env.NODE_ENV === 'production' ? 'info' : 'debug'
+);
+
+// 请求日志助手
+export function logRequest(
+  requestId: string,
+  method: string,
+  route: string,
+  status: number,
+  duration: number
+) {
+  logger.info(`${method} ${route} ${status}`, {
+    requestId,
+    route,
+    duration,
+  });
+}
+```
+
+### I2: API 路由集成示例
+
+```typescript
+// src/app/api/chat/stream/route.ts
+import { logger, logRequest } from '@/lib/logging/logger';
+import { generateRequestId } from '@/lib/security';
+
+export async function POST(req: NextRequest) {
+  const startTime = Date.now();
+  const requestId = req.headers.get('x-request-id') || generateRequestId();
+
+  logger.info('Chat stream started', { requestId });
+
+  try {
+    // ... 处理逻辑 ...
+
+    logRequest(requestId, 'POST', '/api/chat/stream', 200, Date.now() - startTime);
+    return response;
+  } catch (error) {
+    logger.error('Chat stream error', {
+      requestId,
+      error: error instanceof Error ? error.message : 'Unknown error',
+    });
+    logRequest(requestId, 'POST', '/api/chat/stream', 500, Date.now() - startTime);
+    throw error;
+  }
+}
+```
+
+**敏感数据过滤**：
+
+```typescript
+// 永不记录的字段
+const SENSITIVE_FIELDS = ['password', 'token', 'apiKey', 'secret', 'authorization'];
+
+function sanitizeContext(context: LogContext): LogContext {
+  return Object.fromEntries(
+    Object.entries(context).filter(
+      ([key]) => !SENSITIVE_FIELDS.some(f => key.toLowerCase().includes(f))
+    )
+  );
+}
+```
+
+---
+
 ## 实现顺序
 
-| 优先级 | 任务 | 依赖 |
-|--------|------|------|
-| 1 | A2: 更新 PRODUCT_ROADMAP.md | 无 |
-| 2 | D1: 修复 About 页面 | 无 |
-| 3 | C1: 重新生成类型 | 无 |
-| 4 | B1: 安装 Vitest | 无 |
-| 5 | B2: 安装 Husky + lint-staged | B1 |
-| 6 | B3: 修复 ESLint 错误 | B2 |
-| 7 | E3: 骨架屏组件 | 无 |
-| 8 | F1: Error Boundary | 无 |
-| 9 | F2-F4: 模态框可访问性 | 无 |
-| 10 | E1: 侧边栏会话同步 | 无 |
-| 11 | E2: 过程日志链接 | 无 |
-| 12 | A1: 文档系统审查 | 全部完成后 |
+| 优先级 | 任务 | 依赖 | 状态 |
+|--------|------|------|------|
+| 1 | A1-A2: 文档更新 | 无 | ✅ 完成 |
+| 2 | B1-B3: 代码质量 | 无 | ✅ 完成 |
+| 3 | C1: 重新生成类型 | 无 | ⏳ 待办 |
+| 4 | D1: 修复 About 页面 | 无 | ⏳ 待办 |
+| 5 | E1-E3: UI/UX 改进 | 无 | ✅ 完成 |
+| 6 | F1-F4: 健壮性/可访问性 | 无 | ✅ 完成 |
+| 7 | G1: 测试基础设施 | B1 (Vitest) | ⏳ 待办 |
+| 8 | H1-H3: 安全审计 | 无 | ⏳ 待办 |
+| 9 | I1-I2: 基础日志 | 无 | ⏳ 待办 |
 
 ---
 
@@ -603,15 +833,18 @@ className="max-h-[85dvh] overflow-y-auto"
 
 ### 新建文件
 
-| 文件 | 用途 |
-|------|------|
-| `vitest.config.ts` | 测试框架配置 |
-| `.husky/pre-commit` | 预提交钩子 |
-| `src/components/ui/Skeleton.tsx` | 骨架屏组件 |
-| `src/components/providers/ErrorBoundary.tsx` | 客户端错误边界（关键） |
-| `src/app/(workspace)/error.tsx` | 工作区服务端错误页 |
-| `src/app/global-error.tsx` | 全局错误兜底页 |
-| `src/hooks/useModalAccessibility.ts` | 模态框可访问性 Hook |
+| 文件 | 用途 | 状态 |
+|------|------|------|
+| `vitest.config.ts` | 测试框架配置 | ✅ 完成 |
+| `.husky/pre-commit` | 预提交钩子 | ✅ 完成 |
+| `src/components/ui/Skeleton.tsx` | 骨架屏组件 | ✅ 完成 |
+| `src/components/providers/ErrorBoundary.tsx` | 客户端错误边界 | ✅ 完成 |
+| `src/app/(workspace)/error.tsx` | 工作区服务端错误页 | ✅ 完成 |
+| `src/app/global-error.tsx` | 全局错误兜底页 | ✅ 完成 |
+| `src/hooks/useModalAccessibility.ts` | 模态框可访问性 Hook | ✅ 完成 |
+| `tests/unit/financial/*.test.ts` | 财务计算测试 | ⏳ 待办 |
+| `tests/unit/utils/*.test.ts` | 工具函数测试 | ⏳ 待办 |
+| `src/lib/logging/logger.ts` | 结构化日志工具 | ⏳ 待办 |
 
 ### 修改文件
 
@@ -661,7 +894,26 @@ className="max-h-[85dvh] overflow-y-auto"
 - [ ] `types.ts` 包含 `reports` 表
 - [ ] `npm run build` 无类型错误
 
+### 测试
+
+- [ ] 至少 10 个单元测试通过
+- [ ] 核心财务计算有测试覆盖
+- [ ] `npm run test` 全部通过
+
+### 安全
+
+- [ ] `npm audit` 无高危漏洞
+- [ ] API 路由输入验证完整
+- [ ] 安全实践已文档化
+
+### 日志
+
+- [ ] 日志工具支持不同级别
+- [ ] 关键 API 有请求日志
+- [ ] 无敏感数据泄露
+
 ---
 
 *文档创建日期：2026-01-13*
-*状态：Phase 2 完成，进入 Phase 3-5 实现*
+*最后更新：2026-01-14（添加 G、H、I 设计）*
+*状态：Phase 2 完成，Phase 3-5 实现中*

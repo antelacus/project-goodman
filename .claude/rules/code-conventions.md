@@ -1,6 +1,9 @@
 # Code Conventions
 
-This file is for project-scope code conventions and best practices. For global code conventions, see `~/.claude/CLAUDE.md`.
+> **Scope**: Project-specific implementation details only.
+> **Global conventions**: `~/.claude/CLAUDE.md` (universal principles, security, error handling, documentation philosophy)
+>
+> **Boundary principle**: If it applies to ANY TypeScript/Next.js project → global. If it's specific to this codebase (paths, tools, workarounds) → here.
 
 ## File Organization
 
@@ -41,11 +44,12 @@ This file is for project-scope code conventions and best practices. For global c
 - Tool registrations should happen once at module load, not per-request
 - Document search uses hybrid retrieval (vector + keyword) with RRF fusion scoring
 
-## ESLint & TypeScript
+## ESLint & TypeScript Workarounds
 
-### Handling `any` Types
+> Global principle: "Avoid `as any`; if unavoidable, add `// REASON: ...` comment" (see `~/.claude/CLAUDE.md`)
+> Below are **project-specific cases** where this applies.
 
-When `any` is unavoidable (external library types, Zod internals, XLSX parsing), use this pattern:
+### Justified `any` Cases in This Project
 
 ```typescript
 // REASON: XLSX returns unknown[], cast needed for row/cell operations on untyped external data
@@ -53,15 +57,14 @@ When `any` is unavoidable (external library types, Zod internals, XLSX parsing),
 const jsonData = XLSX.utils.sheet_to_json(sheet, { header: 1 }) as any[][];
 ```
 
-Common justified cases:
-
+Known justified cases:
 - XLSX library parsing (returns untyped data)
 - Zod internal `_def` access for schema introspection
 - LangGraph DeepPartial state initialization
 
-### Unused Variables
+### ESLint Config Quirks
 
-ESLint does not recognize underscore prefix (`_unused`) in this project. For unused parameters that must remain in function signature:
+**Unused variables**: ESLint does not recognize underscore prefix (`_unused`) in this project:
 
 ```typescript
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -70,33 +73,21 @@ export async function GET(req: NextRequest) {
 }
 ```
 
-### React Hooks Dependencies
-
-When a callback depends on another callback, define the dependency first:
+**React hooks order**: Define dependency callbacks before using them:
 
 ```typescript
-// ✅ Correct: handleEvent defined with useCallback before sendMessage
+// ✅ Define handleEvent first, then use in sendMessage deps
 const handleEvent = useCallback((event: StreamEvent) => { ... }, [deps]);
 const sendMessage = useCallback((msg: string) => {
   // uses handleEvent
 }, [handleEvent, ...otherDeps]);
-
-// ❌ Wrong: handleEvent used before defined
-const sendMessage = useCallback((msg: string) => {
-  handleEvent(event);  // ESLint warning: handleEvent not in deps
-}, []);
 ```
 
-## Code Documentation Standards
+## Code Documentation
 
-> **Full guidelines**: See `~/.claude/CLAUDE.md` → Documentation Philosophy section.
-> This avoids duplication - the global file has the complete documentation standards.
+> See `~/.claude/CLAUDE.md` → Documentation Philosophy for full guidelines.
 
-**Quick Reference**:
-
-- Architecture docs in `docs/`
-- File-level comments only for complex/entry files
-- Code comments: explain "why", not "what"
+Quick reference: Architecture in `docs/`, file headers for complex files only, code comments explain "why" not "what".
 
 ## Language Standards
 
