@@ -4,6 +4,7 @@ import { Suspense } from 'react';
 import MobileHeader from '@/components/layout/MobileHeader';
 import Sidebar from '@/components/layout/Sidebar';
 import { SidebarProvider, useSidebar } from '@/components/layout/SidebarProvider';
+import { ErrorBoundary } from '@/components/providers';
 import { cn } from '@/lib/utils';
 
 function WorkspaceLayoutContent({ children }: { children: React.ReactNode }) {
@@ -30,7 +31,9 @@ function WorkspaceLayoutContent({ children }: { children: React.ReactNode }) {
                     "ml-0"
                 )}
             >
-                {children}
+                <ErrorBoundary>
+                    {children}
+                </ErrorBoundary>
             </main>
         </div>
     );

@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { useDocumentStore, Document } from "@/store/documents";
 import { UploadFeedback, StructureAnalysis } from "./UploadFeedback";
+import { useModalAccessibility } from "@/hooks/useModalAccessibility";
 
 interface DocumentSelectModalProps {
   open: boolean;
@@ -28,6 +29,12 @@ const DocumentSelectModal: React.FC<DocumentSelectModalProps> = ({
   const [search, setSearch] = useState("");
   const [uploading, setUploading] = useState(false);
   const [uploadAnalysis, setUploadAnalysis] = useState<StructureAnalysis | null>(null);
+
+  // Modal accessibility (focus trap, Escape key, ARIA)
+  const { modalRef, handleBackdropClick, ariaProps } = useModalAccessibility({
+    isOpen: open,
+    onClose,
+  });
 
   if (!open) return null;
 
@@ -133,11 +140,13 @@ const DocumentSelectModal: React.FC<DocumentSelectModalProps> = ({
   return (
     <div
       className="fixed inset-0 w-screen h-screen bg-black/[0.18] z-[1000] flex items-center justify-center"
-      onClick={onClose}
+      onClick={handleBackdropClick}
     >
       <div
-        className="bg-white rounded-lg shadow-xl p-8 min-w-[340px] max-w-[480px] max-h-[90vh] overflow-y-auto relative"
-        onClick={e => e.stopPropagation()}
+        ref={modalRef}
+        className="bg-white rounded-lg shadow-xl p-8 min-w-[340px] max-w-[480px] max-h-[85dvh] overflow-y-auto relative"
+        {...ariaProps}
+        aria-labelledby="document-select-modal-title"
       >
         <button
           onClick={onClose}
@@ -145,7 +154,7 @@ const DocumentSelectModal: React.FC<DocumentSelectModalProps> = ({
         >
           &times;
         </button>
-        <h3 className="font-bold text-lg mb-4">选择文档</h3>
+        <h3 id="document-select-modal-title" className="font-bold text-lg mb-4">选择文档</h3>
         <input
           type="text"
           placeholder="搜索文档名称..."

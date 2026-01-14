@@ -5,3 +5,4 @@
  */
 
 export { ClientOnlyProvider } from "./ClientOnlyProvider";
+export { ErrorBoundary } from "./ErrorBoundary";
