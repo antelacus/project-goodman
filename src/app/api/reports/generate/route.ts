@@ -15,6 +15,7 @@ import {
   generateRequestId,
   createErrorResponse,
 } from '@/lib/security';
+import { logger, logRequest, logError } from '@/lib/logging';
 import { ReportGenerateSchema, validateRequest } from '@/lib/validation/api-schemas';
 import type {
   ReportPhaseEvent,
@@ -123,6 +124,9 @@ function createProcessEvent(
 
 export async function POST(req: NextRequest) {
   const requestId = req.headers.get('x-request-id') || generateRequestId();
+  const startTime = Date.now();
+
+  logger.info('Report generation started', { requestId, route: '/api/reports/generate' });
 
   try {
     // Ensure session exists (creates guest session if needed)
@@ -301,7 +305,7 @@ export async function POST(req: NextRequest) {
           }
 
         } catch (err: unknown) {
-          console.error('Report generation stream error:', err);
+          logError('Report generation stream error', err, requestId, { route: '/api/reports/generate' });
           const errorMessage = err instanceof Error ? err.message : '报告生成过程中发生错误';
           sendEvent('report', createErrorEvent(errorMessage, currentPhase || undefined));
         } finally {
@@ -335,10 +339,12 @@ export async function POST(req: NextRequest) {
       headers['Set-Cookie'] = cookieParts.join('; ');
     }
 
+    logRequest(requestId, 'POST', '/api/reports/generate', 200, Date.now() - startTime);
     return new Response(stream, { headers });
 
   } catch (error: unknown) {
-    console.error('Report generate error:', error);
+    logError('Report generation request failed', error, requestId, { route: '/api/reports/generate' });
+    logRequest(requestId, 'POST', '/api/reports/generate', 500, Date.now() - startTime);
     return createErrorResponse(error, requestId, 500);
   }
 }

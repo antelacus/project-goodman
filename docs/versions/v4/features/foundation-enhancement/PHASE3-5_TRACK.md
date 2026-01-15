@@ -237,23 +237,23 @@
 
 ---
 
-### I. 基础日志设施
+### I. 基础日志设施 ✅
 
 > **新增于 2026-01-14**：提供生产环境可见性。
 
-#### I1: 结构化日志工具
+#### I1: 结构化日志工具 ✅
 
-- [ ] 创建 `src/lib/logging/logger.ts`
-- [ ] 实现日志级别（debug, info, warn, error）
-- [ ] 实现上下文信息（requestId, route, duration）
-- [ ] 实现敏感数据过滤
+- [x] 创建 `src/lib/logging/logger.ts`
+- [x] 实现日志级别（debug, info, warn, error）
+- [x] 实现上下文信息（requestId, route, duration）
+- [x] 实现敏感数据过滤
 
-#### I2: API 路由集成
+#### I2: API 路由集成 ✅
 
-- [ ] 在 `chat/stream/route.ts` 添加请求日志
-- [ ] 在 `reports/generate/route.ts` 添加请求日志
-- [ ] 验证错误日志包含追踪信息
-- [ ] 验证无敏感数据泄露
+- [x] 在 `chat/stream/route.ts` 添加请求日志
+- [x] 在 `reports/generate/route.ts` 添加请求日志
+- [x] 验证错误日志包含追踪信息
+- [x] 验证无敏感数据泄露
 
 ---
 
@@ -657,6 +657,46 @@ Tests: 78 passed (78)
 - `npm run lint` → 0 errors
 - `npm run build` → 成功
 
+### 2026-01-15 - 基础日志设施实现
+
+#### I1: 结构化日志工具
+
+**创建的文件**：
+
+1. `src/lib/logging/logger.ts` - 结构化日志核心模块
+   - `Logger` 类：支持 debug/info/warn/error 四个日志级别
+   - `logRequest()` 函数：HTTP 请求日志助手，包含 method、route、status、duration
+   - `logError()` 函数：错误日志助手，包含错误消息和堆栈追踪（前 5 行）
+   - 敏感数据过滤：自动过滤 password、token、apikey、secret、authorization 等字段
+   - JSON 格式输出：便于日志聚合和分析
+
+2. `src/lib/logging/index.ts` - 模块导出
+
+**日志格式示例**：
+
+```json
+{"timestamp":"2026-01-15T10:30:00.000Z","level":"INFO","message":"POST /api/chat/stream 200 1234ms","requestId":"req_abc123","route":"/api/chat/stream","status":200,"duration":1234}
+```
+
+#### I2: API 路由集成
+
+**修改的文件**：
+
+1. `src/app/api/chat/stream/route.ts`
+   - 导入 `logger`, `logRequest`, `logError`
+   - 添加 `startTime` 计时
+   - 请求开始时记录 info 日志
+   - 请求结束时调用 `logRequest()` 记录响应时间
+   - 错误处理使用 `logError()` 代替 `console.error`
+
+2. `src/app/api/reports/generate/route.ts`
+   - 同上模式集成日志
+
+**验证**：
+
+- `npm run lint` → 0 errors
+- `npm run build` → 成功
+
 ---
 
 ## 测试清单
@@ -710,9 +750,9 @@ Tests: 78 passed (78)
 
 #### 日志设施 (I)
 
-- [ ] 日志工具支持不同级别
-- [ ] 关键 API 有请求日志
-- [ ] 无敏感数据泄露
+- [x] 日志工具支持不同级别
+- [x] 关键 API 有请求日志
+- [x] 无敏感数据泄露
 
 #### 性能基线 (J)
 
@@ -729,5 +769,5 @@ Tests: 78 passed (78)
 ---
 
 *文档创建日期：2026-01-13*
-*最后更新：2026-01-15（完成 Task H 安全审计，修复4个漏洞，记录3个技术债务）*
+*最后更新：2026-01-15（完成 Task I 基础日志设施）*
 *状态：实现中*
