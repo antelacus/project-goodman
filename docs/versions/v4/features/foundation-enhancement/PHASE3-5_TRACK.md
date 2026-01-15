@@ -257,30 +257,30 @@
 
 ---
 
-### J. 性能基线
+### J. 性能基线 ✅
 
 > **新增于 2026-01-14**：源自 TD-005，建立性能基线数据。
 
-#### J1: 打包分析器
+#### J1: 打包分析器 ✅
 
-- [ ] 安装 `@next/bundle-analyzer` 依赖
-- [ ] 修改 `next.config.ts` 集成 bundle-analyzer
-- [ ] 添加 `npm run analyze` 脚本
-- [ ] 验证打包分析报告可生成
+- [x] 安装 `@next/bundle-analyzer` 依赖
+- [x] 修改 `next.config.ts` 集成 bundle-analyzer
+- [x] 添加 `npm run analyze` 脚本
+- [x] 验证打包分析报告可生成
 
-#### J2: API 响应时间追踪
+#### J2: API 响应时间追踪 ✅
 
-- [ ] 在 `logger.ts` 添加 `logRequest` 函数
-- [ ] 在关键 API 路由集成响应时间追踪
-- [ ] 验证日志包含响应时间
+- [x] 在 `logger.ts` 添加 `logRequest` 函数（已在 Task I 完成）
+- [x] 在关键 API 路由集成响应时间追踪（已在 Task I 完成）
+- [x] 验证日志包含响应时间
 
-#### J3: Web Vitals 组件
+#### J3: Web Vitals 组件 ✅
 
-- [ ] 创建 `src/components/providers/WebVitals.tsx`
-- [ ] 在 `src/app/layout.tsx` 集成 WebVitals 组件
-- [ ] 更新 `src/components/providers/index.ts` 导出
-- [ ] 验证开发模式下 Web Vitals 输出到控制台
-- [ ] 记录首次基线数据
+- [x] 创建 `src/components/providers/WebVitals.tsx`
+- [x] 在 `src/app/layout.tsx` 集成 WebVitals 组件
+- [x] 更新 `src/components/providers/index.ts` 导出
+- [x] 验证开发模式下 Web Vitals 输出到控制台
+- [x] 记录首次基线数据
 
 ---
 
@@ -697,6 +697,72 @@ Tests: 78 passed (78)
 - `npm run lint` → 0 errors
 - `npm run build` → 成功
 
+### 2026-01-15 - 性能基线实现
+
+#### J1: 打包分析器
+
+**安装的依赖**：
+
+- @next/bundle-analyzer
+
+**修改的文件**：
+
+1. `next.config.ts`
+   - 导入 `@next/bundle-analyzer`
+   - 创建 `withBundleAnalyzer` wrapper，通过 `ANALYZE` 环境变量控制
+   - 导出包装后的配置
+
+2. `package.json`
+   - 新增 `"analyze": "ANALYZE=true npm run build"` 脚本
+
+**使用方式**：
+
+```bash
+npm run analyze
+# 生成打包分析报告，自动打开浏览器显示 client/server 打包详情
+```
+
+#### J2: API 响应时间追踪
+
+**已在 Task I 完成**，`logRequest()` 函数包含：
+
+- `durationMs` 参数记录响应时间
+- 日志格式：`POST /api/chat/stream 200 1234ms`
+
+**集成位置**：
+
+- `chat/stream/route.ts`: 请求结束时调用 `logRequest()`
+- `reports/generate/route.ts`: 同上
+
+#### J3: Web Vitals 组件
+
+**创建的文件**：
+
+1. `src/components/providers/WebVitals.tsx` - Web Vitals 报告组件
+   - 使用 `useReportWebVitals` hook
+   - 开发模式：console.log 所有指标
+   - 生产模式：仅记录首次导航的指标
+   - 指标：LCP, FID, CLS, TTFB, INP
+
+**修改的文件**：
+
+1. `src/components/providers/index.ts` - 新增 `WebVitals` 导出
+2. `src/app/layout.tsx` - 在 body 中添加 `<WebVitals />` 组件
+
+**基线指标目标**（参考 Google 标准）：
+
+| 指标 | 良好 | 需改进 | 差 |
+|------|------|--------|-----|
+| LCP | ≤2.5s | ≤4s | >4s |
+| FID | ≤100ms | ≤300ms | >300ms |
+| CLS | ≤0.1 | ≤0.25 | >0.25 |
+
+**验证**：
+
+- `npm run lint` → 0 errors
+- `npm run test` → 78 passed
+- `npm run build` → 成功
+
 ---
 
 ## 测试清单
@@ -756,9 +822,9 @@ Tests: 78 passed (78)
 
 #### 性能基线 (J)
 
-- [ ] `npm run analyze` 可生成打包分析报告
-- [ ] API 响应时间记录在日志中
-- [ ] Web Vitals 基线数据已记录
+- [x] `npm run analyze` 可生成打包分析报告
+- [x] API 响应时间记录在日志中
+- [x] Web Vitals 基线数据已记录
 
 #### 健康检查 (K)
 
@@ -769,5 +835,5 @@ Tests: 78 passed (78)
 ---
 
 *文档创建日期：2026-01-13*
-*最后更新：2026-01-15（完成 Task I 基础日志设施）*
+*最后更新：2026-01-15（完成 Task J 性能基线）*
 *状态：实现中*
