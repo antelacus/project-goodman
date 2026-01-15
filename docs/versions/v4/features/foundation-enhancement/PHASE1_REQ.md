@@ -23,6 +23,12 @@ v4.0-4.2 完成后，核心功能（过程透明化、工具精简、报告生�
 | **页面文案** | About 页面显示 V3.7 和 GPT-5-mini | 信息误导用户 |
 | **UI/UX** | 侧边栏会话不同步，过程日志链接导航问题 | 用户体验受损 |
 | **健壮性** | 无 Error Boundary，加载状态不完整 | 应用不稳定 |
+| **基础设施** | 手动部署，无 CI/CD 流水线 | 部署有人为错误风险 |
+| **安全** | expr-eval 有高危漏洞（原型污染、函数注入） | 潜在安全风险 |
+| **安全** | xlsx 有高危漏洞（原型污染、ReDoS） | 潜在安全风险 |
+| **安全** | Next.js 15.3.6 有多个高危漏洞 | 潜在安全风险 |
+| **代码质量** | 部分 API 路由缺少 Zod schema 验证 | 验证逻辑分散 |
+| **可观测性** | 无 LangSmith 集成，Agent 调试依赖控制台日志 | Agent 问题难以调试 |
 
 ---
 
@@ -100,12 +106,51 @@ v4.0-4.2 完成后，核心功能（过程透明化、工具精简、报告生�
 3. 检查 Redis 连接状态
 4. 返回服务版本信息
 
+**L. CI/CD 流水线（CI/CD Pipeline）** *— 解决 TD-004*
+
+1. 创建 GitHub Actions 工作流
+2. 配置代码质量检查（lint、test、tsc）
+3. 配置安全检查（npm audit）
+4. 配置构建验证
+5. 配置生产部署（仅 main 分支）
+
+**M. 依赖安全修复 - expr-eval（Dependency Security - expr-eval）** *— 解决 TD-014*
+
+1. 移除 expr-eval 依赖
+2. 安装 mathjs 作为替代
+3. 重构所有使用 expr-eval 的代码
+4. 更新相关测试
+
+**N. 依赖安全修复 - xlsx（Dependency Security - xlsx）** *— 解决 TD-015*
+
+1. 移除 xlsx (SheetJS) 依赖
+2. 安装 exceljs 作为替代
+3. 重构所有 Excel 文件处理代码
+4. 更新相关测试
+
+**O. 框架升级 - Next.js（Framework Upgrade - Next.js）** *— 解决 TD-016*
+
+1. 升级 Next.js 到 15.5+
+2. 测试所有页面和 API 路由兼容性
+3. 修复任何破坏性变更
+
+**P. API 验证完善（API Validation Completion）** *— 解决 TD-017*
+
+1. 为缺少 Zod schema 的 API 路由添加验证
+2. 统一验证到 `src/lib/validation/api-schemas.ts`
+3. 标准化错误响应格式
+
+**Q. Agent 可观测性（Agent Observability）** *— 解决 TD-003*
+
+1. 集成 LangSmith 用于 Agent 追踪
+2. 配置追踪可视化
+3. 添加 Token 使用量跟踪
+4. 添加性能指标收集
+
 ### 范围外
 
 - 新功能开发（快捷操作扩展、管理用财报）
 - 数据提取间歇性故障诊断（延后观察）
-- CI/CD 流水线（v5 范围）
-- LangSmith 可观测性（v5 范围）
 
 ---
 
@@ -643,6 +688,245 @@ npx supabase gen types typescript --project-id mxybrzuxlsioqwsxyjeb > src/lib/da
 
 ---
 
+### REQ-L1: CI/CD 流水线
+
+> **来源**: TD-004（手动部署）
+
+**当前状态**：通过 `docker compose up -d --build` 手动部署，无自动化测试和部署流程。
+
+**目标状态**：GitHub Actions CI/CD 流水线，自动化代码检查、测试、构建和部署。
+
+**流水线阶段**：
+
+| 阶段 | 触发条件 | 执行内容 |
+|------|----------|----------|
+| 代码质量检查 | Push to development | npm ci, lint, test, tsc |
+| 安全检查 | Push to development | npm audit |
+| 构建验证 | Push to development | npm run build, docker build |
+| 部署 | Merge to main | SSH 部署, docker compose, 健康检查验证 |
+
+**所需 GitHub Secrets**：
+
+- `DEPLOY_HOST`: 生产服务器 IP
+- `DEPLOY_USER`: SSH 用户名
+- `DEPLOY_KEY`: SSH 私钥
+
+**涉及文件**：
+
+- 创建 `.github/workflows/ci.yml`
+- 创建 `.github/workflows/deploy.yml`（或合并为一个文件）
+
+**验收标准**：
+
+- [ ] Push 到 development 分支时自动运行检查
+- [ ] 代码质量检查失败时阻止 PR 合并
+- [ ] Merge 到 main 分支时自动部署
+- [ ] 部署后自动验证健康检查端点
+- [ ] 部署失败时有明确的错误信息
+
+---
+
+### REQ-M1: 替换 expr-eval 为 mathjs
+
+> **来源**: TD-014（expr-eval 高危漏洞）
+
+**当前状态**：使用 `expr-eval` 库处理财务公式计算，该库有两个高危漏洞（原型污染、函数注入）且无修复版本。
+
+**目标状态**：使用 `mathjs` 替代，消除安全漏洞。
+
+**依赖包变更**：
+
+```json
+{
+  "dependencies": {
+    "- expr-eval": "移除",
+    "+ mathjs": "^14.x"
+  }
+}
+```
+
+**迁移要点**：
+
+| expr-eval | mathjs |
+|-----------|--------|
+| `Parser.evaluate(expr, scope)` | `math.evaluate(expr, scope)` |
+| 内置基础运算 | 支持更丰富的数学函数 |
+| ~15KB | ~150KB（需评估打包影响） |
+
+**涉及文件**：
+
+- `src/lib/financial/preset-functions.ts` - 主要使用处
+- `src/lib/extraction/` - 可能的使用处
+- `package.json` - 依赖变更
+
+**验收标准**：
+
+- [ ] `expr-eval` 已从 dependencies 移除
+- [ ] `mathjs` 已安装并正确配置
+- [ ] 所有财务公式计算功能正常
+- [ ] 相关测试通过
+- [ ] `npm audit` 不再报告 expr-eval 漏洞
+
+---
+
+### REQ-N1: 替换 xlsx 为 exceljs
+
+> **来源**: TD-015（xlsx 高危漏洞）
+
+**当前状态**：使用 `xlsx` (SheetJS) 库处理 Excel 文件，该库有两个高危漏洞（原型污染、ReDoS）且无修复版本。
+
+**目标状态**：使用 `exceljs` 替代，消除安全漏洞。
+
+**依赖包变更**：
+
+```json
+{
+  "dependencies": {
+    "- xlsx": "移除",
+    "+ exceljs": "^4.x"
+  }
+}
+```
+
+**迁移要点**：
+
+| xlsx | exceljs |
+|------|---------|
+| `XLSX.read(buffer)` | `workbook.xlsx.load(buffer)` |
+| `XLSX.utils.sheet_to_json()` | 遍历 `worksheet.eachRow()` |
+| 同步 API | 异步 API（需要 await） |
+
+**涉及文件**：
+
+- `src/lib/extraction/structured.ts` - Excel 文件解析
+- `src/app/api/admin/upload-database-document/route.ts` - 文件上传处理
+- `package.json` - 依赖变更
+
+**验收标准**：
+
+- [ ] `xlsx` 已从 dependencies 移除
+- [ ] `exceljs` 已安装并正确配置
+- [ ] Excel 文件上传和解析功能正常
+- [ ] 支持 .xlsx 和 .xls 格式（或明确不支持 .xls）
+- [ ] 相关测试通过
+- [ ] `npm audit` 不再报告 xlsx 漏洞
+
+---
+
+### REQ-O1: 升级 Next.js 到 15.5+
+
+> **来源**: TD-016（Next.js 15.x 多个高危漏洞）
+
+**当前状态**：Next.js 15.3.6 有多个高危漏洞（图像优化缓存混淆、内容注入、SSRF、源码暴露、DoS）。
+
+**目标状态**：升级到 Next.js 15.5+ 修复所有已知漏洞。
+
+**升级策略**：
+
+1. 查阅 Next.js 15.4 → 15.5 迁移指南
+2. 更新 `next` 和 `@types/react` 相关依赖
+3. 运行完整测试套件
+4. 验证所有页面和 API 路由
+
+**潜在破坏性变更**：
+
+- App Router 行为变化
+- Server Actions 签名变化
+- 中间件 API 变化
+
+**涉及文件**：
+
+- `package.json` - 依赖版本
+- `next.config.ts` - 可能需要配置调整
+- 受影响的页面/API 路由（取决于破坏性变更）
+
+**验收标准**：
+
+- [ ] Next.js 升级到 15.5+ 版本
+- [ ] 所有页面正常渲染
+- [ ] 所有 API 路由正常工作
+- [ ] `npm run build` 成功
+- [ ] `npm audit` 不再报告 Next.js 相关漏洞
+
+---
+
+### REQ-P1: API 路由 Zod 验证完善
+
+> **来源**: TD-017（部分 API 路由缺少 Zod schema 验证）
+
+**当前状态**：部分 API 路由使用内联验证而非 Zod schema：
+
+- `/api/quick-actions/extract` - 内联文件类型/大小检查
+- `/api/documents/upload-temp` - TypeScript 接口但无运行时验证
+- `/api/chat/route.ts` - 简单 `if (!message)` 检查
+
+**目标状态**：所有 POST/PATCH 路由使用 Zod schema 验证，统一错误响应格式。
+
+**涉及文件**：
+
+- `src/lib/validation/api-schemas.ts` - 添加新 schemas
+- `src/app/api/quick-actions/extract/route.ts`
+- `src/app/api/documents/upload-temp/route.ts`
+- `src/app/api/chat/route.ts`
+
+**验收标准**：
+
+- [ ] 所有 POST/PATCH API 路由使用 Zod 验证
+- [ ] Schemas 统一定义在 `api-schemas.ts`
+- [ ] 验证错误返回一致的格式
+- [ ] 无功能回归
+
+---
+
+### REQ-Q1: LangSmith 集成
+
+> **来源**: TD-003（Agent 可观测性缺口）
+
+**当前状态**：LangGraph Agent 工作流没有追踪工具，复杂 Agent 行为的调试依赖控制台日志，无法看到每步的 Token 使用量。
+
+**目标状态**：集成 LangSmith 实现 Agent 追踪、Token 使用量监控和性能分析。
+
+**依赖包**：
+
+```json
+{
+  "dependencies": {
+    "langsmith": "^0.x"
+  }
+}
+```
+
+**环境变量**：
+
+```bash
+LANGCHAIN_TRACING_V2=true
+LANGCHAIN_API_KEY=<your-api-key>
+LANGCHAIN_PROJECT=goodman-production
+```
+
+**集成要点**：
+
+- LangGraph 工作流自动追踪（通过环境变量启用）
+- 自定义 span 用于关键操作
+- Token 使用量和成本追踪
+- 错误追踪和调试
+
+**涉及文件**：
+
+- `src/lib/workflows/` - LangGraph 工作流（可能需要包装）
+- `.env.example` - 添加 LangSmith 环境变量
+- `package.json` - 添加 langsmith 依赖
+
+**验收标准**：
+
+- [ ] LangSmith 依赖已安装
+- [ ] 环境变量配置完成
+- [ ] Agent 工作流在 LangSmith 控制台可见
+- [ ] Token 使用量可追踪
+- [ ] 生产环境可启用/禁用追踪
+
+---
+
 ## 需修改的文件汇总
 
 | 类别 | 文件 | 变更 |
@@ -668,6 +952,19 @@ npx supabase gen types typescript --project-id mxybrzuxlsioqwsxyjeb > src/lib/da
 | **API** | 创建 `src/app/api/health/route.ts` | 健康检查端点 |
 | **测试** | 创建 `tests/integration/*.test.ts` | API 集成测试 |
 | **工具** | `src/lib/tools/report-generator.ts` | 修复 generation_time_ms |
+| **CI/CD** | 创建 `.github/workflows/ci.yml` | CI 流水线 |
+| **CI/CD** | 创建 `.github/workflows/deploy.yml` | CD 部署流水线 |
+| **依赖** | `package.json` | 移除 expr-eval，添加 mathjs |
+| **代码** | `src/lib/financial/preset-functions.ts` | expr-eval → mathjs 迁移 |
+| **依赖** | `package.json` | 移除 xlsx，添加 exceljs |
+| **代码** | `src/lib/extraction/structured.ts` | xlsx → exceljs 迁移 |
+| **代码** | `src/app/api/admin/upload-database-document/route.ts` | xlsx → exceljs 迁移 |
+| **依赖** | `package.json` | Next.js 升级到 15.5+ |
+| **验证** | `src/lib/validation/api-schemas.ts` | 添加缺失的 Zod schemas |
+| **API** | 3 个 API 路由 | 添加 Zod 验证 |
+| **依赖** | `package.json` | 添加 langsmith |
+| **配置** | `.env.example` | 添加 LangSmith 环境变量 |
+| **工作流** | `src/lib/workflows/` | LangSmith 追踪集成 |
 
 ---
 
@@ -679,6 +976,11 @@ npx supabase gen types typescript --project-id mxybrzuxlsioqwsxyjeb > src/lib/da
 | 预提交钩子过慢 | 低 | 低 | 仅检查暂存文件 |
 | 会话同步引起性能问题 | 低 | 中 | 避免频繁刷新，使用防抖 |
 | Error Boundary 影响开发调试 | 低 | 低 | 开发模式显示详细错误 |
+| mathjs 打包体积增加 | 高 | 低 | 评估按需导入，监控打包大小 |
+| exceljs API 差异导致功能回归 | 中 | 中 | 详细测试所有 Excel 功能，编写迁移测试 |
+| Next.js 升级破坏性变更 | 中 | 高 | 查阅迁移指南，逐步升级，完整测试 |
+| CI/CD 配置错误导致部署失败 | 中 | 中 | 先在 development 分支测试，手动部署作为后备 |
+| LangSmith 增加 API 延迟 | 低 | 低 | 异步追踪，生产环境可禁用 |
 
 ---
 
@@ -711,8 +1013,8 @@ npx supabase gen types typescript --project-id mxybrzuxlsioqwsxyjeb > src/lib/da
    - 测试模式可供后续开发参考
    - 过时测试脚本已清理或修复
 
-6. **安全**（TD-012, TD-013）
-   - `npm audit` 无高危漏洞
+6. **安全**（TD-012, TD-013, TD-014, TD-015, TD-016）
+   - `npm audit` 无高危或严重漏洞（含依赖替换后）
    - API 输入验证完整
    - 安全实践已文档化
    - RLS 设计决策已文档化
@@ -740,8 +1042,38 @@ npx supabase gen types typescript --project-id mxybrzuxlsioqwsxyjeb > src/lib/da
 11. **功能修复**（TD-008）
     - 报告生成时间正确记录到数据库
 
+12. **CI/CD 自动化**（TD-004）
+    - GitHub Actions 工作流配置完成
+    - Push 到 development 自动运行检查
+    - Merge 到 main 自动部署
+    - 部署后健康检查验证
+
+13. **依赖安全 - expr-eval**（TD-014）
+    - expr-eval 已移除
+    - mathjs 替代方案正常工作
+    - 财务公式计算功能无回归
+
+14. **依赖安全 - xlsx**（TD-015）
+    - xlsx 已移除
+    - exceljs 替代方案正常工作
+    - Excel 文件处理功能无回归
+
+15. **框架升级**（TD-016）
+    - Next.js 升级到 15.5+
+    - 所有页面和 API 正常工作
+    - `npm audit` 无 Next.js 相关漏洞
+
+16. **API 验证完善**（TD-017）
+    - 所有 POST/PATCH 路由使用 Zod 验证
+    - 验证错误响应格式统一
+
+17. **Agent 可观测性**（TD-003）
+    - LangSmith 集成完成
+    - Agent 工作流可追踪
+    - Token 使用量可监控
+
 ---
 
 *文档创建日期：2026-01-13*
-*最后更新：2026-01-14（扩展范围：解决 9 项技术债务 TD-005~TD-013）*
+*最后更新：2026-01-15（扩展范围：解决 15 项技术债务 TD-003~TD-017）*
 *状态：Phase 3-5 实现中*
