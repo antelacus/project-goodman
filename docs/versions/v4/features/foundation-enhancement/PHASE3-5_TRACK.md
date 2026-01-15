@@ -355,17 +355,17 @@
 
 > **新增于 2026-01-15**：源自 TD-016，升级 Next.js 修复多个漏洞。
 
-#### O1: Next.js 15.5+ 升级
+#### O1: Next.js 15.5+ 升级 ✅
 
-- [ ] 查阅 Next.js 15.5 迁移指南
-- [ ] 升级 next、react、react-dom 到最新版本
-- [ ] 升级 @types/react、@types/react-dom
-- [ ] 清理 `.next` 缓存
-- [ ] 检查 `next.config.ts` 配置兼容性
-- [ ] 运行 `npm run build` 验证构建
-- [ ] 运行 `npm run test` 验证测试
-- [ ] 手动验证关键页面（首页、聊天、文档、管理）
-- [ ] 运行 `npm audit` 确认 Next.js 漏洞已消除
+- [x] 查阅 Next.js 15.5 迁移指南
+- [x] 升级 next、react、react-dom 到最新版本
+- [x] 升级 @types/react、@types/react-dom
+- [x] 清理 `.next` 缓存
+- [x] 检查 `next.config.ts` 配置兼容性
+- [x] 运行 `npm run build` 验证构建
+- [x] 运行 `npm run test` 验证测试
+- [x] 手动验证关键页面（首页、聊天、文档、管理）
+- [x] 运行 `npm audit` 确认 Next.js 漏洞已消除
 
 ---
 
@@ -709,6 +709,7 @@ Tests: 78 passed (78)
 **npm audit 初始结果**：7 个漏洞（1 低、2 中、4 高）
 
 **npm audit fix 修复**：4 个漏洞已修复
+
 - @eslint/plugin-kit (Low) - ReDoS
 - @langchain/core (High) - 序列化注入
 - js-yaml (Moderate) - 原型污染
@@ -725,11 +726,13 @@ Tests: 78 passed (78)
 #### H2: 代码安全审查
 
 **密码哈希验证** ✅
+
 - 使用 bcrypt，cost factor 12（`src/lib/security/password.ts`）
 - 使用 `crypto.timingSafeEqual` 进行常量时间比较
 - 支持从明文迁移到 bcrypt
 
 **会话管理验证** ✅
+
 - HttpOnly cookies ✅
 - Secure flag (production) ✅
 - SameSite=Strict ✅
@@ -738,11 +741,13 @@ Tests: 78 passed (78)
 - TTL: Admin 24h, Guest 1h ✅
 
 **API 输入验证验证** ✅
+
 - 关键路由使用 Zod schema（chat/stream、auth/login、reports）
 - 辅助路由使用内联验证（功能性但不够健壮）
 - 所有路由使用 `createErrorResponse()` 统一错误格式
 
 **敏感数据日志检查** ✅
+
 - 未发现密码、token、API key 被记录
 - 一处记录完整请求体（`/api/reports/parse-config`），但内容仅为年份配置，无敏感信息
 
@@ -751,6 +756,7 @@ Tests: 78 passed (78)
 **记录位置**：`docs/TECHNICAL_DEBT.md`
 
 **新增债务项**：
+
 - TD-014: expr-eval 依赖漏洞（中，V5+）
 - TD-015: xlsx 依赖漏洞（中，V5+）
 - TD-016: Next.js 15.x 漏洞（中，V4.4）
@@ -1032,6 +1038,49 @@ if (typeof value === 'object' && 'result' in value) {
 - `npm run build` → 成功
 - `npm audit` → 仅剩 Next.js 漏洞
 
+### 2026-01-15 - 框架升级实现
+
+#### O1: Next.js 15.5+ 升级
+
+**变更原因**：
+
+Next.js 15.3.6 存在 4 个高危漏洞（TD-016）：
+
+- GHSA-g5qg-72qw-gw5v: Cache Key Confusion for Image Optimization API Routes
+- GHSA-xv57-4mr9-wg8v: Content Injection Vulnerability for Image Optimization
+- GHSA-4342-x723-ch2f: Improper Middleware Redirect Handling Leads to SSRF
+- GHSA-w37m-7fhw-fmv9: Server Actions Source Code Exposure
+
+**升级版本**：
+
+| 包 | 旧版本 | 新版本 |
+|---|--------|--------|
+| next | 15.3.6 | 15.5.9 |
+| eslint-config-next | 15.3.3 | 15.5.9 |
+| @next/bundle-analyzer | 16.1.2 | 15.5.9 |
+
+**迁移检查**：
+
+- `cookies()` 和 `headers()` async API：项目已使用 `await cookies()`（`csrf.ts`）
+- `searchParams` 页面 prop：项目使用 `new URL(req.url).searchParams`（Web API，无需修改）
+- `next.config.ts` 配置：无弃用选项，无需修改
+
+**构建说明**：
+
+生产 VPS 内存有限（3.8GB），需要使用内存限制参数：
+
+```bash
+NODE_OPTIONS="--max-old-space-size=2048" npm run build
+```
+
+**验证**：
+
+- `npm run lint` → 0 errors
+- `npx tsc --noEmit` → 成功
+- `npm run test` → 78 passed
+- `npm run build` → 成功（33 static pages）
+- `npm audit` → 0 vulnerabilities
+
 ---
 
 ## 测试清单
@@ -1124,10 +1173,10 @@ if (typeof value === 'object' && 'result' in value) {
 
 #### 框架升级 (O)
 
-- [ ] Next.js 升级到 15.5+
-- [ ] 所有页面正常渲染
-- [ ] 所有 API 路由正常工作
-- [ ] `npm audit` 无 Next.js 相关漏洞
+- [x] Next.js 升级到 15.5+（升级到 15.5.9）
+- [x] 所有页面正常渲染（手动验证）
+- [x] 所有 API 路由正常手动验证）
+- [x] `npm audit` 无 Next.js 相关漏洞（0 vulnerabilities）
 
 #### API 验证 (P)
 
@@ -1146,5 +1195,5 @@ if (typeof value === 'object' && 'result' in value) {
 ---
 
 *文档创建日期：2026-01-13*
-*最后更新：2026-01-15（Task M & N 依赖安全修复完成，漏洞从 7 降至 1）*
+*最后更新：2026-01-15（Task O Next.js 升级完成，漏洞从 1 降至 0）*
 *状态：实现中*
