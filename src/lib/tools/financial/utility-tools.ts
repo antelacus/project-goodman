@@ -7,7 +7,7 @@
  */
 
 import { z } from "zod";
-import { Parser } from "expr-eval";
+import { evaluate } from "mathjs";
 import type { Tool, ToolExecutionResult } from "../types";
 import {
   QueryFinancialDataInputSchema,
@@ -15,9 +15,6 @@ import {
 } from "../types";
 import { toolRegistry } from "../registry";
 import { queryFinancialData } from "../../services/financial-data";
-
-// Expression parser instance (reused for performance)
-const expressionParser = new Parser();
 
 // ============================================================================
 // Query Financial Data Tool
@@ -163,9 +160,9 @@ export const evaluateExpressionTool: Tool = {
         }
       }
 
-      // Parse and evaluate the expression
-      const parsedExpr = expressionParser.parse(expression);
-      const result = parsedExpr.evaluate(variables);
+      // Evaluate the expression using mathjs
+      // mathjs.evaluate returns number | Matrix | BigNumber, but our expressions are simple arithmetic
+      const result = evaluate(expression, variables) as number;
 
       // Format the result based on magnitude
       let formatted: string;

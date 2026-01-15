@@ -1,5 +1,5 @@
 
-import * as XLSX from 'xlsx';
+import ExcelJS from 'exceljs';
 
 // Balance Sheet Mapping
 const BALANCE_SHEET_MAPPING: Record<string, string> = {
@@ -270,12 +270,40 @@ export async function performColumnBasedExtraction(
         console.warn(`[Column Extraction] Unknown document type: ${documentType}, using empty mapping.`);
     }
 
-    const workbook = XLSX.read(fileBuffer, { type: 'buffer' });
-    const sheetName = workbook.SheetNames[0];
-    const sheet = workbook.Sheets[sheetName];
+    const workbook = new ExcelJS.Workbook();
+    // REASON: exceljs types expect Buffer but Node.js 22+ returns Buffer<ArrayBuffer>
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    await workbook.xlsx.load(fileBuffer as any);
+    const worksheet = workbook.worksheets[0];
 
-    // Convert sheet to JSON array of arrays (header: 1)
-    const rows = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: '' }) as (string | number | null | undefined)[][];
+    if (!worksheet) {
+        throw new Error('Excel file has no worksheets');
+    }
+
+    // Convert worksheet to array of arrays (similar to xlsx header: 1)
+    const rows: (string | number | null)[][] = [];
+    worksheet.eachRow({ includeEmpty: true }, (row) => {
+        const rowData: (string | number | null)[] = [];
+        row.eachCell({ includeEmpty: true }, (cell, colNumber) => {
+            // Fill any gaps with null (exceljs may skip empty cells)
+            while (rowData.length < colNumber - 1) {
+                rowData.push(null);
+            }
+            const value = cell.value;
+            if (value === null || value === undefined) {
+                rowData.push(null);
+            } else if (typeof value === 'object' && 'result' in value) {
+                // Formula cell - get calculated result
+                rowData.push(value.result as string | number | null);
+            } else if (typeof value === 'object' && 'text' in value) {
+                // Rich text cell - get text content
+                rowData.push(value.text as string);
+            } else {
+                rowData.push(value as string | number);
+            }
+        });
+        rows.push(rowData);
+    });
 
     // Helper to get column index from letter (A -> 0, B -> 1)
     const getColIndex = (col: string) => {
