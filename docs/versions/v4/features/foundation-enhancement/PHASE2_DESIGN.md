@@ -18,6 +18,10 @@
 | ESLint `any` 类型修复 | 优先使用库类型（Supabase、OpenAI） | 减少自定义类型维护负担 |
 | 骨架屏颜色 | 品牌黄色调（bg-yellow-100） | 与 Goodman 品牌一致 |
 | Error Boundary 日志 | UI 恢复 + console.error | 便于调试，不影响用户体验 |
+| expr-eval 替代 | mathjs | 活跃维护，功能丰富，API 兼容性好 |
+| xlsx 替代 | exceljs | 活跃维护，异步 API，安全性更好 |
+| CI/CD 工具 | GitHub Actions | 原生集成，无额外成本 |
+| LangSmith 集成 | 环境变量启用 | 生产环境可灵活开关 |
 
 ---
 
@@ -1109,6 +1113,396 @@ export async function GET(): Promise<NextResponse<HealthCheckResult>> {
 
 ---
 
+## L. CI/CD 流水线
+
+> **来源**: TD-004
+
+### L1: GitHub Actions 工作流
+
+**新文件**：`.github/workflows/ci.yml`
+
+```yaml
+name: CI
+
+on:
+  push:
+    branches: [development]
+  pull_request:
+    branches: [main]
+
+jobs:
+  quality:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Type check
+        run: npx tsc --noEmit
+
+      - name: Test
+        run: npm run test -- --run
+
+      - name: Security audit
+        run: npm audit --audit-level=high
+
+      - name: Build
+        run: npm run build
+```
+
+**新文件**：`.github/workflows/deploy.yml`
+
+```yaml
+name: Deploy
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deploy to production
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.DEPLOY_HOST }}
+          username: ${{ secrets.DEPLOY_USER }}
+          key: ${{ secrets.DEPLOY_KEY }}
+          script: |
+            cd /home/deploy/goodman
+            git pull origin main
+            docker compose up -d --build
+            sleep 10
+            curl -f http://localhost:3000/api/health || exit 1
+```
+
+**所需 Secrets**：
+
+| Secret | 说明 |
+|--------|------|
+| `DEPLOY_HOST` | 生产服务器 IP |
+| `DEPLOY_USER` | SSH 用户名（deploy） |
+| `DEPLOY_KEY` | SSH 私钥 |
+
+---
+
+## M. 依赖安全修复 - expr-eval
+
+> **来源**: TD-014
+
+### M1: mathjs 迁移
+
+**依赖变更**：
+
+```bash
+npm uninstall expr-eval
+npm install mathjs
+```
+
+**API 映射**：
+
+| expr-eval | mathjs |
+|-----------|--------|
+| `new Parser()` | `import { evaluate } from 'mathjs'` |
+| `parser.evaluate(expr, scope)` | `evaluate(expr, scope)` |
+| `parser.parse(expr).evaluate(scope)` | `evaluate(expr, scope)` |
+
+**主要修改文件**：`src/lib/financial/preset-functions.ts`
+
+```typescript
+// 之前
+import { Parser } from 'expr-eval';
+const parser = new Parser();
+const result = parser.evaluate(formula, { a: 100, b: 50 });
+
+// 之后
+import { evaluate } from 'mathjs';
+const result = evaluate(formula, { a: 100, b: 50 });
+```
+
+**打包体积考虑**：
+
+mathjs 完整包约 150KB（gzipped ~50KB）。可考虑按需导入：
+
+```typescript
+import { create, evaluateDependencies } from 'mathjs';
+const { evaluate } = create({ evaluateDependencies });
+```
+
+**验证**：
+
+1. 所有财务计算功能正常工作
+2. 运行财务计算测试
+3. `npm audit` 不再报告 expr-eval 漏洞
+
+---
+
+## N. 依赖安全修复 - xlsx
+
+> **来源**: TD-015
+
+### N1: exceljs 迁移
+
+**依赖变更**：
+
+```bash
+npm uninstall xlsx
+npm install exceljs
+```
+
+**API 映射**：
+
+| xlsx (同步) | exceljs (异步) |
+|-------------|----------------|
+| `XLSX.read(buffer)` | `await workbook.xlsx.load(buffer)` |
+| `XLSX.utils.sheet_to_json(sheet)` | 手动遍历 `worksheet.eachRow()` |
+| `workbook.Sheets[sheetName]` | `workbook.getWorksheet(sheetName)` |
+
+**主要修改文件**：
+
+1. `src/lib/extraction/structured.ts`
+2. `src/app/api/admin/upload-database-document/route.ts`
+
+**迁移示例**：
+
+```typescript
+// 之前 (xlsx)
+import * as XLSX from 'xlsx';
+
+function parseExcel(buffer: Buffer) {
+  const workbook = XLSX.read(buffer);
+  const sheet = workbook.Sheets[workbook.SheetNames[0]];
+  // REASON: XLSX returns unknown[], cast needed for row/cell operations
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const data = XLSX.utils.sheet_to_json(sheet, { header: 1 }) as any[][];
+  return data;
+}
+
+// 之后 (exceljs)
+import ExcelJS from 'exceljs';
+
+async function parseExcel(buffer: Buffer): Promise<(string | number | null)[][]> {
+  const workbook = new ExcelJS.Workbook();
+  await workbook.xlsx.load(buffer);
+  const worksheet = workbook.worksheets[0];
+
+  const data: (string | number | null)[][] = [];
+  worksheet.eachRow((row, rowNumber) => {
+    const rowData: (string | number | null)[] = [];
+    row.eachCell((cell, colNumber) => {
+      rowData[colNumber - 1] = cell.value as string | number | null;
+    });
+    data[rowNumber - 1] = rowData;
+  });
+
+  return data;
+}
+```
+
+**注意事项**：
+
+- exceljs API 是异步的，需要更新调用链
+- `.xls` 格式支持有限（exceljs 主要支持 `.xlsx`）
+- 如需 `.xls` 支持，可保留 xlsx 仅用于 .xls 或提示用户转换格式
+
+**验证**：
+
+1. Excel 文件上传和解析功能正常
+2. 测试 .xlsx 文件处理
+3. `npm audit` 不再报告 xlsx 漏洞
+
+---
+
+## O. 框架升级 - Next.js
+
+> **来源**: TD-016
+
+### O1: Next.js 15.5+ 升级
+
+**升级命令**：
+
+```bash
+npm install next@latest react@latest react-dom@latest
+npm install -D @types/react@latest @types/react-dom@latest
+```
+
+**升级检查清单**：
+
+1. 查阅 [Next.js 15.5 Release Notes](https://nextjs.org/blog)
+2. 检查 `next.config.ts` 配置兼容性
+3. 验证 App Router 行为
+4. 验证 Server Actions
+5. 验证中间件
+
+**潜在破坏性变更处理**：
+
+| 区域 | 检查项 |
+|------|--------|
+| `next.config.ts` | 配置选项是否已弃用 |
+| Server Components | 异步组件签名 |
+| Route Handlers | Request/Response API |
+| Middleware | 匹配器语法 |
+
+**验证步骤**：
+
+```bash
+# 1. 升级依赖
+npm install next@latest
+
+# 2. 清理缓存
+rm -rf .next
+
+# 3. 构建测试
+npm run build
+
+# 4. 运行测试
+npm run test
+
+# 5. 手动验证关键页面
+# - 首页
+# - 聊天页面
+# - 文档页面
+# - 管理页面
+```
+
+---
+
+## P. API 验证完善
+
+> **来源**: TD-017
+
+### P1: 添加缺失的 Zod Schemas
+
+**需要添加验证的路由**：
+
+| 路由 | 当前状态 | 需要的 Schema |
+|------|----------|---------------|
+| `/api/quick-actions/extract` | 内联检查 | `extractRequestSchema` |
+| `/api/documents/upload-temp` | 无运行时验证 | `uploadTempSchema` |
+| `/api/chat/route.ts` | 简单 if 检查 | `chatRequestSchema` |
+
+**新增到 `src/lib/validation/api-schemas.ts`**：
+
+```typescript
+import { z } from 'zod';
+
+// 提取请求
+export const extractRequestSchema = z.object({
+  file: z.instanceof(File).optional(),
+  fileType: z.enum(['pdf', 'xlsx', 'xls', 'docx']),
+  extractionType: z.enum(['structured', 'unstructured']),
+});
+
+// 临时上传请求
+export const uploadTempSchema = z.object({
+  file: z.instanceof(File),
+  purpose: z.enum(['extraction', 'document']).optional(),
+});
+
+// 聊天请求
+export const chatRequestSchema = z.object({
+  message: z.string().min(1, '消息不能为空'),
+  sessionId: z.string().uuid().optional(),
+});
+```
+
+**路由更新示例**：
+
+```typescript
+// src/app/api/chat/route.ts
+import { chatRequestSchema } from '@/lib/validation/api-schemas';
+import { createErrorResponse } from '@/lib/security';
+
+export async function POST(req: NextRequest) {
+  const body = await req.json();
+
+  const result = chatRequestSchema.safeParse(body);
+  if (!result.success) {
+    return createErrorResponse(
+      result.error.errors[0].message,
+      400
+    );
+  }
+
+  const { message, sessionId } = result.data;
+  // ... 处理逻辑
+}
+```
+
+---
+
+## Q. Agent 可观测性 - LangSmith
+
+> **来源**: TD-003
+
+### Q1: LangSmith 集成
+
+**依赖安装**：
+
+```bash
+npm install langsmith
+```
+
+**环境变量**（添加到 `.env.example`）：
+
+```bash
+# LangSmith Configuration (optional)
+LANGCHAIN_TRACING_V2=true
+LANGCHAIN_API_KEY=your-api-key
+LANGCHAIN_PROJECT=goodman-production
+```
+
+**集成方式**：
+
+LangGraph 自动检测环境变量并启用追踪，无需代码修改。
+
+**可选：自定义 span**：
+
+```typescript
+import { traceable } from 'langsmith/traceable';
+
+// 包装关键函数以添加自定义追踪
+const searchDocuments = traceable(
+  async (query: string) => {
+    // ... 搜索逻辑
+  },
+  { name: 'search_documents' }
+);
+```
+
+**生产环境配置**：
+
+```typescript
+// 条件启用追踪
+const enableTracing = process.env.LANGCHAIN_TRACING_V2 === 'true';
+
+// Docker 环境变量
+// docker-compose.yml
+environment:
+  - LANGCHAIN_TRACING_V2=${LANGCHAIN_TRACING_V2:-false}
+  - LANGCHAIN_API_KEY=${LANGCHAIN_API_KEY:-}
+  - LANGCHAIN_PROJECT=${LANGCHAIN_PROJECT:-goodman}
+```
+
+**验证**：
+
+1. 设置环境变量
+2. 运行 Agent 对话
+3. 在 LangSmith 控制台验证追踪可见
+4. 确认 Token 使用量显示
+
+---
+
 ## 实现顺序
 
 | 优先级 | 任务 | 依赖 | 解决的 TD | 状态 |
@@ -1119,11 +1513,17 @@ export async function GET(): Promise<NextResponse<HealthCheckResult>> {
 | 4 | D1-D2: 页面文案 | 无 | TD-008 | ⏳ 待办 |
 | 5 | E1-E3: UI/UX 改进 | 无 | - | ✅ 完成 |
 | 6 | F1-F4: 健壮性/可访问性 | 无 | - | ✅ 完成 |
-| 7 | G1: 测试基础设施 | B1 (Vitest) | TD-006, TD-010 | ⏳ 待办 |
-| 8 | H1-H3: 安全审计 | 无 | TD-012, TD-013 | ⏳ 待办 |
-| 9 | I1-I2: 基础日志 | 无 | - | ⏳ 待办 |
-| 10 | J1-J3: 性能基线 | I1 (日志设施) | TD-005 | ⏳ 待办 |
-| 11 | K1: 健康检查端点 | 无 | TD-007 | ⏳ 待办 |
+| 7 | G1: 测试基础设施 | B1 (Vitest) | TD-006, TD-010 | ✅ 完成 |
+| 8 | H1-H3: 安全审计 | 无 | TD-012, TD-013 | ✅ 完成 |
+| 9 | I1-I2: 基础日志 | 无 | - | ✅ 完成 |
+| 10 | J1-J3: 性能基线 | I1 (日志设施) | TD-005 | ✅ 完成 |
+| 11 | K1: 健康检查端点 | 无 | TD-007 | ✅ 完成 |
+| 12 | L1: CI/CD 流水线 | K1 (健康检查) | TD-004 | ⏳ 待办 |
+| 13 | M1: expr-eval → mathjs | G1 (测试) | TD-014 | ⏳ 待办 |
+| 14 | N1: xlsx → exceljs | G1 (测试) | TD-015 | ⏳ 待办 |
+| 15 | O1: Next.js 升级 | M1, N1 | TD-016 | ⏳ 待办 |
+| 16 | P1: API Zod 验证 | 无 | TD-017 | ⏳ 待办 |
+| 17 | Q1: LangSmith 集成 | 无 | TD-003 | ⏳ 待办 |
 
 ---
 
@@ -1140,18 +1540,20 @@ export async function GET(): Promise<NextResponse<HealthCheckResult>> {
 | `src/app/(workspace)/error.tsx` | 工作区服务端错误页 | ✅ 完成 |
 | `src/app/global-error.tsx` | 全局错误兜底页 | ✅ 完成 |
 | `src/hooks/useModalAccessibility.ts` | 模态框可访问性 Hook | ✅ 完成 |
-| `tests/unit/financial/*.test.ts` | 财务计算测试 | ⏳ 待办 |
-| `tests/unit/utils/*.test.ts` | 工具函数测试 | ⏳ 待办 |
-| `src/lib/logging/logger.ts` | 结构化日志工具 | ⏳ 待办 |
-| `src/components/providers/WebVitals.tsx` | Web Vitals 报告组件 | ⏳ 待办 |
-| `src/app/api/health/route.ts` | 健康检查端点 | ⏳ 待办 |
+| `tests/unit/financial/*.test.ts` | 财务计算测试 | ✅ 完成 |
+| `tests/unit/utils/*.test.ts` | 工具函数测试 | ✅ 完成 |
+| `src/lib/logging/logger.ts` | 结构化日志工具 | ✅ 完成 |
+| `src/components/providers/WebVitals.tsx` | Web Vitals 报告组件 | ✅ 完成 |
+| `src/app/api/health/route.ts` | 健康检查端点 | ✅ 完成 |
+| `.github/workflows/ci.yml` | CI 工作流 | ⏳ 待办 |
+| `.github/workflows/deploy.yml` | CD 部署工作流 | ⏳ 待办 |
 
 ### 修改文件
 
 | 文件 | 变更 |
 |------|------|
-| `package.json` | 添加依赖、脚本、lint-staged 配置、analyze 脚本 |
-| `next.config.ts` | 移除 `ignoreDuringBuilds: true`、集成 bundle-analyzer |
+| `package.json` | 添加依赖、脚本、lint-staged 配置、analyze 脚本、移除 expr-eval/xlsx、添加 mathjs/exceljs/langsmith |
+| `next.config.ts` | 移除 `ignoreDuringBuilds: true`、集成 bundle-analyzer、Next.js 15.5+ 兼容性 |
 | `docs/PRODUCT_ROADMAP.md` | 更新版本状态 |
 | `src/app/(workspace)/about/page.tsx` | 修复版本信息 |
 | `src/lib/database/types.ts` | 从 Supabase 重新生成 |
@@ -1167,6 +1569,15 @@ export async function GET(): Promise<NextResponse<HealthCheckResult>> {
 | `src/lib/tools/generate-report.ts` | 添加 generation_time_ms 记录 |
 | `.claude/rules/code-conventions.md` | 添加 RLS 设计决策文档 |
 | ~25 个源文件 | ESLint 错误修复 |
+| `src/lib/financial/preset-functions.ts` | expr-eval → mathjs 迁移 |
+| `src/lib/extraction/structured.ts` | xlsx → exceljs 迁移 |
+| `src/app/api/admin/upload-database-document/route.ts` | xlsx → exceljs 迁移 |
+| `src/lib/validation/api-schemas.ts` | 添加缺失的 Zod schemas |
+| `src/app/api/quick-actions/extract/route.ts` | 添加 Zod 验证 |
+| `src/app/api/documents/upload-temp/route.ts` | 添加 Zod 验证 |
+| `src/app/api/chat/route.ts` | 添加 Zod 验证 |
+| `.env.example` | 添加 LangSmith 环境变量 |
+| `docker-compose.yml` | 添加 LangSmith 环境变量 |
 
 ---
 
@@ -1234,8 +1645,43 @@ export async function GET(): Promise<NextResponse<HealthCheckResult>> {
 - [ ] 响应包含数据库连接状态
 - [ ] 响应包含服务版本信息
 
+### CI/CD
+
+- [ ] Push 到 development 触发 CI 工作流
+- [ ] CI 包含 lint、test、build 步骤
+- [ ] Merge 到 main 触发部署
+- [ ] 部署后健康检查验证
+
+### 依赖安全
+
+- [ ] expr-eval 已移除
+- [ ] mathjs 正常工作
+- [ ] xlsx 已移除
+- [ ] exceljs 正常工作
+- [ ] `npm audit` 无高危漏洞
+
+### 框架升级
+
+- [ ] Next.js 升级到 15.5+
+- [ ] 所有页面正常渲染
+- [ ] 所有 API 路由正常工作
+
+### API 验证
+
+- [ ] `/api/quick-actions/extract` 使用 Zod 验证
+- [ ] `/api/documents/upload-temp` 使用 Zod 验证
+- [ ] `/api/chat` 使用 Zod 验证
+- [ ] 验证错误返回一致格式
+
+### Agent 可观测性
+
+- [ ] LangSmith 依赖已安装
+- [ ] 环境变量配置正确
+- [ ] Agent 追踪在 LangSmith 控制台可见
+- [ ] 生产环境可禁用追踪
+
 ---
 
 *文档创建日期：2026-01-13*
-*最后更新：2026-01-14（扩展范围：解决 9 项技术债务 TD-005~TD-013，添加 K 任务）*
+*最后更新：2026-01-15（扩展范围：解决 15 项技术债务 TD-003~TD-017，添加 L~Q 任务）*
 *状态：Phase 2 完成，Phase 3-5 实现中*
