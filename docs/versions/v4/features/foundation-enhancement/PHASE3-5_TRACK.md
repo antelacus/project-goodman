@@ -300,6 +300,108 @@
 
 ---
 
+### L. CI/CD 流水线
+
+> **新增于 2026-01-15**：源自 TD-004，自动化代码检查和部署。
+
+#### L1: GitHub Actions 工作流
+
+- [ ] 创建 `.github/workflows/ci.yml`
+- [ ] 配置代码质量检查（npm ci, lint, test, tsc）
+- [ ] 配置安全检查（npm audit）
+- [ ] 配置构建验证（npm run build）
+- [ ] 创建 `.github/workflows/deploy.yml`
+- [ ] 配置生产部署（SSH 部署, docker compose）
+- [ ] 配置健康检查验证
+- [ ] 设置 GitHub Secrets（DEPLOY_HOST, DEPLOY_USER, DEPLOY_KEY）
+- [ ] 验证 Push 到 development 触发 CI
+- [ ] 验证 Merge 到 main 触发部署
+
+---
+
+### M. 依赖安全修复 - expr-eval
+
+> **新增于 2026-01-15**：源自 TD-014，替换有漏洞的 expr-eval。
+
+#### M1: mathjs 迁移
+
+- [ ] 卸载 expr-eval 依赖
+- [ ] 安装 mathjs 依赖
+- [ ] 迁移 `src/lib/financial/preset-functions.ts` 使用 mathjs
+- [ ] 更新相关测试
+- [ ] 验证财务公式计算功能正常
+- [ ] 运行 `npm audit` 确认 expr-eval 漏洞已消除
+
+---
+
+### N. 依赖安全修复 - xlsx
+
+> **新增于 2026-01-15**：源自 TD-015，替换有漏洞的 xlsx。
+
+#### N1: exceljs 迁移
+
+- [ ] 卸载 xlsx 依赖
+- [ ] 安装 exceljs 依赖
+- [ ] 迁移 `src/lib/extraction/structured.ts` 使用 exceljs
+- [ ] 迁移 `src/app/api/admin/upload-database-document/route.ts` 使用 exceljs
+- [ ] 更新相关测试
+- [ ] 验证 Excel 文件上传和解析功能正常
+- [ ] 运行 `npm audit` 确认 xlsx 漏洞已消除
+
+---
+
+### O. 框架升级 - Next.js
+
+> **新增于 2026-01-15**：源自 TD-016，升级 Next.js 修复多个漏洞。
+
+#### O1: Next.js 15.5+ 升级
+
+- [ ] 查阅 Next.js 15.5 迁移指南
+- [ ] 升级 next、react、react-dom 到最新版本
+- [ ] 升级 @types/react、@types/react-dom
+- [ ] 清理 `.next` 缓存
+- [ ] 检查 `next.config.ts` 配置兼容性
+- [ ] 运行 `npm run build` 验证构建
+- [ ] 运行 `npm run test` 验证测试
+- [ ] 手动验证关键页面（首页、聊天、文档、管理）
+- [ ] 运行 `npm audit` 确认 Next.js 漏洞已消除
+
+---
+
+### P. API 验证完善
+
+> **新增于 2026-01-15**：源自 TD-017，为缺少 Zod 验证的 API 路由添加验证。
+
+#### P1: 添加缺失的 Zod Schemas
+
+- [ ] 在 `src/lib/validation/api-schemas.ts` 添加 `extractRequestSchema`
+- [ ] 在 `src/lib/validation/api-schemas.ts` 添加 `uploadTempSchema`
+- [ ] 在 `src/lib/validation/api-schemas.ts` 添加 `chatRequestSchema`
+- [ ] 更新 `/api/quick-actions/extract/route.ts` 使用 Zod 验证
+- [ ] 更新 `/api/documents/upload-temp/route.ts` 使用 Zod 验证
+- [ ] 更新 `/api/chat/route.ts` 使用 Zod 验证
+- [ ] 验证错误响应格式一致
+- [ ] 验证无功能回归
+
+---
+
+### Q. Agent 可观测性 - LangSmith
+
+> **新增于 2026-01-15**：源自 TD-003，集成 LangSmith 用于 Agent 追踪。
+
+#### Q1: LangSmith 集成
+
+- [ ] 安装 langsmith 依赖
+- [ ] 在 `.env.example` 添加 LangSmith 环境变量
+- [ ] 在 `docker-compose.yml` 添加 LangSmith 环境变量
+- [ ] 验证 LangGraph 自动追踪生效
+- [ ] 可选：为关键操作添加自定义 span
+- [ ] 验证 Agent 工作流在 LangSmith 控制台可见
+- [ ] 验证 Token 使用量可追踪
+- [ ] 验证生产环境可启用/禁用追踪
+
+---
+
 ## 实现记录
 
 ### 2026-01-13 - 文档系统审查与重构
@@ -865,8 +967,50 @@ npm run analyze
 - [x] 响应包含数据库连接状态
 - [x] 响应包含服务版本信息
 
+#### CI/CD 流水线 (L)
+
+- [ ] Push 到 development 触发 CI 工作流
+- [ ] CI 包含 lint、test、build 步骤
+- [ ] Merge 到 main 触发部署
+- [ ] 部署后健康检查验证
+
+#### 依赖安全 - expr-eval (M)
+
+- [ ] expr-eval 已移除
+- [ ] mathjs 正常工作
+- [ ] 财务公式计算功能无回归
+- [ ] `npm audit` 不再报告 expr-eval 漏洞
+
+#### 依赖安全 - xlsx (N)
+
+- [ ] xlsx 已移除
+- [ ] exceljs 正常工作
+- [ ] Excel 文件处理功能无回归
+- [ ] `npm audit` 不再报告 xlsx 漏洞
+
+#### 框架升级 (O)
+
+- [ ] Next.js 升级到 15.5+
+- [ ] 所有页面正常渲染
+- [ ] 所有 API 路由正常工作
+- [ ] `npm audit` 无 Next.js 相关漏洞
+
+#### API 验证 (P)
+
+- [ ] `/api/quick-actions/extract` 使用 Zod 验证
+- [ ] `/api/documents/upload-temp` 使用 Zod 验证
+- [ ] `/api/chat` 使用 Zod 验证
+- [ ] 验证错误返回一致格式
+
+#### Agent 可观测性 (Q)
+
+- [ ] LangSmith 依赖已安装
+- [ ] 环境变量配置正确
+- [ ] Agent 追踪在 LangSmith 控制台可见
+- [ ] 生产环境可禁用追踪
+
 ---
 
 *文档创建日期：2026-01-13*
-*最后更新：2026-01-15（完成 Task K 健康检查端点）*
+*最后更新：2026-01-15（扩展范围：添加 Task L~Q 解决 TD-003~TD-017）*
 *状态：实现中*
