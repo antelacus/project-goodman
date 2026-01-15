@@ -7,6 +7,7 @@ import {
     generateRequestId,
     createErrorResponse,
 } from '@/lib/security';
+import { logger, logRequest, logError } from '@/lib/logging';
 import { ChatMessageSchema, validateRequest } from '@/lib/validation/api-schemas';
 import { v4 as uuidv4 } from 'uuid';
 import {
@@ -91,6 +92,9 @@ function createProcessEvent(
 
 export async function POST(req: NextRequest) {
     const requestId = req.headers.get('x-request-id') || generateRequestId();
+    const startTime = Date.now();
+
+    logger.info('Chat stream started', { requestId, route: '/api/chat/stream' });
 
     try {
         // V3.10: Ensure session exists (creates guest session if needed)
@@ -393,7 +397,7 @@ export async function POST(req: NextRequest) {
                     }
 
                 } catch (err: unknown) {
-                    console.error('Streaming error:', err);
+                    logError('Chat stream processing error', err, requestId, { route: '/api/chat/stream' });
                     const errorMessage = err instanceof Error ? err.message : 'An error occurred during streaming';
                     sendEvent('error', { message: errorMessage });
 
@@ -434,9 +438,11 @@ export async function POST(req: NextRequest) {
             headers['Set-Cookie'] = cookieParts.join('; ');
         }
 
+        logRequest(requestId, 'POST', '/api/chat/stream', 200, Date.now() - startTime);
         return new Response(stream, { headers });
     } catch (error: unknown) {
-        console.error('Request handler error:', error);
+        logError('Chat stream request failed', error, requestId, { route: '/api/chat/stream' });
+        logRequest(requestId, 'POST', '/api/chat/stream', 500, Date.now() - startTime);
         return createErrorResponse(error, requestId, 500);
     }
 }
