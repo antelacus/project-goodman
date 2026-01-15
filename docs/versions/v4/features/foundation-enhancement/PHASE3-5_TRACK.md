@@ -284,19 +284,19 @@
 
 ---
 
-### K. 健康检查端点
+### K. 健康检查端点 ✅
 
 > **新增于 2026-01-14**：源自 TD-007，提供服务健康状态检查。
 
-#### K1: 健康检查 API
+#### K1: 健康检查 API ✅
 
-- [ ] 创建 `src/app/api/health/route.ts`
-- [ ] 实现数据库连接检查
-- [ ] 实现 Redis 连接检查（可选）
-- [ ] 返回服务版本信息
-- [ ] 返回适当的 HTTP 状态码（200/503）
-- [ ] 测试 `curl http://localhost:3000/api/health`
-- [ ] 验证响应格式正确
+- [x] 创建 `src/app/api/health/route.ts`
+- [x] 实现数据库连接检查
+- [x] 实现 Redis 连接检查（可选）
+- [x] 返回服务版本信息
+- [x] 返回适当的 HTTP 状态码（200/503）
+- [x] 测试 `curl http://localhost:3000/api/health`
+- [x] 验证响应格式正确
 
 ---
 
@@ -763,6 +763,39 @@ npm run analyze
 - `npm run test` → 78 passed
 - `npm run build` → 成功
 
+### 2026-01-15 - 健康检查端点实现
+
+#### K1: 健康检查 API
+
+**修改的文件**：
+
+1. `src/app/api/health/route.ts` - 增强为完整的健康检查端点
+   - 数据库连接检查：查询 users 表，记录延迟
+   - Redis 连接检查：调用 `redis.ping()`，记录延迟
+   - 状态判定逻辑：healthy（全部正常）、degraded（数据库正常但 Redis 异常）、unhealthy（数据库异常）
+   - 返回版本信息和时间戳
+   - HTTP 状态码：健康返回 200，不健康返回 503
+
+**响应格式示例**：
+
+```json
+{
+  "status": "healthy",
+  "version": "4.3.0",
+  "timestamp": "2026-01-15T03:17:30.000Z",
+  "checks": {
+    "database": { "status": "ok", "latency": 45 },
+    "redis": { "status": "ok", "latency": 2 }
+  }
+}
+```
+
+**验证**：
+
+- `npm run lint` → 0 errors
+- `npm run test` → 78 passed
+- `npm run build` → 成功
+
 ---
 
 ## 测试清单
@@ -828,12 +861,12 @@ npm run analyze
 
 #### 健康检查 (K)
 
-- [ ] `/api/health` 返回 200 状态
-- [ ] 响应包含数据库连接状态
-- [ ] 响应包含服务版本信息
+- [x] `/api/health` 返回 200 状态
+- [x] 响应包含数据库连接状态
+- [x] 响应包含服务版本信息
 
 ---
 
 *文档创建日期：2026-01-13*
-*最后更新：2026-01-15（完成 Task J 性能基线）*
+*最后更新：2026-01-15（完成 Task K 健康检查端点）*
 *状态：实现中*
