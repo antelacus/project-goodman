@@ -306,13 +306,13 @@
 
 #### L1: GitHub Actions 工作流
 
-- [ ] 创建 `.github/workflows/ci.yml`
-- [ ] 配置代码质量检查（npm ci, lint, test, tsc）
-- [ ] 配置安全检查（npm audit）
-- [ ] 配置构建验证（npm run build）
-- [ ] 创建 `.github/workflows/deploy.yml`
-- [ ] 配置生产部署（SSH 部署, docker compose）
-- [ ] 配置健康检查验证
+- [x] 创建 `.github/workflows/ci.yml`
+- [x] 配置代码质量检查（npm ci, lint, test, tsc）
+- [x] 配置安全检查（npm audit）
+- [x] 配置构建验证（npm run build）
+- [x] 创建 `.github/workflows/deploy.yml`
+- [x] 配置生产部署（SSH 部署, docker compose）
+- [x] 配置健康检查验证
 - [ ] 设置 GitHub Secrets（DEPLOY_HOST, DEPLOY_USER, DEPLOY_KEY）
 - [ ] 验证 Push 到 development 触发 CI
 - [ ] 验证 Merge 到 main 触发部署
@@ -898,6 +898,47 @@ npm run analyze
 - `npm run test` → 78 passed
 - `npm run build` → 成功
 
+### 2026-01-15 - CI/CD 流水线实现
+
+#### L1: GitHub Actions 工作流
+
+**创建的文件**：
+
+1. `.github/workflows/ci.yml` - CI 工作流
+   - 触发条件：Push 到 development 分支、PR 到 main 分支
+   - 步骤：checkout → setup-node → npm ci → lint → tsc → test → audit → build
+   - 安全审计使用 `continue-on-error: true`（已知有无法修复的漏洞）
+   - Build 步骤提供环境变量占位符
+
+2. `.github/workflows/deploy.yml` - 部署工作流
+   - 触发条件：Push 到 main 分支
+   - 使用 `appleboy/ssh-action@v1` 进行 SSH 部署
+   - 部署脚本：git pull → docker compose up → 健康检查验证
+   - 健康检查失败时退出并报错
+
+**所需 GitHub Secrets**：
+
+| Secret | 说明 |
+|--------|------|
+| `DEPLOY_HOST` | 生产服务器 IP |
+| `DEPLOY_USER` | SSH 用户名（deploy） |
+| `DEPLOY_KEY` | SSH 私钥 |
+| `NEXT_PUBLIC_SUPABASE_URL` | Supabase URL（可选，用于 CI build） |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Supabase Anon Key（可选，用于 CI build） |
+
+**验证**：
+
+- `npm run lint` → 0 errors
+- `npm run test` → 78 passed
+- `npm run build` → 成功
+- 工作流文件语法正确
+
+**待用户操作**：
+
+- 在 GitHub 仓库设置中添加 Secrets
+- Push 到 development 验证 CI 触发
+- Merge 到 main 验证部署触发
+
 ---
 
 ## 测试清单
@@ -1012,5 +1053,5 @@ npm run analyze
 ---
 
 *文档创建日期：2026-01-13*
-*最后更新：2026-01-15（扩展范围：添加 Task L~Q 解决 TD-003~TD-017）*
+*最后更新：2026-01-15（完成 Task L CI/CD 流水线）*
 *状态：实现中*
