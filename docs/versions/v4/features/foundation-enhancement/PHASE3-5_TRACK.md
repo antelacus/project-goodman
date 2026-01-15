@@ -313,9 +313,9 @@
 - [x] 创建 `.github/workflows/deploy.yml`
 - [x] 配置生产部署（SSH 部署, docker compose）
 - [x] 配置健康检查验证
-- [ ] 设置 GitHub Secrets（DEPLOY_HOST, DEPLOY_USER, DEPLOY_KEY）
-- [ ] 验证 Push 到 development 触发 CI
-- [ ] 验证 Merge 到 main 触发部署
+- [x] 设置 GitHub Secrets（DEPLOY_HOST, DEPLOY_USER, DEPLOY_KEY）
+- [x] 验证 Push 到 development 触发 CI
+- [ ] 验证 Merge 到 main 触发部署（待下次发布时验证）
 
 ---
 
@@ -933,11 +933,16 @@ npm run analyze
 - `npm run build` → 成功
 - 工作流文件语法正确
 
-**待用户操作**：
+**已完成的用户操作**：
 
-- 在 GitHub 仓库设置中添加 Secrets
-- Push 到 development 验证 CI 触发
-- Merge 到 main 验证部署触发
+- ✅ 在 GitHub 仓库设置中添加 Secrets（DEPLOY_HOST, DEPLOY_USER, DEPLOY_KEY）
+- ✅ 添加可选 Secrets（NEXT_PUBLIC_SUPABASE_URL, NEXT_PUBLIC_SUPABASE_ANON_KEY）
+- ✅ Push 到 development 验证 CI 触发 → 成功运行（2m 13s）
+- ⏳ Merge 到 main 验证部署触发 → 待下次发布时验证
+
+**文档更新**：
+
+- 更新 `docs/DEPLOYMENT_CHECKLIST.md`：标记自动化部分（2.1, 4.2, 5.1），添加 CI/CD 说明
 
 ---
 
@@ -1010,10 +1015,10 @@ npm run analyze
 
 #### CI/CD 流水线 (L)
 
-- [ ] Push 到 development 触发 CI 工作流
-- [ ] CI 包含 lint、test、build 步骤
-- [ ] Merge 到 main 触发部署
-- [ ] 部署后健康检查验证
+- [x] Push 到 development 触发 CI 工作流
+- [x] CI 包含 lint、test、build 步骤
+- [ ] Merge 到 main 触发部署（待下次发布）
+- [ ] 部署后健康检查验证（待下次发布）
 
 #### 依赖安全 - expr-eval (M)
 
@@ -1053,5 +1058,5 @@ npm run analyze
 ---
 
 *文档创建日期：2026-01-13*
-*最后更新：2026-01-15（完成 Task L CI/CD 流水线）*
+*最后更新：2026-01-15（Task L CI/CD 流水线已验证，更新 DEPLOYMENT_CHECKLIST）*
 *状态：实现中*
