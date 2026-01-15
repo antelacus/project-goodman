@@ -14,7 +14,7 @@ export const runtime = "nodejs";
 
 import { NextRequest, NextResponse } from "next/server";
 import OpenAI from "openai";
-import * as XLSX from "xlsx";
+import ExcelJS from "exceljs";
 import { createServerSupabaseClient } from "@/lib/database";
 import type { InsertTables } from "@/lib/database";
 import {
@@ -73,31 +73,47 @@ async function extractTextFromFile(
   // Excel files
   if (fileType === SUPPORTED_EXCEL_TYPE || ext === 'xlsx') {
     const buffer = Buffer.from(fileData, 'base64');
-    const workbook = XLSX.read(buffer, { type: 'buffer' });
+    const workbook = new ExcelJS.Workbook();
+    // REASON: exceljs types expect Buffer but Node.js 22+ returns Buffer<ArrayBuffer>
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    await workbook.xlsx.load(buffer as any);
 
     // Find sheet with most data
-    let bestSheet = workbook.SheetNames[0];
+    let bestSheet = workbook.worksheets[0];
     let bestRowCount = 0;
 
-    for (const sheetName of workbook.SheetNames) {
-      const sheet = workbook.Sheets[sheetName];
-      // REASON: XLSX.utils.sheet_to_json() returns unknown[]. This is a system boundary
-      // where external untyped data enters. Runtime validation for each cell would be excessive.
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const data = XLSX.utils.sheet_to_json(sheet, { header: 1 }) as any[][];
-      const rowCount = data.filter(row => row.some(cell => cell != null && cell !== '')).length;
+    for (const worksheet of workbook.worksheets) {
+      let rowCount = 0;
+      worksheet.eachRow(() => { rowCount++; });
       if (rowCount > bestRowCount) {
         bestRowCount = rowCount;
-        bestSheet = sheetName;
+        bestSheet = worksheet;
       }
     }
 
-    const sheet = workbook.Sheets[bestSheet];
-    // REASON: XLSX returns unknown[], cast needed for row/cell operations on untyped external data
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const jsonData = XLSX.utils.sheet_to_json(sheet, { header: 1 }) as any[][];
+    // Convert worksheet to array of arrays
+    const rows: (string | number | null)[][] = [];
+    bestSheet.eachRow((row) => {
+      const rowData: (string | number | null)[] = [];
+      row.eachCell({ includeEmpty: true }, (cell, colNumber) => {
+        while (rowData.length < colNumber - 1) {
+          rowData.push(null);
+        }
+        const value = cell.value;
+        if (value === null || value === undefined) {
+          rowData.push(null);
+        } else if (typeof value === 'object' && 'result' in value) {
+          rowData.push(value.result as string | number | null);
+        } else if (typeof value === 'object' && 'text' in value) {
+          rowData.push(value.text as string);
+        } else {
+          rowData.push(value as string | number);
+        }
+      });
+      rows.push(rowData);
+    });
 
-    return jsonData
+    return rows
       .filter(row => row.some(cell => cell != null && cell !== ''))
       .map(row => row.map(cell => cell ?? '').join('\t'))
       .join('\n');

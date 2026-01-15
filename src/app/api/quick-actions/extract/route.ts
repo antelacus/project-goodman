@@ -10,7 +10,7 @@
 export const runtime = "nodejs";
 import { NextRequest, NextResponse } from "next/server";
 import OpenAI from "openai";
-import * as XLSX from "xlsx";
+import ExcelJS from "exceljs";
 import { getDataExtractPrompt } from "@/lib/prompts";
 import {
   generateRequestId,
@@ -223,21 +223,40 @@ export async function POST(req: NextRequest) {
 
       result = response.output_text;
     } else if (fileType === SUPPORTED_EXCEL_TYPE) {
-      // Excel processing - parse with xlsx library then send to LLM
+      // Excel processing - parse with exceljs library then send to LLM
       const buffer = Buffer.from(fileData, 'base64');
-      const workbook = XLSX.read(buffer, { type: 'buffer' });
+      const workbook = new ExcelJS.Workbook();
+      // REASON: exceljs types expect Buffer but Node.js 22+ returns Buffer<ArrayBuffer>
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      await workbook.xlsx.load(buffer as any);
 
       // Get first sheet only (single sheet support)
-      const sheetName = workbook.SheetNames[0];
-      const sheet = workbook.Sheets[sheetName];
+      const worksheet = workbook.worksheets[0];
 
       // Convert to array of arrays for better structure
-      const jsonData = XLSX.utils.sheet_to_json(sheet, { header: 1 });
+      const rows: (string | number | null)[][] = [];
+      worksheet.eachRow((row) => {
+        const rowData: (string | number | null)[] = [];
+        row.eachCell({ includeEmpty: true }, (cell, colNumber) => {
+          while (rowData.length < colNumber - 1) {
+            rowData.push(null);
+          }
+          const value = cell.value;
+          if (value === null || value === undefined) {
+            rowData.push(null);
+          } else if (typeof value === 'object' && 'result' in value) {
+            rowData.push(value.result as string | number | null);
+          } else if (typeof value === 'object' && 'text' in value) {
+            rowData.push(value.text as string);
+          } else {
+            rowData.push(value as string | number);
+          }
+        });
+        rows.push(rowData);
+      });
 
       // Format as text for LLM processing
-      // REASON: XLSX returns unknown[], cast needed for row/cell operations on untyped external data
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const textContent = (jsonData as any[][])
+      const textContent = rows
         .filter(row => row.some(cell => cell != null && cell !== ''))
         .map(row => row.map(cell => cell ?? '').join('\t'))
         .join('\n');
