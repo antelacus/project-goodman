@@ -351,7 +351,7 @@
 
 ---
 
-### O. 框架升级 - Next.js
+### O. 框架升级 - Next.js ✅
 
 > **新增于 2026-01-15**：源自 TD-016，升级 Next.js 修复多个漏洞。
 
@@ -369,20 +369,20 @@
 
 ---
 
-### P. API 验证完善
+### P. API 验证完善 ✅
 
 > **新增于 2026-01-15**：源自 TD-017，为缺少 Zod 验证的 API 路由添加验证。
 
-#### P1: 添加缺失的 Zod Schemas
+#### P1: 添加缺失的 Zod Schemas ✅
 
-- [ ] 在 `src/lib/validation/api-schemas.ts` 添加 `extractRequestSchema`
-- [ ] 在 `src/lib/validation/api-schemas.ts` 添加 `uploadTempSchema`
-- [ ] 在 `src/lib/validation/api-schemas.ts` 添加 `chatRequestSchema`
-- [ ] 更新 `/api/quick-actions/extract/route.ts` 使用 Zod 验证
-- [ ] 更新 `/api/documents/upload-temp/route.ts` 使用 Zod 验证
-- [ ] 更新 `/api/chat/route.ts` 使用 Zod 验证
-- [ ] 验证错误响应格式一致
-- [ ] 验证无功能回归
+- [x] 在 `src/lib/validation/api-schemas.ts` 添加 `extractRequestSchema`（已存在为 `ExtractRequestSchema`）
+- [x] 在 `src/lib/validation/api-schemas.ts` 添加 `uploadTempSchema`（已存在为 `TempUploadSchema`）
+- [x] 在 `src/lib/validation/api-schemas.ts` 添加 `chatRequestSchema`（新增为 `ChatRequestSchema`）
+- [x] 更新 `/api/quick-actions/extract/route.ts` 使用 Zod 验证
+- [x] 更新 `/api/documents/upload-temp/route.ts` 使用 Zod 验证
+- [x] 更新 `/api/chat/route.ts` 使用 Zod 验证
+- [x] 验证错误响应格式一致
+- [x] 验证无功能回归（lint、test、build 全部通过）
 
 ---
 
@@ -1081,6 +1081,65 @@ NODE_OPTIONS="--max-old-space-size=2048" npm run build
 - `npm run build` → 成功（33 static pages）
 - `npm audit` → 0 vulnerabilities
 
+### 2026-01-16 - API 验证完善实现
+
+#### P1: 添加缺失的 Zod Schemas
+
+**发现**：
+
+检查 `api-schemas.ts` 后发现所需的 schemas 大部分已存在：
+
+- `ExtractRequestSchema` - 已存在（V3.9 添加）
+- `TempUploadSchema` - 已存在（V3.9 添加）
+- `ChatMessageSchema` - 已存在但使用 `question` 字段
+
+**新增 Schema**：
+
+`ChatRequestSchema` - 用于 `/api/chat` 端点（使用 `message` 字段）
+
+```typescript
+export const ChatRequestSchema = z.object({
+    message: z.string().min(1, '消息不能为空').max(VALIDATION_LIMITS.MAX_QUESTION_LENGTH),
+    sessionId: z.string().uuid('无效的会话ID').optional(),
+    documentIds: z.array(z.string().uuid()).max(VALIDATION_LIMITS.MAX_DOCUMENT_IDS).optional(),
+});
+```
+
+**修改的文件**：
+
+1. `src/lib/validation/api-schemas.ts`
+   - 新增 `ChatRequestSchema`（用于 `/api/chat` 端点）
+
+2. `src/app/api/quick-actions/extract/route.ts`
+   - 导入 `ExtractRequestSchema` 和 `validateRequest`
+   - 添加 Zod 验证逻辑
+   - 保留应用特定验证（文件类型、大小）
+
+3. `src/app/api/documents/upload-temp/route.ts`
+   - 导入 `TempUploadSchema` 和 `validateRequest`
+   - 移除未使用的 `UploadRequest` interface
+   - 处理 `fileType` 可选类型兼容性
+
+4. `src/app/api/chat/route.ts`
+   - 导入 `ChatRequestSchema` 和 `validateRequest`
+   - 替换简单的 `if (!message)` 检查为完整 Zod 验证
+
+**错误响应格式**：
+
+所有路由使用一致的错误响应格式：
+
+```json
+{ "error": "<validation error message>" }
+```
+
+返回 HTTP 400 状态码。
+
+**验证**：
+
+- `npm run lint` → 0 errors
+- `npm run test` → 78 passed
+- `npm run build` → 成功
+
 ---
 
 ## 测试清单
@@ -1180,10 +1239,10 @@ NODE_OPTIONS="--max-old-space-size=2048" npm run build
 
 #### API 验证 (P)
 
-- [ ] `/api/quick-actions/extract` 使用 Zod 验证
-- [ ] `/api/documents/upload-temp` 使用 Zod 验证
-- [ ] `/api/chat` 使用 Zod 验证
-- [ ] 验证错误返回一致格式
+- [x] `/api/quick-actions/extract` 使用 Zod 验证
+- [x] `/api/documents/upload-temp` 使用 Zod 验证
+- [x] `/api/chat` 使用 Zod 验证
+- [x] 验证错误返回一致格式
 
 #### Agent 可观测性 (Q)
 
@@ -1195,5 +1254,5 @@ NODE_OPTIONS="--max-old-space-size=2048" npm run build
 ---
 
 *文档创建日期：2026-01-13*
-*最后更新：2026-01-15（Task O Next.js 升级完成，漏洞从 1 降至 0）*
+*最后更新：2026-01-16（Task P API 验证完善完成）*
 *状态：实现中*

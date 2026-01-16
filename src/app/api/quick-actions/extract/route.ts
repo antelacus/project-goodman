@@ -20,6 +20,7 @@ import {
   incrementGuestRate,
 } from "@/lib/security";
 import { createServerSupabaseClient } from "@/lib/database";
+import { ExtractRequestSchema, validateRequest } from "@/lib/validation/api-schemas";
 import { downloadFileAsBase64, getFirstFileForDocument } from "@/lib/documents/storage";
 
 const openai = new OpenAI({
@@ -79,8 +80,19 @@ export async function POST(req: NextRequest) {
     }
 
     const body = await req.json();
-    let { fileData, fileType, fileName } = body;
-    const { documentId } = body;
+
+    // Validate request body structure with Zod
+    const validationResult = validateRequest(ExtractRequestSchema, body);
+    if (!validationResult.success) {
+      return NextResponse.json({
+        success: false,
+        error: 'validation_error',
+        message: validationResult.error
+      }, { status: 400 });
+    }
+
+    const { documentId } = validationResult.data;
+    let { fileData, fileType, fileName } = validationResult.data;
 
     // Logic: If documentId is provided, fetch fileData from storage
     if (documentId) {
