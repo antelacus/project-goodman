@@ -24,6 +24,7 @@ import {
   checkGuestRate,
   incrementGuestRate,
 } from "@/lib/security";
+import { TempUploadSchema, validateRequest } from "@/lib/validation/api-schemas";
 import {
   parseDocumentSections,
   createSectionAwareChunks,
@@ -46,12 +47,6 @@ const SUPPORTED_TEXT_TYPES = ['text/plain', 'text/markdown'];
 // Max file size: 2MB
 const MAX_FILE_SIZE = 2 * 1024 * 1024;
 
-interface UploadRequest {
-  fileData: string;      // Base64 encoded file content
-  fileName: string;
-  fileType: string;
-  source?: string;       // 'guidance-chat' or other sources
-}
 
 /**
  * Extract text from various file types
@@ -214,16 +209,18 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    const body: UploadRequest = await req.json();
-    const { fileData, fileName, fileType } = body;
+    const body = await req.json();
 
-    // Validate required fields
-    if (!fileData || !fileName) {
+    // Validate request body structure with Zod
+    const validationResult = validateRequest(TempUploadSchema, body);
+    if (!validationResult.success) {
       return NextResponse.json(
-        { error: "缺少必要参数 (fileData, fileName)" },
+        { error: validationResult.error },
         { status: 400 }
       );
     }
+
+    const { fileData, fileName, fileType } = validationResult.data;
 
     // Validate file size (base64 is ~1.37x larger than original)
     const estimatedSize = (fileData.length * 3) / 4;
@@ -242,7 +239,7 @@ export async function POST(req: NextRequest) {
     console.log(`[upload-temp] Processing file: ${fileName}, type: ${fileType}, session: ${session.role}`);
 
     // Step 1: Extract text from file
-    const extractedText = await extractTextFromFile(fileData, fileName, fileType);
+    const extractedText = await extractTextFromFile(fileData, fileName, fileType || '');
 
     if (!extractedText || extractedText.trim().length < 10) {
       return NextResponse.json(
@@ -303,9 +300,9 @@ export async function POST(req: NextRequest) {
       id: documentId,
       name: fileName,
       doc_category: 'business',
-      doc_type: fileType.includes('pdf') ? 'pdf' :
-        fileType.includes('image') ? 'image' :
-          fileType.includes('excel') || fileType.includes('spreadsheet') ? 'excel' : 'txt',
+      doc_type: (fileType || '').includes('pdf') ? 'pdf' :
+        (fileType || '').includes('image') ? 'image' :
+          (fileType || '').includes('excel') || (fileType || '').includes('spreadsheet') ? 'excel' : 'txt',
       status: 'ready',
       size: estimatedSize,
       summary: {
