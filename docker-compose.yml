@@ -17,3 +17,7 @@ services:
     environment:
       - NODE_ENV=production
       - REDIS_HOST=goodman-redis
+      # LangSmith (optional - agent observability)
+      - LANGCHAIN_TRACING_V2=${LANGCHAIN_TRACING_V2:-false}
+      - LANGCHAIN_API_KEY=${LANGCHAIN_API_KEY:-}
+      - LANGCHAIN_PROJECT=${LANGCHAIN_PROJECT:-goodman}

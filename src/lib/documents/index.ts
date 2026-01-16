@@ -9,12 +9,12 @@
  * - storage: Supabase storage helpers
  */
 
-// Search
-export {
-  searchDocuments,
-  type DocumentSearchFilters,
-  type DocumentSearchOptions,
-  type DocumentSearchResponse,
+// Search types only (function is server-only due to LangSmith tracing)
+// Server-side code should import directly: import { searchDocuments } from "@/lib/documents/search";
+export type {
+  DocumentSearchFilters,
+  DocumentSearchOptions,
+  DocumentSearchResponse,
 } from "./search";
 
 // Constants

@@ -386,20 +386,20 @@
 
 ---
 
-### Q. Agent 可观测性 - LangSmith
+### Q. Agent 可观测性 - LangSmith ✅
 
 > **新增于 2026-01-15**：源自 TD-003，集成 LangSmith 用于 Agent 追踪。
 
-#### Q1: LangSmith 集成
+#### Q1: LangSmith 集成 ✅
 
-- [ ] 安装 langsmith 依赖
-- [ ] 在 `.env.example` 添加 LangSmith 环境变量
-- [ ] 在 `docker-compose.yml` 添加 LangSmith 环境变量
-- [ ] 验证 LangGraph 自动追踪生效
-- [ ] 可选：为关键操作添加自定义 span
-- [ ] 验证 Agent 工作流在 LangSmith 控制台可见
-- [ ] 验证 Token 使用量可追踪
-- [ ] 验证生产环境可启用/禁用追踪
+- [x] 安装 langsmith 依赖
+- [x] 在 `.env.example` 添加 LangSmith 环境变量
+- [x] 在 `docker-compose.yml` 添加 LangSmith 环境变量
+- [x] 验证 LangGraph 自动追踪生效（环境变量配置，LangGraph 自动检测）
+- [x] 验证生产环境可启用/禁用追踪（默认禁用，设置 LANGCHAIN_TRACING_V2=true 启用）
+- [x] 验证 Agent 工作流在 LangSmith 控制台可见（用户验证通过）
+- [x] 验证 Token 使用量可追踪（用户验证通过）
+- [x] 为关键操作添加自定义 span（文档搜索、财务计算）
 
 ---
 
@@ -1140,6 +1140,106 @@ export const ChatRequestSchema = z.object({
 - `npm run test` → 78 passed
 - `npm run build` → 成功
 
+### 2026-01-16 - Agent 可观测性实现
+
+#### Q1: LangSmith 集成
+
+**变更原因**：
+
+源自 TD-003，集成 LangSmith 用于 Agent 工作流追踪和可观测性。LangSmith 提供 LLM 调用追踪、Token 使用量监控、以及调试能力。
+
+**安装的依赖**：
+
+- langsmith（npm audit 仍为 0 vulnerabilities）
+
+**修改的文件**：
+
+1. `.env.example`
+   - 新增 LangSmith 配置章节
+   - `LANGCHAIN_TRACING_V2` - 追踪开关（默认 false）
+   - `LANGCHAIN_API_KEY` - LangSmith API 密钥
+   - `LANGCHAIN_PROJECT` - 项目名称（默认 goodman）
+
+2. `docker-compose.yml`
+   - 新增 LangSmith 环境变量传递
+   - 使用默认值确保未配置时追踪禁用
+
+**集成方式**：
+
+LangGraph（`@langchain/langgraph`）自动检测以下环境变量并启用追踪：
+
+```bash
+LANGCHAIN_TRACING_V2=true
+LANGCHAIN_API_KEY=<your-api-key>
+LANGCHAIN_PROJECT=goodman
+```
+
+无需代码修改，设置环境变量即可启用。
+
+**启用/禁用追踪**：
+
+| 场景 | 配置 |
+|------|------|
+| 生产环境禁用（默认） | 不设置或 `LANGCHAIN_TRACING_V2=false` |
+| 生产环境启用 | `LANGCHAIN_TRACING_V2=true` + API key |
+| 开发环境调试 | 在 `.env` 中设置 |
+
+**验证**：
+
+- `npm run lint` → 0 errors
+- `npm run test` → 78 passed
+- `npm run build` → 成功
+- `npm audit` → 0 vulnerabilities
+
+**用户操作（启用追踪时）**：
+
+1. 在 [LangSmith](https://smith.langchain.com/) 创建账号并获取 API key
+2. 在 `.env` 中设置 `LANGCHAIN_TRACING_V2=true` 和 `LANGCHAIN_API_KEY`
+3. 重启服务后，Agent 调用会自动记录到 LangSmith 控制台
+
+#### Q1 扩展: 自定义 Span 实现
+
+**变更原因**：
+
+为关键操作添加自定义 span，提供更细粒度的可观测性。LangGraph 自动追踪整体工作流和节点，自定义 span 追踪节点内部的关键操作。
+
+**修改的文件**：
+
+1. `src/lib/documents/search.ts`
+   - 将 `searchDocuments` 函数包装为 `searchDocumentsInternal`
+   - 使用 `traceable()` 导出追踪版本
+   - 追踪元数据：`run_type: "retriever"`, `component: "document_search"`
+
+2. `src/lib/documents/index.ts`
+   - 移除 `searchDocuments` 从 barrel 导出（防止客户端打包 Node.js 模块）
+   - 保留类型导出，服务端代码需直接从 `./search` 导入
+
+3. `src/lib/tools/search/search-documents.ts`
+   - 更新导入路径：`@/lib/documents` → `@/lib/documents/search`
+
+4. `src/lib/tools/financial/preset-tools.ts`
+   - 在 `execute` 函数内部使用 `traceable()` 包装计算逻辑
+   - 追踪元数据：`run_type: "tool"`, `component: "financial_calculation"`, `metricName`, `category`
+
+**追踪点**：
+
+| 操作 | Span 名称 | 类型 | 元数据 |
+|------|-----------|------|--------|
+| 文档搜索 | `search_documents_hybrid` | retriever | searchType, component |
+| 财务计算 | `financial_calc_{metric}` | tool | metricName, displayName, category, year, period |
+
+**技术说明**：
+
+- `langsmith/traceable` 使用 Node.js `async_hooks`，不能在客户端代码中使用
+- 文档搜索从 barrel 文件移除，确保客户端页面不会打包 traceable
+- 财务工具仅在服务端执行，无需特殊处理
+
+**验证**：
+
+- `npm run lint` → 0 errors
+- `npm run test` → 78 passed
+- `npm run build` → 成功
+
 ---
 
 ## 测试清单
@@ -1246,13 +1346,15 @@ export const ChatRequestSchema = z.object({
 
 #### Agent 可观测性 (Q)
 
-- [ ] LangSmith 依赖已安装
-- [ ] 环境变量配置正确
-- [ ] Agent 追踪在 LangSmith 控制台可见
-- [ ] 生产环境可禁用追踪
+- [x] LangSmith 依赖已安装
+- [x] 环境变量配置正确（.env.example、docker-compose.yml）
+- [x] 生产环境可禁用追踪（默认禁用，需显式启用）
+- [x] Agent 追踪在 LangSmith 控制台可见（用户验证通过）
+- [x] Token 使用量可追踪（用户验证通过）
+- [x] 自定义 span 已实现（文档搜索、财务计算）
 
 ---
 
 *文档创建日期：2026-01-13*
-*最后更新：2026-01-16（Task P API 验证完善完成）*
+*最后更新：2026-01-16（Task Q LangSmith 集成 + 自定义 Span 完成）*
 *状态：实现中*
