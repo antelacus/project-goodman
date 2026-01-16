@@ -49,7 +49,7 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const { content, year, comparisonYear } = validation.data;
+    const { content, year, comparisonYear, generationTimeMs } = validation.data;
     const reportContent = content as ReportContent;
 
     // Determine owner info
@@ -79,7 +79,7 @@ export async function POST(req: NextRequest) {
         content: reportContent as unknown as Json,
         summary_text: summaryText,
         pdf_storage_path: null, // Will be set when PDF is generated
-        generation_time_ms: null, // TODO: track from workflow
+        generation_time_ms: generationTimeMs ?? null,
         expires_at: expiresAt,
       })
       .select('id')

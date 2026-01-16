@@ -103,7 +103,7 @@
 
 ---
 
-### D. 页面文案更新
+### D. 页面文案更新 ✅
 
 #### D1: 修复 About 页面 ✅
 
@@ -111,16 +111,16 @@
 - [x] 更新版本号：V3.7 (Phase 1) → V4.2.1
 - [x] 已更新 About 页技术架构与版本信息
 
-#### D2: 修复报告生成时间记录
+#### D2: 修复报告生成时间记录 ✅
 
 > **来源**: TD-008
 
-- [ ] 定位报告生成工具代码 `src/lib/tools/generate-report.ts`
-- [ ] 在报告生成开始时记录 `startTime`
-- [ ] 计算生成耗时 `generationTimeMs = Date.now() - startTime`
-- [ ] 更新数据库插入逻辑包含 `generation_time_ms`
-- [ ] 生成测试报告验证字段已填充
-- [ ] 查询 `reports` 表确认值正确
+- [x] 定位报告生成时间来源（workflow meta）并复用
+- [x] SSE 完成事件携带 `generationTimeMs`
+- [x] 保存报告请求传递 `generationTimeMs`
+- [x] 更新数据库插入逻辑包含 `generation_time_ms`
+- [x] 生成测试报告验证字段已填充
+- [x] 查询 `reports` 表确认值正确
 
 #### D3: 全站文案一致性修复 ✅
 
@@ -1387,6 +1387,18 @@ ALTER FUNCTION public.update_session_timestamp() SET search_path = public;
 6. `src/app/(workspace)/help/page.tsx`：改为“知识库上传仅管理员”
 7. `src/app/(workspace)/documents/page.tsx`：年份选项改为基于当前年份生成
 
+#### D2: 报告生成时间记录修复
+
+**实现要点**：
+
+- 报告生成完成事件携带 `generationTimeMs`（来源于 workflow meta）
+- `useReportGeneration` 保存耗时并随 `/api/reports/save` 提交
+- `reports` 表插入时写入 `generation_time_ms`
+
+**验证**：
+
+- 生成并保存报告后，`reports` 表最新记录的 `generation_time_ms` 为非空（Supabase 查询确认）
+
 ---
 
 ## 测试清单
@@ -1424,7 +1436,7 @@ ALTER FUNCTION public.update_session_timestamp() SET search_path = public;
 #### 页面文案 (D)
 
 - [ ] About 页面版本信息正确
-- [ ] 报告生成时间正确记录到数据库
+- [x] 报告生成时间正确记录到数据库
 
 #### 测试基础设施 (G)
 
@@ -1503,5 +1515,5 @@ ALTER FUNCTION public.update_session_timestamp() SET search_path = public;
 ---
 
 *文档创建日期：2026-01-13*
-*最后更新：2026-01-16（Task C 数据库维护完成）*
+*最后更新：2026-01-16（Task D2 报告生成时间记录修复）*
 *状态：实现中*

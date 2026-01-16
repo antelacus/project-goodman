@@ -241,6 +241,11 @@ export const ReportSaveSchema = z.object({
         .string()
         .regex(/^\d{4}$/, '对比年份格式错误')
         .optional(),
+    generationTimeMs: z
+        .number()
+        .int()
+        .nonnegative()
+        .optional(),
 });
 
 export type ReportSaveRequest = z.infer<typeof ReportSaveSchema>;
