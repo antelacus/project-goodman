@@ -140,7 +140,7 @@ const ChatInput: React.FC<ChatInputProps> = ({ onSendMessage, disabled, onReques
                                             </div>
                                             <div>
                                                 <div className="font-medium">上传文件</div>
-                                                <div className="text-[10px] text-neutral-400">支持 PDF, Excel, 图片</div>
+                                                <div className="text-[10px] text-neutral-400">支持 PDF、Excel、图片、TXT/MD</div>
                                             </div>
                                         </button>
 
@@ -208,6 +208,8 @@ const ChatInput: React.FC<ChatInputProps> = ({ onSendMessage, disabled, onReques
                 selectedIds={selectedDocIds}
                 onSelect={(ids) => setSelectedDocIds(ids)}
                 showUpload={true}
+                uploadAccept=".pdf,.png,.jpg,.jpeg,.webp,.gif,.xlsx,.txt,.md"
+                uploadHelpText="支持上传 PDF、图片、Excel(.xlsx)、TXT、MD 格式。TXT/MD 仅用于对话上下文，不支持结构化提取。"
             />
         </div>
     );

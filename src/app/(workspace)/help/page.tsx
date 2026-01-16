@@ -125,7 +125,7 @@ export default function HelpPage() {
               </span>
               <h3 className="flex items-center mb-1 text-lg font-semibold text-neutral-900">进入管理模式</h3>
               <p className="mb-4 text-base font-normal text-neutral-600">
-                为了保证数据安全，文档上传功能仅限管理员使用。请确保已获取管理员权限。
+                为了保证数据安全，知识库文档上传功能仅限管理员使用。请确保已获取管理员权限。
               </p>
             </li>
             <li className="mb-10 ml-6">
