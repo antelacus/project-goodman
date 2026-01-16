@@ -20,6 +20,61 @@
 - Service Role Key usage must be isolated to `src/lib/` server modules with runtime `typeof window` check
 - Verify schema changes work in Supabase before writing dependent code
 
+## Database Security (RLS Design Decisions)
+
+> **Context**: Our architecture uses Next.js API routes as the security boundary. All database access goes through server-side code using the Service Role Key, which bypasses RLS. The RLS policies exist as a defense-in-depth layer, not the primary security mechanism.
+
+### Architecture Overview
+
+```
+┌─────────────┐     ┌─────────────────┐     ┌──────────────┐
+│   Browser   │────▶│   Next.js API   │────▶│   Supabase   │
+│  (Client)   │     │   (Server)      │     │  (Database)  │
+└─────────────┘     └─────────────────┘     └──────────────┘
+                            │
+                    Service Role Key
+                    (bypasses RLS)
+```
+
+**Primary Security**: API route authentication/authorization in `src/lib/security/`
+**Secondary Security**: RLS policies (defense-in-depth)
+
+### Tables Without RLS (by design)
+
+| Table | Reason | Mitigation |
+|-------|--------|------------|
+| `users` | Contains password hashes - must NEVER be exposed to client. Server-only access via Service Role. | No client-side Supabase access; all auth through API routes |
+| `guest_activity` | Anonymous tracking for admin dashboard. No user-specific data. Currently unused (0 rows). | Only admin dashboard reads this; no sensitive user data |
+
+### Tables with USING(true) Policies (by design)
+
+These tables have RLS enabled with permissive policies because:
+1. All access is through Service Role (which bypasses RLS anyway)
+2. The policies allow our server code to work without role-based complications
+3. Client-side never directly accesses these tables
+
+| Table | Policy | Reason |
+|-------|--------|--------|
+| `documents` | Allow all via service key | Server manages document ownership; API validates access |
+| `document_chunks` | Allow all via service key | Internal table, only accessed during search |
+| `financial_data` | Allow all via service key | Read-only demo data from uploaded statements |
+| `structured_regulations` | Allow all via service key | Public knowledge base content |
+| `preset_functions` | Allow all via service key | System-defined calculation formulas |
+| `calculation_history` | Allow all via service key | Audit log, server-only writes |
+| `admin_config` | Allow all via service key | Admin-only configuration |
+| `conversation_sessions` | Allow all access | API validates session ownership |
+| `conversation_messages` | Allow all access | API validates session ownership |
+| `reports` | Allow all access | API validates report ownership |
+
+### When to Add Stricter RLS
+
+Consider implementing user-based RLS when:
+- Supporting multiple authenticated users (not just admin)
+- Adding direct client-side Supabase access
+- Implementing real multi-tenancy
+
+For now, our single-admin + guest model doesn't require row-level user isolation.
+
 ## State Management
 
 - Use Redis for any state that must survive restarts (sessions, rate limits, locks)

@@ -65,41 +65,41 @@
 
 ---
 
-### C. 数据库维护
+### C. 数据库维护 ✅
 
-#### C1: 重新生成 TypeScript 类型
+#### C1: 重新生成 TypeScript 类型 ✅
 
-- [ ] 运行 Supabase 类型生成命令
-- [ ] 验证 `reports` 表定义存在
-- [ ] 验证 TypeScript 编译通过
+- [x] 运行 Supabase 类型生成命令
+- [x] 验证 `reports` 表定义存在
+- [x] 验证 TypeScript 编译通过
 
-#### C2: 审查未使用索引
+#### C2: 审查未使用索引 ✅
 
 > **来源**: TD-009
 
-- [ ] 运行 Supabase 性能顾问获取索引使用报告
-- [ ] 分析 23 个未使用索引
-- [ ] 为每个索引做出决策（保留/删除/文档化）
-- [ ] 在实现记录中记录决策及理由
-- [ ] 如需删除，创建迁移脚本
+- [x] 运行 Supabase 性能顾问获取索引使用报告
+- [x] 分析 23 个未使用索引
+- [x] 为每个索引做出决策（保留/删除/文档化）
+- [x] 在实现记录中记录决策及理由
+- [x] 如需删除，创建迁移脚本
 
-#### C3: 处理 RPC 警告
+#### C3: 处理 RPC 警告 ✅
 
 > **来源**: TD-011
 
-- [ ] 识别 4 个有 mutable search_path 警告的函数
-- [ ] 创建迁移添加 `SET search_path = public`
-- [ ] 应用迁移
-- [ ] 运行 `get_advisors` 验证警告已消除
+- [x] 识别 5 个有 mutable search_path 警告的函数（实际为 5 个，非 4 个）
+- [x] 创建迁移添加 `SET search_path = public`
+- [x] 应用迁移
+- [x] 运行 `get_advisors` 验证警告已消除
 
-#### C4: 文档化 RLS 设计决策
+#### C4: 文档化 RLS 设计决策 ✅
 
 > **来源**: TD-012, TD-013
 
-- [ ] 分析 `users` 和 `guest_activity` 表为何不需要 RLS
-- [ ] 分析 9 个表的 `USING(true)` 策略原因
-- [ ] 在 `.claude/rules/code-conventions.md` 添加 Database Security 章节
-- [ ] 记录每个表的 RLS 设计决策
+- [x] 分析 `users` 和 `guest_activity` 表为何不需要 RLS
+- [x] 分析 9 个表的 `USING(true)` 策略原因
+- [x] 在 `.claude/rules/code-conventions.md` 添加 Database Security 章节
+- [x] 记录每个表的 RLS 设计决策
 
 ---
 
@@ -1240,6 +1240,117 @@ LANGCHAIN_PROJECT=goodman
 - `npm run test` → 78 passed
 - `npm run build` → 成功
 
+### 2026-01-16 - 数据库维护实现
+
+#### C1-C4: 全面数据库审查与维护
+
+**数据库概览**：
+
+| 表名 | 行数 | RLS 状态 | 描述 |
+|------|------|----------|------|
+| `users` | 1 | 禁用 | 用户认证（含密码哈希） |
+| `documents` | 52 | USING(true) | 已上传文档 |
+| `document_chunks` | 531 | USING(true) | 向量嵌入分块 |
+| `financial_data` | 322 | USING(true) | 财务数据记录 |
+| `structured_regulations` | 1679 | USING(true) | 法规知识库 |
+| `conversation_sessions` | 159 | USING(true) | 对话会话 |
+| `conversation_messages` | 954 | USING(true) | 对话消息 |
+| `preset_functions` | 29 | USING(true) | 财务计算公式 |
+| `calculation_history` | 2 | USING(true) | 计算历史审计 |
+| `admin_config` | 1 | USING(true) | 管理员配置 |
+| `reports` | 7 | USING(true) | 生成的报告 |
+| `guest_activity` | 0 | 禁用 | 访客活动（未使用） |
+
+**迁移记录**：共 21 个迁移（Nov 2025 - Jan 2026），本次新增 2 个。
+
+#### C3: RPC search_path 修复
+
+**问题**：安全顾问报告 5 个函数缺少 `search_path` 设置，存在潜在的 schema 注入风险。
+
+**创建的迁移**：`fix_function_search_path`
+
+```sql
+ALTER FUNCTION public.cleanup_temp_documents() SET search_path = public;
+ALTER FUNCTION public.get_document_sections(text) SET search_path = public;
+ALTER FUNCTION public.search_documents_hybrid(
+    query_embedding vector,
+    match_count integer,
+    similarity_threshold double precision,
+    filter_document_ids uuid[],
+    keyword_query text
+) SET search_path = public;
+ALTER FUNCTION public.update_reports_timestamp() SET search_path = public;
+ALTER FUNCTION public.update_session_timestamp() SET search_path = public;
+```
+
+**验证**：安全顾问重新运行后，RPC 警告数量从 5 降至 0。
+
+#### C4: RLS 设计决策文档化
+
+**更新的文件**：`.claude/rules/code-conventions.md`
+
+**新增章节**：Database Security (RLS Design Decisions)
+
+内容包括：
+- 架构说明：Browser → Next.js API (Service Role Key) → Supabase
+- 主要安全：API 路由认证/授权
+- 次要安全：RLS 策略（纵深防御）
+- 表级设计决策：
+  - `users`：禁用 RLS - 含密码哈希，仅服务端访问
+  - `guest_activity`：禁用 RLS - 匿名追踪，未使用
+  - 其他 9 个表：`USING(true)` - 通过 Service Role 访问，API 层验证权限
+- 未来考虑：多用户/多租户时需添加用户级 RLS
+
+#### C2: 未使用索引审查与清理
+
+**分析方法**：使用 `pg_stat_user_indexes` 视图查询索引使用统计。
+
+**创建的迁移**：`cleanup_unused_indexes`
+
+**删除的索引（13 个，约 1.7 MB）**：
+
+| 索引 | 大小 | 删除原因 |
+|------|------|----------|
+| `idx_preset_functions_active` | 16 kB | 表仅 29 行，seq scan 更快 |
+| `idx_preset_functions_category` | 16 kB | 表仅 29 行，seq scan 更快 |
+| `idx_users_role` | 16 kB | 表仅 1 行 |
+| `idx_documents_status` | 16 kB | 现有 `idx_documents_compound` 已覆盖 |
+| `idx_documents_year_period` | 16 kB | 现有 `idx_documents_compound` 已覆盖 |
+| `idx_documents_extraction_status` | 16 kB | 现有 `idx_documents_compound` 已覆盖 |
+| `idx_regulations_content_fts` | 1536 kB | 最大！全文搜索转用 vector+keyword 混合 |
+| `idx_regulations_effective` | 40 kB | 未使用 |
+| `idx_chunks_keywords` | 48 kB | JSONB 索引未使用 |
+| `idx_chunks_section_title` | 32 kB | 搜索走向量索引 |
+| `idx_chunks_section_path` | 32 kB | 搜索走向量索引 |
+| `idx_reports_year` | 16 kB | 表仅 7 行 |
+| `idx_reports_created` | 16 kB | 表仅 7 行 |
+
+**保留的索引（10 个）**：
+
+| 索引 | 保留原因 |
+|------|----------|
+| `documents_temp_created_at_idx` | 清理作业需要 |
+| `idx_documents_compound` | 主查询索引 |
+| `idx_guest_activity_created_at` | 未来分析需要 |
+| `idx_guest_activity_visitor_id` | 未来分析需要 |
+| `idx_guest_activity_activity_type` | 未来分析需要 |
+| `idx_messages_session` | 会话查询（FK 关系） |
+| `idx_messages_session_created` | 会话消息排序 |
+| `idx_sessions_last_activity` | 会话过期清理 |
+| `document_chunks_document_id_idx` | 文档删除级联 |
+| `idx_regulations_category` | 分类过滤 |
+
+#### C1: TypeScript 类型重新生成
+
+**工具**：Supabase MCP `generate_typescript_types`
+
+**更新的文件**：`src/lib/database/database.types.ts`
+
+**验证**：
+- `npm run lint` → 0 errors
+- `npx tsc --noEmit` → 成功
+- `npm run build` → 成功
+
 ---
 
 ## 测试清单
@@ -1268,11 +1379,11 @@ LANGCHAIN_PROJECT=goodman
 
 #### 数据库 (C)
 
-- [ ] `types.ts` 包含 `reports` 表
-- [ ] TypeScript 编译无错误
-- [ ] 未使用索引已审查并记录决策
-- [ ] RPC mutable search_path 警告已处理
-- [ ] RLS 设计决策已文档化
+- [x] `types.ts` 包含 `reports` 表
+- [x] TypeScript 编译无错误
+- [x] 未使用索引已审查并记录决策（删除 13 个，保留 10 个）
+- [x] RPC mutable search_path 警告已处理（5 个函数已修复）
+- [x] RLS 设计决策已文档化（`.claude/rules/code-conventions.md`）
 
 #### 页面文案 (D)
 
@@ -1356,5 +1467,5 @@ LANGCHAIN_PROJECT=goodman
 ---
 
 *文档创建日期：2026-01-13*
-*最后更新：2026-01-16（Task Q LangSmith 集成 + 自定义 Span 完成）*
+*最后更新：2026-01-16（Task C 数据库维护完成）*
 *状态：实现中*
