@@ -82,13 +82,15 @@ function createSectionEvent(
 
 function createCompleteEvent(
   reportId: string,
-  content: unknown
+  content: unknown,
+  generationTimeMs?: number
 ): ReportCompleteEvent {
   return {
     type: 'complete',
     data: {
       reportId,
       content: content as ReportCompleteEvent['data']['content'],
+      generationTimeMs,
     },
   };
 }
@@ -289,7 +291,14 @@ export async function POST(req: NextRequest) {
 
           // Send complete event with report content
           if (finalState?.report) {
-            sendEvent('report', createCompleteEvent(tempReportId, finalState.report));
+            sendEvent(
+              'report',
+              createCompleteEvent(
+                tempReportId,
+                finalState.report,
+                finalState.meta?.generationTimeMs
+              )
+            );
           } else if (finalState?.meta?.error) {
             sendEvent('report', createErrorEvent(
               finalState.meta.error.message || '报告生成失败',
