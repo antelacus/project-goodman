@@ -105,10 +105,11 @@
 
 ### D. 页面文案更新
 
-#### D1: 修复 About 页面
+#### D1: 修复 About 页面 ✅
 
-- [ ] 更新 AI 模型名称：GPT-5-mini → GPT-4o
-- [ ] 更新版本号：V3.7 (Phase 1) → V4.2.1
+- [x] 更新 AI 模型名称：GPT-5-mini → GPT-4o
+- [x] 更新版本号：V3.7 (Phase 1) → V4.2.1
+- [x] 已更新 About 页技术架构与版本信息
 
 #### D2: 修复报告生成时间记录
 
@@ -120,6 +121,15 @@
 - [ ] 更新数据库插入逻辑包含 `generation_time_ms`
 - [ ] 生成测试报告验证字段已填充
 - [ ] 查询 `reports` 表确认值正确
+
+#### D3: 全站文案一致性修复 ✅
+
+- [x] Landing 页移除“支持批量处理”表述，更新页脚年份
+- [x] Chat 上传入口文案与实际支持格式/限制一致
+- [x] DocumentSelectModal 上传提示与 accept 格式一致，区分对话/提取场景
+- [x] 帮助页文案明确“知识库上传仅管理员”
+- [x] 提取流程文案去除“Vision 模型”限定
+- [x] 文档页年份下拉改为动态年份
 
 ---
 
@@ -1292,6 +1302,7 @@ ALTER FUNCTION public.update_session_timestamp() SET search_path = public;
 **新增章节**：Database Security (RLS Design Decisions)
 
 内容包括：
+
 - 架构说明：Browser → Next.js API (Service Role Key) → Supabase
 - 主要安全：API 路由认证/授权
 - 次要安全：RLS 策略（纵深防御）
@@ -1347,9 +1358,34 @@ ALTER FUNCTION public.update_session_timestamp() SET search_path = public;
 **更新的文件**：`src/lib/database/database.types.ts`
 
 **验证**：
+
 - `npm run lint` → 0 errors
 - `npx tsc --noEmit` → 成功
 - `npm run build` → 成功
+
+#### D1 + D3: 页面文案与上传提示
+
+**更新范围**：
+
+- About 页：模型与版本信息更新
+- Landing 页：移除“支持批量处理”，更新页脚年份
+- Chat 上传入口与 DocumentSelectModal：格式提示与限制一致
+- 提取流程：去除“Vision 模型”限定
+- 帮助页：明确“知识库上传仅管理员”
+- 文档页：年份下拉改为动态年份
+
+**关键改动**：
+
+1. `src/app/(workspace)/about/page.tsx`：GPT-5-mini → GPT-4o；V3.7 → V4.2.1
+2. `src/app/(landing)/page.tsx`：移除“批量处理”表述；页脚年份更新
+3. `src/components/documents/DocumentSelectModal.tsx`：
+   - 新增 `uploadAccept` / `uploadHelpText` 参数
+   - chat 场景支持 TXT/MD（仅上下文，不做结构化提取）
+   - 提取场景限制为 PDF/图片/Excel
+4. `src/components/chat/ChatInput.tsx`：上传菜单文案与支持格式同步
+5. `src/components/quick-actions/ExtractionModal.tsx`：上传提示与提取模型文案同步
+6. `src/app/(workspace)/help/page.tsx`：改为“知识库上传仅管理员”
+7. `src/app/(workspace)/documents/page.tsx`：年份选项改为基于当前年份生成
 
 ---
 

@@ -13,6 +13,8 @@ interface DocumentSelectModalProps {
   onSelect: (ids: string[]) => void;
   showUpload?: boolean;
   documents?: Document[];
+  uploadAccept?: string;
+  uploadHelpText?: string;
 }
 
 const DocumentSelectModal: React.FC<DocumentSelectModalProps> = ({
@@ -24,6 +26,8 @@ const DocumentSelectModal: React.FC<DocumentSelectModalProps> = ({
   onSelect,
   showUpload = false,
   documents: customDocuments,
+  uploadAccept,
+  uploadHelpText,
 }) => {
   const storeDocuments = useDocumentStore((s) => s.documents);
   const isStoreLoading = useDocumentStore((s) => s.isLoading); // v4.3: Loading state for skeleton
@@ -40,6 +44,10 @@ const DocumentSelectModal: React.FC<DocumentSelectModalProps> = ({
   });
 
   if (!open) return null;
+
+  const resolvedUploadAccept = uploadAccept ?? ".pdf,.png,.jpg,.jpeg,.webp,.gif,.xlsx,.txt,.md";
+  const resolvedUploadHelpText = uploadHelpText
+    ?? "支持上传 PDF、图片、Excel(.xlsx)、TXT、MD 格式。TXT/MD 仅用于对话上下文，不支持结构化提取。";
 
   // 按类型分组并筛选
   const filtered = (cat: "knowledge" | "business") =>
@@ -208,7 +216,7 @@ const DocumentSelectModal: React.FC<DocumentSelectModalProps> = ({
 
         {showUpload && (
           <div className="mb-4">
-            <label className="block mb-2 font-medium">补充上传待处理文档（PDF 格式，小于1MB）</label>
+            <label className="block mb-2 font-medium">补充上传待处理文档（≤2MB）</label>
             <div className="relative inline-block">
               <button
                 type="button"
@@ -224,7 +232,7 @@ const DocumentSelectModal: React.FC<DocumentSelectModalProps> = ({
               <input
                 id="doc-upload-input"
                 type="file"
-                accept=".pdf,.png,.jpg,.jpeg,.webp,.gif,.txt,.md"
+                accept={resolvedUploadAccept}
                 onChange={handleUpload}
                 disabled={uploading}
                 className="hidden"
@@ -232,7 +240,7 @@ const DocumentSelectModal: React.FC<DocumentSelectModalProps> = ({
             </div>
             {/* Simple Help Text */}
             <div className="text-xs text-gray-500 mt-2">
-              支持上传 PDF, 图片, Excel, Docx, TXT 格式。系统将自动分析文档结构。
+              {resolvedUploadHelpText}
             </div>
           </div>
         )}

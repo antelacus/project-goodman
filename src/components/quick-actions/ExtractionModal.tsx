@@ -190,7 +190,7 @@ export default function ExtractionModal({
                         <div className="text-center">
                             <Loader2 size={48} className="animate-spin text-yellow-500 mx-auto mb-6" />
                             <h3 className="text-xl font-bold text-neutral-900 mb-2">正在分析文档...</h3>
-                            <p className="text-neutral-500">正在调用 Vision 模型识别结构化信息，请稍候</p>
+                            <p className="text-neutral-500">正在调用模型识别结构化信息，请稍候</p>
                         </div>
                     )}
 
@@ -276,6 +276,8 @@ export default function ExtractionModal({
                 selectedIds={selectedDocId ? [selectedDocId] : []}
                 onSelect={handleDocSelect}
                 showUpload={true}
+                uploadAccept=".pdf,.png,.jpg,.jpeg,.webp,.gif,.xlsx"
+                uploadHelpText="支持上传 PDF、图片、Excel(.xlsx) 格式。"
             />
         </div>
     );
