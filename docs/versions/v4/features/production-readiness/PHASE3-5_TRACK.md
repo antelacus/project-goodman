@@ -80,11 +80,23 @@
 
 #### Task B2: 冒烟测试脚本
 
-**状态**: ⏳ 待办
+**状态**: ✅ 完成
 
-- [ ] 新增冒烟测试脚本（health/sessions/auth/reports）
-- [ ] 在 deploy-staging 中执行
-- [ ] 失败阻断流程
+- [x] 新增冒烟测试脚本（health/sessions/auth/reports）
+- [x] 在 deploy-staging 中执行
+- [x] 失败阻断流程
+
+**实施记录**:
+
+```
+状态: ✅ 完成
+开始时间: 2026-01-17 12:26
+完成时间: 2026-01-17 12:31
+变更点:
+- 新增 scripts/smoke-test-staging.js（health/sessions/auth/reports）
+- deploy-staging 中新增冒烟测试步骤
+备注: 报告生成使用真实 SSE 流完成事件作为通过标准
+```
 
 ---
 
