@@ -90,9 +90,8 @@ tests/                      # Test scripts
 
 | Document | Contents |
 |----------|----------|
-| [docs/KNOWN_ISSUES.md](docs/KNOWN_ISSUES.md) | Current bugs, gotchas, limitations |
 | [docs/PRODUCT_ROADMAP.md](docs/PRODUCT_ROADMAP.md) | Product roadmap, version planning |
-| [docs/TECHNICAL_DEBT.md](docs/TECHNICAL_DEBT.md) | Technical debt registry |
+| [docs/TECHNICAL_DEBT.md](docs/TECHNICAL_DEBT.md) | Technical debt, known limitations, gotchas |
 | [docs/DEPLOYMENT_CHECKLIST.md](docs/DEPLOYMENT_CHECKLIST.md) | Deployment checklist |
 
 ---

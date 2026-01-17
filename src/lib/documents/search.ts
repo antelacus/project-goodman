@@ -1,5 +1,6 @@
 import { createServerSupabaseClient, searchDocumentsHybrid } from '@/lib/database';
 import type { SearchDocumentsHybridResult } from '@/lib/database';
+import { traceable } from 'langsmith/traceable';
 
 import { SearchResultDocument } from '@/lib/types/domain-types';
 
@@ -28,9 +29,9 @@ export interface DocumentSearchResponse {
 }
 
 /**
- * Performs a hybrid search (Vector + Keyword) using RRF Fusion
+ * Internal search implementation
  */
-export async function searchDocuments(
+async function searchDocumentsInternal(
     query: string,
     filters: DocumentSearchFilters = {},
     options: DocumentSearchOptions = {}
@@ -163,3 +164,23 @@ function normalizeRrfScore(rrfScore: number): number {
     const ratio = (rrfScore - minVal) / (maxVal - minVal);
     return Math.round(30 + ratio * 70);
 }
+
+// ----------------------------------------------------------------------------
+// Traced Export (LangSmith custom span)
+// ----------------------------------------------------------------------------
+
+/**
+ * Performs a hybrid search (Vector + Keyword) using RRF Fusion
+ * Wrapped with LangSmith tracing for observability
+ */
+export const searchDocuments = traceable(
+    searchDocumentsInternal,
+    {
+        name: "search_documents_hybrid",
+        run_type: "retriever",
+        metadata: {
+            component: "document_search",
+            searchType: "hybrid_rrf",
+        },
+    }
+);

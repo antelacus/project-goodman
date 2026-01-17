@@ -47,6 +47,7 @@ export interface ReportCompleteEvent {
   data: {
     reportId: string;
     content: ReportContent;
+    generationTimeMs?: number;
   };
 }
 

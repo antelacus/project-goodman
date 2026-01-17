@@ -35,11 +35,18 @@ From `.claude/rules/development-process.md`:
 ## Phase 3-5 Checklist (Implementation Cycle)
 
 For each task:
+
 - [ ] Task marked "in progress" in todo list
 - [ ] Code implemented following conventions
 - [ ] Tests written/updated
 - [ ] Documentation updated
 - [ ] Task marked "completed"
+
+After all tasks complete (Phase 5 testing):
+
+- [ ] `npm run lint` passes with 0 errors
+- [ ] `npm run test` passes
+- [ ] `npm run build` succeeds
 
 ## Phase 6 Checklist (Deployment)
 

@@ -1,6 +1,6 @@
 import { Inter } from "next/font/google";
 import "./globals.css";
-import { ClientOnlyProvider } from "@/components/providers";
+import { ClientOnlyProvider, WebVitals } from "@/components/providers";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -30,6 +30,7 @@ export default function RootLayout({
   return (
     <html lang="zh" suppressHydrationWarning>
       <body className={`${inter.className} bg-white text-black antialiased`} suppressHydrationWarning>
+        <WebVitals />
         <ClientOnlyProvider>{children}</ClientOnlyProvider>
       </body>
     </html>

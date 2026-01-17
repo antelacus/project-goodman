@@ -148,7 +148,7 @@ export default function HomePage() {
                         </div>
                         <div className="flex flex-col items-center text-center">
                             <h3 className="text-xl font-bold mb-4 text-blue-400">极致效率</h3>
-                            <p className="text-neutral-400 leading-relaxed">从上传到结果仅需数秒，支持批量处理，大幅提升工作效率。</p>
+                            <p className="text-neutral-400 leading-relaxed">从上传到结果仅需数秒，大幅提升工作效率。</p>
                         </div>
                         <div className="flex flex-col items-center text-center">
                             <h3 className="text-xl font-bold mb-4 text-green-400">轻松集成</h3>
@@ -159,7 +159,7 @@ export default function HomePage() {
 
                 {/* FOOTER */}
                 <footer className="py-12 mt-12 text-center text-gray-400 text-sm">
-                    <p>© 2025 Project Goodman. All rights reserved.</p>
+                    <p>© 2026 Project Goodman. All rights reserved.</p>
                 </footer>
             </PageContainer>
         </div>

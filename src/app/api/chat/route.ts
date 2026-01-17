@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { unifiedAgentGraph } from "@/lib/workflows/unified/graph";
 import { createServerSupabaseClient } from "@/lib/database";
 import { generateRequestId, createErrorResponse } from "@/lib/security";
+import { ChatRequestSchema, validateRequest } from "@/lib/validation/api-schemas";
 import type { UnifiedAgentState } from "@/lib/workflows/unified/state";
 
 export async function POST(req: NextRequest) {
@@ -9,15 +10,17 @@ export async function POST(req: NextRequest) {
 
     try {
         const body = await req.json();
-        const { message, sessionId, documentIds } = body;
 
-        // Basic validation
-        if (!message) {
+        // Validate request body structure with Zod
+        const validationResult = validateRequest(ChatRequestSchema, body);
+        if (!validationResult.success) {
             return NextResponse.json(
-                { error: "Message is required" },
+                { error: validationResult.error },
                 { status: 400 }
             );
         }
+
+        const { message, sessionId, documentIds } = validationResult.data;
 
         // Ensure user is authenticated (using Supabase middleware logic usually, checking here explicitly)
         const supabase = createServerSupabaseClient();

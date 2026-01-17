@@ -1,0 +1,26 @@
+name: Deploy
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deploy to production
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.DEPLOY_HOST }}
+          username: ${{ secrets.DEPLOY_USER }}
+          key: ${{ secrets.DEPLOY_KEY }}
+          script: |
+            cd /home/deploy/goodman
+            git pull origin main
+            docker compose up -d --build
+            sleep 15
+            curl -f http://localhost:3000/api/health || exit 1
+
+      - name: Notify on failure
+        if: failure()
+        run: echo "Deployment failed! Check the logs above for details."

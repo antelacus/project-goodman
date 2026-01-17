@@ -96,6 +96,28 @@ export const ChatMessageSchema = z.object({
 export type ChatMessageRequest = z.infer<typeof ChatMessageSchema>;
 
 /**
+ * Chat Request (Legacy non-streaming endpoint)
+ * POST /api/chat
+ * Note: Uses 'message' field name (different from ChatMessageSchema which uses 'question')
+ */
+export const ChatRequestSchema = z.object({
+    message: z
+        .string()
+        .min(1, '消息不能为空')
+        .max(
+            VALIDATION_LIMITS.MAX_QUESTION_LENGTH,
+            `消息长度不能超过 ${VALIDATION_LIMITS.MAX_QUESTION_LENGTH} 字符`
+        ),
+    sessionId: z.string().uuid('无效的会话ID').optional(),
+    documentIds: z
+        .array(z.string().uuid())
+        .max(VALIDATION_LIMITS.MAX_DOCUMENT_IDS, `最多选择 ${VALIDATION_LIMITS.MAX_DOCUMENT_IDS} 个文档`)
+        .optional(),
+});
+
+export type ChatRequest = z.infer<typeof ChatRequestSchema>;
+
+/**
  * Data Extraction Request (V3.9)
  * POST /api/quick-actions/extract
  */
@@ -218,6 +240,11 @@ export const ReportSaveSchema = z.object({
     comparisonYear: z
         .string()
         .regex(/^\d{4}$/, '对比年份格式错误')
+        .optional(),
+    generationTimeMs: z
+        .number()
+        .int()
+        .nonnegative()
         .optional(),
 });
 

@@ -5,7 +5,6 @@
  */
 
 import { BaseAgentState } from "../state/base-state";
-import { AIMessage } from "@langchain/core/messages";
 
 export async function generateResponseNode(
     state: BaseAgentState

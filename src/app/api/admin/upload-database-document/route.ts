@@ -14,7 +14,7 @@ export const runtime = "nodejs";
 
 import { NextRequest, NextResponse } from "next/server";
 import OpenAI from "openai";
-import * as XLSX from "xlsx";
+import ExcelJS from "exceljs";
 import { createServerSupabaseClient } from "@/lib/database";
 import type { InsertTables, Database } from "@/lib/database";
 import { SupabaseClient } from "@supabase/supabase-js";
@@ -36,7 +36,6 @@ import {
   type ColumnExtractionOptions,
   type FinancialExtractionWithType,
   type FinancialStatementType,
-  type FinancialStatementContent,
 } from "@/lib/extraction";
 import {
   validateBalanceSheet,
@@ -51,11 +50,6 @@ import { uploadFileToStorage } from "@/lib/documents/storage";
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 });
-
-// Supported file types for text extraction
-const SUPPORTED_IMAGE_TYPES = ['image/png', 'image/jpeg', 'image/webp', 'image/gif'];
-const SUPPORTED_PDF_TYPE = 'application/pdf';
-const SUPPORTED_EXCEL_TYPE = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
 
 /**
  * Request body schema
@@ -95,41 +89,64 @@ async function extractTextFromFile(
   console.log(`[extractTextFromFile] Processing file: ${fileName}, extension: ${ext}, data length: ${fileData.length}`);
 
   if (ext === 'xlsx') {
-    // Excel file - parse with xlsx library
+    // Excel file - parse with exceljs library (async API)
     try {
       const buffer = Buffer.from(fileData, 'base64');
       console.log(`[extractTextFromFile] Buffer created, size: ${buffer.length} bytes`);
 
-      const workbook = XLSX.read(buffer, { type: 'buffer' });
-      console.log(`[extractTextFromFile] Workbook loaded, sheets: ${workbook.SheetNames.join(', ')}`);
+      const workbook = new ExcelJS.Workbook();
+      // REASON: exceljs types expect Buffer but Node.js 22+ returns Buffer<ArrayBuffer>
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      await workbook.xlsx.load(buffer as any);
+      console.log(`[extractTextFromFile] Workbook loaded, sheets: ${workbook.worksheets.map(ws => ws.name).join(', ')}`);
 
       // Find the sheet with the most data (skip metadata sheets)
-      let bestSheet = workbook.SheetNames[0];
+      let bestSheet = workbook.worksheets[0];
       let bestRowCount = 0;
 
-      for (const sheetName of workbook.SheetNames) {
-        const sheet = workbook.Sheets[sheetName];
-        // REASON: XLSX.utils.sheet_to_json() returns unknown[]. This is a system boundary
-        // where external untyped data enters. Runtime validation for each cell would be excessive.
-        const data = XLSX.utils.sheet_to_json(sheet, { header: 1 }) as any[][];
-        const rowCount = data.filter(row => row.some(cell => cell != null && cell !== '')).length;
-        console.log(`[extractTextFromFile] Sheet "${sheetName}" has ${rowCount} non-empty rows`);
+      for (const worksheet of workbook.worksheets) {
+        let rowCount = 0;
+        worksheet.eachRow(() => { rowCount++; });
+        console.log(`[extractTextFromFile] Sheet "${worksheet.name}" has ${rowCount} rows`);
 
         if (rowCount > bestRowCount) {
           bestRowCount = rowCount;
-          bestSheet = sheetName;
+          bestSheet = worksheet;
         }
       }
 
-      console.log(`[extractTextFromFile] Using sheet: ${bestSheet} with ${bestRowCount} rows`);
-      const sheet = workbook.Sheets[bestSheet];
-      const jsonData = XLSX.utils.sheet_to_json(sheet, { header: 1 });
-      // REASON: XLSX returns unknown[], cast needed for .length access on untyped external data
-      console.log(`[extractTextFromFile] Sheet parsed, rows: ${(jsonData as any[]).length}`);
+      console.log(`[extractTextFromFile] Using sheet: ${bestSheet.name} with ${bestRowCount} rows`);
+
+      // Convert worksheet to array of arrays for text extraction
+      const rows: (string | number | null)[][] = [];
+      bestSheet.eachRow((row) => {
+        const rowData: (string | number | null)[] = [];
+        row.eachCell({ includeEmpty: true }, (cell, colNumber) => {
+          // Ensure array is large enough
+          while (rowData.length < colNumber - 1) {
+            rowData.push(null);
+          }
+          // Get cell value, handling different types
+          const value = cell.value;
+          if (value === null || value === undefined) {
+            rowData.push(null);
+          } else if (typeof value === 'object' && 'result' in value) {
+            // Formula cell - use the result
+            rowData.push(value.result as string | number | null);
+          } else if (typeof value === 'object' && 'text' in value) {
+            // Rich text cell
+            rowData.push(value.text as string);
+          } else {
+            rowData.push(value as string | number);
+          }
+        });
+        rows.push(rowData);
+      });
+
+      console.log(`[extractTextFromFile] Sheet parsed, rows: ${rows.length}`);
 
       // Format as text
-      // REASON: XLSX returns unknown[], cast needed for row/cell operations on untyped external data
-      const text = (jsonData as any[][])
+      const text = rows
         .filter(row => row.some(cell => cell != null && cell !== ''))
         .map(row => row.map(cell => cell ?? '').join('\t'))
         .join('\n');
@@ -407,7 +424,7 @@ export async function POST(request: NextRequest) {
       processed_at: new Date().toISOString(),
     };
 
-    const { data: documentData, error: docError } = await supabase
+    const { error: docError } = await supabase
       .from("documents")
       .insert(documentInsert)
       .select()
@@ -444,7 +461,7 @@ export async function POST(request: NextRequest) {
     console.log(`[Admin Upload] Stored ${chunks.length} vector chunks`);
 
     // Step 6: Store structured data based on document type
-    let structuredDataSummary: UploadResponse["structuredData"] = {};
+    const structuredDataSummary: UploadResponse["structuredData"] = {};
 
     // --- AI-Driven Extraction & Validation ---
     if (
@@ -527,7 +544,8 @@ export async function POST(request: NextRequest) {
 
         // 4. Transform to standard metrics format for DB storage
         // We need to flatten the object { "货币资金": 100 } -> [{ name: '货币资金', value: 100 }]
-        const metrics: any[] = [];
+        // Note: We filter out null values below, so the array only contains valid numbers
+        const metrics: Array<{ name: string; value: number; unit: string }> = [];
 
         for (const [key, value] of Object.entries(item.content)) {
           if (value !== null && value !== undefined) {

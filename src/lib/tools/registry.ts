@@ -177,6 +177,7 @@ export class ToolRegistry {
     if (schema && typeof schema === "object" && "_def" in schema) {
       // REASON: Accessing Zod internal _def property for runtime schema introspection.
       // Required for converting Zod schemas to OpenAI function parameters. No public API exists.
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const def = (schema as any)._def;
 
       if (def.typeName === "ZodObject" && def.shape) {
@@ -188,6 +189,7 @@ export class ToolRegistry {
 
         for (const [key, value] of Object.entries(shape)) {
           // REASON: Accessing Zod internal _def for field type introspection. No public API exists.
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
           const fieldDef = (value as any)?._def;
           if (!fieldDef) continue;
 

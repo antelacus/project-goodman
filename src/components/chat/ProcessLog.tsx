@@ -37,8 +37,8 @@ function SourceLink({ source }: { source: SourceReference }) {
         ? `${source.year}年${source.documentType || source.documentName}`
         : source.documentName;
 
-    // Build link - prefer fileUrl, fallback to documents page
-    const href = source.fileUrl || (source.documentId ? `/documents?id=${source.documentId}` : '#');
+    // v4.3: Build link - prefer fileUrl, fallback to PDF preview API (opens in new tab)
+    const href = source.fileUrl || (source.documentId ? `/api/documents/pdf-preview?id=${source.documentId}` : '#');
 
     // Don't render if no meaningful link target
     if (!source.fileUrl && !source.documentId) {
