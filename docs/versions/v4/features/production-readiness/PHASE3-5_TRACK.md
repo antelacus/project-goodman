@@ -149,11 +149,27 @@
 
 #### Task C3: 错误追踪接入
 
-**状态**: ⏳ 待办
+**状态**: ✅ 完成
 
-- [ ] 仅 server 端接入 GlitchTip DSN
-- [ ] 过滤敏感字段
-- [ ] 与 `requestId` 日志关联
+- [x] 仅 server 端接入 GlitchTip DSN
+- [x] 过滤敏感字段
+- [x] 与 `requestId` 日志关联
+
+**实施记录**:
+
+```
+状态: ✅ 完成
+开始时间: 2026-01-17 13:45
+完成时间: 2026-01-17 14:05
+变更点:
+- 新增 src/lib/observability/error-tracking.ts（server-only 初始化 + sanitize）
+- error-handler 在 5xx 时上报 GlitchTip（含 requestId/route tag）
+- instrumentation 启动时初始化错误追踪
+- 新增 tests/unit/observability 与 tests/unit/security 覆盖
+- vitest 增加 server-only stub alias
+- .env.staging.example 增加 GlitchTip 配置项
+备注: sanitizeEvent 会移除 request/user 并脱敏敏感字段
+```
 
 ---
 
