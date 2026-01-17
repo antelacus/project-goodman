@@ -6,7 +6,7 @@
 |------|------|
 | **功能名称** | 项目基础增强 (Foundation Enhancement) |
 | **版本** | v4.3 |
-| **状态** | Phase 3-5 - 实现中 |
+| **状态** | Phase 3-5 - 已发布 |
 | **设计文档** | [PHASE2_DESIGN.md](./PHASE2_DESIGN.md) |
 
 ---
@@ -108,7 +108,7 @@
 #### D1: 修复 About 页面 ✅
 
 - [x] 更新 AI 模型名称：GPT-5-mini → GPT-4o
-- [x] 更新版本号：V3.7 (Phase 1) → V4.2.1
+- [x] 更新版本号：V3.7 (Phase 1) → V4.3.0
 - [x] 已更新 About 页技术架构与版本信息
 
 #### D2: 修复报告生成时间记录 ✅
@@ -1376,7 +1376,7 @@ ALTER FUNCTION public.update_session_timestamp() SET search_path = public;
 
 **关键改动**：
 
-1. `src/app/(workspace)/about/page.tsx`：GPT-5-mini → GPT-4o；V3.7 → V4.2.1
+1. `src/app/(workspace)/about/page.tsx`：GPT-5-mini → GPT-4o；V3.7 → V4.3.0
 2. `src/app/(landing)/page.tsx`：移除“批量处理”表述；页脚年份更新
 3. `src/components/documents/DocumentSelectModal.tsx`：
    - 新增 `uploadAccept` / `uploadHelpText` 参数
@@ -1435,7 +1435,7 @@ ALTER FUNCTION public.update_session_timestamp() SET search_path = public;
 
 #### 页面文案 (D)
 
-- [x] About 页面版本信息正确（Current Version: V4.2.1）
+- [x] About 页面版本信息正确（Current Version: V4.3.0）
 - [x] 报告生成时间正确记录到数据库
 
 #### 测试基础设施 (G)
@@ -1515,5 +1515,5 @@ ALTER FUNCTION public.update_session_timestamp() SET search_path = public;
 ---
 
 *文档创建日期：2026-01-13*
-*最后更新：2026-01-16（Task D2 报告生成时间记录修复）*
+*最后更新：2026-01-17（Phase 5 手动验证完成）*
 *状态：实现中*
