@@ -13,7 +13,7 @@ v[MAJOR].[MINOR].[PATCH]
 
 ## Major Version Workflow (v*)
 
-See global guidance for details.
+See global guidance file for details.
 
 ## Minor Version Workflow (v*.*)
 
