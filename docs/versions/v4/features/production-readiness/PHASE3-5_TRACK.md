@@ -12,11 +12,23 @@
 
 #### Task A1: 建立 staging 目录与 compose
 
-**状态**: ⏳ 待办
+**状态**: ✅ 完成
 
-- [ ] 创建 `/home/deploy/goodman-staging/` 目录结构
-- [ ] 新增 `docker-compose.staging.yml`（app + redis）
-- [ ] 端口绑定到 3001
+- [x] 创建 `/home/deploy/goodman-staging/` 目录结构
+- [x] 新增 `docker-compose.staging.yml`（app + redis）
+- [x] 端口绑定到 3001
+
+**实施记录**:
+
+```
+状态: ✅ 完成
+开始时间: 2026-01-17 09:10
+完成时间: 2026-01-17 09:25
+变更点:
+- 新增 docker-compose.staging.yml（app + redis + 3001 端口）
+- 创建 /home/deploy/goodman-staging/project-goodman 目录
+备注: staging 仅绑定 127.0.0.1，避免外网直连
+```
 
 ---
 
@@ -176,4 +188,3 @@
 - [ ] E2E 测试通过
 - [ ] staging 冒烟测试通过
 - [ ] 更新本 TRACK 测试记录
-
