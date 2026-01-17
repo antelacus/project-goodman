@@ -1,6 +1,5 @@
 # Development Process
 
-> **Full Process**: See `~/.claude/CLAUDE.md` for complete development guidelines.
 > This is a brief reference for common workflows.
 
 ## Version Semantics
@@ -14,7 +13,7 @@ v[MAJOR].[MINOR].[PATCH]
 
 ## Major Version Workflow (v*)
 
-See `~/.claude/CLAUDE.md` for details.
+See global guidance for details.
 
 ## Minor Version Workflow (v*.*)
 

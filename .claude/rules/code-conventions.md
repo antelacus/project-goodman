@@ -1,8 +1,7 @@
 # Code Conventions
 
 > **Scope**: Project-specific implementation details only.
-> **Global conventions**: `~/.claude/CLAUDE.md` (universal principles, security, error handling, documentation philosophy)
->
+> **Global conventions**: universal principles, security, error handling, documentation philosophy.
 > **Boundary principle**: If it applies to ANY TypeScript/Next.js project → global. If it's specific to this codebase (paths, tools, workarounds) → here.
 
 ## File Organization
@@ -49,6 +48,7 @@
 ### Tables with USING(true) Policies (by design)
 
 These tables have RLS enabled with permissive policies because:
+
 1. All access is through Service Role (which bypasses RLS anyway)
 2. The policies allow our server code to work without role-based complications
 3. Client-side never directly accesses these tables
@@ -69,6 +69,7 @@ These tables have RLS enabled with permissive policies because:
 ### When to Add Stricter RLS
 
 Consider implementing user-based RLS when:
+
 - Supporting multiple authenticated users (not just admin)
 - Adding direct client-side Supabase access
 - Implementing real multi-tenancy
@@ -113,6 +114,7 @@ const jsonData = XLSX.utils.sheet_to_json(sheet, { header: 1 }) as any[][];
 ```
 
 Known justified cases:
+
 - XLSX library parsing (returns untyped data)
 - Zod internal `_def` access for schema introspection
 - LangGraph DeepPartial state initialization

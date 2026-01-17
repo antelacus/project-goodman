@@ -1414,16 +1414,16 @@ ALTER FUNCTION public.update_session_timestamp() SET search_path = public;
 
 #### UI/UX
 
-- [ ] 创建新会话 → 立即出现在侧边栏
+- [x] 创建新会话 → 立即出现在侧边栏
 - [ ] 点击过程日志来源链接 → 打开 PDF 预览
 - [ ] 加载状态显示骨架屏动画
 
 #### 健壮性
 
-- [ ] 触发组件错误 → Error Boundary 显示恢复 UI
-- [ ] 打开模态框 → 按 Escape → 关闭模态框
-- [ ] 打开模态框 → Tab 键在内部循环
-- [ ] 移动端模态框 → 内容可滚动
+- [x] 触发组件错误 → Error Boundary 显示恢复 UI
+- [x] 打开模态框 → 按 Escape → 关闭模态框
+- [x] 打开模态框 → Tab 键在内部循环
+- [x] 移动端模态框 → 内容可滚动
 
 #### 数据库 (C)
 
