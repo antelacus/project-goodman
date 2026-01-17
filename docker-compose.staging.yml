@@ -1,0 +1,37 @@
+services:
+  goodman-staging:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        - NEXT_PUBLIC_SUPABASE_URL=${NEXT_PUBLIC_SUPABASE_URL}
+        - NEXT_PUBLIC_SUPABASE_ANON_KEY=${NEXT_PUBLIC_SUPABASE_ANON_KEY}
+        - OPENAI_API_KEY=${OPENAI_API_KEY}
+        - SUPABASE_SERVICE_ROLE_KEY=${SUPABASE_SERVICE_ROLE_KEY}
+    container_name: goodman-staging
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:3001:3000"
+    env_file:
+      - .env.staging
+    environment:
+      - NODE_ENV=production
+      - REDIS_HOST=goodman-redis-staging
+      - LANGCHAIN_TRACING_V2=${LANGCHAIN_TRACING_V2:-false}
+      - LANGCHAIN_API_KEY=${LANGCHAIN_API_KEY:-}
+      - LANGCHAIN_PROJECT=${LANGCHAIN_PROJECT:-goodman-staging}
+    depends_on:
+      - goodman-redis-staging
+
+  goodman-redis-staging:
+    image: redis:7-alpine
+    container_name: goodman-redis-staging
+    restart: unless-stopped
+    env_file:
+      - .env.staging
+    command: ["sh", "-c", "redis-server --requirepass \"$REDIS_PASSWORD\""]
+    volumes:
+      - goodman-redis-staging-data:/data
+
+volumes:
+  goodman-redis-staging-data:
