@@ -1410,13 +1410,13 @@ ALTER FUNCTION public.update_session_timestamp() SET search_path = public;
 - [x] `npm run lint` 返回 0 错误
 - [x] `npm run build` 成功（ESLint 启用）
 - [x] `npm run test` 可运行并通过
-- [ ] Git commit 测试 lint 错误阻止
+- [x] Git commit 测试 lint 错误阻止（预提交钩子阻止带 TS 错误提交）
 
 #### UI/UX
 
 - [x] 创建新会话 → 立即出现在侧边栏
-- [ ] 点击过程日志来源链接 → 打开 PDF 预览
-- [ ] 加载状态显示骨架屏动画
+- [x] 点击过程日志来源链接 → 打开 PDF 预览（手动验证通过）
+- [x] 加载状态显示骨架屏动画（手动验证通过）
 
 #### 健壮性
 
@@ -1435,7 +1435,7 @@ ALTER FUNCTION public.update_session_timestamp() SET search_path = public;
 
 #### 页面文案 (D)
 
-- [ ] About 页面版本信息正确
+- [x] About 页面版本信息正确（Current Version: V4.2.1）
 - [x] 报告生成时间正确记录到数据库
 
 #### 测试基础设施 (G)
