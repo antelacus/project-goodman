@@ -34,11 +34,23 @@
 
 #### Task A2: 环境变量与数据隔离
 
-**状态**: ⏳ 待办
+**状态**: ✅ 完成
 
-- [ ] 新增 `.env.staging` 模板
-- [ ] staging 使用独立 Supabase 项目或 schema
-- [ ] redis 与生产隔离（独立容器）
+- [x] 新增 `.env.staging` 模板
+- [x] staging 使用独立 Supabase 项目或 schema
+- [x] redis 与生产隔离（独立容器）
+
+**实施记录**:
+
+```
+状态: ✅ 完成
+开始时间: 2026-01-17 09:30
+完成时间: 2026-01-17 09:40
+变更点:
+- 新增 .env.staging.example，明确 staging Supabase 需独立项目或隔离 schema
+- Redis 使用 goodman-redis-staging 容器，避免与生产混用
+备注: 实际部署需将模板复制为 /home/deploy/goodman-staging/.env.staging
+```
 
 ---
 
