@@ -1,7 +1,7 @@
 # Project Goodman - Deployment Checklist
 
 **Version**: v4.3
-**Last Updated**: 2026-01-15
+**Last Updated**: 2026-01-17
 **Target Platform**: Docker on VPS + Supabase Cloud
 
 > This checklist covers the complete Phase 6 deployment process.
@@ -54,7 +54,9 @@ Verify in `$GOODMAN_PROD_DIR/.env`:
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | ✅ | Supabase anon key |
 | `SUPABASE_SERVICE_ROLE_KEY` | ✅ | Supabase service role key |
 | `ADMIN_PASSWORD` | ✅ | Bcrypt hash for admin auth |
-| `REDIS_URL` | ✅ | Redis connection URL |
+| `REDIS_HOST` | ✅ | Redis host |
+| `REDIS_PORT` | ✅ | Redis port |
+| `REDIS_PASSWORD` | ✅ | Redis password |
 
 ### 1.3 Database Status
 
