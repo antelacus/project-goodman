@@ -1472,8 +1472,8 @@ ALTER FUNCTION public.update_session_timestamp() SET search_path = public;
 
 - [x] Push 到 development 触发 CI 工作流
 - [x] CI 包含 lint、test、build 步骤
-- [x] Merge 到 main 触发部署（已触发，CI/CD 自动执行）
-- [x] 部署后健康检查验证（CI/CD 自动执行，需在 Actions 确认）
+- [x] Merge 到 main 触发部署（已在 Actions 确认）
+- [x] 部署后健康检查验证（已在 Actions 确认）
 
 #### 依赖安全 - expr-eval (M)
 
