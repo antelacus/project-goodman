@@ -5,6 +5,8 @@
  * information in production while preserving details in development.
  */
 
+import { captureError } from '@/lib/observability/error-tracking';
+
 // =============================================================================
 // Types
 // =============================================================================
@@ -174,9 +176,13 @@ export function createErrorResponse(
     error: unknown,
     requestId: string,
     statusCode: number = 500,
-    options?: { isDev?: boolean; errorType?: string }
+    options?: { isDev?: boolean; errorType?: string; route?: string }
 ): Response {
     const sanitized = sanitizeError(error, requestId, options);
+
+    if (statusCode >= 500) {
+        captureError(error, { requestId, route: options?.route });
+    }
 
     return new Response(JSON.stringify(sanitized), {
         status: statusCode,
