@@ -58,11 +58,23 @@
 
 #### Task B1: deploy-staging 工作流
 
-**状态**: ⏳ 待办
+**状态**: ✅ 完成
 
-- [ ] 新增 `.github/workflows/deploy-staging.yml`
-- [ ] 使用独立 secrets（STAGING_HOST/USER/KEY）
-- [ ] 完成健康检查验证
+- [x] 新增 `.github/workflows/deploy-staging.yml`
+- [x] 使用独立 secrets（STAGING_HOST/USER/KEY）
+- [x] 完成健康检查验证
+
+**实施记录**:
+
+```
+状态: ✅ 完成
+开始时间: 2026-01-17 12:24
+完成时间: 2026-01-17 12:25
+变更点:
+- 新增 deploy-staging 工作流，development 分支自动部署
+- 健康检查切换为 staging 端口 3001
+备注: staging 部署目录为 /home/deploy/goodman-staging/project-goodman
+```
 
 ---
 

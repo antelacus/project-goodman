@@ -1,0 +1,26 @@
+name: Deploy Staging
+
+on:
+  push:
+    branches: [development]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deploy to staging
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.STAGING_HOST }}
+          username: ${{ secrets.STAGING_USER }}
+          key: ${{ secrets.STAGING_KEY }}
+          script: |
+            cd /home/deploy/goodman-staging/project-goodman
+            git pull origin development
+            docker compose -f docker-compose.staging.yml up -d --build
+            sleep 15
+            curl -f http://localhost:3001/api/health || exit 1
+
+      - name: Notify on failure
+        if: failure()
+        run: echo "Staging deployment failed! Check the logs above for details."
