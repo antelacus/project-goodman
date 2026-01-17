@@ -142,7 +142,7 @@ const sendMessage = useCallback((msg: string) => {
 
 ## Code Documentation
 
-> See `~/.claude/CLAUDE.md` → Documentation Philosophy for full guidelines.
+> See global guideline file → Documentation Philosophy for full guidelines.
 
 Quick reference: Architecture in `docs/`, file headers for complex files only, code comments explain "why" not "what".
 
