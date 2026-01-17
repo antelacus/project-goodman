@@ -77,6 +77,16 @@ services:
       - glitchtip-postgres
       - glitchtip-redis
 
+  uptime-kuma:
+    image: louislam/uptime-kuma:1
+    container_name: uptime-kuma
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:${UPTIME_KUMA_PORT}:3001"
+    volumes:
+      - uptime-kuma-data:/app/data
+
 volumes:
   glitchtip-postgres-data:
   glitchtip-redis-data:
+  uptime-kuma-data:
