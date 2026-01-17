@@ -68,3 +68,6 @@ docs/manual-test-log/
 
 # claude code (user-specific settings)
 .claude/settings.local.json
+
+# git worktrees (local)
+.worktrees/
