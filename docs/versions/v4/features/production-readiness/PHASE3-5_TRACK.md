@@ -104,11 +104,24 @@
 
 #### Task C1: GlitchTip 自托管
 
-**状态**: ⏳ 待办
+**状态**: ✅ 完成
 
-- [ ] 添加 GlitchTip 部署配置（含所需依赖）
-- [ ] 配置持久化存储
-- [ ] 记录部署与访问方式
+- [x] 添加 GlitchTip 部署配置（含所需依赖）
+- [x] 配置持久化存储
+- [x] 记录部署与访问方式
+
+**实施记录**:
+
+```
+状态: ✅ 完成
+开始时间: 2026-01-17 13:05
+完成时间: 2026-01-17 13:25
+变更点:
+- 新增 docker-compose.observability.yml（GlitchTip + Postgres + Redis + migrate/worker）
+- 新增 .env.observability.example（含 GLITCHTIP_ALLOWED_HOSTS）
+- 新增 docs/OBSERVABILITY.md（部署与访问说明）
+备注: docker compose config 验证通过（使用本地 .env.observability 临时副本）
+```
 
 ---
 
