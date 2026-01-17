@@ -1,11 +1,22 @@
 # Project Goodman - Deployment Checklist
 
-**Version**: v4.1
-**Last Updated**: 2026-01-08
+**Version**: v4.3
+**Last Updated**: 2026-01-15
 **Target Platform**: Docker on VPS + Supabase Cloud
 
 > This checklist covers the complete Phase 6 deployment process.
 > Referenced by global `~/.claude/CLAUDE.md`.
+
+## CI/CD Automation
+
+**As of v4.3**, GitHub Actions automates key deployment steps:
+
+| Workflow | Trigger | What It Does |
+|----------|---------|--------------|
+| **CI** (`.github/workflows/ci.yml`) | Push to `development`, PR to `main` | Lint, type check, test, security audit, build |
+| **Deploy** (`.github/workflows/deploy.yml`) | Push to `main` | SSH deploy, docker rebuild, health check |
+
+Sections marked with ✅ **Automated** are now handled by CI/CD.
 
 ---
 
@@ -57,11 +68,19 @@ Verify in `$GOODMAN_PROD_DIR/.env`:
 
 ## 2. Quality Gates
 
-### 2.1 Build Verification
+### 2.1 Lint & Test Verification — ✅ Automated
+
+> **CI/CD**: These checks run automatically on every push to `development`.
+> Check results at: https://github.com/antelacus/project-goodman/actions
 
 ```bash
-npm run build  # Must complete with 0 errors
+# Run locally if needed:
+npm run lint   # Must return 0 errors (enforced by pre-commit hooks)
+npm run test   # Must pass (Vitest)
+npm run build  # Must complete with 0 errors (includes ESLint check)
 ```
+
+> **Note**: Pre-commit hooks (Husky + lint-staged) automatically run ESLint and Prettier on staged files. If commits are failing, run `npm run lint -- --fix` to auto-fix issues.
 
 ### 2.2 Security Audit
 
@@ -92,6 +111,7 @@ npm run build  # Must complete with 0 errors
 
 - [ ] Commit all changes: `git add . && git commit -m "release(vX.X): description"`
 - [ ] Push to development: `git push origin development`
+- [ ] Verify CI passes: https://github.com/antelacus/project-goodman/actions
 
 ---
 
@@ -111,12 +131,20 @@ $GOODMAN_PROD_DIR/
 | `goodman` | 3000 | Next.js application |
 | `goodman-redis` | 6379 | Session & rate limit storage |
 
-### 4.2 Deploy Commands
+### 4.2 Deploy Commands — ✅ Automated
+
+> **CI/CD**: Deployment runs automatically when you merge to `main`.
+> The workflow handles: git pull → docker compose up → health check verification.
+
+**To deploy**: Simply merge `development` into `main`:
 
 ```bash
-# Pull latest code
-cd $GOODMAN_PROD_DIR/project-goodman && git pull origin development
+git checkout main && git merge development && git push origin main
+```
 
+**Manual commands** (for troubleshooting or manual intervention):
+
+```bash
 # Full rebuild and deploy
 cd $GOODMAN_PROD_DIR && docker compose up -d --build goodman
 
@@ -134,11 +162,15 @@ docker ps --filter "name=goodman"
 
 ## 5. Post-Deployment Verification
 
-### 5.1 Health Check
+### 5.1 Health Check — ✅ Automated
+
+> **CI/CD**: The deploy workflow automatically verifies health check after deployment.
+> Deployment fails if health check returns non-200 status.
 
 ```bash
+# Manual verification (optional):
 curl http://localhost:3000/api/health
-# Expected: {"status":"ok","timestamp":"..."}
+# Expected: {"status":"healthy","version":"4.3.x",...}
 ```
 
 ### 5.2 Functional Testing
@@ -164,6 +196,15 @@ docker logs goodman 2>&1 | grep -i "redis"
 ## 6. Release Finalization
 
 > **Only after deployment verification succeeds.**
+
+### 6.1 Post-Release Documentation
+
+- [ ] Update `CHANGELOG.md` with release details (if not done in pre-deployment)
+- [ ] Update `v*_DEVELOPMENT_PLAN.md` to mark feature as released
+- [ ] Move resolved items to "已解决的债务" section in `TECHNICAL_DEBT.md`
+- [ ] Archive completed PHASE3-5_TRACK.md tasks
+
+### 6.2 Merge & Tag
 
 - [ ] Merge to main: `git checkout main && git merge development && git push`
 - [ ] Tag release: `git tag -a vX.X.X -m "Release notes" && git push origin vX.X.X`
@@ -235,6 +276,9 @@ These should always be true:
 
 | Version | Date | Changes |
 |---------|------|---------|
+| v4.3 | 2026-01-15 | Added CI/CD automation notes, marked automated sections (2.1, 4.2, 5.1) |
+| v4.3 | 2026-01-14 | Added lint/test commands to Quality Gates (2.1), added pre-commit hooks note |
+| v4.2 | 2026-01-13 | Added post-release documentation section (6.1) to align with global CLAUDE.md |
 | v4.1 | 2026-01-08 | Fixed sequence: pre-deploy docs before deployment, post-deploy finalization after |
 | v4.0 | 2026-01-08 | Reorganized as Phase 6 execution guide |
 | v3.11 | 2026-01-07 | Updated for Docker/VPS |
@@ -242,4 +286,4 @@ These should always be true:
 
 ---
 
-*Project Goodman v4.1*
+*Project Goodman v4.3*

@@ -14,8 +14,8 @@ import {
   incrementGuestRate,
   generateRequestId,
   createErrorResponse,
-  COOKIE_NAME,
 } from '@/lib/security';
+import { logger, logRequest, logError } from '@/lib/logging';
 import { ReportGenerateSchema, validateRequest } from '@/lib/validation/api-schemas';
 import type {
   ReportPhaseEvent,
@@ -82,13 +82,15 @@ function createSectionEvent(
 
 function createCompleteEvent(
   reportId: string,
-  content: unknown
+  content: unknown,
+  generationTimeMs?: number
 ): ReportCompleteEvent {
   return {
     type: 'complete',
     data: {
       reportId,
       content: content as ReportCompleteEvent['data']['content'],
+      generationTimeMs,
     },
   };
 }
@@ -124,6 +126,9 @@ function createProcessEvent(
 
 export async function POST(req: NextRequest) {
   const requestId = req.headers.get('x-request-id') || generateRequestId();
+  const startTime = Date.now();
+
+  logger.info('Report generation started', { requestId, route: '/api/reports/generate' });
 
   try {
     // Ensure session exists (creates guest session if needed)
@@ -200,7 +205,6 @@ export async function POST(req: NextRequest) {
         // Track which phases we've already started/completed
         const phasesSent = new Map<string, Set<string>>();
         let currentPhase: ReportPhase | null = null;
-        let lastSectionId: string | null = null;
 
         try {
           // Stream events from the workflow
@@ -287,7 +291,14 @@ export async function POST(req: NextRequest) {
 
           // Send complete event with report content
           if (finalState?.report) {
-            sendEvent('report', createCompleteEvent(tempReportId, finalState.report));
+            sendEvent(
+              'report',
+              createCompleteEvent(
+                tempReportId,
+                finalState.report,
+                finalState.meta?.generationTimeMs
+              )
+            );
           } else if (finalState?.meta?.error) {
             sendEvent('report', createErrorEvent(
               finalState.meta.error.message || '报告生成失败',
@@ -303,7 +314,7 @@ export async function POST(req: NextRequest) {
           }
 
         } catch (err: unknown) {
-          console.error('Report generation stream error:', err);
+          logError('Report generation stream error', err, requestId, { route: '/api/reports/generate' });
           const errorMessage = err instanceof Error ? err.message : '报告生成过程中发生错误';
           sendEvent('report', createErrorEvent(errorMessage, currentPhase || undefined));
         } finally {
@@ -337,10 +348,12 @@ export async function POST(req: NextRequest) {
       headers['Set-Cookie'] = cookieParts.join('; ');
     }
 
+    logRequest(requestId, 'POST', '/api/reports/generate', 200, Date.now() - startTime);
     return new Response(stream, { headers });
 
   } catch (error: unknown) {
-    console.error('Report generate error:', error);
+    logError('Report generation request failed', error, requestId, { route: '/api/reports/generate' });
+    logRequest(requestId, 'POST', '/api/reports/generate', 500, Date.now() - startTime);
     return createErrorResponse(error, requestId, 500);
   }
 }

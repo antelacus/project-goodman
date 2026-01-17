@@ -22,7 +22,8 @@ import {
 import { ReportsList } from "@/components/documents";
 
 // Generate year options (last 20 years)
-const YEAR_OPTIONS = Array.from({ length: 20 }, (_, i) => `${2025 - i}`);
+const CURRENT_YEAR = new Date().getFullYear();
+const YEAR_OPTIONS = Array.from({ length: 20 }, (_, i) => `${CURRENT_YEAR - i}`);
 
 // Period options for dropdown (from constants)
 const PERIOD_SELECT_OPTIONS = PERIOD_OPTIONS_DATA;

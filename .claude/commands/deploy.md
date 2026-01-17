@@ -18,17 +18,22 @@ Execute a complete pre-deployment validation and deploy to production.
 Before deploying, verify:
 
 - [ ] All TypeScript compiles without errors
-- [ ] No ESLint warnings
+- [ ] ESLint passes with 0 errors
+- [ ] Unit tests pass
 - [ ] Environment variables configured
 - [ ] Database migrations applied
 - [ ] Types are in sync with database
 - [ ] No security vulnerabilities
 
-## Build Command
+## Verification Commands
 
 ```bash
-npm run build
+npm run lint   # ESLint check (0 errors required)
+npm run test   # Vitest unit tests
+npm run build  # TypeScript + production build
 ```
+
+> **Note**: Pre-commit hooks (Husky + lint-staged) enforce linting on commit. If the above commands fail, commits will also be blocked.
 
 ## Deployment Command
 

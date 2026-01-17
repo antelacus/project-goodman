@@ -7,9 +7,9 @@
 
 import OpenAI from 'openai';
 import type { ReportWorkflowState, ReportSectionData, MetricResult } from '../state';
-import type { ReportSection, ReportMetric, ReportSectionId } from '@/types/report';
+import type { ReportSection, ReportMetric } from '@/types/report';
 import { REPORT_SECTIONS, calculateChange } from '../constants';
-import { buildSectionAnalysisPrompt, buildSummaryPrompt } from '../prompts';
+import { buildSectionAnalysisPrompt } from '../prompts';
 
 // Initialize OpenAI client
 const openai = new OpenAI({

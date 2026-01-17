@@ -5,7 +5,6 @@
  * Each preset function becomes a registered tool in the ToolRegistry.
  */
 
-import { z } from "zod";
 import {
   presetFunctions,
   executeFunction,
@@ -23,6 +22,7 @@ import {
 } from "../types";
 import { toolRegistry } from "../registry";
 import { queryFinancialData } from "../../services/financial-data";
+import { traceable } from "langsmith/traceable";
 
 // ============================================================================
 // Category Mapping
@@ -115,62 +115,80 @@ function createFinancialToolFromPreset(preset: PresetFunction): Tool {
     execute: async (input): Promise<ToolExecutionResult> => {
       const { year, period } = input as { year?: string; period?: string };
 
-      try {
-        // Query required data
-        const data = await queryFinancialData(preset.requiredInputs, year, period);
+      // Wrap the core calculation logic with LangSmith tracing
+      const tracedCalculation = traceable(
+        async () => {
+          // Query required data
+          const data = await queryFinancialData(preset.requiredInputs, year, period);
 
-        // Prepare inputs for calculation
-        const inputs: Record<string, number> = {};
-        const missingMetrics: string[] = [];
+          // Prepare inputs for calculation
+          const inputs: Record<string, number> = {};
+          const missingMetrics: string[] = [];
 
-        preset.requiredInputs.forEach(metric => {
-          const point = data.find(d => d.metric_name === metric);
-          if (point) {
-            inputs[metric] = point.metric_value;
-          } else {
-            missingMetrics.push(metric);
+          preset.requiredInputs.forEach(metric => {
+            const point = data.find(d => d.metric_name === metric);
+            if (point) {
+              inputs[metric] = point.metric_value;
+            } else {
+              missingMetrics.push(metric);
+            }
+          });
+
+          if (missingMetrics.length > 0) {
+            return {
+              success: false,
+              error: `Missing required data: ${missingMetrics.join(", ")}`,
+              data: { missingMetrics }
+            } as ToolExecutionResult;
           }
-        });
 
-        if (missingMetrics.length > 0) {
+          // Execute calculation
+          const result = executeFunction(preset.name, inputs);
+
+          // v4.0: Build source reference from database metadata (not LLM-generated)
+          const primaryData = data[0];
+          const source = primaryData ? {
+            documentId: primaryData.document_id,
+            documentName: primaryData.documents.name,
+            documentType: inferDocumentType(preset.requiredInputs),
+            year: primaryData.year,
+            period: primaryData.period,
+          } : undefined;
+
           return {
-            success: false,
-            error: `Missing required data: ${missingMetrics.join(", ")}`,
-            data: { missingMetrics }
-          };
+            success: true,
+            data: {
+              value: result.result.value,
+              formatted: result.result.formatted,
+              unit: preset.unit,
+              displayName: result.displayName,
+              formula: result.formulaDisplay,
+              interpretation: result.interpretation,
+              warnings: result.result.warnings,
+              sourceDocuments: data.map(d => d.documents.name),
+              // v4.0: Structured source reference for transparency
+              source,
+              // v4.0.1: Include input values for formula display in process log
+              inputs,
+            }
+          } as ToolExecutionResult;
+        },
+        {
+          name: `financial_calc_${preset.name}`,
+          run_type: "tool",
+          metadata: {
+            component: "financial_calculation",
+            metricName: preset.name,
+            displayName: preset.displayName,
+            category: preset.category,
+            year,
+            period,
+          },
         }
+      );
 
-        // Execute calculation
-        const result = executeFunction(preset.name, inputs);
-
-        // v4.0: Build source reference from database metadata (not LLM-generated)
-        const primaryData = data[0];
-        const source = primaryData ? {
-          documentId: primaryData.document_id,
-          documentName: primaryData.documents.name,
-          documentType: inferDocumentType(preset.requiredInputs),
-          year: primaryData.year,
-          period: primaryData.period,
-        } : undefined;
-
-        return {
-          success: true,
-          data: {
-            value: result.result.value,
-            formatted: result.result.formatted,
-            unit: preset.unit,
-            displayName: result.displayName,
-            formula: result.formulaDisplay,
-            interpretation: result.interpretation,
-            warnings: result.result.warnings,
-            sourceDocuments: data.map(d => d.documents.name),
-            // v4.0: Structured source reference for transparency
-            source,
-            // v4.0.1: Include input values for formula display in process log
-            inputs,
-          }
-        };
-
+      try {
+        return await tracedCalculation();
       } catch (error) {
         return {
           success: false,

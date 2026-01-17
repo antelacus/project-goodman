@@ -153,7 +153,9 @@ function calculateChangeForPrompt(current: number, previous: number): string {
  */
 export function buildSummaryPrompt(
   sections: Array<{ title: string; analysis: string }>,
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   year: string,
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   comparisonYear?: string
 ): string {
   const sectionsText = sections

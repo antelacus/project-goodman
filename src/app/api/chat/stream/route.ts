@@ -4,11 +4,10 @@ import {
     ensureSession,
     checkGuestRate,
     incrementGuestRate,
-    getCookieOptions,
-    COOKIE_NAME,
     generateRequestId,
     createErrorResponse,
 } from '@/lib/security';
+import { logger, logRequest, logError } from '@/lib/logging';
 import { ChatMessageSchema, validateRequest } from '@/lib/validation/api-schemas';
 import { v4 as uuidv4 } from 'uuid';
 import {
@@ -93,6 +92,9 @@ function createProcessEvent(
 
 export async function POST(req: NextRequest) {
     const requestId = req.headers.get('x-request-id') || generateRequestId();
+    const startTime = Date.now();
+
+    logger.info('Chat stream started', { requestId, route: '/api/chat/stream' });
 
     try {
         // V3.10: Ensure session exists (creates guest session if needed)
@@ -156,6 +158,7 @@ export async function POST(req: NextRequest) {
         // Initialize state
         // We cast to any to avoid strict type checking on DeepPartial,
         // but the structure matches UnifiedAgentState.
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const initialState: any = {
             input: {
                 question,
@@ -182,7 +185,7 @@ export async function POST(req: NextRequest) {
 
         const stream = new ReadableStream({
             async start(controller) {
-                const sendEvent = (type: string, data: any) => {
+                const sendEvent = (type: string, data: unknown) => {
                     const formattedData = JSON.stringify(data);
                     controller.enqueue(`event: ${type}\ndata: ${formattedData}\n\n`);
                 };
@@ -393,9 +396,9 @@ export async function POST(req: NextRequest) {
                         }
                     }
 
-                } catch (err: any) {
-                    console.error('Streaming error:', err);
-                    const errorMessage = err.message || 'An error occurred during streaming';
+                } catch (err: unknown) {
+                    logError('Chat stream processing error', err, requestId, { route: '/api/chat/stream' });
+                    const errorMessage = err instanceof Error ? err.message : 'An error occurred during streaming';
                     sendEvent('error', { message: errorMessage });
 
                     // v4.0: Send process error event (no stack trace to prevent info disclosure)
@@ -435,9 +438,11 @@ export async function POST(req: NextRequest) {
             headers['Set-Cookie'] = cookieParts.join('; ');
         }
 
+        logRequest(requestId, 'POST', '/api/chat/stream', 200, Date.now() - startTime);
         return new Response(stream, { headers });
     } catch (error: unknown) {
-        console.error('Request handler error:', error);
+        logError('Chat stream request failed', error, requestId, { route: '/api/chat/stream' });
+        logRequest(requestId, 'POST', '/api/chat/stream', 500, Date.now() - startTime);
         return createErrorResponse(error, requestId, 500);
     }
 }

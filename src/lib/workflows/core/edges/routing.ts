@@ -15,7 +15,7 @@ import { BaseAgentState } from "../state/base-state";
  */
 export function shouldContinue(state: BaseAgentState): "toolNode" | "generateResponse" | "end" {
     const { agent } = state;
-    const { currentIteration, maxIterations, isComplete, pendingToolCalls } = agent;
+    const { currentIteration, maxIterations, pendingToolCalls } = agent;
 
     // 1. Check for max iterations validation
     if (currentIteration >= maxIterations) {

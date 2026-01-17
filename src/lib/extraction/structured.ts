@@ -88,7 +88,7 @@ export interface FinancialExtractionResult {
     currency?: string;             // Currency (default: CNY)
     unit?: string;                 // Unit (元, 万元, etc.)
     fiscalYearEnd?: string;        // Fiscal year end date
-    [key: string]: any;
+    [key: string]: string | undefined;
   };
 }
 
@@ -105,7 +105,7 @@ export interface RegulationExtractionResult {
     issuingBody?: string;          // Issuing organization
     effectiveDate?: string;        // Effective date
     documentNumber?: string;       // Document number
-    [key: string]: any;
+    [key: string]: string | undefined;
   };
 }
 
@@ -124,7 +124,7 @@ export interface ContractExtractionResult {
     effectiveDate?: string;        // Effective date
     expiryDate?: string;           // Expiry date
     amount?: number;               // Contract amount
-    [key: string]: any;
+    [key: string]: string | number | undefined;
   };
 }
 
@@ -133,10 +133,10 @@ export interface ContractExtractionResult {
  */
 export interface GeneralExtractionResult {
   documentType: 'general' | 'invoice' | 'voucher' | 'financial_report' | 'account_detail' | 'accounting_standard' | 'policy' | 'business_info';
-  extractedData: Record<string, any>;
+  extractedData: Record<string, unknown>;
   summary: string;
   confidence: number;
-  metadata: Record<string, any>;
+  metadata: Record<string, string | undefined>;
 }
 
 /**
@@ -154,8 +154,9 @@ export type ExtractionResult =
 
 /**
  * Zod schema for financial metric validation
+ * Exported for use in validation utilities
  */
-const FinancialMetricSchema = z.object({
+export const FinancialMetricSchema = z.object({
   name: z.string().min(1),
   value: z.number(),
   unit: z.string(),
@@ -166,8 +167,9 @@ const FinancialMetricSchema = z.object({
 
 /**
  * Zod schema for regulation article validation
+ * Exported for use in validation utilities
  */
-const RegulationArticleSchema = z.object({
+export const RegulationArticleSchema = z.object({
   articleNumber: z.string().min(1),
   subArticle: z.string().optional(),
   title: z.string().optional(),
@@ -610,9 +612,7 @@ export async function performStructuredExtraction(
   explicitType?: DocumentType
 ): Promise<ExtractionResult> {
   // Classify document type if not explicitly provided
-  const { type: detectedType, confidence: typeConfidence } = explicitType
-    ? { type: explicitType, confidence: 1.0 }
-    : classifyDocumentType(text, fileName);
+  const detectedType = explicitType ?? classifyDocumentType(text, fileName).type;
 
   // Route to appropriate extraction function
   switch (detectedType) {
@@ -705,6 +705,7 @@ function extractRegulationDocument(
  */
 function extractContractDocument(
   text: string,
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   fileName?: string
 ): ContractExtractionResult {
   // Basic contract extraction (can be enhanced with more sophisticated parsing)
@@ -761,10 +762,11 @@ function extractContractDocument(
 function extractGeneralDocument(
   text: string,
   documentType: 'general' | 'invoice' | 'voucher' | 'financial_report' | 'account_detail' | 'accounting_standard' | 'policy' | 'business_info',
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   fileName?: string
 ): GeneralExtractionResult {
   // Basic key-value extraction for general documents
-  const extractedData: Record<string, any> = {};
+  const extractedData: Record<string, unknown> = {};
 
   // Try to extract date
   const datePattern = /(\d{4})年(\d{1,2})月(\d{1,2})日/;

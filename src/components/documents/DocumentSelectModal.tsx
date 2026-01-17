@@ -1,6 +1,8 @@
 import React, { useState } from "react";
 import { useDocumentStore, Document } from "@/store/documents";
 import { UploadFeedback, StructureAnalysis } from "./UploadFeedback";
+import { useModalAccessibility } from "@/hooks/useModalAccessibility";
+import { SkeletonDocumentList } from "@/components/ui/Skeleton";
 
 interface DocumentSelectModalProps {
   open: boolean;
@@ -11,6 +13,8 @@ interface DocumentSelectModalProps {
   onSelect: (ids: string[]) => void;
   showUpload?: boolean;
   documents?: Document[];
+  uploadAccept?: string;
+  uploadHelpText?: string;
 }
 
 const DocumentSelectModal: React.FC<DocumentSelectModalProps> = ({
@@ -22,14 +26,28 @@ const DocumentSelectModal: React.FC<DocumentSelectModalProps> = ({
   onSelect,
   showUpload = false,
   documents: customDocuments,
+  uploadAccept,
+  uploadHelpText,
 }) => {
   const storeDocuments = useDocumentStore((s) => s.documents);
+  const isStoreLoading = useDocumentStore((s) => s.isLoading); // v4.3: Loading state for skeleton
   const documents = customDocuments || storeDocuments;
+  const isLoading = !customDocuments && isStoreLoading; // Only show loading if using store documents
   const [search, setSearch] = useState("");
   const [uploading, setUploading] = useState(false);
   const [uploadAnalysis, setUploadAnalysis] = useState<StructureAnalysis | null>(null);
 
+  // Modal accessibility (focus trap, Escape key, ARIA)
+  const { modalRef, handleBackdropClick, ariaProps } = useModalAccessibility({
+    isOpen: open,
+    onClose,
+  });
+
   if (!open) return null;
+
+  const resolvedUploadAccept = uploadAccept ?? ".pdf,.png,.jpg,.jpeg,.webp,.gif,.xlsx,.txt,.md";
+  const resolvedUploadHelpText = uploadHelpText
+    ?? "支持上传 PDF、图片、Excel(.xlsx)、TXT、MD 格式。TXT/MD 仅用于对话上下文，不支持结构化提取。";
 
   // 按类型分组并筛选
   const filtered = (cat: "knowledge" | "business") =>
@@ -133,11 +151,13 @@ const DocumentSelectModal: React.FC<DocumentSelectModalProps> = ({
   return (
     <div
       className="fixed inset-0 w-screen h-screen bg-black/[0.18] z-[1000] flex items-center justify-center"
-      onClick={onClose}
+      onClick={handleBackdropClick}
     >
       <div
-        className="bg-white rounded-lg shadow-xl p-8 min-w-[340px] max-w-[480px] max-h-[90vh] overflow-y-auto relative"
-        onClick={e => e.stopPropagation()}
+        ref={modalRef}
+        className="bg-white rounded-lg shadow-xl p-8 min-w-[340px] max-w-[480px] max-h-[85dvh] overflow-y-auto relative"
+        {...ariaProps}
+        aria-labelledby="document-select-modal-title"
       >
         <button
           onClick={onClose}
@@ -145,7 +165,7 @@ const DocumentSelectModal: React.FC<DocumentSelectModalProps> = ({
         >
           &times;
         </button>
-        <h3 className="font-bold text-lg mb-4">选择文档</h3>
+        <h3 id="document-select-modal-title" className="font-bold text-lg mb-4">选择文档</h3>
         <input
           type="text"
           placeholder="搜索文档名称..."
@@ -167,7 +187,10 @@ const DocumentSelectModal: React.FC<DocumentSelectModalProps> = ({
         {categories.filter(c => c === 'business').map(cat => (
           <div key={cat} className="mb-4">
             <div className="font-bold mb-2 text-gray-700">待处理文档</div>
-            {filtered(cat).length === 0 ? (
+            {/* v4.3: Show skeleton while loading */}
+            {isLoading ? (
+              <SkeletonDocumentList count={3} />
+            ) : filtered(cat).length === 0 ? (
               <div className="text-gray-400 mb-2">暂无文档</div>
             ) : (
               <div className="space-y-2">
@@ -193,7 +216,7 @@ const DocumentSelectModal: React.FC<DocumentSelectModalProps> = ({
 
         {showUpload && (
           <div className="mb-4">
-            <label className="block mb-2 font-medium">补充上传待处理文档（PDF 格式，小于1MB）</label>
+            <label className="block mb-2 font-medium">补充上传待处理文档（≤2MB）</label>
             <div className="relative inline-block">
               <button
                 type="button"
@@ -209,7 +232,7 @@ const DocumentSelectModal: React.FC<DocumentSelectModalProps> = ({
               <input
                 id="doc-upload-input"
                 type="file"
-                accept=".pdf,.png,.jpg,.jpeg,.webp,.gif,.txt,.md"
+                accept={resolvedUploadAccept}
                 onChange={handleUpload}
                 disabled={uploading}
                 className="hidden"
@@ -217,7 +240,7 @@ const DocumentSelectModal: React.FC<DocumentSelectModalProps> = ({
             </div>
             {/* Simple Help Text */}
             <div className="text-xs text-gray-500 mt-2">
-              支持上传 PDF, 图片, Excel, Docx, TXT 格式。系统将自动分析文档结构。
+              {resolvedUploadHelpText}
             </div>
           </div>
         )}

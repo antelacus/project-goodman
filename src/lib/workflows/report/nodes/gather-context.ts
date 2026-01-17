@@ -15,7 +15,6 @@ import type { ReportSourceReference } from '@/types/report';
 export async function gatherContextNode(
   state: ReportWorkflowState
 ): Promise<Partial<ReportWorkflowState>> {
-  const { year, comparisonYear } = state.input;
   const { primary, comparison } = state.metricResults;
 
   try {

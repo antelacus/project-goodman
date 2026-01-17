@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { Check, Loader2, Circle } from 'lucide-react';
-import type { PhaseDisplayInfo, ReportPhase } from '@/types/report-events';
+import type { PhaseDisplayInfo } from '@/types/report-events';
 
 interface ReportProgressProps {
   phases: PhaseDisplayInfo[];

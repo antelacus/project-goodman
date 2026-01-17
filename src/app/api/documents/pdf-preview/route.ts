@@ -6,6 +6,7 @@
  *
  * Query Parameters:
  * - fileUrl: The storage path of the PDF file
+ * - id: Document ID to look up fileUrl (v4.3: alternative to fileUrl)
  * - page: Page number to render (1-indexed, default: 1)
  * - scale: Render scale (default: 1.5 for good quality)
  */
@@ -39,13 +40,32 @@ export async function GET(request: NextRequest) {
 
   try {
     const { searchParams } = new URL(request.url);
-    const fileUrl = searchParams.get("fileUrl");
+    let fileUrl = searchParams.get("fileUrl");
+    const documentId = searchParams.get("id"); // v4.3: Support document ID lookup
     const pageNum = parseInt(searchParams.get("page") || "1", 10);
     const scale = parseFloat(searchParams.get("scale") || "1.5");
 
+    // v4.3: If id is provided but not fileUrl, look up the document's file_url
+    if (!fileUrl && documentId) {
+      const supabaseForLookup = createServerSupabaseClient();
+      const { data: doc, error: lookupError } = await supabaseForLookup
+        .from("documents")
+        .select("file_url")
+        .eq("id", documentId)
+        .single();
+
+      if (lookupError || !doc?.file_url) {
+        return NextResponse.json(
+          { error: "Document not found or has no file" },
+          { status: 404 }
+        );
+      }
+      fileUrl = doc.file_url;
+    }
+
     if (!fileUrl) {
       return NextResponse.json(
-        { error: "fileUrl parameter is required" },
+        { error: "fileUrl or id parameter is required" },
         { status: 400 }
       );
     }
@@ -64,7 +84,7 @@ export async function GET(request: NextRequest) {
 
     // Extract bucket and path from fileUrl
     // fileUrl format: "document-files/path/to/file.pdf" or just the path
-    let bucketName = "document-files";
+    const bucketName = "document-files";
     let filePath = fileUrl;
 
     if (fileUrl.startsWith("document-files/")) {
@@ -165,7 +185,7 @@ export async function POST(request: NextRequest) {
     // Get the PDF file from Supabase storage
     const supabase = createServerSupabaseClient();
 
-    let bucketName = "document-files";
+    const bucketName2 = "document-files";
     let filePath = fileUrl;
 
     if (fileUrl.startsWith("document-files/")) {
@@ -173,7 +193,7 @@ export async function POST(request: NextRequest) {
     }
 
     const { data: fileData, error: downloadError } = await supabase.storage
-      .from(bucketName)
+      .from(bucketName2)
       .download(filePath);
 
     if (downloadError || !fileData) {

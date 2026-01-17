@@ -7,7 +7,7 @@
 
 import { z } from "zod";
 import { Tool } from "../types";
-import { searchDocuments } from "@/lib/documents";
+import { searchDocuments } from "@/lib/documents/search";
 
 // ============================================================================
 // Schema

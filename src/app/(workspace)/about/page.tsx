@@ -22,7 +22,7 @@ export default function AboutPage() {
           <h2 className="mb-4 text-xl font-semibold text-neutral-900">技术架构</h2>
           <p className="leading-relaxed text-neutral-600">
             基于 Next.js 与 Supabase 构建，采用双重存储架构（结构化数据 + 向量检索）。
-            后端集成 GPT-5-mini 模型，通过 LangGraph 编排复杂的思维链（Chain of Thought），
+            后端集成 GPT-4o 模型，通过 LangGraph 编排复杂的思维链（Chain of Thought），
             确保财务计算的准确性与合规建议的专业性。
           </p>
         </div>
@@ -56,7 +56,7 @@ export default function AboutPage() {
       </div>
 
       <div className="mt-16 border-t border-neutral-200 pt-8 text-center text-sm text-neutral-500">
-        <p>Current Version: V3.7 (Phase 1)</p>
+        <p>Current Version: V4.3.0</p>
         <p className="mt-2">Created by Antelacus</p>
       </div>
     </div>

@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from "react";
 import { Copy, FileText, Check, Loader2, FileSpreadsheet } from "lucide-react";
 import { DocumentSelectModal } from "@/components/documents";
 import { useDocumentStore } from "@/store/documents";
+import { useModalAccessibility } from "@/hooks/useModalAccessibility";
 
 interface ExtractionModalProps {
     isOpen: boolean;
@@ -24,6 +25,12 @@ export default function ExtractionModal({
     const [copiedState, setCopiedState] = useState<{ key: string; type: string } | null>(null);
     const [openCopyMenu, setOpenCopyMenu] = useState<string | null>(null);
     const menuRef = useRef<HTMLDivElement>(null);
+
+    // Modal accessibility (focus trap, Escape key, ARIA)
+    const { modalRef, handleBackdropClick, ariaProps } = useModalAccessibility({
+        isOpen,
+        onClose,
+    });
 
     const documents = useDocumentStore(s => s.documents);
     const selectedDoc = documents.find(d => d.id === selectedDocId);
@@ -97,13 +104,21 @@ export default function ExtractionModal({
     if (!isOpen) return null;
 
     return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-in fade-in">
-            <div className="bg-white rounded-xl shadow-2xl w-full max-w-4xl max-h-[85vh] overflow-hidden flex flex-col relative">
+        <div
+            className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-in fade-in"
+            onClick={handleBackdropClick}
+        >
+            <div
+                ref={modalRef}
+                className="bg-white rounded-xl shadow-2xl w-full max-w-4xl max-h-[85dvh] overflow-hidden flex flex-col relative"
+                {...ariaProps}
+                aria-labelledby="extraction-modal-title"
+            >
 
                 {/* Header */}
                 <div className="flex items-center justify-between p-6 border-b border-neutral-100">
                     <div>
-                        <h2 className="text-xl font-bold text-neutral-900 flex items-center gap-2">
+                        <h2 id="extraction-modal-title" className="text-xl font-bold text-neutral-900 flex items-center gap-2">
                             <FileSpreadsheet className="text-yellow-500" />
                             财务信息提取工具
                         </h2>
@@ -175,7 +190,7 @@ export default function ExtractionModal({
                         <div className="text-center">
                             <Loader2 size={48} className="animate-spin text-yellow-500 mx-auto mb-6" />
                             <h3 className="text-xl font-bold text-neutral-900 mb-2">正在分析文档...</h3>
-                            <p className="text-neutral-500">正在调用 Vision 模型识别结构化信息，请稍候</p>
+                            <p className="text-neutral-500">正在调用模型识别结构化信息，请稍候</p>
                         </div>
                     )}
 
@@ -261,6 +276,8 @@ export default function ExtractionModal({
                 selectedIds={selectedDocId ? [selectedDocId] : []}
                 onSelect={handleDocSelect}
                 showUpload={true}
+                uploadAccept=".pdf,.png,.jpg,.jpeg,.webp,.gif,.xlsx"
+                uploadHelpText="支持上传 PDF、图片、Excel(.xlsx) 格式。"
             />
         </div>
     );

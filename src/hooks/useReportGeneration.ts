@@ -6,7 +6,7 @@
  */
 
 import { useState, useRef, useCallback } from 'react';
-import type { ReportContent, ReportSection } from '@/types/report';
+import type { ReportContent } from '@/types/report';
 import type { PhaseDisplayInfo, ReportPhase } from '@/types/report-events';
 import { REPORT_PHASES } from '@/types/report-events';
 
@@ -28,6 +28,7 @@ export interface UseReportGenerationReturn {
   // Generation input tracking (for save operation)
   generationYear: string | undefined;
   comparisonYear: string | undefined;
+  generationTimeMs: number | undefined;
 
   // Operations
   startGeneration: (year: string, comparisonYear?: string) => Promise<ReportContent | null>;
@@ -69,6 +70,7 @@ export function useReportGeneration(): UseReportGenerationReturn {
   const [phases, setPhases] = useState<PhaseDisplayInfo[]>([...REPORT_PHASES]);
   const [currentSection, setCurrentSection] = useState<string | undefined>();
   const [report, setReport] = useState<ReportContent | null>(null);
+  const [generationTimeMs, setGenerationTimeMs] = useState<number | undefined>();
   const [error, setError] = useState<string | undefined>();
 
   // Save state
@@ -120,8 +122,13 @@ export function useReportGeneration(): UseReportGenerationReturn {
         return null;
       }
       case 'complete': {
-        const { content } = event.data as { reportId: string; content: ReportContent };
+        const { content, generationTimeMs: completedTime } = event.data as {
+          reportId: string;
+          content: ReportContent;
+          generationTimeMs?: number;
+        };
         setReport(content);
+        setGenerationTimeMs(completedTime);
         setIsGenerating(false);
         setCurrentSection(undefined);
         return content;
@@ -157,6 +164,7 @@ export function useReportGeneration(): UseReportGenerationReturn {
     setCurrentSection(undefined);
     setGenerationYear(year);
     setComparisonYear(compYear);
+    setGenerationTimeMs(undefined);
 
     // Create abort controller
     if (abortControllerRef.current) {
@@ -283,6 +291,7 @@ export function useReportGeneration(): UseReportGenerationReturn {
           content: report,
           year: report.year,
           comparisonYear: report.comparisonYear,
+          generationTimeMs,
         }),
       });
 
@@ -319,6 +328,7 @@ export function useReportGeneration(): UseReportGenerationReturn {
     setSavedPdfUrl(undefined);
     setGenerationYear(undefined);
     setComparisonYear(undefined);
+    setGenerationTimeMs(undefined);
 
     if (abortControllerRef.current) {
       abortControllerRef.current.abort();
@@ -351,6 +361,7 @@ export function useReportGeneration(): UseReportGenerationReturn {
     savedPdfUrl,
     generationYear,
     comparisonYear,
+    generationTimeMs,
 
     // Operations
     startGeneration,
