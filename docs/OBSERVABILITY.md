@@ -48,4 +48,28 @@ docker compose -f docker-compose.observability.yml \
 
 ## Uptime Kuma 监控
 
-- 本节将在 Task C2 完成后补充（端口、监控项与告警配置）。
+### 1. 启动服务
+
+```bash
+docker compose -f docker-compose.observability.yml \
+  --env-file $GOODMAN_PROD_DIR/.env.observability \
+  up -d uptime-kuma
+```
+
+### 2. 访问地址
+
+- 本机访问：`http://127.0.0.1:${UPTIME_KUMA_PORT}`（默认 3002）
+
+### 3. 监控项配置
+
+建议添加以下 HTTP 检查：
+
+- 生产：`https://<prod-domain>/api/health`
+- Staging：`https://<staging-domain>/api/health`
+
+### 4. 告警渠道
+
+在 Uptime Kuma 控制台中配置通知（邮件/IM），并在项目运维文档中记录：
+
+- 告警渠道类型与目标地址
+- 触发阈值（例如 1 分钟内连续失败 N 次）

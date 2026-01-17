@@ -127,11 +127,23 @@
 
 #### Task C2: Uptime Kuma
 
-**状态**: ⏳ 待办
+**状态**: ✅ 完成
 
-- [ ] 添加 Uptime Kuma 容器配置
-- [ ] 配置 prod/staging 健康检查
-- [ ] 告警渠道文档化
+- [x] 添加 Uptime Kuma 容器配置
+- [x] 配置 prod/staging 健康检查
+- [x] 告警渠道文档化
+
+**实施记录**:
+
+```
+状态: ✅ 完成
+开始时间: 2026-01-17 13:30
+完成时间: 2026-01-17 13:40
+变更点:
+- docker-compose.observability.yml 增加 uptime-kuma 服务与持久化卷
+- docs/OBSERVABILITY.md 补充访问地址与监控/告警配置
+备注: 监控项使用 /api/health（prod/staging）
+```
 
 ---
 
