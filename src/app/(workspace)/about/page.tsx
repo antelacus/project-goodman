@@ -56,7 +56,7 @@ export default function AboutPage() {
       </div>
 
       <div className="mt-16 border-t border-neutral-200 pt-8 text-center text-sm text-neutral-500">
-        <p>Current Version: V4.2.1</p>
+        <p>Current Version: V4.3.0</p>
         <p className="mt-2">Created by Antelacus</p>
       </div>
     </div>
