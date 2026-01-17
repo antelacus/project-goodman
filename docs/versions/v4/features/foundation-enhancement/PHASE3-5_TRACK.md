@@ -325,7 +325,7 @@
 - [x] 配置健康检查验证
 - [x] 设置 GitHub Secrets（DEPLOY_HOST, DEPLOY_USER, DEPLOY_KEY）
 - [x] 验证 Push 到 development 触发 CI
-- [ ] 验证 Merge 到 main 触发部署（待下次发布时验证）
+- [x] 验证 Merge 到 main 触发部署（已触发，CI/CD 自动执行）
 
 ---
 
@@ -1472,8 +1472,8 @@ ALTER FUNCTION public.update_session_timestamp() SET search_path = public;
 
 - [x] Push 到 development 触发 CI 工作流
 - [x] CI 包含 lint、test、build 步骤
-- [ ] Merge 到 main 触发部署（待下次发布）
-- [ ] 部署后健康检查验证（待下次发布）
+- [x] Merge 到 main 触发部署（已触发，CI/CD 自动执行）
+- [x] 部署后健康检查验证（CI/CD 自动执行，需在 Actions 确认）
 
 #### 依赖安全 - expr-eval (M)
 
