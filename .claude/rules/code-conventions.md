@@ -10,6 +10,7 @@
 - Financial metric names defined as constants in `src/lib/financial/metric-names.ts`
 - Document types and periods use mapping constants in `src/lib/documents/constants.ts`
 - Database clients in `src/lib/database/` (Supabase for data, Redis for sessions/cache)
+- Observability in `src/lib/observability/` (error tracking with GlitchTip)
 - Agent tools defined in `src/lib/tools/`, quick-actions in `src/app/api/quick-actions/`
 - Components organized by domain with barrel exports (`index.ts`) for clean imports
 
