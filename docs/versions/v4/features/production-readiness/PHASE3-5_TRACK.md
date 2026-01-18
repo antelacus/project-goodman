@@ -336,20 +336,27 @@
 
 #### Task F1: staging 演练记录
 
-**状态**: 🟡 进行中
+**状态**: ✅ 完成
 
-- [ ] 记录发布、回滚、验证步骤（待实际演练）
+- [x] 记录发布、回滚、验证步骤（待实际演练）
 - [x] 创建演练记录模板（docs/templates/staging-release-rehearsal-template.md）
-- [ ] 归档到文档中（完成演练后）
+- [x] 归档到文档中（完成演练后）
 
 **实施记录**:
 
 ```
-状态: 🟡 进行中
+状态: ✅ 完成
 开始时间: 2026-01-18 08:31
+完成时间: 2026-01-18 10:20
 变更点:
 - 新增 docs/templates/staging-release-rehearsal-template.md（演练记录模板）
-备注: 模板已就绪，待执行演练并填写结果后标记完成
+- 完成 staging 发布/回滚演练（docs/manual-test-log/2026-01-18-staging-release-rehearsal.md）
+- 发布验证：健康检查 ✅、冒烟测试 ✅
+- 回滚验证：健康检查 ✅、关键接口 ✅
+发现问题:
+- @sentry/node webpack 构建问题（需后续修复，已记录到 TECHNICAL_DEBT）
+- docker-compose build args 需要手动 source 环境变量
+备注: 演练成功完成，发布与回滚流程验证通过
 ```
 
 ---

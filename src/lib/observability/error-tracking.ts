@@ -1,6 +1,5 @@
 import 'server-only';
 
-import * as Sentry from '@sentry/node';
 import type { ErrorEvent } from '@sentry/types';
 
 type ErrorContext = {
@@ -83,35 +82,48 @@ function isServerRuntime(): boolean {
   return typeof window === 'undefined' && process.env.NEXT_RUNTIME !== 'edge';
 }
 
-export function initErrorTracking(): void {
+export async function initErrorTracking(): Promise<void> {
   if (initialized || !isServerRuntime()) return;
   const dsn = process.env.GLITCHTIP_DSN;
   if (!dsn) return;
 
-  Sentry.init({
-    dsn,
-    environment: process.env.GLITCHTIP_ENV || process.env.NODE_ENV,
-    tracesSampleRate: 0,
-    sendDefaultPii: false,
-    beforeSend: sanitizeEvent,
-  });
-
-  initialized = true;
-  enabled = true;
+  // Lazy-load @sentry/node only in Node.js runtime to avoid webpack bundling issues
+  // This uses require() which is evaluated at runtime, not build time
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const Sentry = require('@sentry/node');
+    Sentry.init({
+      dsn,
+      environment: process.env.GLITCHTIP_ENV || process.env.NODE_ENV,
+      tracesSampleRate: 0,
+      sendDefaultPii: false,
+      beforeSend: sanitizeEvent,
+    });
+    initialized = true;
+    enabled = true;
+    console.log('[ErrorTracking] Initialized with GlitchTip');
+  } catch (error) {
+    console.error('[ErrorTracking] Failed to initialize:', error);
+  }
 }
 
 export function captureError(error: unknown, context?: ErrorContext): void {
   if (!enabled || !isServerRuntime()) return;
 
-  Sentry.withScope((scope) => {
-    if (context?.requestId) scope.setTag('requestId', context.requestId);
-    if (context?.route) scope.setTag('route', context.route);
-    if (context?.tags) {
-      for (const [key, value] of Object.entries(context.tags)) {
-        scope.setTag(key, value);
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const Sentry = require('@sentry/node');
+    Sentry.withScope((scope: { setTag: (key: string, value: string) => void }) => {
+      if (context?.requestId) scope.setTag('requestId', context.requestId);
+      if (context?.route) scope.setTag('route', context.route);
+      if (context?.tags) {
+        for (const [key, value] of Object.entries(context.tags)) {
+          scope.setTag(key, value);
+        }
       }
-    }
-
-    Sentry.captureException(error);
-  });
+      Sentry.captureException(error);
+    });
+  } catch {
+    // Silently fail if Sentry not available
+  }
 }

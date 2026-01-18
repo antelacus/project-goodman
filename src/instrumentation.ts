@@ -7,15 +7,15 @@
  * V3.10: Initializes cleanup scheduler and admin account.
  */
 
-import { initErrorTracking } from '@/lib/observability/error-tracking';
-
 export async function register() {
     // Only run in Node.js runtime (not Edge)
     if (process.env.NEXT_RUNTIME === 'nodejs') {
         console.log('[Instrumentation] Initializing server-side services...');
 
         try {
-            initErrorTracking();
+            // Dynamic import to avoid webpack bundling @sentry/node for client
+            const { initErrorTracking } = await import('@/lib/observability/error-tracking');
+            await initErrorTracking();
         } catch (error) {
             console.error('[Instrumentation] Failed to initialize error tracking:', error);
         }
