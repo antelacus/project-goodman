@@ -6,6 +6,7 @@
  * - audit-logger: Audit logging for security events
  * - brute-force: Brute force attack prevention
  * - error-handler: Secure error handling
+ * - request-id: Request ID generation
  * - file-validator: File upload validation
  * - password: Password hashing utilities
  * - rate-limiter: Request rate limiting
@@ -54,10 +55,8 @@ export {
 } from "./audit-logger";
 
 // Error Handler
-export {
-  generateRequestId,
-  createErrorResponse,
-} from "./error-handler";
+export { generateRequestId } from "./request-id";
+export { createErrorResponse } from "./error-handler";
 
 // File Validator
 export {

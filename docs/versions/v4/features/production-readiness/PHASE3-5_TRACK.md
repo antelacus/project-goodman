@@ -361,6 +361,30 @@
 
 ---
 
+#### Task F2: 修复 @sentry/node 构建问题
+
+**状态**: ✅ 完成
+
+- [x] 拆分 requestId 生成逻辑，避免 edge middleware 引入 server-only 依赖
+- [x] middleware 改为使用 edge-safe request-id 模块
+- [x] 更新技术债务记录
+
+**实施记录**:
+
+```
+状态: ✅ 完成
+开始时间: 2026-01-18 11:15
+完成时间: 2026-01-18 11:45
+变更点:
+- 新增 src/lib/security/request-id.ts（独立 requestId 生成）
+- middleware 使用 edge-safe request-id 模块，避免引入 error-handler
+- security index 重新导出 generateRequestId
+- 更新 docs/TECHNICAL_DEBT.md 归档该问题
+备注: @sentry/node 依赖仅在 server 端使用，避免 edge runtime 构建错误
+```
+
+---
+
 ## Phase 5 测试清单（全部任务完成后）
 
 - [ ] `npm run lint` 通过

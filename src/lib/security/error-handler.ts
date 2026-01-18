@@ -49,20 +49,6 @@ const GENERIC_MESSAGES: Record<string, string> = {
 };
 
 // =============================================================================
-// Request ID Generation
-// =============================================================================
-
-/**
- * Generate a unique request ID for tracing
- * Format: req_{base36_timestamp}_{random_suffix}
- */
-export function generateRequestId(): string {
-    const timestamp = Date.now().toString(36);
-    const random = Math.random().toString(36).slice(2, 8);
-    return `req_${timestamp}_${random}`;
-}
-
-// =============================================================================
 // Error Sanitization
 // =============================================================================
 

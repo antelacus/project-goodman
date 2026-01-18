@@ -20,7 +20,7 @@
 
 | ID     | 领域    | 描述                                                  | 严重性 | 处理版本 |
 |--------|---------|------------------------------------------------------|--------|--------|
-| TD-014 | 可观测性 | @sentry/node webpack 构建失败：使用 `node:` URL 导入，Next.js webpack 无法处理。当前使用 stub 绕过，GlitchTip 错误追踪未实际启用。需要迁移到 @sentry/nextjs 或配置 webpack externals | 高 | V4.5 |
+| 无 | 无 | 无 | 无 | 无 |
 
 ## 开发注意事项
 
@@ -37,6 +37,7 @@
 
 | ID | 描述 | 解决版本 | 解决说明 |
 |----|------|----------|----------|
+| TD-018 | @sentry/node webpack 构建失败：Edge middleware 引入 error-handler，触发 @sentry/node 依赖 Node 内置模块。 | V4.4 | 拆分 request-id 模块，middleware 仅依赖 edge-safe 实现，Sentry 仅在 server 端加载 |
 | TD-003 | 无 LangSmith 集成用于 Agent 追踪 | V4.3 | 集成 LangSmith 追踪与自定义 span |
 | TD-004 | 手动部署，无自动化流水线 | V4.3 | GitHub Actions CI/CD 覆盖 lint/test/build/deploy |
 | TD-005 | 无性能基线（打包大小、API 响应时间、Core Web Vitals） | V4.3 | 添加打包分析、结构化日志、Web Vitals |
