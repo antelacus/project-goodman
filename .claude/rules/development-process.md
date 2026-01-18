@@ -26,10 +26,10 @@ See global guidance file for details.
 
 ## Worktrees & Task Execution
 
-- **Default**: one feature branch + one worktree per feature (not per task).
-- **Task order**: execute sequentially on the same branch; commit after each task and update the track doc.
-- **Dependencies**: dependent tasks stay on the same branch. Only split branches/worktrees for truly parallel work; if dependency exists, stack branches (branch from dependency) and rebase downstream after upstream changes.
-- **Finish**: merge feature branch into `development`, push, then remove the worktree.
+- **Default**: work directly on `development`; do not create worktrees unless explicitly requested.
+- **Task order**: execute sequentially on `development`; commit after each task and update the track doc.
+- **Dependencies**: keep dependent tasks on `development`. Only use worktrees/feature branches when the user explicitly requests isolation for parallel work.
+- **Finish**: merge `development` into `main` per release. If a worktree is explicitly requested, merge the feature branch back into `development` and remove the worktree.
 
 ## Patch Version (v*.*.*)
 

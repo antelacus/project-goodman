@@ -40,6 +40,11 @@
 - Include task identifiers when relevant (e.g., `Task K`).
 - PRs should include a short summary, tests run, linked issues/tasks, and screenshots for UI changes.
 
+## Git Workflow
+
+- Default: work directly on `development`; never create a new git worktree unless the user explicitly requests it.
+- If a worktree is explicitly requested, follow the global worktree flow.
+
 ## Configuration & Security Tips
 
 - Use `.env`/`.env.local`; start from `.env.example` and keep secrets out of git.
