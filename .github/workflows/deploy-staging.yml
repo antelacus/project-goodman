@@ -11,9 +11,9 @@ jobs:
       - name: Deploy to staging
         uses: appleboy/ssh-action@v1
         with:
-          host: ${{ secrets.STAGING_HOST }}
-          username: ${{ secrets.STAGING_USER }}
-          key: ${{ secrets.STAGING_KEY }}
+          host: ${{ secrets.DEPLOY_HOST }}
+          username: ${{ secrets.DEPLOY_USER }}
+          key: ${{ secrets.DEPLOY_KEY }}
           script: |
             cd /home/deploy/goodman-staging/project-goodman
             git pull origin development
