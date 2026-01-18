@@ -4,295 +4,240 @@
 **Last Updated**: 2026-01-18
 **Target Platform**: Docker on VPS + Supabase Cloud
 
-> This checklist covers the complete Phase 6 deployment process.
-> Referenced by global `~/.claude/CLAUDE.md`.
+---
 
-## CI/CD Automation
+## How Deployment Works
 
-**As of v4.3**, GitHub Actions automates key deployment steps:
+```
+┌─────────────────────────────────────────────────────────────────────────┐
+│                           DEVELOPMENT FLOW                               │
+├─────────────────────────────────────────────────────────────────────────┤
+│                                                                          │
+│   Local Development                                                      │
+│         │                                                                │
+│         ▼                                                                │
+│   Push to `development` ──────► CI (lint, test, build)                  │
+│         │                              │                                 │
+│         │                              ▼                                 │
+│         └──────────────────► Staging auto-deploy + smoke tests          │
+│                                        │                                 │
+│                                        ▼                                 │
+│                              Verify staging works                        │
+│                                        │                                 │
+│                                        ▼                                 │
+│                              Merge `development` → `main`                │
+│                                        │                                 │
+│                                        ▼                                 │
+│                              Production auto-deploy                      │
+│                                        │                                 │
+│                                        ▼                                 │
+│                              Tag release                                 │
+│                                                                          │
+└─────────────────────────────────────────────────────────────────────────┘
+```
 
-| Workflow | Trigger | What It Does |
+### CI/CD Workflows
+
+| Workflow | Trigger | What Happens |
 |----------|---------|--------------|
-| **CI** (`.github/workflows/ci.yml`) | Push to `development`, PR to `main` | Lint, type check, test, security audit, build |
-| **Deploy Staging** (`.github/workflows/deploy-staging.yml`) | Push to `development` | SSH deploy (staging), health check, smoke test |
-| **Deploy** (`.github/workflows/deploy.yml`) | Push to `main` | SSH deploy, docker rebuild, health check |
-
-Sections marked with ✅ **Automated** are now handled by CI/CD.
+| **CI** | Push to `development` | Lint, type check, test, coverage, security audit, build |
+| **Deploy Staging** | Push to `development` | Deploy to staging, health check, smoke tests |
+| **Deploy Production** | Push to `main` | Deploy to production, health check |
 
 ---
 
-## Quick Reference
+## Quick Reference Commands
 
 ```bash
-# Deploy (prod)
-cd /home/deploy/goodman && docker compose up -d --build goodman
-
-# Verify (prod)
-curl http://localhost:3000/api/health
-
-# Deploy (staging)
-cd /home/deploy/goodman-staging/project-goodman && \
-  docker compose -f docker-compose.staging.yml up -d --build
-
-# Verify (staging)
+# === STAGING ===
+# Health check
 curl http://localhost:3001/api/health
 
-# Logs
-docker logs -f goodman
-```
-
----
-
-## 1. Pre-Deployment Verification
-
-### 1.1 Implementation Complete
-
-- [ ] All tasks in PHASE3-5_TRACK.md marked complete
-- [ ] No TODO/FIXME comments left in new code
-- [ ] TypeScript types regenerated (if DB changes): `npx supabase gen types typescript`
-
-### 1.2 Environment Variables
-
-Verify in `/home/deploy/goodman/.env`:
-
-| Variable | Required | Description |
-|----------|----------|-------------|
-| `OPENAI_API_KEY` | ✅ | OpenAI API key |
-| `NEXT_PUBLIC_SUPABASE_URL` | ✅ | Supabase project URL |
-| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | ✅ | Supabase anon key |
-| `SUPABASE_SERVICE_ROLE_KEY` | ✅ | Supabase service role key |
-| `ADMIN_PASSWORD` | ✅ | Bcrypt hash for admin auth |
-| `REDIS_HOST` | ✅ | Redis host |
-| `REDIS_PORT` | ✅ | Redis port |
-| `REDIS_PASSWORD` | ✅ | Redis password |
-
-### 1.3 Database Status
-
-| Check | Command |
-|-------|---------|
-| Migrations applied | Supabase dashboard or `supabase db diff` |
-| Types in sync | `npx supabase gen types typescript` |
-| Security advisors | Supabase dashboard → Database → Advisors |
-
-### 1.4 Staging Verification (Pre-Prod) — ✅ Automated
-
-- [ ] `deploy-staging` workflow succeeded on `development`
-- [ ] Health check passed: `http://localhost:3001/api/health`
-- [ ] Smoke tests passed (health/sessions/auth/reports)
-
-
----
-
-## 2. Quality Gates
-
-### 2.1 Lint & Test Verification — ✅ Automated
-
-> **CI/CD**: These checks run automatically on every push to `development`.
-> Check results at: https://github.com/antelacus/project-goodman/actions
-
-```bash
-# Run locally if needed:
-npm run lint         # Must return 0 errors (enforced by pre-commit hooks)
-npm run test         # Must pass (Vitest)
-npm run test:coverage # Coverage report (baseline gate)
-npm run build        # Must complete with 0 errors (includes ESLint check)
-# Optional (non-blocking in CI):
-# npm run test:e2e
-```
-
-> **Note**: Pre-commit hooks (Husky + lint-staged) automatically run ESLint and Prettier on staged files. If commits are failing, run `npm run lint -- --fix` to auto-fix issues.
-
-### 2.2 Security Audit
-
-- [ ] No sensitive data exposed to client
-- [ ] No stack traces in error responses
-- [ ] Input validation on all API endpoints
-- [ ] Check Supabase security advisors (MCP or dashboard)
-
-### 2.3 Code Review
-
-- [ ] New code follows project conventions
-- [ ] No obvious bugs or edge case issues
-- [ ] Performance: no unnecessary re-renders, API calls, or DB queries
-
-### 2.4 Observability Baseline
-
-- [ ] GlitchTip DSN configured in env
-- [ ] GlitchTip receives server errors with requestId tags
-- [ ] Uptime Kuma monitors prod/staging `/api/health`
-- [ ] Alert channels documented in `docs/OBSERVABILITY.md`
-
----
-
-## 3. Pre-Deployment Documentation
-
-> **Important**: Complete these steps BEFORE deployment to ensure deployed code is tracked in git.
-
-### 3.1 Version & Changelog
-
-- [ ] Update `package.json` version number
-- [ ] Update `CHANGELOG.md` with release notes
-- [ ] Update version docs (DEVELOPMENT_PLAN.md, TRACK.md status)
-
-### 3.2 Commit & Push
-
-- [ ] Commit all changes: `git add . && git commit -m "release(vX.X): description"`
-- [ ] Push to development: `git push origin development`
-- [ ] Verify CI passes: https://github.com/antelacus/project-goodman/actions
-
----
-
-## 4. Deployment Execution
-
-### 4.0 Staging Deployment (Pre-Prod) — ✅ Automated
-
-> **CI/CD**: Staging deployment runs on push to `development`.
-> Workflow handles: git pull → docker compose up → health check → smoke test.
-
-Manual commands (only if needed):
-
-```bash
+# Manual deploy (if needed)
 cd /home/deploy/goodman-staging/project-goodman
-
 docker compose -f docker-compose.staging.yml up -d --build
-curl http://localhost:3001/api/health
 
+# Manual smoke test
 SMOKE_BASE_URL=http://localhost:3001 \
 SMOKE_ENV_FILE=/home/deploy/goodman-staging/.env.staging \
 node scripts/smoke-test-staging.js
-```
 
-### 4.1 Infrastructure
+# === PRODUCTION ===
+# Health check
+curl http://localhost:3000/api/health
 
-```
-/home/deploy/goodman/
-├── docker-compose.yml    # Container orchestration
-├── .env                  # Environment variables
-└── project-goodman/      # Application code
-```
-
-| Container | Port | Purpose |
-|-----------|------|---------|
-| `goodman` | 3000 | Next.js application |
-| `goodman-redis` | 6379 | Session & rate limit storage |
-
-### 4.2 Deploy Commands — ✅ Automated
-
-> **CI/CD**: Deployment runs automatically when you merge to `main`.
-> The workflow handles: git pull → docker compose up → health check verification.
-
-**To deploy**: Simply merge `development` into `main`:
-
-```bash
-git checkout main && git merge development && git push origin main
-```
-
-**Manual commands** (for troubleshooting or manual intervention):
-
-```bash
-# Full rebuild and deploy
+# Manual deploy (if needed)
 cd /home/deploy/goodman && docker compose up -d --build goodman
 
 # View logs
 docker logs -f goodman
-
-# Restart without rebuild
-docker compose restart goodman
-
-# Check container status
-docker ps --filter "name=goodman"
 ```
 
 ---
 
-## 5. Post-Deployment Verification
+## Phase 1: Development (Automatic)
 
-### 5.1 Health Check — ✅ Automated
+> **No action required.** These run automatically when you push to `development`.
 
-> **CI/CD**: The deploy workflow automatically verifies health check after deployment.
-> Deployment fails if health check returns non-200 status.
+| Check | Status | Notes |
+|-------|--------|-------|
+| ESLint | Automatic | Fails CI if errors |
+| TypeScript | Automatic | Fails CI if type errors |
+| Unit Tests | Automatic | Fails CI if tests fail |
+| Coverage | Automatic | Fails CI if below threshold |
+| Build | Automatic | Fails CI if build fails |
+| Staging Deploy | Automatic | Deploys after CI passes |
+| Smoke Tests | Automatic | Health, auth, sessions, reports |
+
+**If CI or staging fails**: Fix the issue, push again.
+
+---
+
+## Phase 2: Pre-Production Checklist (Manual)
+
+> **Before merging to main**, verify these items.
+
+### 2.1 Staging Verification
+
+- [ ] CI workflow passed (green checkmark on GitHub Actions)
+- [ ] Staging deployment passed (smoke tests green)
+- [ ] (Optional) Manual testing on staging if needed
+
+### 2.2 Implementation Complete
+
+- [ ] All tasks in PHASE3-5_TRACK.md marked complete
+- [ ] No TODO/FIXME comments left in new code
+- [ ] TypeScript types regenerated if DB changes: `npx supabase gen types typescript`
+
+### 2.3 Security Review
+
+- [ ] No sensitive data exposed to client
+- [ ] Input validation on all new API endpoints
+- [ ] Check Supabase security advisors (dashboard → Database → Advisors)
+
+### 2.4 Documentation Updated
+
+- [ ] `package.json` version bumped
+- [ ] `CHANGELOG.md` updated with release notes
+- [ ] TRACK.md status updated
+
+### 2.5 Commit & Push
 
 ```bash
-# Manual verification (optional):
+git add .
+git commit -m "release(vX.X): description"
+git push origin development
+```
+
+- [ ] Final CI check passes after release commit
+
+---
+
+## Phase 3: Deploy to Production
+
+> **Merge to main triggers production deployment.**
+
+```bash
+git checkout main
+git merge development
+git push origin main
+```
+
+- [ ] Production deploy workflow started (check GitHub Actions)
+- [ ] Health check passed (automatic)
+
+### Manual Verification (Optional)
+
+```bash
+# Check health
 curl http://localhost:3000/api/health
-# Expected: {"status":"healthy","version":"4.4.x",...}
-```
 
-### 5.2 Functional Testing
-
-| Test | Command | Expected |
-|------|---------|----------|
-| Health | `curl localhost:3000/api/health` | `{"status":"ok"}` |
-| Sessions | `curl localhost:3000/api/sessions` | `{"sessions":[]}` |
-| Auth | `curl -X POST localhost:3000/api/auth/login` | JSON response |
-
-### 5.3 Log Monitoring (15 min recommended)
-
-```bash
-# Watch for errors
+# Watch logs for 5-15 minutes
 docker logs -f goodman 2>&1 | grep -i "error\|warn"
-
-# Check Redis connection
-docker logs goodman 2>&1 | grep -i "redis"
 ```
 
 ---
 
-## 6. Release Finalization
+## Phase 4: Release Finalization
 
-> **Only after deployment verification succeeds.**
+> **After production is verified working.**
 
-### 6.1 Post-Release Documentation
+### 4.1 Tag the Release
 
-- [ ] Update `CHANGELOG.md` with release details (if not done in pre-deployment)
-- [ ] Update `v*_DEVELOPMENT_PLAN.md` to mark feature as released
-- [ ] Move resolved items to "已解决的债务" section in `TECHNICAL_DEBT.md`
-- [ ] Archive completed PHASE3-5_TRACK.md tasks
+```bash
+git tag -a vX.X.X -m "Release description"
+git push origin vX.X.X
+```
 
-### 6.2 Merge & Tag
+### 4.2 Update Documentation
 
-- [ ] Merge to main: `git checkout main && git merge development && git push`
-- [ ] Tag release: `git tag -a vX.X.X -m "Release notes" && git push origin vX.X.X`
-- [ ] Return to development: `git checkout development`
+- [ ] Mark feature as released in `v*_DEVELOPMENT_PLAN.md`
+- [ ] Move resolved items to "已解决的债务" in `TECHNICAL_DEBT.md`
+
+### 4.3 Return to Development
+
+```bash
+git checkout development
+```
 
 ---
 
-## 7. Rollback Plan
+## Rollback Procedures
 
-### Quick Rollback
+### Quick Rollback (Code Issue)
 
 ```bash
-# Revert to previous commit
+# On server
+cd /home/deploy/goodman/project-goodman
 git checkout HEAD~1
 cd /home/deploy/goodman && docker compose up -d --build goodman
+
+# Verify
+curl http://localhost:3000/api/health
 ```
 
 ### Database Rollback
 
 Migrations are forward-only. For schema changes:
 1. Backup data before migration
-2. Test migrations on branch first
+2. Test migrations on staging first
 3. Use Supabase branching for major changes
 
 ---
 
-## 8. Monitoring & Troubleshooting
+## Environment Variables
 
-### Container Health
+### Production (`/home/deploy/goodman/.env`)
 
-```bash
-docker stats goodman goodman-redis
-```
+| Variable | Required | Description |
+|----------|----------|-------------|
+| `OPENAI_API_KEY` | Yes | OpenAI API key |
+| `NEXT_PUBLIC_SUPABASE_URL` | Yes | Supabase project URL |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Yes | Supabase anon key |
+| `SUPABASE_SERVICE_ROLE_KEY` | Yes | Supabase service role key |
+| `ADMIN_PASSWORD` | Yes | Admin password (plaintext, hashed at runtime) |
+| `REDIS_HOST` | Yes | Redis host |
+| `REDIS_PORT` | Yes | Redis port |
+| `REDIS_PASSWORD` | Yes | Redis password |
 
-### Service Costs
+### Staging (`/home/deploy/goodman-staging/.env.staging`)
 
-| Service | Monitor | Notes |
-|---------|---------|-------|
-| OpenAI | platform.openai.com/usage | Pay-as-you-go |
-| Supabase | Dashboard → Usage | Storage & bandwidth |
-| VPS | Provider dashboard | CPU/memory |
+Same variables, but pointing to staging Supabase project.
 
-### Common Issues
+---
+
+## Infrastructure Reference
+
+### Containers
+
+| Environment | Container | Port | Directory |
+|-------------|-----------|------|-----------|
+| Production | `goodman` | 3000 | `/home/deploy/goodman/` |
+| Production | `goodman-redis` | 6379 | - |
+| Staging | `goodman-staging` | 3001 | `/home/deploy/goodman-staging/` |
+| Staging | `goodman-redis-staging` | 6380 | - |
+
+### Troubleshooting
 
 | Issue | Solution |
 |-------|----------|
@@ -302,6 +247,15 @@ docker stats goodman goodman-redis
 | Build fails | Run `npm run build` locally first |
 | Slow startup | Normal ~10s for cold start |
 
+### Service Monitoring
+
+| Service | Dashboard |
+|---------|-----------|
+| OpenAI | platform.openai.com/usage |
+| Supabase | Dashboard → Usage |
+| GlitchTip | Your GlitchTip instance |
+| Uptime Kuma | Your Uptime Kuma instance |
+
 ---
 
 ## Security Baseline
@@ -310,7 +264,7 @@ These should always be true:
 
 - [x] Environment variables in `.env` (not in code)
 - [x] Service role key server-side only
-- [x] Admin password bcrypt hashed
+- [x] Admin password not stored in plaintext in database
 - [x] CSRF protection on state-changing operations
 - [x] Rate limiting via Redis
 - [x] Security headers in next.config.ts
@@ -321,14 +275,12 @@ These should always be true:
 
 | Version | Date | Changes |
 |---------|------|---------|
-| v4.3 | 2026-01-15 | Added CI/CD automation notes, marked automated sections (2.1, 4.2, 5.1) |
-| v4.3 | 2026-01-14 | Added lint/test commands to Quality Gates (2.1), added pre-commit hooks note |
-| v4.2 | 2026-01-13 | Added post-release documentation section (6.1) to align with global CLAUDE.md |
-| v4.1 | 2026-01-08 | Fixed sequence: pre-deploy docs before deployment, post-deploy finalization after |
+| v4.4 | 2026-01-18 | Restructured for clarity; added visual flow diagram; separated phases |
+| v4.3 | 2026-01-15 | Added CI/CD automation notes, marked automated sections |
+| v4.2 | 2026-01-13 | Added post-release documentation section |
+| v4.1 | 2026-01-08 | Fixed sequence: pre-deploy docs before deployment |
 | v4.0 | 2026-01-08 | Reorganized as Phase 6 execution guide |
-| v3.11 | 2026-01-07 | Updated for Docker/VPS |
-| v2.0 | 2025-12-03 | Initial Vercel deployment |
 
 ---
 
-*Project Goodman v4.3*
+*Project Goodman v4.4*
