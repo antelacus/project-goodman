@@ -104,31 +104,72 @@
 
 #### Task C1: GlitchTip 自托管
 
-**状态**: ⏳ 待办
+**状态**: ✅ 完成
 
-- [ ] 添加 GlitchTip 部署配置（含所需依赖）
-- [ ] 配置持久化存储
-- [ ] 记录部署与访问方式
+- [x] 添加 GlitchTip 部署配置（含所需依赖）
+- [x] 配置持久化存储
+- [x] 记录部署与访问方式
+
+**实施记录**:
+
+```
+状态: ✅ 完成
+开始时间: 2026-01-17 13:05
+完成时间: 2026-01-17 13:25
+变更点:
+- 新增 docker-compose.observability.yml（GlitchTip + Postgres + Redis + migrate/worker）
+- 新增 .env.observability.example（含 GLITCHTIP_ALLOWED_HOSTS）
+- 新增 docs/OBSERVABILITY.md（部署与访问说明）
+备注: docker compose config 验证通过（使用本地 .env.observability 临时副本）
+```
 
 ---
 
 #### Task C2: Uptime Kuma
 
-**状态**: ⏳ 待办
+**状态**: ✅ 完成
 
-- [ ] 添加 Uptime Kuma 容器配置
-- [ ] 配置 prod/staging 健康检查
-- [ ] 告警渠道文档化
+- [x] 添加 Uptime Kuma 容器配置
+- [x] 配置 prod/staging 健康检查
+- [x] 告警渠道文档化
+
+**实施记录**:
+
+```
+状态: ✅ 完成
+开始时间: 2026-01-17 13:30
+完成时间: 2026-01-17 13:40
+变更点:
+- docker-compose.observability.yml 增加 uptime-kuma 服务与持久化卷
+- docs/OBSERVABILITY.md 补充访问地址与监控/告警配置
+备注: 监控项使用 /api/health（prod/staging）
+```
 
 ---
 
 #### Task C3: 错误追踪接入
 
-**状态**: ⏳ 待办
+**状态**: ✅ 完成
 
-- [ ] 仅 server 端接入 GlitchTip DSN
-- [ ] 过滤敏感字段
-- [ ] 与 `requestId` 日志关联
+- [x] 仅 server 端接入 GlitchTip DSN
+- [x] 过滤敏感字段
+- [x] 与 `requestId` 日志关联
+
+**实施记录**:
+
+```
+状态: ✅ 完成
+开始时间: 2026-01-17 13:45
+完成时间: 2026-01-17 14:05
+变更点:
+- 新增 src/lib/observability/error-tracking.ts（server-only 初始化 + sanitize）
+- error-handler 在 5xx 时上报 GlitchTip（含 requestId/route tag）
+- instrumentation 启动时初始化错误追踪
+- 新增 tests/unit/observability 与 tests/unit/security 覆盖
+- vitest 增加 server-only stub alias
+- .env.staging.example 增加 GlitchTip 配置项
+备注: sanitizeEvent 会移除 request/user 并脱敏敏感字段
+```
 
 ---
 
