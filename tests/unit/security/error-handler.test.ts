@@ -1,3 +1,4 @@
+// @vitest-environment node
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 vi.mock('@/lib/observability/error-tracking', () => ({
@@ -12,8 +13,9 @@ describe('createErrorResponse', () => {
     vi.clearAllMocks();
   });
 
-  it('reports server errors with requestId', () => {
+  it('reports server errors with requestId', async () => {
     createErrorResponse(new Error('boom'), 'req_test', 500);
+    await new Promise((resolve) => setTimeout(resolve, 0));
     expect(captureError).toHaveBeenCalledWith(expect.any(Error), {
       requestId: 'req_test',
       route: undefined,
