@@ -93,6 +93,10 @@ tests/                      # Test scripts
 | [docs/PRODUCT_ROADMAP.md](docs/PRODUCT_ROADMAP.md) | Product roadmap, version planning |
 | [docs/TECHNICAL_DEBT.md](docs/TECHNICAL_DEBT.md) | Technical debt, known limitations, gotchas |
 | [docs/DEPLOYMENT_CHECKLIST.md](docs/DEPLOYMENT_CHECKLIST.md) | Deployment checklist |
+| [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) | System architecture, deployment topology, data flows |
+| [docs/SECURITY.md](docs/SECURITY.md) | Security boundaries, key management, disclosure process |
+| [docs/INCIDENT_RUNBOOK.md](docs/INCIDENT_RUNBOOK.md) | Incident response, rollback procedures |
+| [docs/OBSERVABILITY.md](docs/OBSERVABILITY.md) | GlitchTip, Uptime Kuma setup and usage |
 
 ---
 
