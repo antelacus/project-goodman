@@ -336,10 +336,21 @@
 
 #### Task F1: staging 演练记录
 
-**状态**: ⏳ 待办
+**状态**: 🟡 进行中
 
-- [ ] 记录发布、回滚、验证步骤
-- [ ] 归档到文档中
+- [ ] 记录发布、回滚、验证步骤（待实际演练）
+- [x] 创建演练记录模板（docs/templates/staging-release-rehearsal-template.md）
+- [ ] 归档到文档中（完成演练后）
+
+**实施记录**:
+
+```
+状态: 🟡 进行中
+开始时间: 2026-01-18 08:31
+变更点:
+- 新增 docs/templates/staging-release-rehearsal-template.md（演练记录模板）
+备注: 模板已就绪，待执行演练并填写结果后标记完成
+```
 
 ---
 
