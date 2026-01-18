@@ -203,11 +203,26 @@
 
 #### Task D2: E2E 测试
 
-**状态**: ⏳ 待办
+**状态**: ✅ 完成
 
-- [ ] 接入 Playwright
-- [ ] 编写 1-2 条关键路径测试
-- [ ] CI 运行（初期 non-blocking）
+- [x] 接入 Playwright
+- [x] 编写 1-2 条关键路径测试
+- [x] CI 运行（初期 non-blocking）
+
+**实施记录**:
+
+```
+状态: ✅ 完成
+开始时间: 2026-01-18 02:10
+完成时间: 2026-01-18 02:25
+变更点:
+- 新增 Playwright 配置与测试脚本（tests/e2e/landing-to-chat.spec.ts）
+- 增加 playwright.config.ts，E2E 走本地 dev server
+- CI 中加入 Playwright 安装 + E2E（non-blocking）
+测试:
+- npm run test:e2e ✅ (1 passed)
+备注: CI 需要 Playwright 浏览器安装步骤
+```
 
 ---
 
