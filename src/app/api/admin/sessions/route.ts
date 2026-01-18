@@ -14,7 +14,7 @@ import { getGuestRateLimits } from '@/lib/security/guest-rate';
 import { logSecurityEvent } from '@/lib/security/audit-logger';
 import { getClientIP } from '@/lib/security/guest-session';
 import { validateCsrf, createCsrfErrorResponse } from '@/lib/security/csrf';
-import { generateRequestId, createErrorResponse } from '@/lib/security/error-handler';
+import { generateRequestId, createErrorResponse } from '@/lib/security';
 import { SessionTerminateSchema, validateRequest } from '@/lib/validation/api-schemas';
 
 /**

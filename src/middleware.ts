@@ -14,7 +14,7 @@ import {
     shouldBypassRateLimit,
     getRateLimitHeaders,
 } from './lib/security/rate-limiter';
-import { generateRequestId } from './lib/security/error-handler';
+import { generateRequestId } from './lib/security/request-id';
 
 // =============================================================================
 // Middleware
