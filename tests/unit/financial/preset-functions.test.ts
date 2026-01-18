@@ -336,6 +336,39 @@ describe('Composite Analysis', () => {
       expect(result.result.formatted).toContain('总资产周转率 2.00次');
       expect(result.result.formatted).toContain('权益乘数 2.00倍');
     });
+
+    it('should throw error when revenue is zero', () => {
+      expect(() =>
+        executeFunction('dupont_roe', {
+          [M.IncomeStatement.NET_PROFIT]: 100000,
+          [M.IncomeStatement.TOTAL_REVENUE]: 0,
+          [M.BalanceSheet.TOTAL_ASSETS]: 500000,
+          [M.BalanceSheet.TOTAL_OWNERS_EQUITY]: 250000,
+        })
+      ).toThrow('不能为0');
+    });
+
+    it('should throw error when total assets is zero', () => {
+      expect(() =>
+        executeFunction('dupont_roe', {
+          [M.IncomeStatement.NET_PROFIT]: 100000,
+          [M.IncomeStatement.TOTAL_REVENUE]: 1000000,
+          [M.BalanceSheet.TOTAL_ASSETS]: 0,
+          [M.BalanceSheet.TOTAL_OWNERS_EQUITY]: 250000,
+        })
+      ).toThrow('不能为0');
+    });
+
+    it('should throw error when shareholders equity is zero', () => {
+      expect(() =>
+        executeFunction('dupont_roe', {
+          [M.IncomeStatement.NET_PROFIT]: 100000,
+          [M.IncomeStatement.TOTAL_REVENUE]: 1000000,
+          [M.BalanceSheet.TOTAL_ASSETS]: 500000,
+          [M.BalanceSheet.TOTAL_OWNERS_EQUITY]: 0,
+        })
+      ).toThrow('不能为0');
+    });
   });
 });
 
@@ -375,6 +408,38 @@ describe('Input Validation', () => {
         [M.BalanceSheet.TOTAL_CURRENT_LIABILITIES]: 100000,
       })
     ).toThrow('必须是有效的数字');
+  });
+
+  it('should rethrow non-Error values from calculate', () => {
+    const target = presetFunctions.find((func) => func.name === 'current_ratio');
+
+    if (!target) {
+      throw new Error('current_ratio function not found');
+    }
+
+    const originalCalculate = target.calculate;
+    const sentinel = 'non-error';
+
+    target.calculate = () => {
+      throw sentinel;
+    };
+
+    try {
+      let thrown: unknown;
+
+      try {
+        executeFunction('current_ratio', {
+          [M.BalanceSheet.TOTAL_CURRENT_ASSETS]: 200000,
+          [M.BalanceSheet.TOTAL_CURRENT_LIABILITIES]: 100000,
+        });
+      } catch (error) {
+        thrown = error;
+      }
+
+      expect(thrown).toBe(sentinel);
+    } finally {
+      target.calculate = originalCalculate;
+    }
   });
 });
 
