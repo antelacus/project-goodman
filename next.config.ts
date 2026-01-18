@@ -48,6 +48,8 @@ const securityHeaders = [
 
 const nextConfig: NextConfig = {
   output: 'standalone',
+  // Externalize @sentry/node to prevent webpack bundling Node.js-specific modules
+  serverExternalPackages: ['@sentry/node', '@sentry/node-core'],
   // V3.10: instrumentation.ts is used for cleanup scheduler and admin init
   // Note: In Next.js 15.3+, instrumentation works by default (no experimental flag needed)
   async headers() {
