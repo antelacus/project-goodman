@@ -1,7 +1,7 @@
 # Project Goodman - Deployment Checklist
 
-**Version**: v4.3
-**Last Updated**: 2026-01-17
+**Version**: v4.4
+**Last Updated**: 2026-01-18
 **Target Platform**: Docker on VPS + Supabase Cloud
 
 > This checklist covers the complete Phase 6 deployment process.
@@ -14,6 +14,7 @@
 | Workflow | Trigger | What It Does |
 |----------|---------|--------------|
 | **CI** (`.github/workflows/ci.yml`) | Push to `development`, PR to `main` | Lint, type check, test, security audit, build |
+| **Deploy Staging** (`.github/workflows/deploy-staging.yml`) | Push to `development` | SSH deploy (staging), health check, smoke test |
 | **Deploy** (`.github/workflows/deploy.yml`) | Push to `main` | SSH deploy, docker rebuild, health check |
 
 Sections marked with ✅ **Automated** are now handled by CI/CD.
@@ -23,11 +24,18 @@ Sections marked with ✅ **Automated** are now handled by CI/CD.
 ## Quick Reference
 
 ```bash
-# Deploy
+# Deploy (prod)
 cd $GOODMAN_PROD_DIR && docker compose up -d --build goodman
 
-# Verify
+# Verify (prod)
 curl http://localhost:3000/api/health
+
+# Deploy (staging)
+cd $GOODMAN_STAGING_DIR/project-goodman && \
+  docker compose -f docker-compose.staging.yml up -d --build
+
+# Verify (staging)
+curl http://localhost:3001/api/health
 
 # Logs
 docker logs -f goodman
@@ -66,6 +74,13 @@ Verify in `$GOODMAN_PROD_DIR/.env`:
 | Types in sync | `npx supabase gen types typescript` |
 | Security advisors | Supabase dashboard → Database → Advisors |
 
+### 1.4 Staging Verification (Pre-Prod) — ✅ Automated
+
+- [ ] `deploy-staging` workflow succeeded on `development`
+- [ ] Health check passed: `http://localhost:3001/api/health`
+- [ ] Smoke tests passed (health/sessions/auth/reports)
+
+
 ---
 
 ## 2. Quality Gates
@@ -77,9 +92,12 @@ Verify in `$GOODMAN_PROD_DIR/.env`:
 
 ```bash
 # Run locally if needed:
-npm run lint   # Must return 0 errors (enforced by pre-commit hooks)
-npm run test   # Must pass (Vitest)
-npm run build  # Must complete with 0 errors (includes ESLint check)
+npm run lint         # Must return 0 errors (enforced by pre-commit hooks)
+npm run test         # Must pass (Vitest)
+npm run test:coverage # Coverage report (baseline gate)
+npm run build        # Must complete with 0 errors (includes ESLint check)
+# Optional (non-blocking in CI):
+# npm run test:e2e
 ```
 
 > **Note**: Pre-commit hooks (Husky + lint-staged) automatically run ESLint and Prettier on staged files. If commits are failing, run `npm run lint -- --fix` to auto-fix issues.
@@ -96,6 +114,13 @@ npm run build  # Must complete with 0 errors (includes ESLint check)
 - [ ] New code follows project conventions
 - [ ] No obvious bugs or edge case issues
 - [ ] Performance: no unnecessary re-renders, API calls, or DB queries
+
+### 2.4 Observability Baseline
+
+- [ ] GlitchTip DSN configured in env
+- [ ] GlitchTip receives server errors with requestId tags
+- [ ] Uptime Kuma monitors prod/staging `/api/health`
+- [ ] Alert channels documented in `docs/OBSERVABILITY.md`
 
 ---
 
@@ -118,6 +143,24 @@ npm run build  # Must complete with 0 errors (includes ESLint check)
 ---
 
 ## 4. Deployment Execution
+
+### 4.0 Staging Deployment (Pre-Prod) — ✅ Automated
+
+> **CI/CD**: Staging deployment runs on push to `development`.
+> Workflow handles: git pull → docker compose up → health check → smoke test.
+
+Manual commands (only if needed):
+
+```bash
+cd $GOODMAN_STAGING_DIR/project-goodman
+
+docker compose -f docker-compose.staging.yml up -d --build
+curl http://localhost:3001/api/health
+
+SMOKE_BASE_URL=http://localhost:3001 \
+SMOKE_ENV_FILE=$GOODMAN_STAGING_DIR/.env.staging \
+node scripts/smoke-test-staging.js
+```
 
 ### 4.1 Infrastructure
 
@@ -172,7 +215,7 @@ docker ps --filter "name=goodman"
 ```bash
 # Manual verification (optional):
 curl http://localhost:3000/api/health
-# Expected: {"status":"healthy","version":"4.3.x",...}
+# Expected: {"status":"healthy","version":"4.4.x",...}
 ```
 
 ### 5.2 Functional Testing
