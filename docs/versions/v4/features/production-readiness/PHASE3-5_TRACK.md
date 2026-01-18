@@ -177,12 +177,27 @@
 
 #### Task D1: 集成测试
 
-**状态**: ⏳ 待办
+**状态**: ✅ 完成
 
-- [ ] 增加集成测试基础设施
-- [ ] 覆盖 `/api/chat` 或 `/api/chat/stream`
-- [ ] 覆盖 `/api/reports/generate`
-- [ ] 覆盖 `/api/documents/upload-temp`
+- [x] 增加集成测试基础设施
+- [x] 覆盖 `/api/chat` 或 `/api/chat/stream`
+- [x] 覆盖 `/api/reports/generate`
+- [x] 覆盖 `/api/documents/upload-temp`
+
+**实施记录**:
+
+```
+状态: ✅ 完成
+开始时间: 2026-01-18 00:40
+完成时间: 2026-01-18 00:59
+变更点:
+- 新增 tests/integration/api 下的 API 集成测试（chat-stream/reports-generate/upload-temp）
+- 使用模块 mock 隔离外部依赖（安全模块、工作流、OpenAI、Supabase）
+- SSE 流测试采用流读取方式，验证 complete/report 事件输出
+验证:
+- npm run test -- --run tests/integration/api/chat-stream.test.ts tests/integration/api/reports-generate.test.ts tests/integration/api/upload-temp.test.ts
+备注: 集成测试默认使用 Node 环境，避免 JSDOM 对 ReadableStream 的限制
+```
 
 ---
 
