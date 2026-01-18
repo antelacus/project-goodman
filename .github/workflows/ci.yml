@@ -29,6 +29,18 @@ jobs:
       - name: Test
         run: npm run test -- --run
 
+      - name: Install Playwright browsers
+        run: npx playwright install
+
+      - name: E2E (Playwright, non-blocking)
+        run: npm run test:e2e
+        continue-on-error: true
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL || 'https://placeholder.supabase.co' }}
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'placeholder-anon-key' }}
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY || 'sk-placeholder-for-ci-build' }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY || 'placeholder-service-role-key' }}
+
       - name: Security audit
         run: npm audit --audit-level=high
         continue-on-error: true  # Don't fail on known unfixable vulnerabilities
