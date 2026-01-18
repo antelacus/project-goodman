@@ -46,12 +46,18 @@
 
 ## Deployment
 
-**Production**: Docker on VPS
+**Production**: Docker on VPS (port 3000)
 
 - `goodman` container (Next.js app)
 - `goodman-redis` container (Redis)
 - nginx reverse proxy + SSL
 - `docker-compose.yml` in `$GOODMAN_PROD_DIR/`
+
+**Staging**: Docker on same VPS (port 3001)
+
+- Auto-deploys when pushing to `development` branch
+- Runs smoke tests (health, auth, sessions, reports)
+- Directory: `$GOODMAN_STAGING_DIR/`
 
 **Development**: `npm run dev` (local Node.js with hot reload)
 

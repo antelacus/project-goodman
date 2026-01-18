@@ -21,15 +21,16 @@ See global guidance file for details.
 |-------|-------------|--------|
 | **Phase 1** | `PHASE1_PRD.md` or `_REQ.md` | Requirements → pause for approval |
 | **Phase 2** | `PHASE2_DESIGN.md` | Design → create TRACK → pause for approval |
-| **Phase 3-5** | `PHASE3-5_TRACK.md` | Implement → document (per task) → test(all tasks)|
-| **Phase 6** | Release | Quality gates → deploy → update docs → tag |
+| **Phase 3-5** | `PHASE3-5_TRACK.md` | Implement → document (per task) → test (all tasks) |
+| **Phase 6** | Release | Verify CI + staging → merge to main → tag |
 
 ## Worktrees & Task Execution
 
 - **Default**: work directly on `development`; do not create worktrees unless explicitly requested.
 - **Task order**: execute sequentially on `development`; commit after each task and update the track doc.
+- **On push**: CI runs automatically (lint, test, build); staging auto-deploys with smoke tests.
 - **Dependencies**: keep dependent tasks on `development`. Only use worktrees/feature branches when the user explicitly requests isolation for parallel work.
-- **Finish**: merge `development` into `main` per release. If a worktree is explicitly requested, merge the feature branch back into `development` and remove the worktree.
+- **Finish**: verify CI + staging pass → merge `development` into `main` → tag release.
 
 ## Patch Version (v*.*.*)
 
