@@ -411,11 +411,27 @@
 
 ## Phase 5 测试清单（全部任务完成后）
 
-- [ ] `npm run lint` 通过
-- [ ] `npm run build` 通过
-- [ ] `npm run test -- --run` 通过
-- [ ] `npm run test:coverage` 生成报告
-- [ ] 集成测试通过
-- [ ] E2E 测试通过
-- [ ] staging 冒烟测试通过
-- [ ] 更新本 TRACK 测试记录
+- [x] `npm run lint` 通过
+- [x] `npm run build` 通过
+- [x] `npm run test -- --run` 通过
+- [x] `npm run test:coverage` 生成报告
+- [x] 集成测试通过
+- [x] E2E 测试通过（安装 Playwright 浏览器后）
+- [x] staging 冒烟测试通过
+- [x] 更新本 TRACK 测试记录
+
+**测试记录**:
+
+```
+状态: ✅ 全部完成
+时间: 2026-01-19 06:21（最后更新: 2026-01-19 09:35）
+环境: 本地 sandbox（E2E 已安装 Playwright 浏览器）
+结果:
+- npm run lint ✅
+- npm run build ✅
+- npm run test -- --run ✅ (9 files, 88 tests)
+- npm run test:coverage ✅ (Lines 57.03%, Statements 56.49%, Branches 40.47%, Functions 62.37%)
+- 集成测试 ✅（chat-stream/reports-generate/upload-temp）
+- E2E ✅（tests/e2e/landing-to-chat.spec.ts）
+- staging 冒烟测试 ✅（health/login/sessions/reports 全部通过）
+```
