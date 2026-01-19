@@ -313,7 +313,7 @@ export function useReportGeneration(): UseReportGenerationReturn {
     } finally {
       setIsSaving(false);
     }
-  }, [report, fetchCsrfToken]);
+  }, [report, fetchCsrfToken, generationTimeMs]);
 
   /**
    * Reset all state to initial values
