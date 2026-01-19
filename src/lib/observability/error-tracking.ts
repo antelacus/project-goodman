@@ -8,6 +8,12 @@ type ErrorContext = {
   tags?: Record<string, string>;
 };
 
+type SpanContext = {
+  name: string;
+  op?: string;
+  attributes?: Record<string, string | number>;
+};
+
 const SENSITIVE_PATTERNS = [
   /api[_-]?key/i,
   /secret/i,
@@ -82,6 +88,15 @@ function isServerRuntime(): boolean {
   return typeof window === 'undefined' && process.env.NEXT_RUNTIME !== 'edge';
 }
 
+export function parseTraceSampleRate(value?: string): number {
+  if (!value) return 0;
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed)) return 0;
+  if (parsed <= 0) return 0;
+  if (parsed >= 1) return 1;
+  return parsed;
+}
+
 export async function initErrorTracking(): Promise<void> {
   if (initialized || !isServerRuntime()) return;
   const dsn = process.env.SENTRY_DSN || process.env.GLITCHTIP_DSN;
@@ -98,7 +113,7 @@ export async function initErrorTracking(): Promise<void> {
         process.env.SENTRY_ENV ||
         process.env.GLITCHTIP_ENV ||
         process.env.NODE_ENV,
-      tracesSampleRate: 0,
+      tracesSampleRate: parseTraceSampleRate(process.env.SENTRY_TRACES_SAMPLE_RATE),
       sendDefaultPii: false,
       beforeSend: sanitizeEvent,
     });
@@ -129,4 +144,31 @@ export function captureError(error: unknown, context?: ErrorContext): void {
   } catch {
     // Silently fail if Sentry not available
   }
+}
+
+export async function withSentrySpan<T>(
+  context: SpanContext,
+  callback: () => Promise<T> | T
+): Promise<T> {
+  if (!enabled || !isServerRuntime()) return await callback();
+
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const Sentry = require('@sentry/node');
+    if (typeof Sentry.startSpan === 'function') {
+      return await Sentry.startSpan(
+        {
+          name: context.name,
+          op: context.op,
+          attributes: context.attributes,
+          forceTransaction: true,
+        },
+        () => callback()
+      );
+    }
+  } catch {
+    // Ignore Sentry failures, return callback result
+  }
+
+  return await callback();
 }

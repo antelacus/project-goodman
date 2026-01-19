@@ -11,7 +11,7 @@
 
 ---
 
-## Sentry（错误追踪）
+## Sentry（错误追踪 + 性能）
 
 ### 1) 创建项目并获取 DSN
 
@@ -25,6 +25,7 @@
 ```
 SENTRY_DSN="https://<public-key>@oXXXX.ingest.sentry.io/XXXX"
 SENTRY_ENV="production"
+SENTRY_TRACES_SAMPLE_RATE="0.1" # 0-1 之间，默认 0
 ```
 
 > 兼容说明：代码仍支持 `GLITCHTIP_DSN` 与 `GLITCHTIP_ENV`（历史变量），但推荐使用 `SENTRY_*`。
@@ -41,6 +42,38 @@ docker compose up -d --build
 
 - 触发一次 5xx 错误并在 Sentry 中确认事件到达
 - 或使用 Sentry 的 “Send Test Event” 功能
+
+---
+
+## Sentry Performance（性能阈值与告警）
+
+### 1) 事务范围（关键 API）
+
+统一事务名称（Server-only）：
+
+- `api.chat.stream`
+- `api.reports.generate`
+- `api.documents.upload-temp`
+- `api.quick-actions.extract`
+
+> 页面级性能阈值由 Lighthouse CI 负责（见 CI 门禁与基线），不依赖 Sentry 页面事务。
+
+### 2) 初始性能阈值（可随基线收敛）
+
+| 事务 | 阈值（P95） | 失败率阈值 | 说明 |
+|------|------------|------------|------|
+| api.chat.stream | > 30s | > 2% | SSE 流式响应，关注整体延迟 |
+| api.reports.generate | > 60s | > 2% | 报告生成可较长，先宽松 |
+| api.documents.upload-temp | > 10s | > 2% | 上传 + 解析 |
+| api.quick-actions.extract | > 20s | > 2% | OCR/抽取流程 |
+
+> 以上为初始阈值，基于上线后 1-2 周数据再收敛。
+
+### 3) 告警策略（记录）
+
+- **告警渠道**：Sentry Email（绑定邮箱）+ 团队 IM（如企业微信/钉钉/Slack）
+- **责任人**：项目负责人（Project Lead）
+- **触发条件**：P95 超阈值或失败率超阈值（5-10 分钟窗口）
 
 ---
 

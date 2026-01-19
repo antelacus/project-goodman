@@ -33,6 +33,7 @@ import {
   uploadFileToStorage,
   deleteFileFromStorage
 } from "@/lib/documents/storage";
+import { withSentrySpan } from "@/lib/observability/error-tracking";
 
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
@@ -176,235 +177,246 @@ async function extractTextFromFile(
 }
 
 export async function POST(req: NextRequest) {
-  const requestId = req.headers.get('x-request-id') || generateRequestId();
+  const spanContext = {
+    name: "api.documents.upload-temp",
+    op: "http.server",
+    attributes: {
+      "http.route": "/api/documents/upload-temp",
+      "http.method": "POST",
+    },
+  };
 
-  try {
-    // V3.10: Ensure session exists (creates guest session if needed)
-    const sessionResult = await ensureSession(req);
-    const { session, isNewSession } = sessionResult;
+  return withSentrySpan(spanContext, async () => {
+    const requestId = req.headers.get('x-request-id') || generateRequestId();
 
-    // V3.10: Check rate limit for guest users
-    if (session.role === 'guest') {
-      const rateCheck = await checkGuestRate(session.sessionId, 'upload');
-      if (!rateCheck.allowed) {
-        const response = NextResponse.json(
-          {
-            error: '已达到文件上传限制，请1小时后重试',
-            resetsAt: rateCheck.resetsAt,
-            remaining: rateCheck.remaining,
-            total: rateCheck.total,
-          },
-          { status: 429 }
-        );
-
-        if (isNewSession && sessionResult.setCookieHeader) {
-          response.cookies.set(
-            sessionResult.setCookieHeader.name,
-            sessionResult.setCookieHeader.value,
-            sessionResult.setCookieHeader.options
-          );
-        }
-
-        return response;
-      }
-    }
-
-    const body = await req.json();
-
-    // Validate request body structure with Zod
-    const validationResult = validateRequest(TempUploadSchema, body);
-    if (!validationResult.success) {
-      return NextResponse.json(
-        { error: validationResult.error },
-        { status: 400 }
-      );
-    }
-
-    const { fileData, fileName, fileType } = validationResult.data;
-
-    // Validate file size (base64 is ~1.37x larger than original)
-    const estimatedSize = (fileData.length * 3) / 4;
-    if (estimatedSize > MAX_FILE_SIZE) {
-      return NextResponse.json(
-        { error: "文件大小超过2MB限制" },
-        { status: 400 }
-      );
-    }
-
-    // V3.10: Increment rate limit for guest after validation passes
-    if (session.role === 'guest') {
-      await incrementGuestRate(session.sessionId, 'upload');
-    }
-
-    console.log(`[upload-temp] Processing file: ${fileName}, type: ${fileType}, session: ${session.role}`);
-
-    // Step 1: Extract text from file
-    const extractedText = await extractTextFromFile(fileData, fileName, fileType || '');
-
-    if (!extractedText || extractedText.trim().length < 10) {
-      return NextResponse.json(
-        { error: "无法从文件中提取有效文本内容" },
-        { status: 400 }
-      );
-    }
-
-    console.log(`[upload-temp] Extracted ${extractedText.length} chars from ${fileName}`);
-
-    // Step 2: Parse document structure
-    const parseResult = await parseDocumentSections(extractedText);
-    const chunks = createSectionAwareChunks(extractedText, parseResult.sections, 1000);
-
-    console.log(`[upload-temp] Created ${chunks.length} chunks`);
-
-    // Step 3: Generate embeddings
-    const embeddings: number[][] = [];
-    for (const chunk of chunks) {
-      const embeddingResponse = await openai.embeddings.create({
-        model: "text-embedding-3-small",
-        input: chunk.content,
-        encoding_format: "float",
-      });
-      embeddings.push(embeddingResponse.data[0].embedding);
-    }
-
-    // Step 4: Store in database
-    const supabase = createServerSupabaseClient();
-    const documentId = crypto.randomUUID();
-
-    // V3.10: Calculate ownership based on session role
-    const ownerId = session.role === 'guest' ? session.sessionId : session.userId;
-    const ownerType = session.role;
-    // Guest documents expire in 1 hour
-    const expiresAt = session.role === 'guest'
-      ? new Date(Date.now() + 60 * 60 * 1000).toISOString()
-      : null;
-
-    // V3.11: Upload file to storage for data extraction support
-    let fileUrl: string | null = null;
     try {
-      console.log(`[upload-temp] Uploading original file to storage...`);
-      // We pass the base64 data directly to the upload utility
-      // Note: uploadFileToStorage expects base64 without the data: scheme prefix if it's raw content,
-      // but here we already have raw base64 data in fileData (from req.json)
-      fileUrl = await uploadFileToStorage(documentId, fileName, fileData);
-      console.log(`[upload-temp] File uploaded: ${fileUrl}`);
-    } catch (storageError) {
-      console.error(`[upload-temp] Storage upload failed:`, storageError);
-      // Non-fatal? If storage fails, extract API won't work.
-      // We should probably fail the whole request since the user might expect extraction to work.
-      throw new Error(`文件存储失败: ${storageError instanceof Error ? storageError.message : String(storageError)}`);
-    }
+      // V3.10: Ensure session exists (creates guest session if needed)
+      const sessionResult = await ensureSession(req);
+      const { session, isNewSession } = sessionResult;
 
-    // Create document record with proper typing
-    const documentInsert: InsertTables<'documents'> = {
-      id: documentId,
-      name: fileName,
-      doc_category: 'business',
-      doc_type: (fileType || '').includes('pdf') ? 'pdf' :
-        (fileType || '').includes('image') ? 'image' :
-          (fileType || '').includes('excel') || (fileType || '').includes('spreadsheet') ? 'excel' : 'txt',
-      status: 'ready',
-      size: estimatedSize,
-      summary: {
-        summary: extractedText.substring(0, 500),
-        document_type: 'temp_upload',
-        key_metrics: [],
-        time_period: '',
-        structure_metrics: {
+      // V3.10: Check rate limit for guest users
+      if (session.role === 'guest') {
+        const rateCheck = await checkGuestRate(session.sessionId, 'upload');
+        if (!rateCheck.allowed) {
+          const response = NextResponse.json(
+            {
+              error: '已达到文件上传限制，请1小时后重试',
+              resetsAt: rateCheck.resetsAt,
+              remaining: rateCheck.remaining,
+              total: rateCheck.total,
+            },
+            { status: 429 }
+          );
+
+          if (isNewSession && sessionResult.setCookieHeader) {
+            response.cookies.set(
+              sessionResult.setCookieHeader.name,
+              sessionResult.setCookieHeader.value,
+              sessionResult.setCookieHeader.options
+            );
+          }
+
+          return response;
+        }
+      }
+
+      const body = await req.json();
+
+      // Validate request body structure with Zod
+      const validationResult = validateRequest(TempUploadSchema, body);
+      if (!validationResult.success) {
+        return NextResponse.json(
+          { error: validationResult.error },
+          { status: 400 }
+        );
+      }
+
+      const { fileData, fileName, fileType } = validationResult.data;
+
+      // Validate file size (base64 is ~1.37x larger than original)
+      const estimatedSize = (fileData.length * 3) / 4;
+      if (estimatedSize > MAX_FILE_SIZE) {
+        return NextResponse.json(
+          { error: "文件大小超过2MB限制" },
+          { status: 400 }
+        );
+      }
+
+      // V3.10: Increment rate limit for guest after validation passes
+      if (session.role === 'guest') {
+        await incrementGuestRate(session.sessionId, 'upload');
+      }
+
+      console.log(`[upload-temp] Processing file: ${fileName}, type: ${fileType}, session: ${session.role}`);
+
+      // Step 1: Extract text from file
+      const extractedText = await extractTextFromFile(fileData, fileName, fileType || '');
+
+      if (!extractedText || extractedText.trim().length < 10) {
+        return NextResponse.json(
+          { error: "无法从文件中提取有效文本内容" },
+          { status: 400 }
+        );
+      }
+
+      console.log(`[upload-temp] Extracted ${extractedText.length} chars from ${fileName}`);
+
+      // Step 2: Parse document structure
+      const parseResult = await parseDocumentSections(extractedText);
+      const chunks = createSectionAwareChunks(extractedText, parseResult.sections, 1000);
+
+      console.log(`[upload-temp] Created ${chunks.length} chunks`);
+
+      // Step 3: Generate embeddings
+      const embeddings: number[][] = [];
+      for (const chunk of chunks) {
+        const embeddingResponse = await openai.embeddings.create({
+          model: "text-embedding-3-small",
+          input: chunk.content,
+          encoding_format: "float",
+        });
+        embeddings.push(embeddingResponse.data[0].embedding);
+      }
+
+      // Step 4: Store in database
+      const supabase = createServerSupabaseClient();
+      const documentId = crypto.randomUUID();
+
+      // V3.10: Calculate ownership based on session role
+      const ownerId = session.role === 'guest' ? session.sessionId : session.userId;
+      const ownerType = session.role;
+      // Guest documents expire in 1 hour
+      const expiresAt = session.role === 'guest'
+        ? new Date(Date.now() + 60 * 60 * 1000).toISOString()
+        : null;
+
+      // V3.11: Upload file to storage for data extraction support
+      let fileUrl: string | null = null;
+      try {
+        console.log(`[upload-temp] Uploading original file to storage...`);
+        // We pass the base64 data directly to the upload utility
+        // Note: uploadFileToStorage expects base64 without the data: scheme prefix if it's raw content,
+        // but here we already have raw base64 data in fileData (from req.json)
+        fileUrl = await uploadFileToStorage(documentId, fileName, fileData);
+        console.log(`[upload-temp] File uploaded: ${fileUrl}`);
+      } catch (storageError) {
+        console.error(`[upload-temp] Storage upload failed:`, storageError);
+        // Non-fatal? If storage fails, extract API won't work.
+        // We should probably fail the whole request since the user might expect extraction to work.
+        throw new Error(`文件存储失败: ${storageError instanceof Error ? storageError.message : String(storageError)}`);
+      }
+
+      // Create document record with proper typing
+      const documentInsert: InsertTables<'documents'> = {
+        id: documentId,
+        name: fileName,
+        doc_category: 'business',
+        doc_type: (fileType || '').includes('pdf') ? 'pdf' :
+          (fileType || '').includes('image') ? 'image' :
+            (fileType || '').includes('excel') || (fileType || '').includes('spreadsheet') ? 'excel' : 'txt',
+        status: 'ready',
+        size: estimatedSize,
+        summary: {
+          summary: extractedText.substring(0, 500),
+          document_type: 'temp_upload',
+          key_metrics: [],
+          time_period: '',
+          structure_metrics: {
+            quality: parseResult.quality,
+            sections: parseResult.sections.length
+          }
+        },
+        section_structure: {
+          hasToc: parseResult.hasToc,
           quality: parseResult.quality,
-          sections: parseResult.sections.length
+          sectionCount: parseResult.sections.length,
+          sections: parseResult.sections.slice(0, 20).map(s => ({ title: s.title, level: s.level }))
+        },
+        structure_quality: parseResult.quality,
+        owner_id: ownerId,
+        owner_type: ownerType,
+        expires_at: expiresAt,
+        file_url: fileUrl,
+      };
+
+      const { error: docError } = await supabase
+        .from('documents')
+        .insert(documentInsert);
+
+      if (docError) {
+        console.error('[upload-temp] Document insert error:', docError);
+        // V3.11: Cleanup uploaded file if DB insert fails
+        if (fileUrl) {
+          try {
+            await deleteFileFromStorage(fileUrl);
+          } catch (cleanupError) {
+            console.error('[upload-temp] Failed to cleanup file after DB error:', cleanupError);
+          }
         }
-      },
-      section_structure: {
-        hasToc: parseResult.hasToc,
-        quality: parseResult.quality,
-        sectionCount: parseResult.sections.length,
-        sections: parseResult.sections.slice(0, 20).map(s => ({ title: s.title, level: s.level }))
-      },
-      structure_quality: parseResult.quality,
-      owner_id: ownerId,
-      owner_type: ownerType,
-      expires_at: expiresAt,
-      file_url: fileUrl,
-    };
+        throw new Error(`数据库存储失败: ${docError.message}`);
+      }
 
-    const { error: docError } = await supabase
-      .from('documents')
-      .insert(documentInsert);
+      // Create chunk records with proper typing
+      const chunkRecords: InsertTables<'document_chunks'>[] = chunks.map((chunk, index) => ({
+        id: crypto.randomUUID(),
+        document_id: documentId,
+        chunk_index: index,
+        content: chunk.content,
+        embedding: JSON.stringify(embeddings[index]),
+        section_title: chunk.sectionTitle || null,
+        section_level: chunk.sectionLevel || 0,
+        section_path: chunk.sectionPath || null,
+      }));
 
-    if (docError) {
-      console.error('[upload-temp] Document insert error:', docError);
-      // V3.11: Cleanup uploaded file if DB insert fails
-      if (fileUrl) {
-        try {
-          await deleteFileFromStorage(fileUrl);
-        } catch (cleanupError) {
-          console.error('[upload-temp] Failed to cleanup file after DB error:', cleanupError);
+      // Insert chunks in batches
+      const BATCH_SIZE = 50;
+      for (let i = 0; i < chunkRecords.length; i += BATCH_SIZE) {
+        const batch = chunkRecords.slice(i, i + BATCH_SIZE);
+        const { error: chunksError } = await supabase
+          .from('document_chunks')
+          .insert(batch);
+
+        if (chunksError) {
+          // Rollback document
+          await supabase.from('documents').delete().eq('id', documentId);
+          throw new Error(`向量存储失败: ${chunksError.message}`);
         }
       }
-      throw new Error(`数据库存储失败: ${docError.message}`);
-    }
 
-    // Create chunk records with proper typing
-    const chunkRecords: InsertTables<'document_chunks'>[] = chunks.map((chunk, index) => ({
-      id: crypto.randomUUID(),
-      document_id: documentId,
-      chunk_index: index,
-      content: chunk.content,
-      embedding: JSON.stringify(embeddings[index]),
-      section_title: chunk.sectionTitle || null,
-      section_level: chunk.sectionLevel || 0,
-      section_path: chunk.sectionPath || null,
-    }));
+      console.log(`[upload-temp] Successfully stored document ${documentId} with ${chunks.length} chunks`);
 
-    // Insert chunks in batches
-    const BATCH_SIZE = 50;
-    for (let i = 0; i < chunkRecords.length; i += BATCH_SIZE) {
-      const batch = chunkRecords.slice(i, i + BATCH_SIZE);
-      const { error: chunksError } = await supabase
-        .from('document_chunks')
-        .insert(batch);
+      // Return response
+      const response = NextResponse.json({
+        success: true,
+        documentId,
+        textPreview: extractedText.substring(0, 300) + (extractedText.length > 300 ? '...' : ''),
+        structureAnalysis: {
+          quality: parseResult.quality,
+          hasToc: parseResult.hasToc,
+          sectionCount: parseResult.sections.length,
+          chunkCount: chunks.length,
+          suggestions: parseResult.quality === 'basic'
+            ? ['文档结构较简单，建议添加标题和分节以提高检索效果']
+            : []
+        },
+        // V3.10: Include expiration info for guest documents
+        ...(expiresAt && { expiresAt: new Date(expiresAt).getTime() })
+      });
 
-      if (chunksError) {
-        // Rollback document
-        await supabase.from('documents').delete().eq('id', documentId);
-        throw new Error(`向量存储失败: ${chunksError.message}`);
+      // V3.10: Set session cookie for new guests
+      if (isNewSession && sessionResult.setCookieHeader) {
+        response.cookies.set(
+          sessionResult.setCookieHeader.name,
+          sessionResult.setCookieHeader.value,
+          sessionResult.setCookieHeader.options
+        );
       }
+
+      return response;
+
+    } catch (error: unknown) {
+      console.error("[upload-temp] Error:", error);
+      return createErrorResponse(error, requestId, 500);
     }
-
-    console.log(`[upload-temp] Successfully stored document ${documentId} with ${chunks.length} chunks`);
-
-    // Return response
-    const response = NextResponse.json({
-      success: true,
-      documentId,
-      textPreview: extractedText.substring(0, 300) + (extractedText.length > 300 ? '...' : ''),
-      structureAnalysis: {
-        quality: parseResult.quality,
-        hasToc: parseResult.hasToc,
-        sectionCount: parseResult.sections.length,
-        chunkCount: chunks.length,
-        suggestions: parseResult.quality === 'basic'
-          ? ['文档结构较简单，建议添加标题和分节以提高检索效果']
-          : []
-      },
-      // V3.10: Include expiration info for guest documents
-      ...(expiresAt && { expiresAt: new Date(expiresAt).getTime() })
-    });
-
-    // V3.10: Set session cookie for new guests
-    if (isNewSession && sessionResult.setCookieHeader) {
-      response.cookies.set(
-        sessionResult.setCookieHeader.name,
-        sessionResult.setCookieHeader.value,
-        sessionResult.setCookieHeader.options
-      );
-    }
-
-    return response;
-
-  } catch (error: unknown) {
-    console.error("[upload-temp] Error:", error);
-    return createErrorResponse(error, requestId, 500);
-  }
+  });
 }

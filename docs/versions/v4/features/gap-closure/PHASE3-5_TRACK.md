@@ -17,14 +17,38 @@
 
 #### Task A1: 启用 Sentry Performance
 
-- [ ] 在 `src/lib/observability/error-tracking.ts` 配置可调 `tracesSampleRate`
-- [ ] 为关键 API 统一事务命名（`api.chat.stream` 等）
-- [ ] 更新 `.env.example`（SENTRY_TRACES_SAMPLE_RATE）
+- [x] 在 `src/lib/observability/error-tracking.ts` 配置可调 `tracesSampleRate`
+- [x] 为关键 API 统一事务命名（`api.chat.stream` 等）
+- [x] 更新 `.env.example`（SENTRY_TRACES_SAMPLE_RATE）
+
+**实施记录**:
+
+```
+状态: ✅ 完成
+开始时间: 2026-01-19 10:05
+完成时间: 2026-01-19 10:35
+变更点:
+- 新增 SENTRY_TRACES_SAMPLE_RATE 解析与 span helper
+- 关键 API 事务命名：chat/report/upload/extract
+- .env.example 增加 traces sample rate 配置
+测试: npm test -- --run tests/unit/observability/error-tracking.test.ts
+```
 
 #### Task A2: 告警策略文档化
 
-- [ ] 更新 `docs/OBSERVABILITY.md`（阈值/通知渠道/责任人）
-- [ ] 明确 API 与页面范围（API 事务 + Lighthouse 页面基线）
+- [x] 更新 `docs/OBSERVABILITY.md`（阈值/通知渠道/责任人）
+- [x] 明确 API 与页面范围（API 事务 + Lighthouse 页面基线）
+
+**实施记录**:
+
+```
+状态: ✅ 完成
+开始时间: 2026-01-19 10:36
+完成时间: 2026-01-19 10:45
+变更点:
+- docs/OBSERVABILITY.md 增加性能阈值、告警渠道与责任人
+- 明确 API 事务范围与 Lighthouse 页面基线范围
+```
 
 ---
 
