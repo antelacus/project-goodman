@@ -20,6 +20,26 @@
 
 ---
 
+## [4.4.0] - 2026-01-19
+
+### 新增
+
+- **Staging 环境与自动化验证**: `development` 推送自动部署 staging，包含健康检查与冒烟测试（health/auth/sessions/reports）
+- **测试体系补齐**: 新增关键 API 集成测试、Playwright E2E 核心流程与覆盖率基线报告
+- **可观测性**: 接入 Sentry 错误追踪（仅 server 端）与 UptimeRobot 健康检查监控
+- **运维文档**: 新增 ARCHITECTURE/SECURITY/INCIDENT_RUNBOOK，并更新部署清单
+
+### 变更
+
+- **覆盖率门槛**: CI 覆盖率阈值调整为与当前基线一致（Lines 56 / Statements 56 / Branches 40 / Functions 62）
+- **可观测性方案**: 从自托管 GlitchTip/Uptime Kuma 切换为 SaaS（Sentry + UptimeRobot）
+
+### 修复
+
+- **Edge 构建兼容性**: 拆分 request-id 生成逻辑，避免 edge middleware 引入 `@sentry/node` 依赖导致构建失败
+
+---
+
 ## [4.3.0] - 2026-01-17
 
 ### 新增
