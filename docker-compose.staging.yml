@@ -13,7 +13,7 @@ services:
     ports:
       - "127.0.0.1:3001:3000"
     env_file:
-      - .env.staging
+      - ../.env.staging
     environment:
       - NODE_ENV=production
       - REDIS_HOST=goodman-redis-staging
@@ -28,7 +28,7 @@ services:
     container_name: goodman-redis-staging
     restart: unless-stopped
     env_file:
-      - .env.staging
+      - ../.env.staging
     command: ["sh", "-c", "redis-server --requirepass \"$REDIS_PASSWORD\""]
     volumes:
       - goodman-redis-staging-data:/data
