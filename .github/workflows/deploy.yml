@@ -17,6 +17,8 @@ jobs:
           script: |
             cd $GOODMAN_PROD_DIR
             git pull origin main
+            # Export env vars for docker compose build args
+            set -a && source $GOODMAN_PROD_DIR/.env && set +a
             docker compose up -d --build
             sleep 15
             curl -f http://localhost:3000/api/health || exit 1

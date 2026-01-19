@@ -340,25 +340,22 @@
 
 **状态**: ✅ 完成
 
+- [x] 创建演练记录（docs/manual-test-log/2026-01-19-staging-release-rehearsal.md）
+- [x] 按照步骤完成演练
 - [x] 记录发布、回滚、验证步骤（待实际演练）
-- [x] 创建演练记录模板（docs/templates/staging-release-rehearsal-template.md）
-- [x] 归档到文档中（完成演练后）
 
 **实施记录**:
 
 ```
 状态: ✅ 完成
-开始时间: 2026-01-18 08:31
-完成时间: 2026-01-18 10:20
+开始时间: 2026-01-19 00:35
+完成时间: 2026-01-19 00:45
 变更点:
-- 新增 docs/templates/staging-release-rehearsal-template.md（演练记录模板）
-- 完成 staging 发布/回滚演练（docs/manual-test-log/2026-01-18-staging-release-rehearsal.md）
-- 发布验证：健康检查 ✅、冒烟测试 ✅
-- 回滚验证：健康检查 ✅、关键接口 ✅
-发现问题:
-- @sentry/node webpack 构建问题（需后续修复，已记录到 TECHNICAL_DEBT）
-- docker-compose build args 需要手动 source 环境变量
-备注: 演练成功完成，发布与回滚流程验证通过
+- 新增 docs/manual-test-log/2026-01-19-staging-release-rehearsal.md
+- 执行发布验证：健康检查 + 冒烟测试通过
+- 执行回滚演练：从 b0627ed 回滚至 fa47f6f 并恢复
+- 验证关键路径：health/sessions/auth/reports 均正常
+备注: GlitchTip/Uptime Kuma 尚未部署，可观测性验证暂缺（非阻断）
 ```
 
 ---
