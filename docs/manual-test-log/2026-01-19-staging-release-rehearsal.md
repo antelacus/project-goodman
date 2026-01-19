@@ -16,7 +16,7 @@
 - [x] staging 环境可访问
 - [x] `/api/health` 返回 200
 - [x] `.env.staging` 已配置且不含生产密钥
-- [ ] GlitchTip/Uptime Kuma 正常（observability 容器未部署）
+- [ ] GlitchTip/Uptime Kuma 正常（observability 容器未部署，后续已改用 Sentry/UptimeRobot）
 - [x] 已确认回滚目标（commit/tag/时间点）
 
 ## 发布演练
@@ -127,11 +127,11 @@ curl http://localhost:3001/api/health
 
 - 结论摘要：staging 发布/回滚流程验证成功，健康检查与冒烟测试均通过
 - 需要改进的环节：
-  1. GlitchTip/Uptime Kuma 容器尚未部署，可观测性验证暂缺
+  1. GlitchTip/Uptime Kuma 容器尚未部署，可观测性验证暂缺（现已改用 Sentry/UptimeRobot）
   2. **CI 工作流缺少环境变量导出** - docker compose build args 需要在构建前导出环境变量
 - 后续行动项：
   1. ✅ 已修复 `deploy-staging.yml` 和 `deploy.yml`，增加 `set -a && source .env && set +a`
-  2. 部署 observability 容器（可选，非阻断）
+  2. 配置 Sentry/UptimeRobot（可选，非阻断）
 
 ## 附件
 

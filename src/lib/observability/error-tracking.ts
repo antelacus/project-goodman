@@ -84,7 +84,7 @@ function isServerRuntime(): boolean {
 
 export async function initErrorTracking(): Promise<void> {
   if (initialized || !isServerRuntime()) return;
-  const dsn = process.env.GLITCHTIP_DSN;
+  const dsn = process.env.SENTRY_DSN || process.env.GLITCHTIP_DSN;
   if (!dsn) return;
 
   // Lazy-load @sentry/node only in Node.js runtime to avoid webpack bundling issues
@@ -94,14 +94,17 @@ export async function initErrorTracking(): Promise<void> {
     const Sentry = require('@sentry/node');
     Sentry.init({
       dsn,
-      environment: process.env.GLITCHTIP_ENV || process.env.NODE_ENV,
+      environment:
+        process.env.SENTRY_ENV ||
+        process.env.GLITCHTIP_ENV ||
+        process.env.NODE_ENV,
       tracesSampleRate: 0,
       sendDefaultPii: false,
       beforeSend: sanitizeEvent,
     });
     initialized = true;
     enabled = true;
-    console.log('[ErrorTracking] Initialized with GlitchTip');
+    console.log('[ErrorTracking] Initialized');
   } catch (error) {
     console.error('[ErrorTracking] Failed to initialize:', error);
   }

@@ -253,8 +253,8 @@ Same variables, but pointing to staging Supabase project.
 |---------|-----------|
 | OpenAI | platform.openai.com/usage |
 | Supabase | Dashboard → Usage |
-| GlitchTip | Your GlitchTip instance |
-| Uptime Kuma | Your Uptime Kuma instance |
+| Sentry | sentry.io |
+| UptimeRobot | uptime.com |
 
 ---
 

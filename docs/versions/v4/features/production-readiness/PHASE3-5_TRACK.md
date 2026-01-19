@@ -173,6 +173,31 @@
 
 ---
 
+#### Task C4: 切换至 SaaS 可观测性（Sentry + UptimeRobot）
+
+**状态**: ✅ 完成
+
+- [x] 生产环境接入 Sentry（SaaS）
+- [x] 更新可观测性文档（Sentry + UptimeRobot）
+- [x] 停用自托管 GlitchTip/Uptime Kuma 容器
+
+**实施记录**:
+
+```
+状态: ✅ 完成
+开始时间: 2026-01-19 02:30
+完成时间: 2026-01-19 02:50
+变更点:
+- error-tracking 支持 SENTRY_DSN/SENTRY_ENV（保留 GLITCHTIP_* 兼容）
+- 更新 docs/OBSERVABILITY.md 为 SaaS 方案（Sentry + UptimeRobot）
+- 生产环境 .env 配置 SENTRY_DSN 并重启容器
+- 停用 docker-compose.observability.yml 对应容器与卷
+- 移除 docker-compose.observability.yml 与 .env.observability.example
+备注: staging 未配置公网域名，UptimeRobot 暂仅监控生产
+```
+
+---
+
 ### D. 测试体系补齐
 
 #### Task D1: 集成测试
@@ -355,7 +380,7 @@
 - 执行发布验证：健康检查 + 冒烟测试通过
 - 执行回滚演练：从 b0627ed 回滚至 fa47f6f 并恢复
 - 验证关键路径：health/sessions/auth/reports 均正常
-备注: GlitchTip/Uptime Kuma 尚未部署，可观测性验证暂缺（非阻断）
+备注: 先前 GlitchTip/Uptime Kuma 未部署；现已改用 Sentry/UptimeRobot（SaaS）
 ```
 
 ---

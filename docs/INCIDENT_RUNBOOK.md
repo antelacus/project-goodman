@@ -25,7 +25,7 @@
 
 ### 3.1 发现与确认
 
-1. 监控告警触发（Uptime Kuma/日志）
+1. 监控告警触发（UptimeRobot/日志）
 2. 确认 `/api/health` 状态
 3. 记录触发时间、影响范围与初步症状
 
@@ -39,7 +39,7 @@
 
 1. 查看应用日志：`docker logs -f goodman`
 2. 查看 Redis/Supabase 状态
-3. 查看 GlitchTip 错误堆栈与 requestId
+3. 查看 Sentry 错误堆栈与 requestId
 
 ### 3.4 恢复与验证
 
@@ -98,7 +98,7 @@ cd $GOODMAN_PROD_DIR && docker compose up -d --build goodman
 
 ### 5.4 错误追踪飙升
 
-- 查看 GlitchTip 错误分布与版本
+- 查看 Sentry 错误分布与版本
 - 关联 requestId 查找具体 API route
 
 ---
@@ -112,4 +112,3 @@ cd $GOODMAN_PROD_DIR && docker compose up -d --build goodman
 - 根因：
 - 修复与验证：
 - 复盘行动项：
-

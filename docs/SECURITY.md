@@ -29,7 +29,7 @@
 
 ## 3. 密钥与配置管理
 
-- **环境变量集中管理**：`.env` / `.env.staging` / `.env.observability`
+- **环境变量集中管理**：`.env` / `.env.staging`
 - **密钥隔离**：staging 与 production 使用独立密钥与数据源
 - **Service Role Key**：仅 server 模块引用，带运行时环境检查
 - **密钥轮换**：建议在发布前后进行周期轮换，并同步更新部署配置
@@ -47,8 +47,8 @@
 
 ## 5. 可观测性与审计
 
-- **错误追踪**：GlitchTip（仅 server 端启用）
-- **健康监控**：Uptime Kuma 监控 `/api/health`
+- **错误追踪**：Sentry（仅 server 端启用）
+- **健康监控**：UptimeRobot 监控 `/api/health`
 - **审计基线**：CI 中执行依赖安全审计与质量门禁
 
 ---
@@ -73,4 +73,3 @@
 
 - 安全边界或鉴权策略变更需同步更新本文件
 - 与部署相关的安全检查详见 `docs/DEPLOYMENT_CHECKLIST.md`
-

@@ -16,7 +16,7 @@
 - [ ] staging 环境可访问
 - [ ] `/api/health` 返回 200
 - [ ] `.env.staging` 已配置且不含生产密钥
-- [ ] GlitchTip/Uptime Kuma 正常
+- [ ] Sentry/UptimeRobot 正常（如已配置）
 - [ ] 已确认回滚目标（commit/tag/时间点）
 
 ## 发布演练
