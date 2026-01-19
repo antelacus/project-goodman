@@ -34,6 +34,7 @@ yarn-error.log*
 
 # env files (can opt-in for committing if needed)
 .env*
+!.env.example
 
 # prompt files - now committed to repo for Vercel deployment
 # (previously excluded as "sensitive business content" but needed for production)
