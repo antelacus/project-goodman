@@ -16,7 +16,7 @@
 | 决策点 | 选择 | 原因 |
 |--------|------|------|
 | Staging 部署 | 同一 VPS + 独立目录/端口/环境变量 | 零成本、隔离清晰、易回滚 |
-| 可观测性 | 自托管 GlitchTip + Uptime Kuma | 无 SaaS 成本、可控性高 |
+| 可观测性 | Sentry（SaaS）+ UptimeRobot（SaaS） | 免运维成本、接入快、免费额度可用 |
 | E2E 工具 | Playwright | headless 友好，CI 支持成熟 |
 | 覆盖率门槛 | 初始 60% 基线 | 现实可达，便于逐步提高 |
 | 发布验证 | 健康检查 + 冒烟脚本 | 覆盖关键路径，成本低 |
@@ -43,11 +43,12 @@
               │  staging: 3001                  │
               │  ├─ goodman-staging (Next.js)   │
               │  └─ redis-staging               │
-              │                                │
-              │  observability                  │
-              │  ├─ glitchtip                   │
-              │  └─ uptime-kuma                 │
               └────────────────────────────────┘
+                              │ HTTPS
+                    ┌─────────┴─────────┐
+                    │      SaaS         │
+                    │  Sentry/UptimeRobot │
+                    └───────────────────┘
 ```
 
 ### 1.2 数据源隔离
@@ -80,14 +81,15 @@
 
 ### 2.4 错误追踪与监控
 
-**GlitchTip**：
+**Sentry**：
 - 仅在 server 端启用
 - 上报字段过滤（password/token/secret）
 - 复用 `requestId` 关联日志
 
-**Uptime Kuma**：
-- 监控 prod/staging `/api/health`
+**UptimeRobot**：
+- 监控 prod `/api/health`
 - 告警渠道记录在文档中（邮件/IM）
+- staging 需配置公网域名后再接入
 
 ---
 
@@ -103,7 +105,7 @@
 ### 3.2 运行时错误处理
 
 - API 统一使用 `createErrorResponse()`
-- GlitchTip 捕获未处理异常并上报
+- Sentry 捕获未处理异常并上报
 - 禁止敏感信息上报
 
 ---
@@ -132,7 +134,7 @@
 
 ### 5.1 迁移步骤
 
-1. 部署 GlitchTip/Uptime Kuma
+1. 接入 Sentry/UptimeRobot
 2. 建立 staging 环境
 3. 接入错误追踪与冒烟测试
 4. 增量补齐集成/E2E 测试
@@ -142,14 +144,14 @@
 
 - staging 故障不影响生产
 - 生产回滚遵循 `docs/DEPLOYMENT_CHECKLIST.md`
-- GlitchTip/Uptime Kuma 可独立停用
+- Sentry/UptimeRobot 可独立停用
 
 ---
 
 ## 6. 安全影响评估
 
-- 新增第三方服务为自托管，无数据外泄风险
-- 需保证 GlitchTip 日志过滤敏感字段
+- 新增第三方 SaaS 服务，需评估数据出站与合规要求
+- 需保证 Sentry 日志过滤敏感字段
 - staging 必须与生产隔离，避免误写
 
 ---
@@ -160,4 +162,3 @@
 - `docs/SECURITY.md`
 - `docs/INCIDENT_RUNBOOK.md`
 - 更新 `docs/DEPLOYMENT_CHECKLIST.md`
-

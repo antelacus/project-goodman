@@ -2,6 +2,8 @@
 
 > **For Claude:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task.
 
+> ⚠️ 说明：已切换为 Sentry + UptimeRobot（SaaS）方案，本任务文档保留作为历史记录，相关自托管配置已从仓库移除。
+
 **Goal:** 完成 GlitchTip + Uptime Kuma 自托管配置，并在服务端接入错误追踪（带 requestId/route 上下文，且不泄露敏感信息）。
 
 **Architecture:** 通过独立 `docker-compose.observability.yml` 部署可观测性栈；应用端在 server-only 模块初始化错误追踪，并在 API 错误响应时上报错误（仅 5xx）。

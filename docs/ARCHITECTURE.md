@@ -35,26 +35,21 @@
 |             +----v----+                      |
 |             |  Redis  |                      |
 |             +---------+                      |
-|                                              |
-|  observability                               |
-|  +-----------+   +-----------+               |
-|  | GlitchTip |   | UptimeKuma|               |
-|  +-----------+   +-----------+               |
 +-------------------+--------------------------+
-                    |
-                    | HTTPS
-                    v
-+----------------------------------------------+
-|                  Supabase                    |
-|         Postgres + Storage + Auth            |
-+----------------------------------------------+
+            |                     |
+            | HTTPS               | HTTPS
+            v                     v
++------------------+   +-----------------------+
+|    Supabase      |   | Sentry/UptimeRobot    |
+| Postgres/Storage |   |   (SaaS Observability)|
++------------------+   +-----------------------+
 ```
 
 ### 1.2 关键边界
 
 - **安全边界**：Next.js API routes 是唯一对外入口，所有数据库访问走 server 端。
 - **数据边界**：staging 与 production 使用独立环境与数据源，避免误写。
-- **可观测性边界**：错误追踪与健康监控独立容器部署。
+- **可观测性边界**：错误追踪与健康监控通过 SaaS 提供。
 
 ---
 
@@ -67,8 +62,8 @@
 | Supabase Postgres | 数据存储 | 文档元数据、结构化财务数据 |
 | Supabase Storage | 文件存储 | 原始上传文件与解析结果 |
 | Redis | 会话/限流 | 会话状态、速率限制、缓存 |
-| GlitchTip | 错误追踪 | 服务器端异常上报（过滤敏感信息） |
-| Uptime Kuma | 监控告警 | 健康检查监控与告警 |
+| Sentry | 错误追踪 | 服务器端异常上报（过滤敏感信息） |
+| UptimeRobot | 监控告警 | 健康检查监控与告警 |
 
 ---
 
@@ -101,8 +96,7 @@
 
 - **Production**：端口 3000，目录 `/home/deploy/goodman/project-goodman`
 - **Staging**：端口 3001，目录 `/home/deploy/goodman-staging/project-goodman`
-- **Observability**：独立 compose 与 env 文件
-- **配置管理**：`.env` / `.env.staging` / `.env.observability`
+- **配置管理**：`.env` / `.env.staging`
 
 ---
 
@@ -110,7 +104,7 @@
 
 - **OpenAI API**：LLM 推理与生成
 - **Supabase**：数据库与存储
-- **自托管可观测性**：GlitchTip + Uptime Kuma
+- **可观测性**：Sentry + UptimeRobot（SaaS）
 
 ---
 
@@ -118,4 +112,3 @@
 
 - 架构变更需更新本文件与 `docs/SECURITY.md`
 - 发布前验证流程见 `docs/DEPLOYMENT_CHECKLIST.md`
-

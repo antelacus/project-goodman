@@ -152,13 +152,13 @@
 
 - **P0**：建立 staging 环境（与 prod 同构）
 - **P0**：补齐关键 API 的集成测试（至少 chat/stream、documents/upload、reports）
-- **P0**：引入错误追踪（Sentry/GlitchTip 二选一）
+- **P0**：引入错误追踪（Sentry）
 - **P1**：新增 `docs/ARCHITECTURE.md`（当前版本架构总览）
 - **P1**：新增 `docs/SECURITY.md`（安全边界、密钥策略、披露流程）
 
 ### 6.2 近期提升（3–6 周）
 
-- **P0**：指标与告警（Uptime + 关键 API 失败率）
+- **P0**：指标与告警（UptimeRobot + 关键 API 失败率）
 - **P1**：覆盖率基线与门槛（例如 60% 起步）
 - **P1**：标准化手工回归清单（与 release checklist 对齐）
 - **P2**：Lighthouse/A11y 报告与评分基线
@@ -214,8 +214,8 @@ jobs:
 
 ### 7.3 监控与告警最小方案（无侵入）
 
-- **Uptime**：Uptime Kuma（单容器）监控 `/api/health`
-- **Error Tracking**：Sentry/GlitchTip（最小 SDK 引入）
+- **Uptime**：UptimeRobot 监控 `/api/health`
+- **Error Tracking**：Sentry（最小 SDK 引入）
 - **日志**：继续输出 JSON，后续可接 Loki/ELK
 
 ---
