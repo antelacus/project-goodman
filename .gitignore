@@ -57,6 +57,7 @@ quick-*.ts
 check-*.ts
 debug_*.txt
 debug_*.xlsx
+.lighthouseci
 
 # data directory (ignore contents but keep structure)
 /data/**/*
