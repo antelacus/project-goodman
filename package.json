@@ -14,6 +14,7 @@
     "test:perf": "tsx scripts/quality-gates/perf-gate.ts check",
     "test:lighthouse": "lhci collect --config=./lighthouserc.cjs",
     "test:a11y": "tsx scripts/quality-gates/a11y-gate.ts check",
+    "test:audit": "tsx scripts/quality-gates/audit-gate.ts",
     "test:lighthouse:gate": "npm run test:lighthouse && tsx scripts/quality-gates/lighthouse-gate.ts check",
     "perf:baseline": "tsx scripts/quality-gates/perf-gate.ts baseline",
     "a11y:baseline": "tsx scripts/quality-gates/a11y-gate.ts baseline",
