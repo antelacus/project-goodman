@@ -6,7 +6,7 @@
 |------|------|
 | **功能名称** | 性能优化 (Performance Optimization) |
 | **版本** | v4.6 |
-| **状态** | Phase 3-5 - 未开始 |
+| **状态** | Phase 3-5 - 进行中 |
 | **设计文档** | [PHASE2_DESIGN.md](./PHASE2_DESIGN.md) |
 
 ---
@@ -17,22 +17,22 @@
 
 #### A1: 输出 P0/P1 关键流程清单
 
-- [ ] 定义 P0 流程清单（含入口 API 与成功判定）
-- [ ] 定义 P1 流程清单（低频/次要流程）
-- [ ] 每条流程至少 1 条可执行验收步骤
-- [ ] 文档化到 `docs/versions/v4/features/performance-optimization/WORKFLOW_RELIABILITY_MATRIX.md`
+- [x] 定义 P0 流程清单（含入口 API 与成功判定）
+- [x] 定义 P1 流程清单（低频/次要流程）
+- [x] 每条流程至少 1 条可执行验收步骤
+- [x] 文档化到 `docs/reports/2026-1-20-performance-optimization-workflow_reliability_matrix.md`
 
 #### A2: 指标口径与采样规则
 
-- [ ] 明确采样周期与样本量标准（≥7 天或 ≥200 请求）
-- [ ] 定义成功率/错误率/P95 的计算口径
-- [ ] 记录与 v4.4 observability 对接方式
+- [x] 明确采样周期与样本量标准（≥7 天或 ≥200 请求）
+- [x] 定义成功率/错误率/P95 的计算口径
+- [x] 记录与 v4.4 observability 对接方式
 
 #### A3: 指标映射表
 
-- [ ] 每条 P0 流程映射到日志字段与指标名称
-- [ ] 标明阈值（成功率/5xx/P95）
-- [ ] 标明失败归因字段（errorType/step）
+- [x] 每条 P0 流程映射到日志字段与指标名称
+- [x] 标明阈值（成功率/5xx/P95）
+- [x] 标明失败归因字段（errorType/step）
 
 ---
 
