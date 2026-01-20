@@ -1,11 +1,11 @@
-# v4.5 性能优化 - Phase 3-5 实现跟踪
+# v4.6 性能优化 - Phase 3-5 实现跟踪
 
 ## 概述
 
 | 属性 | 详情 |
 |------|------|
 | **功能名称** | 性能优化 (Performance Optimization) |
-| **版本** | v4.5 |
+| **版本** | v4.6 |
 | **状态** | Phase 3-5 - 未开始 |
 | **设计文档** | [PHASE2_DESIGN.md](./PHASE2_DESIGN.md) |
 
