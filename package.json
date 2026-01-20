@@ -12,6 +12,7 @@
     "test:e2e": "playwright test",
     "test:coverage": "vitest --coverage",
     "test:perf": "tsx scripts/quality-gates/perf-gate.ts check",
+    "test:lighthouse": "lhci collect --config=./lighthouserc.cjs",
     "perf:baseline": "tsx scripts/quality-gates/perf-gate.ts baseline",
     "analyze": "ANALYZE=true npm run build",
     "migrate-data": "tsx scripts/migrate-to-supabase.ts",
@@ -56,6 +57,7 @@
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3",
+    "@lhci/cli": "^0.13.0",
     "@next/bundle-analyzer": "^15.5.9",
     "@playwright/test": "^1.55.1",
     "@tailwindcss/postcss": "^4",

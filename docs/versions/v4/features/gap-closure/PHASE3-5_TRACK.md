@@ -93,8 +93,20 @@
 
 #### Task C1: Lighthouse 配置
 
-- [ ] 新增 `lighthouserc` 配置
-- [ ] 增加 `npm run test:lighthouse` 脚本
+- [x] 新增 `lighthouserc` 配置
+- [x] 增加 `npm run test:lighthouse` 脚本
+
+**实施记录**:
+
+```
+状态: ✅ 完成
+开始时间: 2026-01-20 02:15
+完成时间: 2026-01-20 02:35
+变更点:
+- 新增 lighthouserc.cjs（基于环境变量的基础 URL 与输出目录）
+- package.json 增加 test:lighthouse 脚本与 @lhci/cli
+测试: 未运行（依赖安装与本地/CI 运行确认）
+```
 
 #### Task C2: 基线生成与存档
 
