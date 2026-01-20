@@ -1,7 +1,7 @@
 # Project Goodman - Deployment Checklist
 
 **Version**: v4.4
-**Last Updated**: 2026-01-18
+**Last Updated**: 2026-01-20
 **Target Platform**: Docker on VPS + Supabase Cloud
 
 ---
@@ -40,7 +40,7 @@
 
 | Workflow | Trigger | What Happens |
 |----------|---------|--------------|
-| **CI** | Push to `development` | Lint, type check, test, coverage, security audit, build |
+| **CI** | Push to `development` | Lint, type check, test, coverage, quality gates (Lighthouse/A11y/Perf/Audit), build |
 | **Deploy Staging** | Push to `development` | Deploy to staging, health check, smoke tests |
 | **Deploy Production** | Push to `main` | Deploy to production, health check |
 
@@ -85,6 +85,10 @@ docker logs -f goodman
 | TypeScript | Automatic | Fails CI if type errors |
 | Unit Tests | Automatic | Fails CI if tests fail |
 | Coverage | Automatic | Fails CI if below threshold |
+| Lighthouse CI | Automatic | Fails CI if scores regress beyond threshold |
+| A11y (axe) | Automatic | Fails CI if new critical/serious violations appear |
+| Performance Baseline | Automatic | Fails CI if latency/error rate regress beyond threshold |
+| Security Audit | Automatic | Fails CI on High/Critical (allowlist required) |
 | Build | Automatic | Fails CI if build fails |
 | Staging Deploy | Automatic | Deploys after CI passes |
 | Smoke Tests | Automatic | Health, auth, sessions, reports |

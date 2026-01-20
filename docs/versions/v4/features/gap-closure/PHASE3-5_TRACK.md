@@ -219,13 +219,26 @@
 
 #### Task F1: CLAUDE.md 更新
 
-- [ ] 修正技术栈依赖（mathjs/exceljs 等）
-- [ ] 更新可观测性说明（Sentry + UptimeRobot + Performance）
+- [x] 修正技术栈依赖（mathjs/exceljs 等）
+- [x] 更新可观测性说明（Sentry + UptimeRobot + Performance）
 
 #### Task F2: 运维文档更新
 
-- [ ] `docs/OBSERVABILITY.md` 增加性能阈值/门禁说明
-- [ ] `docs/DEPLOYMENT_CHECKLIST.md` 增加 Lighthouse/A11y/Perf/Audit 门禁
+- [x] `docs/OBSERVABILITY.md` 增加性能阈值/门禁说明
+- [x] `docs/DEPLOYMENT_CHECKLIST.md` 增加 Lighthouse/A11y/Perf/Audit 门禁
+
+**实施记录**:
+
+```
+状态: ✅ 完成
+开始时间: 2026-01-20 14:20
+完成时间: 2026-01-20 14:40
+变更点:
+- 更新 CLAUDE.md 技术栈依赖与可观测性文档描述
+- docs/OBSERVABILITY.md 增加 CI 质量门禁与基线说明
+- docs/DEPLOYMENT_CHECKLIST.md 增加 Lighthouse/A11y/Perf/Audit 门禁项
+测试: 未运行（文档更新）
+```
 
 ---
 

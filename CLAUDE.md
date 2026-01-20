@@ -40,7 +40,7 @@
 | AI | OpenAI GPT-4o |
 | Storage | Supabase Storage (`document-files` bucket) |
 | Cache/Sessions | Redis |
-| Libraries | Zod, bcryptjs, expr-eval, xlsx |
+| Libraries | Zod, bcryptjs, mathjs, exceljs |
 
 ---
 
@@ -102,7 +102,7 @@ tests/                      # Test scripts
 | [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) | System architecture, deployment topology, data flows |
 | [docs/SECURITY.md](docs/SECURITY.md) | Security boundaries, key management, disclosure process |
 | [docs/INCIDENT_RUNBOOK.md](docs/INCIDENT_RUNBOOK.md) | Incident response, rollback procedures |
-| [docs/OBSERVABILITY.md](docs/OBSERVABILITY.md) | GlitchTip, Uptime Kuma setup and usage |
+| [docs/OBSERVABILITY.md](docs/OBSERVABILITY.md) | Sentry (errors + performance) + UptimeRobot setup and usage |
 
 ---
 
