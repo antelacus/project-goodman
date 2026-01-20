@@ -110,8 +110,21 @@
 
 #### Task C2: 基线生成与存档
 
-- [ ] 生成 `/` 与 `/chat` 基线报告
-- [ ] 存档到 `tests/quality-baselines/lighthouse/`
+- [x] 生成 `/` 与 `/chat` 基线报告
+- [x] 存档到 `tests/quality-baselines/lighthouse/`
+
+**实施记录**:
+
+```
+状态: ✅ 完成
+开始时间: 2026-01-20 03:00
+完成时间: 2026-01-20 03:17
+变更点:
+- 生成 Lighthouse 基线（/ 与 /chat）
+- 基线存档至 tests/quality-baselines/lighthouse（JSON + HTML）
+- lighthouserc.cjs 的 chromeFlags 改为字符串形式，确保 --no-sandbox 生效
+测试: CHROME_PATH=~/.cache/ms-playwright/chromium-1200/chrome-linux64/chrome LHCI_BASE_URL=http://127.0.0.1:3000 npm run test:lighthouse
+```
 
 #### Task C3: CI 门禁
 
