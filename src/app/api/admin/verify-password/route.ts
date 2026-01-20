@@ -15,6 +15,8 @@ import {
   logSecurityEvent,
 } from "@/lib/security";
 import { validateRequest, AdminVerifyPasswordSchema } from "@/lib/validation/api-schemas";
+import { logWorkflowEvent } from "@/lib/logging";
+import type { WorkflowErrorType } from "@/lib/errors";
 
 /**
  * Helper to extract client IP from request
@@ -41,14 +43,47 @@ function getClientIP(request: NextRequest): string {
  */
 export async function POST(req: NextRequest) {
   const requestId = req.headers.get('x-request-id') || generateRequestId();
+  const startTime = Date.now();
+  const workflowContext = {
+    workflow: 'admin_auth',
+    requestId,
+    route: '/api/admin/verify-password',
+  };
+  let workflowCompleted = false;
   const clientIP = getClientIP(req);
   const userAgent = req.headers.get('user-agent') || 'unknown';
+
+  logWorkflowEvent({ ...workflowContext, step: 'start', status: 'ok' });
+
+  const logWorkflowSuccess = () => {
+    if (workflowCompleted) return;
+    workflowCompleted = true;
+    logWorkflowEvent({
+      ...workflowContext,
+      step: 'success',
+      status: 'ok',
+      duration: Date.now() - startTime,
+    });
+  };
+
+  const logWorkflowFailure = (errorType: WorkflowErrorType) => {
+    if (workflowCompleted) return;
+    workflowCompleted = true;
+    logWorkflowEvent({
+      ...workflowContext,
+      step: 'failure',
+      status: 'error',
+      errorType,
+      duration: Date.now() - startTime,
+    });
+  };
 
   try {
     // Step 1: Check brute-force protection
     const bruteCheck = await checkBruteForce(clientIP);
 
     if (!bruteCheck.allowed) {
+      logWorkflowFailure('RATE_LIMIT');
       // Audit: Log lockout attempt
       logSecurityEvent('lockout_active', clientIP, userAgent, {
         requestId,
@@ -78,6 +113,7 @@ export async function POST(req: NextRequest) {
     // Validate with Zod schema (includes length limit)
     const validation = validateRequest(AdminVerifyPasswordSchema, body);
     if (!validation.success) {
+      logWorkflowFailure('VALIDATION');
       return NextResponse.json(
         { valid: false, error: validation.error, requestId },
         { status: 400, headers: { 'X-Request-ID': requestId } }
@@ -105,6 +141,7 @@ export async function POST(req: NextRequest) {
           requestId,
           lockDuration: failResult.lockDuration,
         });
+        logWorkflowFailure('RATE_LIMIT');
 
         return NextResponse.json(
           {
@@ -125,6 +162,7 @@ export async function POST(req: NextRequest) {
 
       // Audit: Log failed login attempt
       logAuthEvent('login_failed', clientIP, userAgent, { requestId });
+      logWorkflowFailure('AUTH');
 
       // Return generic error (don't reveal if password exists)
       return NextResponse.json(
@@ -159,9 +197,14 @@ export async function POST(req: NextRequest) {
     response.cookies.set(COOKIE_NAME, session.token, COOKIE_OPTIONS);
     response.headers.set('X-Request-ID', requestId);
 
+    logWorkflowSuccess();
     return response;
   } catch (error: unknown) {
     console.error('Admin password verification error:', error);
-    return createErrorResponse(error, requestId, 500);
+    logWorkflowFailure('INTERNAL');
+    return createErrorResponse(error, requestId, 500, {
+      errorType: 'INTERNAL',
+      route: '/api/admin/verify-password',
+    });
   }
 }

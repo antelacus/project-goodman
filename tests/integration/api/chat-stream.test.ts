@@ -3,6 +3,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { NextRequest } from 'next/server';
 import type { EnsureSessionResult } from '@/lib/security';
 import { POST } from '@/app/api/chat/stream/route';
+import * as logging from '@/lib/logging';
 import * as security from '@/lib/security';
 import { unifiedAgentGraph } from '@/lib/workflows/unified/graph';
 
@@ -15,6 +16,7 @@ vi.mock('@/lib/logging', () => ({
   },
   logRequest: vi.fn(),
   logError: vi.fn(),
+  logWorkflowEvent: vi.fn(),
 }));
 
 vi.mock('@/lib/workflows/unified/graph', () => ({
@@ -117,5 +119,22 @@ describe('POST /api/chat/stream', () => {
 
     expect(chunkText).toContain('event: complete');
     expect(chunkText).toContain('"answer":"测试回复"');
+
+    expect(vi.mocked(logging.logWorkflowEvent)).toHaveBeenCalledWith(
+      expect.objectContaining({
+        workflow: 'chat_stream',
+        step: 'start',
+        status: 'ok',
+        requestId: 'req-1',
+      })
+    );
+    expect(vi.mocked(logging.logWorkflowEvent)).toHaveBeenCalledWith(
+      expect.objectContaining({
+        workflow: 'chat_stream',
+        step: 'success',
+        status: 'ok',
+        requestId: 'req-1',
+      })
+    );
   });
 });

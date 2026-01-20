@@ -17,6 +17,7 @@ import OpenAI from "openai";
 import ExcelJS from "exceljs";
 import { createServerSupabaseClient } from "@/lib/database";
 import type { InsertTables } from "@/lib/database";
+import { logWorkflowEvent } from "@/lib/logging";
 import {
   generateRequestId,
   createErrorResponse,
@@ -35,6 +36,7 @@ import {
 } from "@/lib/documents/storage";
 import { withSentrySpan } from "@/lib/observability/error-tracking";
 import { isPerfTestRequest } from "@/lib/quality-gates/perf-test";
+import type { WorkflowErrorType } from "@/lib/errors";
 
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
@@ -206,6 +208,38 @@ export async function POST(req: NextRequest) {
     }
 
     const requestId = req.headers.get('x-request-id') || generateRequestId();
+    const startTime = Date.now();
+    const workflowContext = {
+      workflow: 'document_extraction',
+      requestId,
+      route: '/api/documents/upload-temp',
+    };
+    let workflowCompleted = false;
+
+    logWorkflowEvent({ ...workflowContext, step: 'start', status: 'ok' });
+
+    const logWorkflowSuccess = () => {
+      if (workflowCompleted) return;
+      workflowCompleted = true;
+      logWorkflowEvent({
+        ...workflowContext,
+        step: 'success',
+        status: 'ok',
+        duration: Date.now() - startTime,
+      });
+    };
+
+    const logWorkflowFailure = (errorType: WorkflowErrorType) => {
+      if (workflowCompleted) return;
+      workflowCompleted = true;
+      logWorkflowEvent({
+        ...workflowContext,
+        step: 'failure',
+        status: 'error',
+        errorType,
+        duration: Date.now() - startTime,
+      });
+    };
 
     try {
       // V3.10: Ensure session exists (creates guest session if needed)
@@ -216,6 +250,7 @@ export async function POST(req: NextRequest) {
       if (session.role === 'guest') {
         const rateCheck = await checkGuestRate(session.sessionId, 'upload');
         if (!rateCheck.allowed) {
+          logWorkflowFailure('RATE_LIMIT');
           const response = NextResponse.json(
             {
               error: '已达到文件上传限制，请1小时后重试',
@@ -243,6 +278,7 @@ export async function POST(req: NextRequest) {
       // Validate request body structure with Zod
       const validationResult = validateRequest(TempUploadSchema, body);
       if (!validationResult.success) {
+        logWorkflowFailure('VALIDATION');
         return NextResponse.json(
           { error: validationResult.error },
           { status: 400 }
@@ -254,6 +290,7 @@ export async function POST(req: NextRequest) {
       // Validate file size (base64 is ~1.37x larger than original)
       const estimatedSize = (fileData.length * 3) / 4;
       if (estimatedSize > MAX_FILE_SIZE) {
+        logWorkflowFailure('VALIDATION');
         return NextResponse.json(
           { error: "文件大小超过2MB限制" },
           { status: 400 }
@@ -269,8 +306,15 @@ export async function POST(req: NextRequest) {
 
       // Step 1: Extract text from file
       const extractedText = await extractTextFromFile(fileData, fileName, fileType || '');
+      logWorkflowEvent({
+        ...workflowContext,
+        step: 'extract',
+        status: 'ok',
+        duration: Date.now() - startTime,
+      });
 
       if (!extractedText || extractedText.trim().length < 10) {
+        logWorkflowFailure('EXTRACTION_FAILED');
         return NextResponse.json(
           { error: "无法从文件中提取有效文本内容" },
           { status: 400 }
@@ -317,6 +361,12 @@ export async function POST(req: NextRequest) {
         // but here we already have raw base64 data in fileData (from req.json)
         fileUrl = await uploadFileToStorage(documentId, fileName, fileData);
         console.log(`[upload-temp] File uploaded: ${fileUrl}`);
+        logWorkflowEvent({
+          ...workflowContext,
+          step: 'upload',
+          status: 'ok',
+          duration: Date.now() - startTime,
+        });
       } catch (storageError) {
         console.error(`[upload-temp] Storage upload failed:`, storageError);
         // Non-fatal? If storage fails, extract API won't work.
@@ -402,6 +452,12 @@ export async function POST(req: NextRequest) {
       }
 
       console.log(`[upload-temp] Successfully stored document ${documentId} with ${chunks.length} chunks`);
+      logWorkflowEvent({
+        ...workflowContext,
+        step: 'store',
+        status: 'ok',
+        duration: Date.now() - startTime,
+      });
 
       // Return response
       const response = NextResponse.json({
@@ -430,11 +486,16 @@ export async function POST(req: NextRequest) {
         );
       }
 
+      logWorkflowSuccess();
       return response;
 
     } catch (error: unknown) {
       console.error("[upload-temp] Error:", error);
-      return createErrorResponse(error, requestId, 500);
+      logWorkflowFailure('EXTRACTION_FAILED');
+      return createErrorResponse(error, requestId, 500, {
+        errorType: 'EXTRACTION_FAILED',
+        route: '/api/documents/upload-temp',
+      });
     }
   });
 }

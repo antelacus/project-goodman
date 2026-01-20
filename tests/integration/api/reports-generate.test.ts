@@ -3,6 +3,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { NextRequest } from 'next/server';
 import type { EnsureSessionResult } from '@/lib/security';
 import { POST } from '@/app/api/reports/generate/route';
+import * as logging from '@/lib/logging';
 import * as security from '@/lib/security';
 import { reportWorkflowGraph } from '@/lib/workflows/report';
 
@@ -15,6 +16,7 @@ vi.mock('@/lib/logging', () => ({
   },
   logRequest: vi.fn(),
   logError: vi.fn(),
+  logWorkflowEvent: vi.fn(),
 }));
 
 vi.mock('@/lib/workflows/report', () => ({
@@ -113,5 +115,22 @@ describe('POST /api/reports/generate', () => {
 
     expect(chunkText).toContain('event: report');
     expect(chunkText).toContain('"type":"complete"');
+
+    expect(vi.mocked(logging.logWorkflowEvent)).toHaveBeenCalledWith(
+      expect.objectContaining({
+        workflow: 'report_generation',
+        step: 'start',
+        status: 'ok',
+        requestId: 'req-1',
+      })
+    );
+    expect(vi.mocked(logging.logWorkflowEvent)).toHaveBeenCalledWith(
+      expect.objectContaining({
+        workflow: 'report_generation',
+        step: 'success',
+        status: 'ok',
+        requestId: 'req-1',
+      })
+    );
   });
 });

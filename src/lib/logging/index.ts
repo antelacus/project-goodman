@@ -7,4 +7,13 @@
  * - logError: Error logging helper with context
  */
 
-export { logger, logRequest, logError, type LogContext } from './logger';
+export {
+  logger,
+  logRequest,
+  logWorkflowEvent,
+  logError,
+  type LogContext,
+  type WorkflowLogContext,
+  type WorkflowStep,
+  type WorkflowStatus,
+} from './logger';
