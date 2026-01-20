@@ -40,7 +40,6 @@
     "superpowers@claude-plugins-official": true,
     "commit-commands@claude-plugins-official": true,
     "security-guidance@claude-plugins-official": true,
-    "sentry@claude-plugins-official": true,
-    "github@claude-plugins-official": true
+    "sentry@claude-plugins-official": true
   }
 }
