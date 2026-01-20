@@ -246,14 +246,29 @@
 
 #### Task G1: audit gate
 
-- [ ] 新增审计脚本（High+Critical）
-- [ ] 允许显式豁免清单（含理由与到期时间）
-- [ ] 增加 `npm run test:audit` 脚本
+- [x] 新增审计脚本（High+Critical）
+- [x] 允许显式豁免清单（含理由与到期时间）
+- [x] 增加 `npm run test:audit` 脚本
 
 #### Task G2: CI 接入
 
-- [ ] CI 中 audit 失败直接阻断
-- [ ] 记录现有高危依赖修复计划
+- [x] CI 中 audit 失败直接阻断
+- [x] 记录现有高危依赖修复计划
+
+**实施记录**:
+
+```
+状态: ✅ 完成
+开始时间: 2026-01-20 06:45
+完成时间: 2026-01-20 06:55
+变更点:
+- 新增 audit gate 脚本与解析逻辑（High/Critical 过滤）
+- 新增允许清单 tests/quality-baselines/audit/audit-allowlist.json（含原因/到期/修复计划字段）
+- package.json 增加 npm run test:audit
+- CI 改为 npm run test:audit 并移除 continue-on-error
+- 修复计划记录方式：在 allowlist entry 内填写 fixPlan（当前 allowlist 为空）
+测试: npm run test -- --run tests/unit/quality-gates/audit-metrics.test.ts
+```
 
 ---
 
