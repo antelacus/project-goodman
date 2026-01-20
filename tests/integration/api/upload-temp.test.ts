@@ -3,6 +3,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { NextRequest } from 'next/server';
 import type { EnsureSessionResult } from '@/lib/security';
 import { POST } from '@/app/api/documents/upload-temp/route';
+import * as logging from '@/lib/logging';
 import * as security from '@/lib/security';
 import { createServerSupabaseClient } from '@/lib/database';
 import { parseDocumentSections, createSectionAwareChunks } from '@/lib/documents';
@@ -17,6 +18,7 @@ vi.mock('@/lib/logging', () => ({
   },
   logRequest: vi.fn(),
   logError: vi.fn(),
+  logWorkflowEvent: vi.fn(),
 }));
 
 vi.mock('openai', () => {
@@ -147,5 +149,22 @@ describe('POST /api/documents/upload-temp', () => {
     expect(body.documentId).toBeTruthy();
     expect(body.textPreview).toContain('测试的文本内容');
     expect(body.structureAnalysis.chunkCount).toBe(1);
+
+    expect(vi.mocked(logging.logWorkflowEvent)).toHaveBeenCalledWith(
+      expect.objectContaining({
+        workflow: 'document_extraction',
+        step: 'start',
+        status: 'ok',
+        requestId: 'req-1',
+      })
+    );
+    expect(vi.mocked(logging.logWorkflowEvent)).toHaveBeenCalledWith(
+      expect.objectContaining({
+        workflow: 'document_extraction',
+        step: 'success',
+        status: 'ok',
+        requestId: 'req-1',
+      })
+    );
   });
 });

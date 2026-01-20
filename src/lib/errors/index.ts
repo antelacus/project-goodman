@@ -8,6 +8,10 @@
 export { WorkflowErrorCode } from "./base";
 export type { WorkflowErrorCode as WorkflowErrorCodeType } from "./base";
 
+// Workflow error types
+export { WorkflowErrorType, WORKFLOW_ERROR_MESSAGES } from "./workflow-error-types";
+export type { WorkflowErrorType as WorkflowErrorTypeType } from "./workflow-error-types";
+
 // Context types
 export type {
   BaseErrorContext,

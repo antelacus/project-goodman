@@ -18,6 +18,7 @@ import ExcelJS from "exceljs";
 import { createServerSupabaseClient } from "@/lib/database";
 import type { InsertTables, Database } from "@/lib/database";
 import { SupabaseClient } from "@supabase/supabase-js";
+import { logWorkflowEvent } from "@/lib/logging";
 import {
   verifyAdminPassword,
   generateRequestId,
@@ -37,6 +38,7 @@ import {
   type FinancialExtractionWithType,
   type FinancialStatementType,
 } from "@/lib/extraction";
+import type { WorkflowErrorType } from "@/lib/errors";
 import {
   validateBalanceSheet,
   validateIncomeStatement,
@@ -270,6 +272,37 @@ interface UploadResponse {
 export async function POST(request: NextRequest) {
   const requestId = request.headers.get('x-request-id') || generateRequestId();
   const startTime = Date.now();
+  const workflowContext = {
+    workflow: 'admin_upload',
+    requestId,
+    route: '/api/admin/upload-database-document',
+  };
+  let workflowCompleted = false;
+
+  logWorkflowEvent({ ...workflowContext, step: 'start', status: 'ok' });
+
+  const logWorkflowSuccess = () => {
+    if (workflowCompleted) return;
+    workflowCompleted = true;
+    logWorkflowEvent({
+      ...workflowContext,
+      step: 'success',
+      status: 'ok',
+      duration: Date.now() - startTime,
+    });
+  };
+
+  const logWorkflowFailure = (errorType: WorkflowErrorType) => {
+    if (workflowCompleted) return;
+    workflowCompleted = true;
+    logWorkflowEvent({
+      ...workflowContext,
+      step: 'failure',
+      status: 'error',
+      errorType,
+      duration: Date.now() - startTime,
+    });
+  };
 
   try {
     // Parse request body
@@ -289,6 +322,7 @@ export async function POST(request: NextRequest) {
 
     // Validate required fields
     if (!documentText || !fileName || !documentType || !adminPassword) {
+      logWorkflowFailure('VALIDATION');
       return NextResponse.json(
         {
           success: false,
@@ -302,6 +336,7 @@ export async function POST(request: NextRequest) {
     // Verify admin password
     const isValidPassword = await verifyAdminPassword(adminPassword);
     if (!isValidPassword) {
+      logWorkflowFailure('AUTH');
       return NextResponse.json(
         {
           success: false,
@@ -327,6 +362,7 @@ export async function POST(request: NextRequest) {
 
           if (!contentValidation.valid) {
             console.warn(`[Admin Upload] File content validation failed for ${fileName}: ${contentValidation.error}`);
+            logWorkflowFailure('VALIDATION');
             return NextResponse.json(
               {
                 success: false,
@@ -349,8 +385,15 @@ export async function POST(request: NextRequest) {
     // Step 0: Extract text from file if needed
     console.log(`[Admin Upload] Extracting text from: ${fileName}`);
     const extractedText = await extractTextFromFile(documentText, fileName, openai);
+    logWorkflowEvent({
+      ...workflowContext,
+      step: 'extract',
+      status: 'ok',
+      duration: Date.now() - startTime,
+    });
 
     if (!extractedText || extractedText.trim().length === 0) {
+      logWorkflowFailure('EXTRACTION_FAILED');
       return NextResponse.json(
         {
           success: false,
@@ -395,6 +438,12 @@ export async function POST(request: NextRequest) {
         console.log(`[Admin Upload] Uploading original file to storage...`);
         fileUrl = await uploadFileToStorage(documentId, fileName, documentText);
         console.log(`[Admin Upload] File uploaded: ${fileUrl}`);
+        logWorkflowEvent({
+          ...workflowContext,
+          step: 'upload',
+          status: 'ok',
+          duration: Date.now() - startTime,
+        });
       }
     } catch (storageError) {
       // Log but don't fail - file storage is optional
@@ -459,6 +508,12 @@ export async function POST(request: NextRequest) {
     }
 
     console.log(`[Admin Upload] Stored ${chunks.length} vector chunks`);
+    logWorkflowEvent({
+      ...workflowContext,
+      step: 'store',
+      status: 'ok',
+      duration: Date.now() - startTime,
+    });
 
     // Step 6: Store structured data based on document type
     const structuredDataSummary: UploadResponse["structuredData"] = {};
@@ -582,6 +637,7 @@ export async function POST(request: NextRequest) {
 
       console.log(`[Admin Upload] Extraction complete. Stored ${totalMetricsStored} metrics.`);
 
+      logWorkflowSuccess();
       return NextResponse.json({
         success: true,
         documentId,
@@ -634,6 +690,7 @@ export async function POST(request: NextRequest) {
       message += `提取了 ${articlesCount} 个法规条款。`;
     }
 
+    logWorkflowSuccess();
     return NextResponse.json({
       success: true,
       documentId,
@@ -644,7 +701,11 @@ export async function POST(request: NextRequest) {
 
   } catch (error: unknown) {
     console.error("[Admin Upload] Error:", error);
-    return createErrorResponse(error, requestId, 500);
+    logWorkflowFailure('INTERNAL');
+    return createErrorResponse(error, requestId, 500, {
+      errorType: 'INTERNAL',
+      route: '/api/admin/upload-database-document',
+    });
   }
 }
 

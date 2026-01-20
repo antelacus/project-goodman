@@ -40,21 +40,21 @@
 
 #### B1: 统一错误分类
 
-- [ ] 定义错误分类枚举（VALIDATION/AUTH/TIMEOUT/RETRIEVAL_EMPTY/EXTRACTION_FAILED/REPORT_FAILED/INTERNAL）
-- [ ] 明确每类错误的用户提示策略
+- [x] 定义错误分类枚举（VALIDATION/AUTH/TIMEOUT/RETRIEVAL_EMPTY/EXTRACTION_FAILED/REPORT_FAILED/INTERNAL）
+- [x] 明确每类错误的用户提示策略
 
 #### B2: 结构化日志契约
 
-- [ ] 定义 workflow event 日志字段（workflow/step/status/duration/errorType/requestId）
-- [ ] 明确写入时机（start/success/failure）
+- [x] 定义 workflow event 日志字段（workflow/step/status/duration/errorType/requestId）
+- [x] 明确写入时机（start/success/failure）
 
 #### B3: P0 路由日志补齐
 
-- [ ] Chat：记录首 token 与完成事件耗时
-- [ ] 报告生成：记录开始/完成/失败事件
-- [ ] 文档提取：记录上传→提取→保存关键节点
-- [ ] Quick Actions：记录执行成功/失败
-- [ ] Admin 上传/配置：记录关键节点与失败原因
+- [x] Chat：记录首 token 与完成事件耗时
+- [x] 报告生成：记录开始/完成/失败事件
+- [x] 文档提取：记录上传→提取→保存关键节点
+- [x] Quick Actions：记录执行成功/失败
+- [x] Admin 上传/配置：记录关键节点与失败原因
 
 ---
 

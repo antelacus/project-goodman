@@ -8,6 +8,8 @@
  * - JSON-formatted output for log aggregation
  */
 
+import type { WorkflowErrorType } from '@/lib/errors';
+
 // =============================================================================
 // Types
 // =============================================================================
@@ -20,8 +22,26 @@ export interface LogContext {
   route?: string;
   duration?: number;
   method?: string;
-  status?: number;
+  status?: number | string;
   [key: string]: unknown;
+}
+
+export type WorkflowStep =
+  | 'start'
+  | 'first_token'
+  | 'upload'
+  | 'extract'
+  | 'store'
+  | 'success'
+  | 'failure';
+export type WorkflowStatus = 'ok' | 'error';
+
+export interface WorkflowLogContext extends LogContext {
+  workflow: string;
+  step: WorkflowStep;
+  status: WorkflowStatus;
+  duration?: number;
+  errorType?: WorkflowErrorType;
 }
 
 // =============================================================================
@@ -206,6 +226,34 @@ export function logRequest(
     default:
       logger.info(message, fullContext);
   }
+}
+
+// =============================================================================
+// Workflow Logging Helper
+// =============================================================================
+
+/**
+ * Log a workflow event with a standard contract
+ */
+export function logWorkflowEvent(context: WorkflowLogContext): void {
+  const { workflow, step, status, duration, errorType, ...rest } = context;
+  const message = `${workflow} ${step} ${status}${typeof duration === 'number' ? ` ${duration}ms` : ''}`;
+
+  const logContext: LogContext = {
+    workflow,
+    step,
+    status,
+    duration,
+    errorType,
+    ...rest,
+  };
+
+  if (status === 'error') {
+    logger.error(message, logContext);
+    return;
+  }
+
+  logger.info(message, logContext);
 }
 
 // =============================================================================

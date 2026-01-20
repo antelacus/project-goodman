@@ -7,7 +7,7 @@ import {
     generateRequestId,
     createErrorResponse,
 } from '@/lib/security';
-import { logger, logRequest, logError } from '@/lib/logging';
+import { logger, logRequest, logWorkflowEvent, logError } from '@/lib/logging';
 import { ChatMessageSchema, validateRequest } from '@/lib/validation/api-schemas';
 import { v4 as uuidv4 } from 'uuid';
 import { withSentrySpan } from '@/lib/observability/error-tracking';
@@ -18,6 +18,7 @@ import {
     formatThinkingEvent,
 } from '@/lib/workflows/shared/format-event';
 import type { ProcessEvent, SourceReference } from '@/types/process-events';
+import type { WorkflowErrorType } from '@/lib/errors';
 
 export const runtime = 'nodejs'; // Ensure Node.js runtime for LangGraph
 
@@ -110,8 +111,39 @@ export async function POST(req: NextRequest) {
 
         const requestId = req.headers.get('x-request-id') || generateRequestId();
         const startTime = Date.now();
+        const workflowContext = {
+            workflow: 'chat_stream',
+            requestId,
+            route: '/api/chat/stream',
+        };
+        let workflowCompleted = false;
+        let firstTokenLogged = false;
 
         logger.info('Chat stream started', { requestId, route: '/api/chat/stream' });
+        logWorkflowEvent({ ...workflowContext, step: 'start', status: 'ok' });
+
+        const logWorkflowSuccess = () => {
+            if (workflowCompleted) return;
+            workflowCompleted = true;
+            logWorkflowEvent({
+                ...workflowContext,
+                step: 'success',
+                status: 'ok',
+                duration: Date.now() - startTime,
+            });
+        };
+
+        const logWorkflowFailure = (errorType: WorkflowErrorType) => {
+            if (workflowCompleted) return;
+            workflowCompleted = true;
+            logWorkflowEvent({
+                ...workflowContext,
+                step: 'failure',
+                status: 'error',
+                errorType,
+                duration: Date.now() - startTime,
+            });
+        };
 
         try {
             // V3.10: Ensure session exists (creates guest session if needed)
@@ -122,6 +154,7 @@ export async function POST(req: NextRequest) {
             if (session.role === 'guest') {
                 const rateCheck = await checkGuestRate(session.sessionId, 'message');
                 if (!rateCheck.allowed) {
+                    logWorkflowFailure('RATE_LIMIT');
                     const response = NextResponse.json(
                         {
                             error: '已达到消息数量限制，请1小时后重试',
@@ -150,6 +183,7 @@ export async function POST(req: NextRequest) {
             // V3.9: Validate request with Zod schema
             const validation = validateRequest(ChatMessageSchema, body);
             if (!validation.success) {
+                logWorkflowFailure('VALIDATION');
                 return NextResponse.json(
                     { error: validation.error },
                     { status: 400 }
@@ -203,6 +237,15 @@ export async function POST(req: NextRequest) {
             const stream = new ReadableStream({
                 async start(controller) {
                     const sendEvent = (type: string, data: unknown) => {
+                        if (!firstTokenLogged) {
+                            firstTokenLogged = true;
+                            logWorkflowEvent({
+                                ...workflowContext,
+                                step: 'first_token',
+                                status: 'ok',
+                                duration: Date.now() - startTime,
+                            });
+                        }
                         const formattedData = JSON.stringify(data);
                         controller.enqueue(`event: ${type}\ndata: ${formattedData}\n\n`);
                     };
@@ -399,17 +442,20 @@ export async function POST(req: NextRequest) {
                                 sessionId: returnedSessionId,
                                 ...outputData
                             });
+                            logWorkflowSuccess();
                         } else {
                             // Fallback: If we couldn't capture the output
                             // Check if we have an error in the output metadata
                             if (finalOutput && finalOutput.meta && finalOutput.meta.error) {
                                 sendEvent('error', { message: finalOutput.meta.error.message });
+                                logWorkflowFailure('INTERNAL');
                             } else {
                                 sendEvent('complete', {
                                     sessionId: capturedSessionId || sessionId || 'unknown',
                                     type: 'error',
                                     answer: 'I completed the task but could not generate a final response.'
                                 });
+                                logWorkflowFailure('INTERNAL');
                             }
                         }
 
@@ -417,6 +463,7 @@ export async function POST(req: NextRequest) {
                         logError('Chat stream processing error', err, requestId, { route: '/api/chat/stream' });
                         const errorMessage = err instanceof Error ? err.message : 'An error occurred during streaming';
                         sendEvent('error', { message: errorMessage });
+                        logWorkflowFailure('INTERNAL');
 
                         // v4.0: Send process error event (no stack trace to prevent info disclosure)
                         sendEvent('process', createProcessEvent(
@@ -460,7 +507,11 @@ export async function POST(req: NextRequest) {
         } catch (error: unknown) {
             logError('Chat stream request failed', error, requestId, { route: '/api/chat/stream' });
             logRequest(requestId, 'POST', '/api/chat/stream', 500, Date.now() - startTime);
-            return createErrorResponse(error, requestId, 500);
+            logWorkflowFailure('INTERNAL');
+            return createErrorResponse(error, requestId, 500, {
+                errorType: 'INTERNAL',
+                route: '/api/chat/stream',
+            });
         }
     }
     );

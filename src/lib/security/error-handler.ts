@@ -5,6 +5,8 @@
  * information in production while preserving details in development.
  */
 
+import { WORKFLOW_ERROR_MESSAGES } from '@/lib/errors';
+
 // =============================================================================
 // Types
 // =============================================================================
@@ -38,12 +40,8 @@ const SENSITIVE_PATTERNS = [
 
 // Generic error messages by error type
 const GENERIC_MESSAGES: Record<string, string> = {
-    VALIDATION: '输入验证失败',
-    AUTH: '认证失败',
-    FORBIDDEN: '没有访问权限',
+    ...WORKFLOW_ERROR_MESSAGES,
     NOT_FOUND: '请求的资源不存在',
-    RATE_LIMIT: '请求过于频繁，请稍后重试',
-    TIMEOUT: '请求超时，请重试',
     SERVER: '处理请求时出错，请稍后重试',
     DEFAULT: '发生错误，请稍后重试',
 };

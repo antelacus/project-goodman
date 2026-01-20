@@ -15,7 +15,7 @@ import {
   generateRequestId,
   createErrorResponse,
 } from '@/lib/security';
-import { logger, logRequest, logError } from '@/lib/logging';
+import { logger, logRequest, logWorkflowEvent, logError } from '@/lib/logging';
 import { ReportGenerateSchema, validateRequest } from '@/lib/validation/api-schemas';
 import { withSentrySpan } from '@/lib/observability/error-tracking';
 import { isPerfTestRequest } from '@/lib/quality-gates/perf-test';
@@ -27,6 +27,7 @@ import type {
   ReportProcessEvent,
   ReportPhase,
 } from '@/types/report-events';
+import type { WorkflowErrorType } from '@/lib/errors';
 
 export const runtime = 'nodejs';
 
@@ -144,8 +145,38 @@ export async function POST(req: NextRequest) {
 
     const requestId = req.headers.get('x-request-id') || generateRequestId();
     const startTime = Date.now();
+    const workflowContext = {
+      workflow: 'report_generation',
+      requestId,
+      route: '/api/reports/generate',
+    };
+    let workflowCompleted = false;
 
     logger.info('Report generation started', { requestId, route: '/api/reports/generate' });
+    logWorkflowEvent({ ...workflowContext, step: 'start', status: 'ok' });
+
+    const logWorkflowSuccess = () => {
+      if (workflowCompleted) return;
+      workflowCompleted = true;
+      logWorkflowEvent({
+        ...workflowContext,
+        step: 'success',
+        status: 'ok',
+        duration: Date.now() - startTime,
+      });
+    };
+
+    const logWorkflowFailure = (errorType: WorkflowErrorType) => {
+      if (workflowCompleted) return;
+      workflowCompleted = true;
+      logWorkflowEvent({
+        ...workflowContext,
+        step: 'failure',
+        status: 'error',
+        errorType,
+        duration: Date.now() - startTime,
+      });
+    };
 
     try {
       // Ensure session exists (creates guest session if needed)
@@ -156,6 +187,7 @@ export async function POST(req: NextRequest) {
       if (session.role === 'guest') {
         const rateCheck = await checkGuestRate(session.sessionId, 'report');
         if (!rateCheck.allowed) {
+          logWorkflowFailure('RATE_LIMIT');
           const response = NextResponse.json(
             {
               error: '已达到报告生成限制，请1小时后重试',
@@ -183,6 +215,7 @@ export async function POST(req: NextRequest) {
       // Validate request
       const validation = validateRequest(ReportGenerateSchema, body);
       if (!validation.success) {
+        logWorkflowFailure('VALIDATION');
         return NextResponse.json(
           { error: validation.error },
           { status: 400 }
@@ -316,24 +349,29 @@ export async function POST(req: NextRequest) {
                   finalState.meta?.generationTimeMs
                 )
               );
+              logWorkflowSuccess();
             } else if (finalState?.meta?.error) {
               sendEvent('report', createErrorEvent(
                 finalState.meta.error.message || '报告生成失败',
                 currentPhase || undefined
               ));
+              logWorkflowFailure('REPORT_FAILED');
             } else if (finalState?.dataAvailability?.error) {
               sendEvent('report', createErrorEvent(
                 finalState.dataAvailability.error,
                 'check'
               ));
+              logWorkflowFailure('RETRIEVAL_EMPTY');
             } else {
               sendEvent('report', createErrorEvent('报告生成失败：未知错误'));
+              logWorkflowFailure('REPORT_FAILED');
             }
 
           } catch (err: unknown) {
             logError('Report generation stream error', err, requestId, { route: '/api/reports/generate' });
             const errorMessage = err instanceof Error ? err.message : '报告生成过程中发生错误';
             sendEvent('report', createErrorEvent(errorMessage, currentPhase || undefined));
+            logWorkflowFailure('REPORT_FAILED');
           } finally {
             controller.close();
           }
@@ -371,7 +409,11 @@ export async function POST(req: NextRequest) {
     } catch (error: unknown) {
       logError('Report generation request failed', error, requestId, { route: '/api/reports/generate' });
       logRequest(requestId, 'POST', '/api/reports/generate', 500, Date.now() - startTime);
-      return createErrorResponse(error, requestId, 500);
+      logWorkflowFailure('REPORT_FAILED');
+      return createErrorResponse(error, requestId, 500, {
+        errorType: 'REPORT_FAILED',
+        route: '/api/reports/generate',
+      });
     }
   });
 }
