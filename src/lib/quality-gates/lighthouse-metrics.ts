@@ -56,7 +56,7 @@ export function extractLighthousePath(report: LighthouseReport): string {
 
   try {
     return new URL(url).pathname;
-  } catch (error) {
+  } catch {
     throw new Error(`Invalid Lighthouse URL: ${url}`);
   }
 }
