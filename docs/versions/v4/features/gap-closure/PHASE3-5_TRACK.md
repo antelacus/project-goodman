@@ -150,9 +150,23 @@
 
 #### Task D1: A11y 测试脚本
 
-- [ ] 安装 `@axe-core/playwright`
-- [ ] 编写 `/` 与 `/chat` A11y 检查
-- [ ] 增加 `npm run test:a11y` 脚本
+- [x] 安装 `@axe-core/playwright`
+- [x] 编写 `/` 与 `/chat` A11y 检查
+- [x] 增加 `npm run test:a11y` 脚本
+
+**实施记录**:
+
+```
+状态: ✅ 完成
+开始时间: 2026-01-20 03:45
+完成时间: 2026-01-20 03:56
+变更点:
+- 新增 a11y 结果提取工具与单测（extractA11yViolations）
+- 新增 a11y 扫描脚本（/ 与 /chat）
+- package.json 增加 test:a11y 脚本
+- 安装 @axe-core/playwright
+测试: npm run test -- --run tests/unit/quality-gates/a11y-metrics.test.ts
+```
 
 #### Task D2: 基线与门禁
 
