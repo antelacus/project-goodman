@@ -39,7 +39,7 @@ jobs:
         run: echo "CHROME_PATH=$(node -e \"const { chromium } = require('playwright'); console.log(chromium.executablePath());\")" >> $GITHUB_ENV
 
       - name: Start Next.js dev server (quality gates)
-        if: ${{ hashFiles('tests/quality-baselines/performance/perf-baseline.json') != '' || hashFiles('tests/quality-baselines/lighthouse/*.json') != '' }}
+        if: ${{ hashFiles('tests/quality-baselines/performance/perf-baseline.json') != '' || hashFiles('tests/quality-baselines/lighthouse/*.json') != '' || hashFiles('tests/quality-baselines/a11y/a11y-baseline.json') != '' }}
         run: |
           NODE_ENV=development PERF_TEST_MODE=true REDIS_DISABLED=true \
           NEXT_PUBLIC_SUPABASE_URL=${{ secrets.NEXT_PUBLIC_SUPABASE_URL || 'https://placeholder.supabase.co' }} \
@@ -64,8 +64,14 @@ jobs:
         env:
           LHCI_BASE_URL: http://127.0.0.1:3100
 
+      - name: A11y regression gate
+        if: ${{ hashFiles('tests/quality-baselines/a11y/a11y-baseline.json') != '' }}
+        run: npm run test:a11y
+        env:
+          A11Y_BASE_URL: http://127.0.0.1:3100
+
       - name: Stop Next.js dev server (quality gates)
-        if: ${{ always() && (hashFiles('tests/quality-baselines/performance/perf-baseline.json') != '' || hashFiles('tests/quality-baselines/lighthouse/*.json') != '') }}
+        if: ${{ always() && (hashFiles('tests/quality-baselines/performance/perf-baseline.json') != '' || hashFiles('tests/quality-baselines/lighthouse/*.json') != '' || hashFiles('tests/quality-baselines/a11y/a11y-baseline.json') != '') }}
         run: |
           if [ -f /tmp/next-dev.pid ]; then
             kill "$(cat /tmp/next-dev.pid)"

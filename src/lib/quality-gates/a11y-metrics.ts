@@ -7,6 +7,22 @@ export type A11yViolation = {
   impact: A11ySeverity;
 };
 
+export type A11yBaseline = {
+  generatedAt: string;
+  baseUrl: string;
+  pages: Record<string, A11yViolation[]>;
+};
+
+export type A11yRegression = {
+  path: string;
+  newViolations: A11yViolation[];
+};
+
+export type A11yComparison = {
+  regressions: A11yRegression[];
+  missing: string[];
+};
+
 export type AxeViolation = {
   id: string;
   impact?: A11yImpact;
@@ -43,4 +59,41 @@ export function extractA11yViolations(results: AxeResults): A11yViolation[] {
   return Array.from(byId.entries())
     .sort(([leftId], [rightId]) => leftId.localeCompare(rightId))
     .map(([id, impact]) => ({ id, impact }));
+}
+
+export function compareA11yBaselines(
+  baseline: A11yBaseline,
+  current: A11yBaseline
+): A11yComparison {
+  const regressions: A11yRegression[] = [];
+  const missing: string[] = [];
+
+  for (const [path, baselineViolations] of Object.entries(baseline.pages)) {
+    const currentViolations = current.pages[path];
+    if (!currentViolations) {
+      missing.push(path);
+      continue;
+    }
+
+    const baselineById = new Map<string, A11ySeverity>();
+    for (const violation of baselineViolations) {
+      baselineById.set(violation.id, violation.impact);
+    }
+
+    const newViolations = currentViolations
+      .filter((violation) => {
+        const baselineImpact = baselineById.get(violation.id);
+        if (!baselineImpact) {
+          return true;
+        }
+        return IMPACT_PRIORITY[violation.impact] > IMPACT_PRIORITY[baselineImpact];
+      })
+      .sort((left, right) => left.id.localeCompare(right.id));
+
+    if (newViolations.length > 0) {
+      regressions.push({ path, newViolations });
+    }
+  }
+
+  return { regressions, missing };
 }

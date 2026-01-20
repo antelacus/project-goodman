@@ -72,3 +72,4 @@ supabase/.temp/
 
 # git worktrees (local)
 .worktrees/
+.a11y
