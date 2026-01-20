@@ -23,6 +23,7 @@ import { createServerSupabaseClient } from "@/lib/database";
 import { ExtractRequestSchema, validateRequest } from "@/lib/validation/api-schemas";
 import { downloadFileAsBase64, getFirstFileForDocument } from "@/lib/documents/storage";
 import { withSentrySpan } from "@/lib/observability/error-tracking";
+import { isPerfTestRequest } from "@/lib/quality-gates/perf-test";
 
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
@@ -55,6 +56,17 @@ export async function POST(req: NextRequest) {
   };
 
   return withSentrySpan(spanContext, async () => {
+    if (isPerfTestRequest(req)) {
+      await req.arrayBuffer();
+      return NextResponse.json({
+        success: true,
+        perfTest: true,
+        data: { status: "ok" },
+        fileType: "application/json",
+        fileName: "perf-test.json",
+      });
+    }
+
     const requestId = req.headers.get('x-request-id') || generateRequestId();
 
     try {

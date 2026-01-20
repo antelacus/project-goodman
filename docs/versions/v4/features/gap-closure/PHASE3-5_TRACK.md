@@ -56,20 +56,36 @@
 
 #### Task B1: 性能测试工具与脚本
 
-- [ ] 安装 `autocannon`
-- [ ] 新增性能基线脚本（固定并发/时长/P95 输出）
-- [ ] 增加 `npm run test:perf` 脚本
+- [x] 安装 `autocannon`
+- [x] 新增性能基线脚本（固定并发/时长/P95 输出）
+- [x] 增加 `npm run test:perf` 脚本
 
 #### Task B2: 性能测试模式与基线
 
-- [ ] 增加 `PERF_TEST_MODE` 测试模式（仅非生产生效）
-- [ ] 为关键 API 提供稳定、可复现的测试路径
-- [ ] 生成基线快照并存档（`tests/quality-baselines/performance/`）
+- [x] 增加 `PERF_TEST_MODE` 测试模式（仅非生产生效）
+- [x] 为关键 API 提供稳定、可复现的测试路径
+- [x] 生成基线快照并存档（`tests/quality-baselines/performance/`）
 
 #### Task B3: CI 门禁接入
 
-- [ ] 对比当前结果与基线（+20% 阈值）
-- [ ] 超阈值阻断 CI
+- [x] 对比当前结果与基线（+20% 阈值）
+- [x] 超阈值阻断 CI
+
+**实施记录**:
+
+```
+状态: ✅ 完成
+开始时间: 2026-01-19 13:05
+完成时间: 2026-01-20 02:00
+变更点:
+- 新增 perf gate 脚本与基线目录（tests/quality-baselines/performance）
+- 关键 API 增加 PERF_TEST_MODE 快速路径（chat/report/upload/extract）
+- CI 增加 perf gate（基线文件存在时才启用）
+- .env.example 增加 PERF_TEST_MODE 与 QUALITY_GATES_STRICT
+- 生成 perf 基线快照（tests/quality-baselines/performance/perf-baseline.json）
+  - 覆盖场景：chat.stream / reports.generate / documents.upload-temp / quick-actions.extract
+  - 测试配置：1 connection, 10s duration, 5 max requests
+```
 
 ---
 

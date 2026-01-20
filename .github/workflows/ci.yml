@@ -32,6 +32,33 @@ jobs:
       - name: Coverage
         run: npm run test:coverage
 
+      - name: Start Next.js dev server (perf gate)
+        if: ${{ hashFiles('tests/quality-baselines/performance/perf-baseline.json') != '' }}
+        run: |
+          NODE_ENV=development PERF_TEST_MODE=true REDIS_DISABLED=true \
+          NEXT_PUBLIC_SUPABASE_URL=${{ secrets.NEXT_PUBLIC_SUPABASE_URL || 'https://placeholder.supabase.co' }} \
+          NEXT_PUBLIC_SUPABASE_ANON_KEY=${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'placeholder-anon-key' }} \
+          OPENAI_API_KEY=${{ secrets.OPENAI_API_KEY || 'sk-placeholder-for-ci-build' }} \
+          SUPABASE_SERVICE_ROLE_KEY=${{ secrets.SUPABASE_SERVICE_ROLE_KEY || 'placeholder-service-role-key' }} \
+          npm run dev -- --hostname 127.0.0.1 --port 3100 > /tmp/next-dev.log 2>&1 &
+          echo $! > /tmp/next-dev.pid
+          sleep 15
+
+      - name: Perf regression gate
+        if: ${{ hashFiles('tests/quality-baselines/performance/perf-baseline.json') != '' }}
+        run: npm run test:perf
+        env:
+          NODE_ENV: development
+          PERF_TEST_MODE: 'true'
+          PERF_BASE_URL: http://127.0.0.1:3100
+
+      - name: Stop Next.js dev server (perf gate)
+        if: ${{ always() && hashFiles('tests/quality-baselines/performance/perf-baseline.json') != '' }}
+        run: |
+          if [ -f /tmp/next-dev.pid ]; then
+            kill "$(cat /tmp/next-dev.pid)"
+          fi
+
       - name: Upload coverage report
         uses: actions/upload-artifact@v4
         with:
