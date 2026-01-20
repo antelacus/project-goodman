@@ -32,8 +32,14 @@ jobs:
       - name: Coverage
         run: npm run test:coverage
 
-      - name: Start Next.js dev server (perf gate)
-        if: ${{ hashFiles('tests/quality-baselines/performance/perf-baseline.json') != '' }}
+      - name: Install Playwright browsers
+        run: npx playwright install chromium
+
+      - name: Export CHROME_PATH for Lighthouse
+        run: echo "CHROME_PATH=$(node -e \"const { chromium } = require('playwright'); console.log(chromium.executablePath());\")" >> $GITHUB_ENV
+
+      - name: Start Next.js dev server (quality gates)
+        if: ${{ hashFiles('tests/quality-baselines/performance/perf-baseline.json') != '' || hashFiles('tests/quality-baselines/lighthouse/*.json') != '' }}
         run: |
           NODE_ENV=development PERF_TEST_MODE=true REDIS_DISABLED=true \
           NEXT_PUBLIC_SUPABASE_URL=${{ secrets.NEXT_PUBLIC_SUPABASE_URL || 'https://placeholder.supabase.co' }} \
@@ -52,8 +58,14 @@ jobs:
           PERF_TEST_MODE: 'true'
           PERF_BASE_URL: http://127.0.0.1:3100
 
-      - name: Stop Next.js dev server (perf gate)
-        if: ${{ always() && hashFiles('tests/quality-baselines/performance/perf-baseline.json') != '' }}
+      - name: Lighthouse regression gate
+        if: ${{ hashFiles('tests/quality-baselines/lighthouse/*.json') != '' }}
+        run: npm run test:lighthouse:gate
+        env:
+          LHCI_BASE_URL: http://127.0.0.1:3100
+
+      - name: Stop Next.js dev server (quality gates)
+        if: ${{ always() && (hashFiles('tests/quality-baselines/performance/perf-baseline.json') != '' || hashFiles('tests/quality-baselines/lighthouse/*.json') != '') }}
         run: |
           if [ -f /tmp/next-dev.pid ]; then
             kill "$(cat /tmp/next-dev.pid)"
@@ -64,9 +76,6 @@ jobs:
         with:
           name: coverage-report
           path: coverage
-
-      - name: Install Playwright browsers
-        run: npx playwright install
 
       - name: E2E (Playwright, non-blocking)
         run: npm run test:e2e

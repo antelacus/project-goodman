@@ -128,8 +128,21 @@
 
 #### Task C3: CI 门禁
 
-- [ ] 对比基线分数（允许下降 ≤5）
-- [ ] 超阈值阻断 CI
+- [x] 对比基线分数（允许下降 ≤5）
+- [x] 超阈值阻断 CI
+
+**实施记录**:
+
+```
+状态: ✅ 完成
+开始时间: 2026-01-20 03:31
+完成时间: 2026-01-20 03:50
+变更点:
+- 新增 Lighthouse 分数对比逻辑与单测（performance/accessibility）
+- 新增 Lighthouse gate 脚本（baseline/check）并接入 npm scripts
+- CI 增加 Lighthouse gate 步骤（Playwright chromium + CHROME_PATH）
+测试: npm run test -- --run tests/unit/quality-gates/lighthouse-metrics.test.ts
+```
 
 ---
 
