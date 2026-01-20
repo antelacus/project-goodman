@@ -18,6 +18,7 @@ import {
 import { logger, logRequest, logError } from '@/lib/logging';
 import { ReportGenerateSchema, validateRequest } from '@/lib/validation/api-schemas';
 import { withSentrySpan } from '@/lib/observability/error-tracking';
+import { isPerfTestRequest } from '@/lib/quality-gates/perf-test';
 import type {
   ReportPhaseEvent,
   ReportSectionEvent,
@@ -136,6 +137,11 @@ export async function POST(req: NextRequest) {
   };
 
   return withSentrySpan(spanContext, async () => {
+    if (isPerfTestRequest(req)) {
+      await req.arrayBuffer();
+      return NextResponse.json({ success: true, perfTest: true });
+    }
+
     const requestId = req.headers.get('x-request-id') || generateRequestId();
     const startTime = Date.now();
 

@@ -1,0 +1,50 @@
+{
+  "generatedAt": "2026-01-20T01:57:53.165Z",
+  "baseUrl": "http://localhost:3003",
+  "scenarios": {
+    "chat.stream": {
+      "name": "chat.stream",
+      "method": "POST",
+      "path": "/api/chat/stream",
+      "latencyMs": {
+        "p50": 173,
+        "p95": 0,
+        "p99": 465
+      },
+      "errorRate": 0
+    },
+    "reports.generate": {
+      "name": "reports.generate",
+      "method": "POST",
+      "path": "/api/reports/generate",
+      "latencyMs": {
+        "p50": 185,
+        "p95": 0,
+        "p99": 376
+      },
+      "errorRate": 0
+    },
+    "documents.upload-temp": {
+      "name": "documents.upload-temp",
+      "method": "POST",
+      "path": "/api/documents/upload-temp",
+      "latencyMs": {
+        "p50": 619,
+        "p95": 0,
+        "p99": 1521
+      },
+      "errorRate": 0
+    },
+    "quick-actions.extract": {
+      "name": "quick-actions.extract",
+      "method": "POST",
+      "path": "/api/quick-actions/extract",
+      "latencyMs": {
+        "p50": 209,
+        "p95": 0,
+        "p99": 582
+      },
+      "errorRate": 0
+    }
+  }
+}
