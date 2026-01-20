@@ -29,6 +29,10 @@
 - 依据 v4.4 生产就绪实施记录与新增文档，更新差距矩阵与优先级。
 - 状态调整仅依据当前仓库证据，不包含线上配置的实时核验。
 
+**更新说明（2026-01-20）**：
+- 依据 v4.5 生产就绪缺口补齐（Gap Closure）实施记录，更新差距矩阵与路线图。
+- 状态调整仍以仓库证据为准，不包含线上告警阈值的实时核验。
+
 ---
 
 ## 2. 方法与评分
@@ -57,14 +61,17 @@
 - `docs/SECURITY.md`：安全边界、密钥策略、披露流程
 - `docs/INCIDENT_RUNBOOK.md`：事故响应与回滚流程
 - `docs/OBSERVABILITY.md`：Sentry + UptimeRobot 方案与配置
+- `docs/versions/v4/features/gap-closure/PHASE3-5_TRACK.md`：v4.5 实施记录与测试
 - `.github/workflows/deploy-staging.yml`：staging 自动部署
 - `.github/workflows/ci.yml`、`.github/workflows/deploy.yml`：CI/CD 自动化
+- `scripts/quality-gates/`：质量门禁脚本（perf/lighthouse/a11y/audit）
 - `tests/integration/`、`tests/e2e/`：集成与 E2E 覆盖现状
+- `tests/quality-baselines/`：性能/Lighthouse/A11y/审计基线快照
 - `docs/TECHNICAL_DEBT.md`：已知问题与风险记录
 - `package.json`、`.husky/`：质量门禁（lint/test/tsc）
 - `tests/unit/`：单元测试现状
 - `.claude/rules/code-conventions.md`：安全/数据库设计决策
-- `CLAUDE.md`：技术栈与项目定位（存在内容滞后）
+- `CLAUDE.md`：技术栈与项目定位
 
 ---
 
@@ -77,8 +84,8 @@
 | 用户向 README（非技术） | `README.md` | ✅ | 已面向用户/招聘展示
 | 架构总览（单一权威文档） | `docs/ARCHITECTURE.md` | ✅ | 已补齐架构总览与数据流说明
 | 运维/故障处置手册 | `docs/INCIDENT_RUNBOOK.md` + `docs/DEPLOYMENT_CHECKLIST.md` | ✅ | 已补齐分级/响应/回滚流程
-| 开发者入门与本地环境说明 | 无专门文档 | ❌ | 对外展示时缺乏工程化入口
-| 文档一致性与更新机制 | `CLAUDE.md` vs `docs/TECHNICAL_DEBT.md`/`docs/OBSERVABILITY.md` | ⚠️ | 技术栈/可观测性描述仍有滞后
+| 开发者入门与本地环境说明 | `README.md` | ✅ | 已补充开发者快速开始与本地环境说明
+| 文档一致性与更新机制 | `CLAUDE.md` + `docs/OBSERVABILITY.md` | ✅ | 已对齐技术栈与可观测性描述
 
 ### 4.2 代码质量与架构卫生
 
@@ -93,7 +100,7 @@
 | 基线标准 | 证据 | 状态 | 备注/风险 |
 |---|---|---|---|
 | 输入验证与统一错误响应 | `.claude/rules/code-conventions.md` | ✅ | API 规范明确
-| 依赖漏洞扫描 | CI 中 `npm audit` | ⚠️ | `continue-on-error`，未作为硬门禁
+| 依赖漏洞扫描 | `.github/workflows/ci.yml` + `scripts/quality-gates/audit-gate.ts` | ✅ | High/Critical 作为硬门禁，支持豁免清单
 | 安全实践文档 | `docs/SECURITY.md` | ✅ | 安全边界、密钥策略、披露流程已补齐
 | 密钥管理与泄露防护 | `.env` / `.env.example` | ⚠️ | `.env` 存在但未纳入版本控制，仍需持续审查
 
@@ -121,7 +128,7 @@
 |---|---|---|---|
 | 结构化日志 | `src/lib/logging/logger.ts` | ✅ | 已实现基础日志
 | 健康检查 | `/api/health` | ✅ | 可用于探活
-| 指标采集与告警 | `docs/OBSERVABILITY.md` | ⚠️ | 已有 uptime 监控，但缺指标/性能阈值
+| 指标采集与告警 | `docs/OBSERVABILITY.md` | ✅ | 已补齐性能阈值与告警策略（Sentry Performance + UptimeRobot）
 | 错误追踪（Sentry 类） | `docs/OBSERVABILITY.md` | ✅ | Sentry 方案已接入文档化
 
 ### 4.7 可靠性 / 性能
@@ -129,8 +136,8 @@
 | 基线标准 | 证据 | 状态 | 备注/风险 |
 |---|---|---|---|
 | Web Vitals 基线 | `WebVitals` 组件 | ⚠️ | 仅控制台输出，无仪表盘/阈值
-| 性能预算/回归阈值 | 无 | ❌ | 无自动警戒
-| 负载/稳定性测试 | 无 | ❌ | 无法证明高峰稳定性
+| 性能预算/回归阈值 | `tests/quality-baselines/performance/perf-baseline.json` | ✅ | 已建立 perf 基线与回归门禁（+20%）
+| 负载/稳定性测试 | `scripts/quality-gates/perf-gate.ts` | ✅ | 轻量 autocannon 基线与对比可复现
 
 ### 4.8 UX 与可访问性
 
@@ -138,20 +145,20 @@
 |---|---|---|---|
 | Error Boundary 与错误兜底 | 已实现 | ✅ | 基础完备
 | 关键模态无障碍 | `useModalAccessibility` | ✅ | 基础完备
-| 自动化 a11y/Lighthouse | 无 | ❌ | 对外展示缺“量化指标”
+| 自动化 a11y/Lighthouse | `tests/quality-baselines/a11y/a11y-baseline.json` + `tests/quality-baselines/lighthouse/` | ✅ | 已建立基线与 CI 门禁
 
 ---
 
 ## 5. 风险排序（Top Gaps）
 
-| Gap | 风险分 | 优先级 | 理由 |
-|---|---|---|---|
-| 指标/告警仅健康检查（缺性能阈值） | 12 (3×4) | P1 | 仅 uptime，缺关键指标与性能告警
-| 性能预算/负载稳定性测试缺失 | 12 (3×4) | P1 | 无法证明高峰稳定性
-| 自动化 a11y/Lighthouse 基线缺失 | 9 (3×3) | P2 | 对外展示缺量化指标
-| 开发者入门/本地环境文档缺失 | 9 (3×3) | P2 | 工程化入口不足
-| CI 安全审计非硬门禁 | 6 (2×3) | P2 | `npm audit` continue-on-error
-| 文档一致性（CLAUDE.md 滞后） | 6 (2×3) | P2 | 技术栈/可观测性描述需对齐
+| Gap | 风险分 | 优先级 | 状态 | 理由 |
+|---|---|---|---|---|
+| 指标/告警仅健康检查（缺性能阈值） | 12 (3×4) | P1 | ✅ 已补齐（v4.5） | 仅 uptime，缺关键指标与性能告警
+| 性能预算/负载稳定性测试缺失 | 12 (3×4) | P1 | ✅ 已补齐（v4.5） | 无法证明高峰稳定性
+| 自动化 a11y/Lighthouse 基线缺失 | 9 (3×3) | P2 | ✅ 已补齐（v4.5） | 对外展示缺量化指标
+| 开发者入门/本地环境文档缺失 | 9 (3×3) | P2 | ✅ 已补齐（v4.5） | 工程化入口不足
+| CI 安全审计非硬门禁 | 6 (2×3) | P2 | ✅ 已补齐（v4.5） | `npm audit` continue-on-error
+| 文档一致性（CLAUDE.md 滞后） | 6 (2×3) | P2 | ✅ 已补齐（v4.5） | 技术栈/可观测性描述需对齐
 
 ---
 
@@ -166,14 +173,20 @@
 - ✅ 覆盖率基线与测试门禁
 - ✅ 发布/回滚演练记录与清单更新
 
-### 6.2 仍待补齐（后续）
+### 6.2 已补齐（v4.5）
 
-- **P1**：指标/性能阈值与告警（非仅 uptime）
-- **P1**：性能预算 + 负载/稳定性测试基线
-- **P2**：开发者入门/本地环境文档
-- **P2**：文档一致性修复（CLAUDE.md 对齐实际依赖/可观测性）
-- **P2**：安全审计作为硬门禁（或列出可接受豁免）
-- **P2**：Lighthouse/A11y 报告与评分基线
+- ✅ **P1**：指标/性能阈值与告警（非仅 uptime）
+- ✅ **P1**：性能预算 + 负载/稳定性测试基线
+- ✅ **P2**：开发者入门/本地环境文档
+- ✅ **P2**：文档一致性修复（CLAUDE.md 对齐实际依赖/可观测性）
+- ✅ **P2**：安全审计作为硬门禁（或列出可接受豁免）
+- ✅ **P2**：Lighthouse/A11y 报告与评分基线
+
+### 6.3 仍待补齐（当前残余）
+
+- **P2**：E2E 流程仍为非阻断（CI continue-on-error）
+- **P2**：Web Vitals 基线仍缺仪表盘与阈值
+- **P2**：密钥管理持续审查（仅 `.env.example`，需长期治理）
 
 ---
 
@@ -234,6 +247,8 @@ jobs:
 
 ## 8. 结论
 
-当前项目已补齐生产就绪的 P0 关键证据（staging、集成测试、错误追踪、核心文档与演练）。剩余差距集中在 **指标/性能类可观测性、性能/稳定性基线、开发者入门与文档一致性、自动化 a11y/Lighthouse 与安全审计门禁**。
+当前项目已补齐生产就绪的 P0 关键证据（staging、集成测试、错误追踪、核心文档与演练），并在 v4.5 补齐主要 P1/P2 缺口（性能阈值、基线门禁、A11y/Lighthouse、README 开发者入口、审计门禁、文档一致性）。
+
+剩余差距集中在 **E2E 仍为非阻断、Web Vitals 缺阈值与仪表盘、密钥管理的持续治理**。
 
 如果需要，我可以把本分析转化为 **v4.4 的 Phase 1 REQ 文档**，并拆解为可执行任务清单。
