@@ -178,6 +178,41 @@ Project Goodman 是一款面向企业会计部门的 AI 财务助手。通过自
 
 ---
 
+## 开发者快速开始
+
+### 技术栈概览
+
+- Next.js 15 / React 19 / TypeScript
+- Supabase (Postgres) + Redis
+- LangGraph + OpenAI
+- Tailwind CSS
+- Vitest + Playwright + Lighthouse CI + axe + autocannon
+- Sentry + UptimeRobot
+
+### 环境变量与本地运行
+
+1. 安装依赖：`npm install`
+2. 复制环境变量：`cp .env.example .env.local`
+3. 必填配置：
+   - `OPENAI_API_KEY`
+   - `NEXT_PUBLIC_SUPABASE_URL` / `NEXT_PUBLIC_SUPABASE_ANON_KEY`
+   - `SUPABASE_SERVICE_ROLE_KEY`
+   - `ADMIN_PASSWORD`
+   - `REDIS_HOST` / `REDIS_PORT` / `REDIS_PASSWORD`（开发环境可用 `REDIS_DISABLED=true` 关闭）
+4. 启动开发：`npm run dev`，访问 `http://localhost:3000`
+
+### 测试与门禁
+
+- 基础质量：`npm run lint` / `npm run build` / `npm run test -- --run`
+- 覆盖率：`npm run test:coverage`
+- 性能基线：`npm run test:perf`（需 `PERF_TEST_MODE=true`，并先启动本地服务）
+- Lighthouse：`npm run test:lighthouse`（基线对比用 `npm run test:lighthouse:gate`）
+- A11y：`npm run test:a11y`
+
+提示：门禁目标地址可通过 `PERF_BASE_URL` / `LHCI_BASE_URL` / `A11Y_BASE_URL` 指定；`QUALITY_GATES_STRICT=false` 可降级为警告。
+
+---
+
 ## License
 
 [AGPL-3.0](https://www.gnu.org/licenses/agpl-3.0.html)
