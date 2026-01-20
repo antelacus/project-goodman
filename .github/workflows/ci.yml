@@ -36,7 +36,9 @@ jobs:
         run: npx playwright install chromium
 
       - name: Export CHROME_PATH for Lighthouse
-        run: echo "CHROME_PATH=$(node -e \"const { chromium } = require('playwright'); console.log(chromium.executablePath());\")" >> $GITHUB_ENV
+        run: |
+          CHROME_PATH="$(node -e 'const { chromium } = require("playwright"); console.log(chromium.executablePath());')"
+          echo "CHROME_PATH=$CHROME_PATH" >> "$GITHUB_ENV"
 
       - name: Start Next.js dev server (quality gates)
         if: ${{ hashFiles('tests/quality-baselines/performance/perf-baseline.json') != '' || hashFiles('tests/quality-baselines/lighthouse/*.json') != '' || hashFiles('tests/quality-baselines/a11y/a11y-baseline.json') != '' }}
