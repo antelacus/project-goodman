@@ -170,9 +170,25 @@
 
 #### Task D2: 基线与门禁
 
-- [ ] 生成基线并存档到 `tests/quality-baselines/a11y/`
-- [ ] 无新增严重/关键违规门禁
-- [ ] CI 中执行并阻断失败
+- [x] 生成基线并存档到 `tests/quality-baselines/a11y/`
+- [x] 无新增严重/关键违规门禁
+- [x] CI 中执行并阻断失败
+
+**实施记录**:
+
+```
+状态: ✅ 完成
+开始时间: 2026-01-20 13:50
+完成时间: 2026-01-20 13:55
+变更点:
+- 生成 a11y 基线（/ 与 /chat）
+- 基线存档至 tests/quality-baselines/a11y/a11y-baseline.json
+- CI 已在前次任务配置中包含 a11y gate（hashFiles 条件检测）
+- 检测到现有 color-contrast (serious) 违规，已纳入基线
+测试:
+- npm run test -- --run tests/unit/quality-gates/a11y-regressions.test.ts (3 tests passed)
+- A11Y_BASE_URL=http://127.0.0.1:3000 npm run test:a11y (gate passed)
+```
 
 ---
 
