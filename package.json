@@ -13,6 +13,7 @@
     "test:coverage": "vitest --coverage",
     "test:perf": "tsx scripts/quality-gates/perf-gate.ts check",
     "test:lighthouse": "lhci collect --config=./lighthouserc.cjs",
+    "test:a11y": "tsx scripts/quality-gates/a11y-gate.ts scan",
     "test:lighthouse:gate": "npm run test:lighthouse && tsx scripts/quality-gates/lighthouse-gate.ts check",
     "perf:baseline": "tsx scripts/quality-gates/perf-gate.ts baseline",
     "lighthouse:baseline": "npm run test:lighthouse && tsx scripts/quality-gates/lighthouse-gate.ts baseline",
@@ -58,6 +59,7 @@
     "zustand": "^5.0.5"
   },
   "devDependencies": {
+    "@axe-core/playwright": "^4.11.0",
     "@eslint/eslintrc": "^3",
     "@lhci/cli": "^0.13.0",
     "@next/bundle-analyzer": "^15.5.9",
