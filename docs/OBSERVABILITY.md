@@ -99,6 +99,30 @@ docker compose up -d --build
 
 ---
 
+## CI 质量门禁（基线与回归）
+
+> 说明：以下门禁用于构建期质量控制，与线上监控互补，形成可审计证据链。
+
+### 基线与回归规则
+
+- **Lighthouse CI**：`/` 与 `/chat` 基线存档在 `tests/quality-baselines/lighthouse/`，性能/可访问性评分下降 > 5 触发失败
+- **A11y（axe）**：基线存档在 `tests/quality-baselines/a11y/a11y-baseline.json`，不允许新增 critical/serious 违规
+- **性能基线（autocannon）**：基线存档在 `tests/quality-baselines/performance/perf-baseline.json`，P95 或失败率退化 > 20% 触发失败
+- **安全审计**：`npm audit` 的 High/Critical 作为硬门禁（允许带到期时间的豁免清单）
+
+### 相关命令
+
+```
+npm run test:lighthouse
+npm run test:a11y
+npm run test:perf
+npm run test:audit
+```
+
+> 可通过 `QUALITY_GATES_STRICT` 控制门禁严格程度（紧急回滚场景使用）。
+
+---
+
 ## 历史方案（已弃用）
 
 此前使用自托管 GlitchTip + Uptime Kuma。
