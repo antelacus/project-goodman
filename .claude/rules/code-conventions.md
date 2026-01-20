@@ -152,5 +152,6 @@ Quick reference: Architecture in `docs/`, file headers for complex files only, c
 - **Code**: English for all code (functions, variables, comments)
 - **User-facing content**: Chinese (中文) for UI strings, labels, business domain terms (财务指标名称)
 - **Documentation in `/docs`**: **Simplified Chinese (简体中文)** for all documents (PRDs, design docs, development tracks), while keeping code examples and technical terminology in English. `docs/DEPLOYMENT_CHECKLIST.md` is an exception.
-- **CLAUDE.md, CHANGELOG.md**: English (for broader accessibility)
+- **CLAUDE.md**: English (for broader accessibility)
+- **CHANGELOG.md**: 中文 (Keep a Changelog 格式)
 - **README.md**: Chinese (中文) for user familiarization
