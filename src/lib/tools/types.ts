@@ -61,6 +61,25 @@ export interface ToolExecutionResult<T = unknown> {
   warnings?: string[];
 }
 
+// ============================================================================
+// Retrieval Output Metadata
+// ============================================================================
+
+export const RetrievalMetaSchema = z.object({
+  total: z.number().optional(),
+  missing: z.array(z.string()).optional(),
+});
+
+export type RetrievalMeta = z.infer<typeof RetrievalMetaSchema>;
+
+export const RetrievalStatusSchema = z.object({
+  empty: z.boolean(),
+  reason: z.string().optional(),
+  meta: RetrievalMetaSchema.optional(),
+});
+
+export type RetrievalStatus = z.infer<typeof RetrievalStatusSchema>;
+
 /**
  * Core Tool interface
  *
@@ -158,7 +177,7 @@ export type FinancialToolInput = z.infer<typeof FinancialToolInputSchema>;
 /**
  * Standard output for financial calculation tools
  */
-export const FinancialToolOutputSchema = z.object({
+const FinancialToolSuccessSchema = z.object({
   value: z.number().describe("计算结果数值"),
   formatted: z.string().describe("格式化后的结果字符串"),
   warnings: z.array(z.string()).optional().describe("计算警告信息"),
@@ -166,6 +185,11 @@ export const FinancialToolOutputSchema = z.object({
   formula: z.string().describe("计算公式"),
   steps: z.array(z.string()).optional().describe("计算步骤"),
 });
+
+export const FinancialToolOutputSchema = z.union([
+  FinancialToolSuccessSchema,
+  RetrievalStatusSchema,
+]);
 
 export type FinancialToolOutput = z.infer<typeof FinancialToolOutputSchema>;
 
@@ -207,6 +231,10 @@ export const QueryFinancialDataOutputSchema = z.object({
     })
   ),
   missing: z.array(z.string()).describe("未找到的指标"),
+}).extend({
+  empty: z.boolean(),
+  reason: z.string().optional(),
+  meta: RetrievalMetaSchema.optional(),
 });
 
 export type QueryFinancialDataOutput = z.infer<

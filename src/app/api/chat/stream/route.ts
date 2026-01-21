@@ -20,6 +20,11 @@ import {
 import type { ProcessEvent, SourceReference } from '@/types/process-events';
 import type { WorkflowErrorType } from '@/lib/errors';
 import type { ChatWarning } from '@/lib/chat/warnings';
+import {
+    RETRIEVAL_EMPTY_DATA_REASON,
+    RETRIEVAL_FAILED_REASON,
+    buildMissingMetricsReason,
+} from '@/lib/tools/retrieval';
 
 export const runtime = 'nodejs'; // Ensure Node.js runtime for LangGraph
 
@@ -100,18 +105,15 @@ type ToolExecutionResult = {
     data?: Record<string, unknown>;
 };
 
-const RETRIEVAL_EMPTY_MESSAGE =
-    '未找到相关数据。你可以上传相关文档，或调整关键词/年份后重试。';
-const RETRIEVAL_FAILED_MESSAGE =
-    '检索暂时失败。你可以稍后重试，或换个关键词。';
+const RETRIEVAL_TOOL_NAMES = new Set([
+    'search_documents',
+    'search_regulations',
+    'query_financial_data',
+]);
 
 function getStringArray(value: unknown): string[] | null {
     if (!Array.isArray(value)) return null;
     return value.filter((item): item is string => typeof item === 'string');
-}
-
-function buildMissingMetricsMessage(missing: string[]): string {
-    return `缺少必要指标：${missing.join('、')}。你可以上传相关文档或调整年份。`;
 }
 
 function getRetrievalWarning(
@@ -121,11 +123,30 @@ function getRetrievalWarning(
     if (!result || typeof result !== 'object') return null;
 
     const data = result.data;
+    if (data && typeof data === 'object') {
+        const record = data as Record<string, unknown>;
+        if (record.empty === true) {
+            const reason = typeof record.reason === 'string'
+                ? record.reason
+                : RETRIEVAL_EMPTY_DATA_REASON;
+            return {
+                warning: { type: 'RETRIEVAL_EMPTY', message: reason, tool: toolName },
+                errorType: 'RETRIEVAL_EMPTY',
+            };
+        }
+    }
+
+    if (result.success === false && RETRIEVAL_TOOL_NAMES.has(toolName)) {
+        return {
+            warning: { type: 'RETRIEVAL_FAILED', message: RETRIEVAL_FAILED_REASON, tool: toolName },
+            errorType: 'INTERNAL',
+        };
+    }
 
     if (toolName === 'search_documents' || toolName === 'search_regulations') {
         if (result.success === false) {
             return {
-                warning: { type: 'RETRIEVAL_FAILED', message: RETRIEVAL_FAILED_MESSAGE, tool: toolName },
+                warning: { type: 'RETRIEVAL_FAILED', message: RETRIEVAL_FAILED_REASON, tool: toolName },
                 errorType: 'INTERNAL',
             };
         }
@@ -138,7 +159,7 @@ function getRetrievalWarning(
 
         if (isEmpty) {
             return {
-                warning: { type: 'RETRIEVAL_EMPTY', message: RETRIEVAL_EMPTY_MESSAGE, tool: toolName },
+                warning: { type: 'RETRIEVAL_EMPTY', message: RETRIEVAL_EMPTY_DATA_REASON, tool: toolName },
                 errorType: 'RETRIEVAL_EMPTY',
             };
         }
@@ -147,7 +168,7 @@ function getRetrievalWarning(
     if (toolName === 'query_financial_data') {
         if (result.success === false) {
             return {
-                warning: { type: 'RETRIEVAL_FAILED', message: RETRIEVAL_FAILED_MESSAGE, tool: toolName },
+                warning: { type: 'RETRIEVAL_FAILED', message: RETRIEVAL_FAILED_REASON, tool: toolName },
                 errorType: 'INTERNAL',
             };
         }
@@ -157,7 +178,7 @@ function getRetrievalWarning(
             : undefined;
         if (results && results.length === 0) {
             return {
-                warning: { type: 'RETRIEVAL_EMPTY', message: RETRIEVAL_EMPTY_MESSAGE, tool: toolName },
+                warning: { type: 'RETRIEVAL_EMPTY', message: RETRIEVAL_EMPTY_DATA_REASON, tool: toolName },
                 errorType: 'RETRIEVAL_EMPTY',
             };
         }
@@ -165,7 +186,7 @@ function getRetrievalWarning(
         const missing = getStringArray((data as { missing?: unknown })?.missing);
         if (missing && missing.length > 0) {
             return {
-                warning: { type: 'RETRIEVAL_EMPTY', message: buildMissingMetricsMessage(missing), tool: toolName },
+                warning: { type: 'RETRIEVAL_EMPTY', message: buildMissingMetricsReason(missing), tool: toolName },
                 errorType: 'RETRIEVAL_EMPTY',
             };
         }
@@ -174,7 +195,7 @@ function getRetrievalWarning(
     const missingMetrics = getStringArray((data as { missingMetrics?: unknown })?.missingMetrics);
     if (missingMetrics && missingMetrics.length > 0) {
         return {
-            warning: { type: 'RETRIEVAL_EMPTY', message: buildMissingMetricsMessage(missingMetrics), tool: toolName },
+            warning: { type: 'RETRIEVAL_EMPTY', message: buildMissingMetricsReason(missingMetrics), tool: toolName },
             errorType: 'RETRIEVAL_EMPTY',
         };
     }
