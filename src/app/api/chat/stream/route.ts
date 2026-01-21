@@ -19,6 +19,7 @@ import {
 } from '@/lib/workflows/shared/format-event';
 import type { ProcessEvent, SourceReference } from '@/types/process-events';
 import type { WorkflowErrorType } from '@/lib/errors';
+import type { ChatWarning } from '@/lib/chat/warnings';
 
 export const runtime = 'nodejs'; // Ensure Node.js runtime for LangGraph
 
@@ -93,6 +94,94 @@ function createProcessEvent(
     };
 }
 
+type ToolExecutionResult = {
+    success?: boolean;
+    error?: string;
+    data?: Record<string, unknown>;
+};
+
+const RETRIEVAL_EMPTY_MESSAGE =
+    '未找到相关数据。你可以上传相关文档，或调整关键词/年份后重试。';
+const RETRIEVAL_FAILED_MESSAGE =
+    '检索暂时失败。你可以稍后重试，或换个关键词。';
+
+function getStringArray(value: unknown): string[] | null {
+    if (!Array.isArray(value)) return null;
+    return value.filter((item): item is string => typeof item === 'string');
+}
+
+function buildMissingMetricsMessage(missing: string[]): string {
+    return `缺少必要指标：${missing.join('、')}。你可以上传相关文档或调整年份。`;
+}
+
+function getRetrievalWarning(
+    toolName: string,
+    result: ToolExecutionResult
+): { warning: ChatWarning; errorType: WorkflowErrorType } | null {
+    if (!result || typeof result !== 'object') return null;
+
+    const data = result.data;
+
+    if (toolName === 'search_documents' || toolName === 'search_regulations') {
+        if (result.success === false) {
+            return {
+                warning: { type: 'RETRIEVAL_FAILED', message: RETRIEVAL_FAILED_MESSAGE, tool: toolName },
+                errorType: 'INTERNAL',
+            };
+        }
+
+        const total = typeof data?.total === 'number' ? data.total : undefined;
+        const documents = Array.isArray((data as { documents?: unknown })?.documents)
+            ? (data as { documents: unknown[] }).documents
+            : undefined;
+        const isEmpty = total === 0 || (documents ? documents.length === 0 : false);
+
+        if (isEmpty) {
+            return {
+                warning: { type: 'RETRIEVAL_EMPTY', message: RETRIEVAL_EMPTY_MESSAGE, tool: toolName },
+                errorType: 'RETRIEVAL_EMPTY',
+            };
+        }
+    }
+
+    if (toolName === 'query_financial_data') {
+        if (result.success === false) {
+            return {
+                warning: { type: 'RETRIEVAL_FAILED', message: RETRIEVAL_FAILED_MESSAGE, tool: toolName },
+                errorType: 'INTERNAL',
+            };
+        }
+
+        const results = Array.isArray((data as { results?: unknown })?.results)
+            ? (data as { results: unknown[] }).results
+            : undefined;
+        if (results && results.length === 0) {
+            return {
+                warning: { type: 'RETRIEVAL_EMPTY', message: RETRIEVAL_EMPTY_MESSAGE, tool: toolName },
+                errorType: 'RETRIEVAL_EMPTY',
+            };
+        }
+
+        const missing = getStringArray((data as { missing?: unknown })?.missing);
+        if (missing && missing.length > 0) {
+            return {
+                warning: { type: 'RETRIEVAL_EMPTY', message: buildMissingMetricsMessage(missing), tool: toolName },
+                errorType: 'RETRIEVAL_EMPTY',
+            };
+        }
+    }
+
+    const missingMetrics = getStringArray((data as { missingMetrics?: unknown })?.missingMetrics);
+    if (missingMetrics && missingMetrics.length > 0) {
+        return {
+            warning: { type: 'RETRIEVAL_EMPTY', message: buildMissingMetricsMessage(missingMetrics), tool: toolName },
+            errorType: 'RETRIEVAL_EMPTY',
+        };
+    }
+
+    return null;
+}
+
 export async function POST(req: NextRequest) {
     const spanContext = {
         name: 'api.chat.stream',
@@ -118,6 +207,8 @@ export async function POST(req: NextRequest) {
         };
         let workflowCompleted = false;
         let firstTokenLogged = false;
+        const warnings: ChatWarning[] = [];
+        const warningKeys = new Set<string>();
 
         logger.info('Chat stream started', { requestId, route: '/api/chat/stream' });
         logWorkflowEvent({ ...workflowContext, step: 'start', status: 'ok' });
@@ -142,6 +233,22 @@ export async function POST(req: NextRequest) {
                 status: 'error',
                 errorType,
                 duration: Date.now() - startTime,
+            });
+        };
+
+        const recordWarning = (warning: ChatWarning, errorType: WorkflowErrorType) => {
+            const key = `${warning.type}:${warning.message}`;
+            if (warningKeys.has(key)) return;
+            warningKeys.add(key);
+            warnings.push(warning);
+            logWorkflowEvent({
+                ...workflowContext,
+                step: 'warning',
+                status: 'error',
+                errorType,
+                duration: Date.now() - startTime,
+                warningType: warning.type,
+                toolName: warning.tool,
             });
         };
 
@@ -351,7 +458,12 @@ export async function POST(req: NextRequest) {
                                     for (const resultEntry of toolResults) {
                                         if (!resultEntry.toolName) continue;
 
-                                        const result = resultEntry.result || {};
+                                        const result = (resultEntry.result || {}) as ToolExecutionResult;
+
+                                        const warning = getRetrievalWarning(resultEntry.toolName, result);
+                                        if (warning) {
+                                            recordWarning(warning.warning, warning.errorType);
+                                        }
 
                                         // Check if tool execution failed
                                         if (result.success === false) {
@@ -438,9 +550,11 @@ export async function POST(req: NextRequest) {
                                 returnedSessionId = sessionId || 'unknown';
                             }
 
+                            const warningPayload = warnings.length > 0 ? { warnings } : {};
                             sendEvent('complete', {
                                 sessionId: returnedSessionId,
-                                ...outputData
+                                ...outputData,
+                                ...warningPayload,
                             });
                             logWorkflowSuccess();
                         } else {
@@ -450,10 +564,12 @@ export async function POST(req: NextRequest) {
                                 sendEvent('error', { message: finalOutput.meta.error.message });
                                 logWorkflowFailure('INTERNAL');
                             } else {
+                                const warningPayload = warnings.length > 0 ? { warnings } : {};
                                 sendEvent('complete', {
                                     sessionId: capturedSessionId || sessionId || 'unknown',
                                     type: 'error',
-                                    answer: 'I completed the task but could not generate a final response.'
+                                    answer: 'I completed the task but could not generate a final response.',
+                                    ...warningPayload,
                                 });
                                 logWorkflowFailure('INTERNAL');
                             }

@@ -32,6 +32,7 @@ export type WorkflowStep =
   | 'upload'
   | 'extract'
   | 'store'
+  | 'warning'
   | 'success'
   | 'failure';
 export type WorkflowStatus = 'ok' | 'error';
