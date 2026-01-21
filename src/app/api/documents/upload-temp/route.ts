@@ -17,7 +17,7 @@ import OpenAI from "openai";
 import ExcelJS from "exceljs";
 import { createServerSupabaseClient } from "@/lib/database";
 import type { InsertTables } from "@/lib/database";
-import { logWorkflowEvent } from "@/lib/logging";
+import { logError, logWorkflowEvent } from "@/lib/logging";
 import {
   generateRequestId,
   createErrorResponse,
@@ -245,31 +245,40 @@ export async function POST(req: NextRequest) {
       // V3.10: Ensure session exists (creates guest session if needed)
       const sessionResult = await ensureSession(req);
       const { session, isNewSession } = sessionResult;
+      const createStandardErrorResponse = (
+        payload: Record<string, unknown>,
+        status: number
+      ) => {
+        const response = NextResponse.json(
+          { ...payload, requestId },
+          { status, headers: { 'X-Request-ID': requestId } }
+        );
+
+        if (isNewSession && sessionResult.setCookieHeader) {
+          response.cookies.set(
+            sessionResult.setCookieHeader.name,
+            sessionResult.setCookieHeader.value,
+            sessionResult.setCookieHeader.options
+          );
+        }
+
+        return response;
+      };
 
       // V3.10: Check rate limit for guest users
       if (session.role === 'guest') {
         const rateCheck = await checkGuestRate(session.sessionId, 'upload');
         if (!rateCheck.allowed) {
           logWorkflowFailure('RATE_LIMIT');
-          const response = NextResponse.json(
+          return createStandardErrorResponse(
             {
               error: '已达到文件上传限制，请1小时后重试',
               resetsAt: rateCheck.resetsAt,
               remaining: rateCheck.remaining,
               total: rateCheck.total,
             },
-            { status: 429 }
+            429
           );
-
-          if (isNewSession && sessionResult.setCookieHeader) {
-            response.cookies.set(
-              sessionResult.setCookieHeader.name,
-              sessionResult.setCookieHeader.value,
-              sessionResult.setCookieHeader.options
-            );
-          }
-
-          return response;
         }
       }
 
@@ -279,9 +288,9 @@ export async function POST(req: NextRequest) {
       const validationResult = validateRequest(TempUploadSchema, body);
       if (!validationResult.success) {
         logWorkflowFailure('VALIDATION');
-        return NextResponse.json(
+        return createStandardErrorResponse(
           { error: validationResult.error },
-          { status: 400 }
+          400
         );
       }
 
@@ -291,9 +300,9 @@ export async function POST(req: NextRequest) {
       const estimatedSize = (fileData.length * 3) / 4;
       if (estimatedSize > MAX_FILE_SIZE) {
         logWorkflowFailure('VALIDATION');
-        return NextResponse.json(
+        return createStandardErrorResponse(
           { error: "文件大小超过2MB限制" },
-          { status: 400 }
+          400
         );
       }
 
@@ -315,9 +324,9 @@ export async function POST(req: NextRequest) {
 
       if (!extractedText || extractedText.trim().length < 10) {
         logWorkflowFailure('EXTRACTION_FAILED');
-        return NextResponse.json(
+        return createStandardErrorResponse(
           { error: "无法从文件中提取有效文本内容" },
-          { status: 400 }
+          400
         );
       }
 
@@ -491,6 +500,9 @@ export async function POST(req: NextRequest) {
 
     } catch (error: unknown) {
       console.error("[upload-temp] Error:", error);
+      logError('Upload temp failed', error, requestId, {
+        route: '/api/documents/upload-temp',
+      });
       logWorkflowFailure('EXTRACTION_FAILED');
       return createErrorResponse(error, requestId, 500, {
         errorType: 'EXTRACTION_FAILED',
