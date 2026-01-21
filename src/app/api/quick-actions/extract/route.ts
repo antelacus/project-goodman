@@ -103,6 +103,13 @@ export async function POST(req: NextRequest) {
       });
     };
 
+    const createJsonResponse = (payload: Record<string, unknown>, status = 200) => {
+      return NextResponse.json(
+        { ...payload, requestId },
+        { status, headers: { 'X-Request-ID': requestId } }
+      );
+    };
+
     try {
       // V3.10: Ensure session exists (creates guest session if needed)
       const sessionResult = await ensureSession(req);
@@ -113,7 +120,7 @@ export async function POST(req: NextRequest) {
         const rateCheck = await checkGuestRate(session.sessionId, 'extract');
         if (!rateCheck.allowed) {
           logWorkflowFailure('RATE_LIMIT');
-          const response = NextResponse.json(
+          const response = createJsonResponse(
             {
               success: false,
               error: 'rate_limit',
@@ -122,7 +129,7 @@ export async function POST(req: NextRequest) {
               remaining: rateCheck.remaining,
               total: rateCheck.total,
             },
-            { status: 429 }
+            429
           );
 
           if (isNewSession && sessionResult.setCookieHeader) {
@@ -143,11 +150,11 @@ export async function POST(req: NextRequest) {
       const validationResult = validateRequest(ExtractRequestSchema, body);
       if (!validationResult.success) {
         logWorkflowFailure('VALIDATION');
-        return NextResponse.json({
+        return createJsonResponse({
           success: false,
           error: 'validation_error',
           message: validationResult.error
-        }, { status: 400 });
+        }, 400);
       }
 
       const { documentId } = validationResult.data;
@@ -167,7 +174,7 @@ export async function POST(req: NextRequest) {
 
         if (docError || !doc) {
           logWorkflowFailure('RETRIEVAL_EMPTY');
-          return NextResponse.json({ success: false, error: 'document_not_found', message: '找不到指定文档' }, { status: 404 });
+          return createJsonResponse({ success: false, error: 'document_not_found', message: '找不到指定文档' }, 404);
         }
 
         // V3.10: Check document access permission
@@ -176,7 +183,7 @@ export async function POST(req: NextRequest) {
           const ownerId = session.role === 'guest' ? session.sessionId : session.userId;
           if (doc.owner_id !== ownerId) {
             logWorkflowFailure('FORBIDDEN');
-            return NextResponse.json({ success: false, error: 'forbidden', message: '无权访问此文档' }, { status: 403 });
+            return createJsonResponse({ success: false, error: 'forbidden', message: '无权访问此文档' }, 403);
           }
         }
 
@@ -194,7 +201,7 @@ export async function POST(req: NextRequest) {
 
         if (!storagePath) {
           logWorkflowFailure('RETRIEVAL_EMPTY');
-          return NextResponse.json({ success: false, error: 'file_not_found', message: '文档原始文件不存在，无法进行提取' }, { status: 404 });
+          return createJsonResponse({ success: false, error: 'file_not_found', message: '文档原始文件不存在，无法进行提取' }, 404);
         }
 
         // Fetch file content
@@ -213,38 +220,38 @@ export async function POST(req: NextRequest) {
         } catch (storageError) {
           console.error(`[Extraction API] Failed to download file:`, storageError);
           logWorkflowFailure('EXTRACTION_FAILED');
-          return NextResponse.json({ success: false, error: 'storage_error', message: '无法读取文档文件' }, { status: 500 });
+          return createJsonResponse({ success: false, error: 'storage_error', message: '无法读取文档文件' }, 500);
         }
       }
 
       // Validate required fields
       if (!fileData || !fileType) {
         logWorkflowFailure('VALIDATION');
-        return NextResponse.json({
+        return createJsonResponse({
           success: false,
           error: 'missing_fields',
           message: '缺少必要参数'
-        }, { status: 400 });
+        }, 400);
       }
 
       // Validate file type
       if (!ALL_SUPPORTED_TYPES.includes(fileType)) {
         logWorkflowFailure('VALIDATION');
-        return NextResponse.json({
+        return createJsonResponse({
           success: false,
           error: 'invalid_file_type',
           message: '不支持的文件格式，请上传 PDF、PNG、JPG、JPEG、WEBP、GIF 或 Excel(.xlsx) 文件'
-        }, { status: 400 });
+        }, 400);
       }
 
       // Validate file size
       if (fileData.length > MAX_BASE64_SIZE) {
         logWorkflowFailure('VALIDATION');
-        return NextResponse.json({
+        return createJsonResponse({
           success: false,
           error: 'file_too_large',
           message: '文件大小超过 2MB 限制'
-        }, { status: 400 });
+        }, 400);
       }
 
       const prompt = getDataExtractPrompt();
@@ -365,7 +372,7 @@ export async function POST(req: NextRequest) {
       // Parse and return the result
       const parsedResult = JSON.parse(result);
 
-      const response = NextResponse.json({
+      const response = createJsonResponse({
         success: true,
         data: parsedResult,
         fileType: fileType,

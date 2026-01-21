@@ -118,4 +118,13 @@ describe('POST /api/quick-actions/extract', () => {
       })
     );
   });
+
+  it('includes requestId on validation errors', async () => {
+    const response = await POST(createRequest({}));
+
+    expect(response.status).toBe(400);
+    const body = await response.json();
+    expect(body.success).toBe(false);
+    expect(body.requestId).toBe('req-1');
+  });
 });

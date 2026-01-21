@@ -75,6 +75,7 @@ describe('POST /api/admin/upload-database-document', () => {
     expect(response.status).toBe(401);
     const body = await response.json();
     expect(body.success).toBe(false);
+    expect(body.requestId).toBe('req-1');
 
     expect(vi.mocked(logging.logWorkflowEvent)).toHaveBeenCalledWith(
       expect.objectContaining({
