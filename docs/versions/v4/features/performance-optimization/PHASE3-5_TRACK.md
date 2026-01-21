@@ -111,8 +111,8 @@
 
 #### D3: 覆盖率与回归记录
 
-- [ ] 生成覆盖率报告并记录数值
-- [ ] 更新本文件中的测试执行记录
+- [x] 生成覆盖率报告并记录数值
+- [x] 更新本文件中的测试执行记录
 
 ---
 
@@ -168,3 +168,15 @@
 - [ ] 最小 E2E 冒烟测试通过
 - [ ] 覆盖率报告生成并记录
 - [ ] 更新本文件测试结果与日期
+
+**测试记录**:
+
+```
+状态: ✅ 覆盖率达标
+时间: 2026-01-21 03:50
+环境: 本地 sandbox
+结果:
+- npm run test:coverage ✅ (Lines 57.34%, Statements 56.07%, Branches 44.5%, Functions 66.33%)
+备注:
+- 补充单元测试覆盖：errors/base、tools/registry、database/helpers、documents/file-utils、database/supabase、tools/types
+```
