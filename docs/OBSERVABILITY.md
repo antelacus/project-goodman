@@ -58,22 +58,35 @@ docker compose up -d --build
 
 > 页面级性能阈值由 Lighthouse CI 负责（见 CI 门禁与基线），不依赖 Sentry 页面事务。
 
-### 2) 初始性能阈值（可随基线收敛）
+### 2) 性能阈值（对齐 v4.6 目标）
 
-| 事务 | 阈值（P95） | 失败率阈值 | 说明 |
-|------|------------|------------|------|
-| api.chat.stream | > 30s | > 2% | SSE 流式响应，关注整体延迟 |
-| api.reports.generate | > 60s | > 2% | 报告生成可较长，先宽松 |
-| api.documents.upload-temp | > 10s | > 2% | 上传 + 解析 |
-| api.quick-actions.extract | > 20s | > 2% | OCR/抽取流程 |
+| 事务 | 阈值（P95 上限） | 失败率阈值 | 说明 |
+|------|------------------|------------|------|
+| api.chat.stream | <= 12s | > 2% | SSE 流式响应，关注整体延迟（首 token 见日志指标） |
+| api.reports.generate | <= 60s | > 2% | 报告生成流程 |
+| api.documents.upload-temp | <= 45s | > 2% | 上传 + 解析 + 抽取 |
+| api.quick-actions.extract | <= 1s | > 2% | 非 AI 快速提取路径目标 |
 
-> 以上为初始阈值，基于上线后 1-2 周数据再收敛。
+> 以上阈值与 v4.6 目标对齐；Sentry 告警规则以此为基准配置。
+
+### 2.1) 日志 → 指标映射（v4.6）
+
+统一使用 `logWorkflowEvent` 的结构化字段聚合指标：
+
+- **聚合字段**：`workflow` / `step` / `status` / `duration` / `errorType` / `requestId`
+- **成功率**：`step=success` / 总请求数（每条流程）
+- **错误率**：
+  - **5xx**：基于 `logRequest` 的 `status` 统计（目标 <= 0.5%）
+  - **流程失败**：`step=failure` 计数（目标 ≤ 2%）
+- **P95**：按 `workflow` 聚合 `duration` 计算
+- **首 token P95**：`workflow=chat_stream` + `step=first_token` 的 `duration`
 
 ### 3) 告警策略（记录）
 
 - **告警渠道**：Sentry Email（绑定邮箱）+ 团队 IM（如企业微信/钉钉/Slack）
 - **责任人**：项目负责人（Project Lead）
 - **触发条件**：P95 超阈值或失败率超阈值（5-10 分钟窗口）
+- **对齐说明**：Sentry Performance 告警规则按上表阈值配置；UptimeRobot 继续覆盖 `/api/health`
 
 ---
 
