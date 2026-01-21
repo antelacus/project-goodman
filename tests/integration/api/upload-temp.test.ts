@@ -167,4 +167,20 @@ describe('POST /api/documents/upload-temp', () => {
       })
     );
   });
+
+  it('returns requestId in validation error responses', async () => {
+    const payload = {
+      fileData: '',
+      fileName: '',
+      fileType: 'text/plain',
+    };
+
+    const response = await POST(createRequest(payload));
+
+    expect(response.status).toBe(400);
+    expect(response.headers.get('X-Request-ID')).toBe('req-1');
+    const body = await response.json();
+    expect(body.error).toBeTruthy();
+    expect(body.requestId).toBe('req-1');
+  });
 });
