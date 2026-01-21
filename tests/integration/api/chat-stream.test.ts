@@ -108,6 +108,7 @@ async function readSseEvents(response: Response) {
 }
 
 beforeEach(() => {
+  vi.clearAllMocks();
   vi.mocked(security.ensureSession).mockResolvedValue(mockSessionResult);
   vi.mocked(security.checkGuestRate).mockResolvedValue({
     allowed: true,
@@ -210,5 +211,21 @@ describe('POST /api/chat/stream', () => {
         type: 'RETRIEVAL_EMPTY',
       }),
     ]);
+  });
+
+  it('logs workflow failure for validation errors', async () => {
+    const response = await POST(createRequest({}));
+
+    expect(response.status).toBe(400);
+
+    expect(vi.mocked(logging.logWorkflowEvent)).toHaveBeenCalledWith(
+      expect.objectContaining({
+        workflow: 'chat_stream',
+        step: 'failure',
+        status: 'error',
+        errorType: 'VALIDATION',
+        requestId: 'req-1',
+      })
+    );
   });
 });

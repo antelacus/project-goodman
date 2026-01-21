@@ -4,6 +4,8 @@ import { NextRequest } from 'next/server';
 import { POST } from '@/app/api/admin/upload-database-document/route';
 import * as logging from '@/lib/logging';
 import * as security from '@/lib/security';
+import { createServerSupabaseClient } from '@/lib/database';
+import { performStructuredExtraction } from '@/lib/extraction';
 
 vi.mock('@/lib/logging', () => ({
   logger: {
@@ -21,7 +23,9 @@ vi.mock('openai', () => {
   return {
     default: class OpenAI {
       embeddings = {
-        create: vi.fn(),
+        create: vi.fn().mockResolvedValue({
+          data: [{ embedding: [0.1, 0.2, 0.3] }],
+        }),
       };
       chat = {
         completions: {
@@ -49,6 +53,16 @@ vi.mock('@/lib/security', () => ({
   validateFileByExtension: vi.fn(() => ({ valid: true })),
 }));
 
+vi.mock('@/lib/database', () => ({
+  createServerSupabaseClient: vi.fn(),
+}));
+
+vi.mock('@/lib/extraction', () => ({
+  performStructuredExtraction: vi.fn(),
+  performColumnBasedExtraction: vi.fn(),
+  performAIExtraction: vi.fn(),
+}));
+
 function createRequest(body: unknown) {
   return new NextRequest('http://localhost/api/admin/upload-database-document', {
     method: 'POST',
@@ -58,6 +72,7 @@ function createRequest(body: unknown) {
 }
 
 beforeEach(() => {
+  vi.clearAllMocks();
   vi.mocked(security.verifyAdminPassword).mockResolvedValue(false);
 });
 
@@ -91,6 +106,69 @@ describe('POST /api/admin/upload-database-document', () => {
         step: 'failure',
         status: 'error',
         errorType: 'AUTH',
+        requestId: 'req-1',
+      })
+    );
+  });
+
+  it('stores documents when admin upload succeeds', async () => {
+    vi.mocked(security.verifyAdminPassword).mockResolvedValue(true);
+
+    vi.mocked(performStructuredExtraction).mockResolvedValue({
+      documentType: 'general',
+      extractedData: { summary: 'test' },
+      summary: 'test summary',
+      confidence: 0.9,
+      metadata: {},
+    });
+
+    const documentsInsert = vi.fn().mockReturnValue({
+      select: vi.fn().mockReturnValue({
+        single: vi.fn().mockResolvedValue({ error: null }),
+      }),
+    });
+    const documentChunksInsert = vi.fn().mockResolvedValue({ error: null });
+
+    vi.mocked(createServerSupabaseClient).mockReturnValue({
+      from: vi.fn((table: string) => {
+        if (table === 'documents') {
+          return {
+            insert: documentsInsert,
+            delete: vi.fn().mockReturnValue({
+              eq: vi.fn().mockResolvedValue({ error: null }),
+            }),
+          };
+        }
+        if (table === 'document_chunks') {
+          return {
+            insert: documentChunksInsert,
+          };
+        }
+        return {
+          insert: vi.fn().mockResolvedValue({ error: null }),
+        };
+      }),
+    });
+
+    const payload = {
+      documentText: Buffer.from('Admin upload sample content.').toString('base64'),
+      fileName: 'notes.txt',
+      documentType: 'general',
+      adminPassword: 'valid-password',
+    };
+
+    const response = await POST(createRequest(payload));
+
+    expect(response.status).toBe(200);
+    const body = await response.json();
+    expect(body.success).toBe(true);
+    expect(body.documentId).toBeTruthy();
+
+    expect(vi.mocked(logging.logWorkflowEvent)).toHaveBeenCalledWith(
+      expect.objectContaining({
+        workflow: 'admin_upload',
+        step: 'success',
+        status: 'ok',
         requestId: 'req-1',
       })
     );
