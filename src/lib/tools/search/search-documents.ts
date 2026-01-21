@@ -8,6 +8,9 @@
 import { z } from "zod";
 import { Tool } from "../types";
 import { searchDocuments } from "@/lib/documents/search";
+import {
+  RETRIEVAL_EMPTY_DOCUMENTS_REASON,
+} from "@/lib/tools/retrieval";
 
 // ============================================================================
 // Schema
@@ -66,11 +69,24 @@ export const searchDocumentsTool: Tool<SearchDocumentsInput, any> = {
         })),
       }));
 
+      simplifiedDocs.sort((a, b) => {
+        if (b.matchScore !== a.matchScore) {
+          return b.matchScore - a.matchScore;
+        }
+        return a.name.localeCompare(b.name, "zh-CN");
+      });
+
+      const total = results.totalMatches;
+      const empty = total === 0;
+
       return {
         success: true,
         data: {
-          total: results.totalMatches,
+          total,
           documents: simplifiedDocs,
+          empty,
+          reason: empty ? RETRIEVAL_EMPTY_DOCUMENTS_REASON : undefined,
+          meta: { total },
         },
       };
     } catch (error) {

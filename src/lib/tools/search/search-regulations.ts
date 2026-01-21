@@ -10,6 +10,9 @@ import { Tool } from "../types";
 import { createServerSupabaseClient, matchDocuments } from "@/lib/database";
 import type { MatchDocumentsResult } from "@/lib/database";
 import OpenAI from "openai";
+import {
+  RETRIEVAL_EMPTY_REGULATIONS_REASON,
+} from "@/lib/tools/retrieval";
 
 // ============================================================================
 // Schema
@@ -32,6 +35,11 @@ interface SearchRegulationsData {
     source: string;
     article: string;
   }>;
+  empty: boolean;
+  reason?: string;
+  meta?: {
+    total?: number;
+  };
 }
 
 // ============================================================================
@@ -76,11 +84,24 @@ export const searchRegulationsTool: Tool<SearchRegulationsInput, SearchRegulatio
         article: "",
       }));
 
+      documents.sort((a, b) => {
+        if (b.similarity !== a.similarity) {
+          return b.similarity - a.similarity;
+        }
+        return a.source.localeCompare(b.source, "zh-CN");
+      });
+
+      const total = documents.length;
+      const empty = total === 0;
+
       return {
         success: true,
         data: {
-          total: documents.length,
+          total,
           documents,
+          empty,
+          reason: empty ? RETRIEVAL_EMPTY_REGULATIONS_REASON : undefined,
+          meta: { total },
         },
       };
     } catch (error) {

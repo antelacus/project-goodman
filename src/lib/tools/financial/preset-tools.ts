@@ -23,6 +23,7 @@ import {
 import { toolRegistry } from "../registry";
 import { queryFinancialData } from "../../services/financial-data";
 import { traceable } from "langsmith/traceable";
+import { buildMissingMetricsReason } from "@/lib/tools/retrieval";
 
 // ============================================================================
 // Category Mapping
@@ -136,9 +137,12 @@ function createFinancialToolFromPreset(preset: PresetFunction): Tool {
 
           if (missingMetrics.length > 0) {
             return {
-              success: false,
-              error: `Missing required data: ${missingMetrics.join(", ")}`,
-              data: { missingMetrics }
+              success: true,
+              data: {
+                empty: true,
+                reason: buildMissingMetricsReason(missingMetrics),
+                meta: { missing: missingMetrics },
+              },
             } as ToolExecutionResult;
           }
 

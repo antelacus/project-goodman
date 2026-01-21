@@ -15,6 +15,7 @@ import {
 } from "../types";
 import { toolRegistry } from "../registry";
 import { queryFinancialData } from "../../services/financial-data";
+import { buildMissingMetricsReason } from "@/lib/tools/retrieval";
 
 // ============================================================================
 // Query Financial Data Tool
@@ -77,11 +78,29 @@ export const queryFinancialDataTool: Tool = {
       // Calculate missing metrics
       const missing = metric_names.filter((m) => !foundMetrics.has(m));
 
+      allResults.sort((a, b) => {
+        if (a.year !== b.year) {
+          return b.year.localeCompare(a.year);
+        }
+        if (a.period !== b.period) {
+          return b.period.localeCompare(a.period);
+        }
+        return a.metric.localeCompare(b.metric, "zh-CN");
+      });
+
+      const empty = allResults.length === 0 || missing.length > 0;
+
       return {
         success: true,
         data: {
           results: allResults,
           missing,
+          empty,
+          reason: empty ? buildMissingMetricsReason(missing) : undefined,
+          meta: {
+            total: allResults.length,
+            missing,
+          },
         },
       };
     } catch (error) {
