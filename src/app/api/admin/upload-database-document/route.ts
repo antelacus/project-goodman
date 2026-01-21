@@ -304,6 +304,14 @@ export async function POST(request: NextRequest) {
     });
   };
 
+  const createJsonResponse = (payload: UploadResponse | Record<string, unknown>, status = 200) => {
+    const responsePayload = { ...payload, requestId } as Record<string, unknown>;
+    return NextResponse.json(
+      responsePayload,
+      { status, headers: { 'X-Request-ID': requestId } }
+    );
+  };
+
   try {
     // Parse request body
     const body: UploadRequest = await request.json();
@@ -323,13 +331,13 @@ export async function POST(request: NextRequest) {
     // Validate required fields
     if (!documentText || !fileName || !documentType || !adminPassword) {
       logWorkflowFailure('VALIDATION');
-      return NextResponse.json(
+      return createJsonResponse(
         {
           success: false,
           message: "Missing required fields",
           error: "documentText, fileName, documentType, and adminPassword are required",
         } as UploadResponse,
-        { status: 400 }
+        400
       );
     }
 
@@ -337,13 +345,13 @@ export async function POST(request: NextRequest) {
     const isValidPassword = await verifyAdminPassword(adminPassword);
     if (!isValidPassword) {
       logWorkflowFailure('AUTH');
-      return NextResponse.json(
+      return createJsonResponse(
         {
           success: false,
           message: "Invalid admin password",
           error: "Authentication failed",
         } as UploadResponse,
-        { status: 401 }
+        401
       );
     }
 
@@ -363,13 +371,13 @@ export async function POST(request: NextRequest) {
           if (!contentValidation.valid) {
             console.warn(`[Admin Upload] File content validation failed for ${fileName}: ${contentValidation.error}`);
             logWorkflowFailure('VALIDATION');
-            return NextResponse.json(
+            return createJsonResponse(
               {
                 success: false,
                 message: contentValidation.error || "文件内容验证失败",
                 error: "File content validation failed",
               } as UploadResponse,
-              { status: 400 }
+              400
             );
           }
         }
@@ -394,13 +402,13 @@ export async function POST(request: NextRequest) {
 
     if (!extractedText || extractedText.trim().length === 0) {
       logWorkflowFailure('EXTRACTION_FAILED');
-      return NextResponse.json(
+      return createJsonResponse(
         {
           success: false,
           message: "无法从文件中提取文本",
           error: "Text extraction returned empty result",
         } as UploadResponse,
-        { status: 400 }
+        400
       );
     }
 
@@ -638,7 +646,7 @@ export async function POST(request: NextRequest) {
       console.log(`[Admin Upload] Extraction complete. Stored ${totalMetricsStored} metrics.`);
 
       logWorkflowSuccess();
-      return NextResponse.json({
+      return createJsonResponse({
         success: true,
         documentId,
         message: columnMapping ? "Document processed successfully with Column-based extraction" : "Document processed successfully with AI extraction",
@@ -691,7 +699,7 @@ export async function POST(request: NextRequest) {
     }
 
     logWorkflowSuccess();
-    return NextResponse.json({
+    return createJsonResponse({
       success: true,
       documentId,
       message,

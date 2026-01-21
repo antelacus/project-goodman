@@ -3,6 +3,7 @@ import { Copy, FileText, Check, Loader2, FileSpreadsheet } from "lucide-react";
 import { DocumentSelectModal } from "@/components/documents";
 import { useDocumentStore } from "@/store/documents";
 import { useModalAccessibility } from "@/hooks/useModalAccessibility";
+import { formatExtractionValue } from "./extraction-utils";
 
 interface ExtractionModalProps {
     isOpen: boolean;
@@ -89,10 +90,11 @@ export default function ExtractionModal({
     };
 
     const handleCopy = (key: string, value: unknown, type: "key" | "value" | "both") => {
+        const formattedValue = formatExtractionValue(value);
         const textToCopy = {
             key: key,
-            value: String(value),
-            both: `${key}: ${String(value)}`,
+            value: formattedValue,
+            both: `${key}: ${formattedValue}`,
         }[type];
 
         navigator.clipboard.writeText(textToCopy);
@@ -228,11 +230,13 @@ export default function ExtractionModal({
                                 </button>
                             </div>
                             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 pb-8">
-                                {Object.entries(extractionResult).map(([key, value]) => (
+                                {Object.entries(extractionResult).map(([key, value]) => {
+                                    const displayValue = formatExtractionValue(value);
+                                    return (
                                     <div key={key} className="p-4 bg-white rounded-lg border border-neutral-200 shadow-sm relative group hover:border-yellow-400 transition-colors">
                                         <p className="text-xs font-medium text-neutral-500 uppercase tracking-wider mb-1">{key.replace(/_/g, ' ')}</p>
-                                        <p className="text-lg font-semibold text-neutral-900 break-words line-clamp-3" title={String(value)}>
-                                            {String(value)}
+                                        <p className="text-lg font-semibold text-neutral-900 break-words line-clamp-3" title={displayValue}>
+                                            {displayValue}
                                         </p>
 
                                         <div className="absolute top-2 right-2" ref={openCopyMenu === key ? menuRef : null}>
@@ -260,7 +264,7 @@ export default function ExtractionModal({
                                             )}
                                         </div>
                                     </div>
-                                ))}
+                                )})}
                             </div>
                         </div>
                     )}
