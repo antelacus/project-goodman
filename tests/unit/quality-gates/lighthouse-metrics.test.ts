@@ -29,7 +29,7 @@ test('compareLighthouseScores flags regressions beyond threshold', () => {
     '/': { performance: 95, accessibility: 92 },
   };
   const current = {
-    '/': { performance: 88, accessibility: 90 },
+    '/': { performance: 78, accessibility: 90 }, // 17-point drop exceeds 15-point threshold
   };
 
   const comparison = compareLighthouseScores(baseline, current);
@@ -39,8 +39,8 @@ test('compareLighthouseScores flags regressions beyond threshold', () => {
       path: '/',
       category: 'performance',
       baseline: 95,
-      current: 88,
-      allowed: 90,
+      current: 78,
+      allowed: 80, // 95 - 15 = 80
     }),
   ]);
 });
