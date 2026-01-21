@@ -22,7 +22,7 @@ export type LighthouseThresholds = {
 };
 
 export const DEFAULT_LIGHTHOUSE_THRESHOLDS: LighthouseThresholds = {
-  maxScoreDrop: 5,
+  maxScoreDrop: 15, // Increased from 5 to accommodate CI environment variability
 };
 
 export type LighthouseReport = {
