@@ -253,7 +253,7 @@ export default function ChatWorkspace() {
                 /* Zero State: Centered */
                 <div className="flex-1 flex flex-col items-center justify-center p-4 max-w-3xl mx-auto w-full z-10 relative animate-in fade-in duration-500">
                     <div className="mb-8 text-left w-full pl-1">
-                        <h1 className="text-4xl md:text-5xl bg-clip-text text-transparent bg-gradient-to-r from-neutral-900 via-neutral-600 to-yellow-600 font-medium mb-2 tracking-tight">你好，</h1>
+                        <h1 className="text-4xl md:text-5xl bg-clip-text text-transparent bg-gradient-to-r from-neutral-900 via-neutral-600 to-yellow-600 font-medium mb-2 tracking-tight">您好，</h1>
                         <h2 className="text-4xl md:text-5xl text-neutral-300 font-medium tracking-tight">今天有什么可以帮您？</h2>
                     </div>
                     <div className="w-full">

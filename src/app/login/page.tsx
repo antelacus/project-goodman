@@ -104,7 +104,7 @@ export default function LoginPage() {
                         />
                     </Link>
                     <h1 className="text-2xl font-bold text-gray-900">管理员登录</h1>
-                    <p className="mt-2 text-gray-500">登录后可访问完整功能</p>
+                    <p className="mt-2 text-gray-500">仅限管理员使用，暂不开放注册</p>
                 </div>
 
                 {/* Login Form */}

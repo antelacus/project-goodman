@@ -51,9 +51,8 @@ export default function HomePage() {
             <PageContainer maxWidth="7xl">
                 {/* HERO SECTION */}
                 <section className="flex flex-col items-center justify-center min-h-[85vh] text-center pt-20">
-                    <div className="relative mb-8 animate-in zoom-in duration-700">
-                        <div className="absolute -inset-4 rounded-full bg-yellow-400/30 blur-2xl animate-pulse"></div>
-                        <Image src="/logo.png" alt="Project Goodman Logo" width={180} height={180} priority className="relative rounded-2xl shadow-2xl" />
+                    <div className="mb-8 animate-in zoom-in duration-700">
+                        <Image src="/logo.png" alt="Project Goodman Logo" width={180} height={180} priority className="rounded-2xl" />
                     </div>
 
                     <h1 className="text-5xl md:text-7xl font-extrabold tracking-tight leading-tight mb-6 animate-in slide-in-from-bottom-4 duration-700 delay-100">
@@ -137,22 +136,20 @@ export default function HomePage() {
                 </section>
 
                 {/* WHY GOODMAN */}
-                <section className="bg-neutral-900 rounded-[2.5rem] p-10 md:p-20 mt-10 text-white overflow-hidden relative">
-                    <div className="absolute top-0 right-0 w-96 h-96 bg-yellow-500/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2"></div>
-
-                    <h2 className="text-3xl md:text-4xl font-bold mb-16 text-center relative z-10">为什么选择 Goodman？</h2>
-                    <div className="grid md:grid-cols-3 gap-12 relative z-10">
+                <section className="bg-white border border-gray-100 rounded-[2.5rem] p-10 md:p-20 mt-10 text-gray-900">
+                    <h2 className="text-3xl md:text-4xl font-bold mb-16 text-center">为什么选择 Goodman？</h2>
+                    <div className="grid md:grid-cols-3 gap-12">
                         <div className="flex flex-col items-center text-center">
-                            <h3 className="text-xl font-bold mb-4 text-yellow-400">专业可信</h3>
-                            <p className="text-neutral-400 leading-relaxed">引用最新会计准则与法规，严谨可靠，杜绝虚假信息。</p>
+                            <h3 className="text-xl font-bold mb-4 text-yellow-600">专业可信</h3>
+                            <p className="text-gray-500 leading-relaxed">引用最新会计准则与法规，严谨可靠，杜绝虚假信息。</p>
                         </div>
                         <div className="flex flex-col items-center text-center">
-                            <h3 className="text-xl font-bold mb-4 text-blue-400">极致效率</h3>
-                            <p className="text-neutral-400 leading-relaxed">从上传到结果仅需数秒，大幅提升工作效率。</p>
+                            <h3 className="text-xl font-bold mb-4 text-blue-600">极致效率</h3>
+                            <p className="text-gray-500 leading-relaxed">从上传到结果仅需数秒，大幅提升工作效率。</p>
                         </div>
                         <div className="flex flex-col items-center text-center">
-                            <h3 className="text-xl font-bold mb-4 text-green-400">轻松集成</h3>
-                            <p className="text-neutral-400 leading-relaxed">现代化架构，可轻松托管或私有化部署，数据安全无忧。</p>
+                            <h3 className="text-xl font-bold mb-4 text-green-600">轻松集成</h3>
+                            <p className="text-gray-500 leading-relaxed">现代化架构，可轻松托管或私有化部署，数据安全无忧。</p>
                         </div>
                     </div>
                 </section>
