@@ -77,7 +77,7 @@ docker compose up -d --build
 - **成功率**：`step=success` / 总请求数（每条流程）
 - **错误率**：
   - **5xx**：基于 `logRequest` 的 `status` 统计（目标 <= 0.5%）
-  - **流程失败**：`step=failure` 计数（目标 ≤ 2%）
+  - **流程失败**：`step=failure` 计数（目标 <= 2%）
 - **P95**：按 `workflow` 聚合 `duration` 计算
 - **首 token P95**：`workflow=chat_stream` + `step=first_token` 的 `duration`
 
