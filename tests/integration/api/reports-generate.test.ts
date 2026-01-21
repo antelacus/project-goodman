@@ -133,4 +133,50 @@ describe('POST /api/reports/generate', () => {
       })
     );
   });
+
+  it('streams an error event when workflow returns meta.error', async () => {
+    vi.mocked(reportWorkflowGraph.streamEvents).mockResolvedValue(
+      createEventStream([
+        {
+          event: 'on_chain_end',
+          name: 'assembleReport',
+          data: {
+            output: {
+              report: {
+                title: '综合财务分析报告',
+                summary: '测试报告内容',
+              },
+              meta: { error: { message: 'LLM生成失败' } },
+            },
+          },
+        },
+      ])
+    );
+
+    const response = await POST(createRequest({ year: '2024' }));
+
+    expect(response.status).toBe(200);
+    expect(response.headers.get('content-type')).toContain('text/event-stream');
+
+    const reader = response.body?.getReader();
+    const firstChunk = reader ? await reader.read() : null;
+    const chunkText = firstChunk?.value
+      ? typeof firstChunk.value === 'string'
+        ? firstChunk.value
+        : new TextDecoder().decode(firstChunk.value)
+      : '';
+
+    expect(chunkText).toContain('event: report');
+    expect(chunkText).toContain('"type":"error"');
+
+    expect(vi.mocked(logging.logWorkflowEvent)).toHaveBeenCalledWith(
+      expect.objectContaining({
+        workflow: 'report_generation',
+        step: 'failure',
+        status: 'error',
+        errorType: 'REPORT_FAILED',
+        requestId: 'req-1',
+      })
+    );
+  });
 });

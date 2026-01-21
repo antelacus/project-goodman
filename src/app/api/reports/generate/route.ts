@@ -339,20 +339,15 @@ export async function POST(req: NextRequest) {
               }
             }
 
-            // Send complete event with report content
-            if (finalState?.report) {
-              sendEvent(
-                'report',
-                createCompleteEvent(
-                  tempReportId,
-                  finalState.report,
-                  finalState.meta?.generationTimeMs
-                )
-              );
-              logWorkflowSuccess();
-            } else if (finalState?.meta?.error) {
+            const metaError = finalState?.meta?.error;
+            if (metaError) {
+              const errorMessage = metaError instanceof Error
+                ? metaError.message
+                : typeof metaError === 'string'
+                  ? metaError
+                  : '报告生成失败';
               sendEvent('report', createErrorEvent(
-                finalState.meta.error.message || '报告生成失败',
+                errorMessage,
                 currentPhase || undefined
               ));
               logWorkflowFailure('REPORT_FAILED');
@@ -362,6 +357,16 @@ export async function POST(req: NextRequest) {
                 'check'
               ));
               logWorkflowFailure('RETRIEVAL_EMPTY');
+            } else if (finalState?.report) {
+              sendEvent(
+                'report',
+                createCompleteEvent(
+                  tempReportId,
+                  finalState.report,
+                  finalState.meta?.generationTimeMs
+                )
+              );
+              logWorkflowSuccess();
             } else {
               sendEvent('report', createErrorEvent('报告生成失败：未知错误'));
               logWorkflowFailure('REPORT_FAILED');
