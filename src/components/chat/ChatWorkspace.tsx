@@ -12,6 +12,7 @@ import GuestBanner from './GuestBanner';
 import { ReportProgress } from '@/components/reports';
 import { SkeletonMessage } from '@/components/ui/Skeleton';
 import type { ChatMessage } from '@/types/message';
+import { formatChatWarnings, type ChatWarning } from '@/lib/chat/warnings';
 
 export default function ChatWorkspace() {
     const searchParams = useSearchParams();
@@ -114,22 +115,30 @@ export default function ChatWorkspace() {
         await saveReport();
     }, [saveReport]);
 
-    const handleComplete = (data: { answer?: string; sessionId?: string }) => {
-        // Add the final assistant response
-        if (data && data.answer) {
-            setMessages(prev => [...prev, {
-                role: 'assistant',
-                content: data.answer || '',
-                id: Date.now().toString()
-            }]);
-        } else {
-            // Fallback if no answer structure
-            setMessages(prev => [...prev, {
-                role: 'assistant',
-                content: "Request completed, but no answer was returned.",
-                id: Date.now().toString()
-            }]);
-        }
+    const handleComplete = (data: { answer?: string; sessionId?: string; warnings?: ChatWarning[] }) => {
+        const warningMessage = formatChatWarnings(data?.warnings);
+        const content = data?.answer || "Request completed, but no answer was returned.";
+
+        setMessages(prev => {
+            const next: ChatMessage[] = [
+                ...prev,
+                {
+                    role: 'assistant',
+                    content,
+                    id: Date.now().toString()
+                }
+            ];
+
+            if (warningMessage) {
+                next.push({
+                    role: 'assistant',
+                    content: warningMessage,
+                    id: Date.now().toString()
+                });
+            }
+
+            return next;
+        });
     };
 
     const handleError = (error: string) => {

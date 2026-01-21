@@ -74,6 +74,39 @@ function createEventStream(events: Array<Record<string, unknown>>) {
   })();
 }
 
+async function readSseEvents(response: Response) {
+  const reader = response.body?.getReader();
+  const decoder = new TextDecoder();
+  let text = '';
+
+  if (!reader) return [];
+
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    text += typeof value === 'string' ? value : decoder.decode(value);
+  }
+
+  return text
+    .split('\n\n')
+    .filter((block) => block.trim())
+    .map((block) => {
+      const lines = block.split('\n');
+      let eventType: string | null = null;
+      let eventData: unknown = null;
+
+      for (const line of lines) {
+        if (line.startsWith('event: ')) {
+          eventType = line.substring(7);
+        } else if (line.startsWith('data: ')) {
+          eventData = JSON.parse(line.substring(6));
+        }
+      }
+
+      return { type: eventType, data: eventData };
+    });
+}
+
 beforeEach(() => {
   vi.mocked(security.ensureSession).mockResolvedValue(mockSessionResult);
   vi.mocked(security.checkGuestRate).mockResolvedValue({
@@ -109,16 +142,12 @@ describe('POST /api/chat/stream', () => {
     expect(response.status).toBe(200);
     expect(response.headers.get('content-type')).toContain('text/event-stream');
 
-    const reader = response.body?.getReader();
-    const firstChunk = reader ? await reader.read() : null;
-    const chunkText = firstChunk?.value
-      ? typeof firstChunk.value === 'string'
-        ? firstChunk.value
-        : new TextDecoder().decode(firstChunk.value)
-      : '';
+    const events = await readSseEvents(response);
+    const completeEvent = events.find((event) => event.type === 'complete');
 
-    expect(chunkText).toContain('event: complete');
-    expect(chunkText).toContain('"answer":"测试回复"');
+    expect(completeEvent?.data).toMatchObject({
+      answer: '测试回复',
+    });
 
     expect(vi.mocked(logging.logWorkflowEvent)).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -136,5 +165,50 @@ describe('POST /api/chat/stream', () => {
         requestId: 'req-1',
       })
     );
+  });
+
+  it('includes retrieval warnings when search results are empty', async () => {
+    vi.mocked(unifiedAgentGraph.streamEvents).mockResolvedValue(
+      createEventStream([
+        {
+          event: 'on_chain_end',
+          name: 'toolExecutor',
+          data: {
+            output: {
+              toolResults: [
+                {
+                  toolName: 'search_documents',
+                  result: { success: true, data: { total: 0, documents: [] } },
+                },
+              ],
+            },
+          },
+        },
+        {
+          event: 'on_chain_end',
+          name: 'generateResponse',
+          data: {
+            output: {
+              output: {
+                answer: '测试回复',
+                type: 'final',
+              },
+            },
+          },
+        },
+      ])
+    );
+
+    const response = await POST(createRequest({ question: '你好' }));
+    expect(response.status).toBe(200);
+
+    const events = await readSseEvents(response);
+    const completeEvent = events.find((event) => event.type === 'complete');
+
+    expect(completeEvent?.data?.warnings).toEqual([
+      expect.objectContaining({
+        type: 'RETRIEVAL_EMPTY',
+      }),
+    ]);
   });
 });
