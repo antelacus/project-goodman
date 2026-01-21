@@ -76,6 +76,7 @@ function createRequest(body: unknown) {
 }
 
 beforeEach(() => {
+  vi.clearAllMocks();
   vi.mocked(security.ensureSession).mockResolvedValue(mockSessionResult);
   vi.mocked(security.checkGuestRate).mockResolvedValue({
     allowed: true,
@@ -126,5 +127,15 @@ describe('POST /api/quick-actions/extract', () => {
     const body = await response.json();
     expect(body.success).toBe(false);
     expect(body.requestId).toBe('req-1');
+
+    expect(vi.mocked(logging.logWorkflowEvent)).toHaveBeenCalledWith(
+      expect.objectContaining({
+        workflow: 'quick_action_extract',
+        step: 'failure',
+        status: 'error',
+        errorType: 'VALIDATION',
+        requestId: 'req-1',
+      })
+    );
   });
 });

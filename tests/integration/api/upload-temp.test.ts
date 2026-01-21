@@ -92,6 +92,7 @@ function createRequest(body: unknown) {
 }
 
 beforeEach(() => {
+  vi.clearAllMocks();
   vi.mocked(security.ensureSession).mockResolvedValue(mockSessionResult);
   vi.mocked(security.checkGuestRate).mockResolvedValue({
     allowed: true,
@@ -182,5 +183,28 @@ describe('POST /api/documents/upload-temp', () => {
     const body = await response.json();
     expect(body.error).toBeTruthy();
     expect(body.requestId).toBe('req-1');
+  });
+
+  it('logs extraction failure for empty extracted content', async () => {
+    const payload = {
+      fileData: Buffer.from('short').toString('base64'),
+      fileName: 'short.txt',
+      fileType: 'text/plain',
+    };
+
+    const response = await POST(createRequest(payload));
+
+    expect(response.status).toBe(400);
+    expect(response.headers.get('X-Request-ID')).toBe('req-1');
+
+    expect(vi.mocked(logging.logWorkflowEvent)).toHaveBeenCalledWith(
+      expect.objectContaining({
+        workflow: 'document_extraction',
+        step: 'failure',
+        status: 'error',
+        errorType: 'EXTRACTION_FAILED',
+        requestId: 'req-1',
+      })
+    );
   });
 });
