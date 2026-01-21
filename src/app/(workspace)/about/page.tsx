@@ -1,29 +1,30 @@
 import { Zap, Shield, FileText } from "lucide-react";
 import React from 'react';
+import { appVersionLabel } from '@/lib/build-info';
 
 export default function AboutPage() {
   return (
     <div className="mx-auto max-w-4xl py-10">
       <div className="mb-12 text-center">
         <h1 className="mb-4 text-4xl font-bold text-neutral-900">关于 Project Goodman</h1>
-        <p className="text-neutral-600">新一代智能财务助手，重新定义财务工作流。</p>
+        <p className="text-neutral-600">面向财务人员的 AI 辅助工具</p>
+        <p className="mt-2 text-sm text-neutral-500">当前版本：{appVersionLabel}</p>
       </div>
 
       <div className="grid gap-8 md:grid-cols-2">
         <div className="rounded-xl border border-neutral-200 bg-white p-6 shadow-sm">
           <h2 className="mb-4 text-xl font-semibold text-neutral-900">项目愿景</h2>
           <p className="leading-relaxed text-neutral-600">
-            Project Goodman 致力于将人工智能技术引入财务领域，通过智能信息提取、自动化指标分析和合规性指导，
-            将繁琐的财务基础工作自动化，让财务专业人员专注于更有价值的决策分析。
+            Project Goodman 旨在为财务人员提供 AI 辅助能力，帮助处理文档信息提取、财务指标计算和合规查询等日常工作，
+            减少重复性劳动，让您有更多时间专注于分析和决策。
           </p>
         </div>
 
         <div className="rounded-xl border border-neutral-200 bg-white p-6 shadow-sm">
           <h2 className="mb-4 text-xl font-semibold text-neutral-900">技术架构</h2>
           <p className="leading-relaxed text-neutral-600">
-            基于 Next.js 与 Supabase 构建，采用双重存储架构（结构化数据 + 向量检索）。
-            后端集成 GPT-4o 模型，通过 LangGraph 编排复杂的思维链（Chain of Thought），
-            确保财务计算的准确性与合规建议的专业性。
+            基于 Next.js 与 Supabase 构建的现代 Web 应用，采用结构化数据与向量检索相结合的存储方案，
+            集成大语言模型提供智能交互能力。
           </p>
         </div>
       </div>
@@ -36,28 +37,27 @@ export default function AboutPage() {
               <FileText size={32} />
             </div>
             <h3 className="mb-2 font-semibold text-neutral-900">信息提取</h3>
-            <p className="text-sm text-neutral-500">自动解析多种格式文档，结构化关键信息</p>
+            <p className="text-sm text-neutral-500">解析常见格式文档，辅助提取关键信息</p>
           </div>
           <div className="flex flex-col items-center text-center">
             <div className="mb-4 rounded-full bg-yellow-50 p-4 text-yellow-600">
               <Zap size={32} />
             </div>
             <h3 className="mb-2 font-semibold text-neutral-900">智能分析</h3>
-            <p className="text-sm text-neutral-500">多维度财务指标计算与趋势分析</p>
+            <p className="text-sm text-neutral-500">支持常用财务指标计算与对比分析</p>
           </div>
           <div className="flex flex-col items-center text-center">
             <div className="mb-4 rounded-full bg-green-50 p-4 text-green-600">
               <Shield size={32} />
             </div>
-            <h3 className="mb-2 font-semibold text-neutral-900">合规保障</h3>
-            <p className="text-sm text-neutral-500">实时引用最新法规，降低合规风险</p>
+            <h3 className="mb-2 font-semibold text-neutral-900">合规参考</h3>
+            <p className="text-sm text-neutral-500">提供会计准则与法规查询参考</p>
           </div>
         </div>
       </div>
 
       <div className="mt-16 border-t border-neutral-200 pt-8 text-center text-sm text-neutral-500">
-        <p>Current Version: V4.3.0</p>
-        <p className="mt-2">Created by Antelacus</p>
+        <p>Created by Antelacus</p>
       </div>
     </div>
   );

@@ -57,36 +57,32 @@ export default function GuestBanner() {
             <div className="px-4 py-2 flex items-center justify-between max-w-4xl mx-auto">
                 <div className="flex items-center gap-3 text-sm">
                     <AlertCircle className="w-4 h-4 text-blue-500 flex-shrink-0" />
-                    <span className="text-blue-700">
-                        访客模式 - 每小时有限额
-                    </span>
+                    <span className="text-blue-700">访客模式</span>
 
-                    {/* Rate limit indicators */}
-                    {limits && (
-                        <div className="hidden sm:flex items-center gap-3 ml-2 text-xs">
-                            <LimitBadge
-                                icon={<MessageSquare className="w-3 h-3" />}
-                                remaining={limits.message.remaining}
-                                limit={limits.message.limit}
-                                label="消息"
-                            />
-                            <LimitBadge
-                                icon={<Upload className="w-3 h-3" />}
-                                remaining={limits.upload.remaining}
-                                limit={limits.upload.limit}
-                                label="上传"
-                            />
-                            <LimitBadge
-                                icon={<FileText className="w-3 h-3" />}
-                                remaining={limits.extract.remaining}
-                                limit={limits.extract.limit}
-                                label="提取"
-                            />
-                        </div>
-                    )}
+                    {/* Rate limit indicators - always visible */}
+                    <div className="flex items-center gap-2 text-xs">
+                        <LimitBadge
+                            icon={<MessageSquare className="w-3 h-3" />}
+                            remaining={limits?.message.remaining ?? 20}
+                            limit={limits?.message.limit ?? 20}
+                            label="消息"
+                        />
+                        <LimitBadge
+                            icon={<Upload className="w-3 h-3" />}
+                            remaining={limits?.upload.remaining ?? 5}
+                            limit={limits?.upload.limit ?? 5}
+                            label="上传"
+                        />
+                        <LimitBadge
+                            icon={<FileText className="w-3 h-3" />}
+                            remaining={limits?.extract.remaining ?? 10}
+                            limit={limits?.extract.limit ?? 10}
+                            label="提取"
+                        />
+                    </div>
 
                     {hasLowLimits && (
-                        <span className="text-orange-600 text-xs hidden md:inline">
+                        <span className="text-orange-600 text-xs hidden sm:inline">
                             限额即将用尽
                         </span>
                     )}
