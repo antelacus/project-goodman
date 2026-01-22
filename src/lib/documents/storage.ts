@@ -280,7 +280,7 @@ export async function getSignedFileUrls(
 /**
  * Get content type from filename
  */
-function getContentType(filename: string): string {
+export function getContentType(filename: string): string {
   const ext = filename.toLowerCase().split('.').pop();
 
   const mimeTypes: Record<string, string> = {
@@ -293,6 +293,7 @@ function getContentType(filename: string): string {
     'gif': 'image/gif',
     'webp': 'image/webp',
     'txt': 'text/plain',
+    'md': 'text/markdown',
     'csv': 'text/csv',
   };
 
