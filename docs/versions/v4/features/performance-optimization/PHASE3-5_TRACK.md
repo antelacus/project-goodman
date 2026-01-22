@@ -186,9 +186,9 @@
 
 #### G4: UI 文案与下载入口
 
-- [ ] `ReportActions` 与 `ReportsList` 下载按钮替换为 DOCX
-- [ ] 移除 UI/文案中 PDF 输出描述
-- [ ] 无 DOCX 时显示清晰提示与引导
+- [x] `ReportActions` 与 `ReportsList` 下载按钮替换为 DOCX
+- [x] 移除 UI/文案中 PDF 输出描述
+- [x] 无 DOCX 时显示清晰提示与引导
 
 #### G5: 验收测试
 

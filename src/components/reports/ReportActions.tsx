@@ -12,7 +12,7 @@ interface ReportActionsProps {
 }
 
 /**
- * Action buttons for saving report and downloading PDF
+ * Action buttons for saving report and downloading DOCX
  */
 export const ReportActions: React.FC<ReportActionsProps> = ({
   onSave,
@@ -39,7 +39,7 @@ export const ReportActions: React.FC<ReportActionsProps> = ({
           {isSaving ? (
             <>
               <Loader2 size={16} className="animate-spin" />
-              <span>正在生成PDF并保存...</span>
+              <span>正在生成DOCX并保存...</span>
             </>
           ) : (
             <>
@@ -57,16 +57,27 @@ export const ReportActions: React.FC<ReportActionsProps> = ({
           className="inline-flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
         >
           <FileDown size={16} />
-          <span>下载 PDF</span>
+          <span>下载 DOCX</span>
         </button>
       )}
 
       {/* Status text when saved */}
       {savedReportId && (
-        <span className="text-sm text-green-600 flex items-center gap-1">
+        <span className={`text-sm flex items-center gap-1 ${savedDocxUrl ? 'text-green-600' : 'text-amber-600'}`}>
           <Download size={14} />
-          报告已保存
+          {savedDocxUrl ? '报告已保存' : '报告已保存，DOCX 未生成'}
         </span>
+      )}
+
+      {savedReportId && !savedDocxUrl && onSave && (
+        <button
+          onClick={onSave}
+          disabled={disabled || isSaving}
+          className="inline-flex items-center gap-2 px-3 py-2 bg-amber-50 text-amber-700 rounded-lg hover:bg-amber-100 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+        >
+          <Save size={16} />
+          <span>重新生成 DOCX</span>
+        </button>
       )}
     </div>
   );
