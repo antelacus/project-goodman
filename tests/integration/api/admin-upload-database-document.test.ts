@@ -173,4 +173,61 @@ describe('POST /api/admin/upload-database-document', () => {
       })
     );
   });
+
+  it('decodes markdown uploads before storing document size', async () => {
+    vi.mocked(security.verifyAdminPassword).mockResolvedValue(true);
+
+    vi.mocked(performStructuredExtraction).mockResolvedValue({
+      documentType: 'general',
+      extractedData: { summary: 'test' },
+      summary: 'test summary',
+      confidence: 0.9,
+      metadata: {},
+    });
+
+    let insertedDocument: Record<string, unknown> | null = null;
+    const documentsInsert = vi.fn().mockImplementation((payload: Record<string, unknown>) => {
+      insertedDocument = payload;
+      return {
+        select: vi.fn().mockReturnValue({
+          single: vi.fn().mockResolvedValue({ error: null }),
+        }),
+      };
+    });
+    const documentChunksInsert = vi.fn().mockResolvedValue({ error: null });
+
+    vi.mocked(createServerSupabaseClient).mockReturnValue({
+      from: vi.fn((table: string) => {
+        if (table === 'documents') {
+          return {
+            insert: documentsInsert,
+            delete: vi.fn().mockReturnValue({
+              eq: vi.fn().mockResolvedValue({ error: null }),
+            }),
+          };
+        }
+        if (table === 'document_chunks') {
+          return {
+            insert: documentChunksInsert,
+          };
+        }
+        return {
+          insert: vi.fn().mockResolvedValue({ error: null }),
+        };
+      }),
+    });
+
+    const markdown = '# 标题\n内容';
+    const payload = {
+      documentText: Buffer.from(markdown).toString('base64'),
+      fileName: 'notes.md',
+      documentType: 'general',
+      adminPassword: 'valid-password',
+    };
+
+    const response = await POST(createRequest(payload));
+
+    expect(response.status).toBe(200);
+    expect(insertedDocument?.size).toBe(Buffer.byteLength(markdown, 'utf8'));
+  });
 });

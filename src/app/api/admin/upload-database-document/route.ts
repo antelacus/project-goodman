@@ -237,7 +237,7 @@ async function extractTextFromFile(
       max_completion_tokens: 4096
     });
     return response.choices[0]?.message?.content || '';
-  } else if (ext === 'txt') {
+  } else if (ext === 'txt' || ext === 'md') {
     // Plain text - decode from base64
     return Buffer.from(fileData, 'base64').toString('utf-8');
   }

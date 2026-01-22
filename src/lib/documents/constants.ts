@@ -161,7 +161,7 @@ export function isUploadable(docType: string | null | undefined): boolean {
 /**
  * Document types that only accept PDF format
  */
-export const PDF_ONLY_TYPES = ['financial_report', 'business_info'];
+export const PDF_ONLY_TYPES = ['financial_report'];
 
 /**
  * Check if a document type is a regulation/policy

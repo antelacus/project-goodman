@@ -31,6 +31,20 @@ export type Document = {
   is_temp?: boolean;
 };
 
+async function fetchCsrfToken(): Promise<string> {
+  const response = await fetch('/api/auth/csrf');
+  if (!response.ok) {
+    throw new Error('Failed to fetch CSRF token');
+  }
+
+  const data = await response.json() as { success?: boolean; token?: string };
+  if (!data?.success || !data.token) {
+    throw new Error('Failed to fetch CSRF token');
+  }
+
+  return data.token;
+}
+
 interface DocumentStore {
   documents: Document[];
   isLoading: boolean;
@@ -64,7 +78,13 @@ export const useDocumentStore = create<DocumentStore>((set, get) => ({
 
   deleteDocument: async (id) => {
     try {
-      const res = await fetch(`/api/documents?id=${id}`, { method: 'DELETE' });
+      const csrfToken = await fetchCsrfToken();
+      const res = await fetch(`/api/documents?id=${id}`, {
+        method: 'DELETE',
+        headers: {
+          'x-csrf-token': csrfToken,
+        },
+      });
       if (!res.ok) throw new Error('Failed to delete document');
       set((state) => ({
         documents: state.documents.filter((doc) => doc.id !== id),

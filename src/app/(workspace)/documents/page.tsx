@@ -14,6 +14,7 @@ import {
   isUploadable,
   PDF_ONLY_TYPES,
 } from "@/lib/documents";
+import { updateDocumentMetadata } from "@/lib/documents/update-document-metadata";
 import {
   isImage,
   isPdf,
@@ -36,6 +37,7 @@ const ADMIN_SUPPORTED_FORMATS = {
   "image/webp": [".webp"],
   "image/gif": [".gif"],
   "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": [".xlsx"],
+  "text/markdown": [".md"],
 };
 
 function EditableCell({
@@ -228,11 +230,7 @@ export default function DocumentsPage() {
     }
 
     try {
-      const response = await fetch('/api/documents', {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ documentId: id, updates }),
-      });
+      const response = await updateDocumentMetadata(id, updates);
 
       if (!response.ok) {
         const errorData = await response.json();
