@@ -62,5 +62,6 @@ export interface MessageListProps {
   // v4.2: Report actions
   onSaveReport?: () => void;
   isSavingReport?: boolean;
-  savedReportPdfUrl?: string;
+  savedReportDocxUrl?: string;
+  savedReportId?: string;
 }

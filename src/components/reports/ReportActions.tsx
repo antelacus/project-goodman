@@ -6,7 +6,8 @@ import { Save, Download, Loader2, FileDown } from 'lucide-react';
 interface ReportActionsProps {
   onSave?: () => void;
   isSaving?: boolean;
-  savedPdfUrl?: string;
+  savedDocxUrl?: string;
+  savedReportId?: string;
   disabled?: boolean;
 }
 
@@ -16,19 +17,20 @@ interface ReportActionsProps {
 export const ReportActions: React.FC<ReportActionsProps> = ({
   onSave,
   isSaving = false,
-  savedPdfUrl,
+  savedDocxUrl,
+  savedReportId,
   disabled = false,
 }) => {
   const handleDownload = () => {
-    if (savedPdfUrl) {
-      window.open(savedPdfUrl, '_blank');
+    if (savedDocxUrl) {
+      window.open(savedDocxUrl, '_blank');
     }
   };
 
   return (
     <div className="flex items-center gap-3 pt-4 border-t border-neutral-200">
       {/* Save Button - shown when not yet saved */}
-      {!savedPdfUrl && onSave && (
+      {!savedReportId && onSave && (
         <button
           onClick={onSave}
           disabled={disabled || isSaving}
@@ -49,7 +51,7 @@ export const ReportActions: React.FC<ReportActionsProps> = ({
       )}
 
       {/* Download Button - shown after save */}
-      {savedPdfUrl && (
+      {savedDocxUrl && (
         <button
           onClick={handleDownload}
           className="inline-flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
@@ -60,7 +62,7 @@ export const ReportActions: React.FC<ReportActionsProps> = ({
       )}
 
       {/* Status text when saved */}
-      {savedPdfUrl && (
+      {savedReportId && (
         <span className="text-sm text-green-600 flex items-center gap-1">
           <Download size={14} />
           报告已保存

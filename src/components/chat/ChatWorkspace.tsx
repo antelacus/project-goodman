@@ -31,7 +31,8 @@ export default function ChatWorkspace() {
         currentSection: currentReportSection,
         error: reportError,
         isSaving: isSavingReport,
-        savedPdfUrl: savedReportPdfUrl,
+        savedDocxUrl: savedReportDocxUrl,
+        savedReportId,
         startGeneration,
         saveReport,
     } = useReportGeneration();
@@ -276,7 +277,8 @@ export default function ChatWorkspace() {
                             processEvents={processEvents}
                             onSaveReport={handleSaveReport}
                             isSavingReport={isSavingReport}
-                            savedReportPdfUrl={savedReportPdfUrl}
+                            savedReportDocxUrl={savedReportDocxUrl}
+                            savedReportId={savedReportId}
                         />
 
                         {/* v4.2: Report Progress (shown during generation or on error) */}

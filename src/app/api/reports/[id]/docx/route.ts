@@ -1,8 +1,8 @@
 /**
- * API Route: /api/reports/[id]/pdf
+ * API Route: /api/reports/[id]/docx
  *
- * Get a signed URL for downloading the report PDF.
- * v4.2: PDF download endpoint.
+ * Get a signed URL for downloading the report DOCX.
+ * v4.6: DOCX download endpoint.
  */
 
 import { NextRequest, NextResponse } from 'next/server';
@@ -18,7 +18,7 @@ import { getSignedFileUrl } from '@/lib/documents/storage';
 export const runtime = 'nodejs';
 
 // ============================================================================
-// GET Handler - Get PDF Download URL
+// GET Handler - Get DOCX Download URL
 // ============================================================================
 
 export async function GET(
@@ -52,7 +52,7 @@ export async function GET(
 
     const { data: report, error } = await supabase
       .from('reports')
-      .select('id, owner_id, owner_type, pdf_storage_path')
+      .select('id, owner_id, owner_type, docx_storage_path')
       .eq('id', reportId)
       .single();
 
@@ -63,7 +63,7 @@ export async function GET(
           { status: 404 }
         );
       }
-      console.error('[ReportPdf] Query error:', error);
+      console.error('[ReportDocx] Query error:', error);
       throw new Error(`获取报告失败: ${error.message}`);
     }
 
@@ -85,16 +85,16 @@ export async function GET(
       );
     }
 
-    // Check if PDF exists
-    if (!report.pdf_storage_path) {
+    // Check if DOCX exists
+    if (!report.docx_storage_path) {
       return NextResponse.json(
-        { error: 'PDF 文件尚未生成' },
+        { error: 'DOCX 文件尚未生成' },
         { status: 404 }
       );
     }
 
     // Generate signed URL (1 hour expiry)
-    const signedUrl = await getSignedFileUrl(report.pdf_storage_path, 3600);
+    const signedUrl = await getSignedFileUrl(report.docx_storage_path, 3600);
 
     if (!signedUrl) {
       return NextResponse.json(
@@ -123,7 +123,7 @@ export async function GET(
     return response;
 
   } catch (error: unknown) {
-    console.error('[ReportPdf] Error:', error);
+    console.error('[ReportDocx] Error:', error);
     return createErrorResponse(error, requestId, 500);
   }
 }

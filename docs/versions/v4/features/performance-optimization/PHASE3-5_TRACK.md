@@ -180,9 +180,9 @@
 
 #### G3: API 与前端保存流程
 
-- [ ] `/api/reports/save` 返回 DOCX 下载地址
-- [ ] 新增 `/api/reports/[id]/docx` 下载接口（替代 `/pdf`）
-- [ ] `useReportGeneration` 保存逻辑与提示文案改为 DOCX
+- [x] `/api/reports/save` 返回 DOCX 下载地址
+- [x] 新增 `/api/reports/[id]/docx` 下载接口（替代 `/pdf`）
+- [x] `useReportGeneration` 保存逻辑与提示文案改为 DOCX
 
 #### G4: UI 文案与下载入口
 

@@ -15,7 +15,8 @@ const MessageList: React.FC<MessageListProps> = ({
     processEvents = [],
     onSaveReport,
     isSavingReport = false,
-    savedReportPdfUrl,
+    savedReportDocxUrl,
+    savedReportId,
 }) => {
     const bottomRef = useRef<HTMLDivElement>(null);
 
@@ -40,7 +41,8 @@ const MessageList: React.FC<MessageListProps> = ({
                                     report={msg.reportContent}
                                     onSave={onSaveReport}
                                     isSaving={isSavingReport}
-                                    savedPdfUrl={savedReportPdfUrl}
+                                    savedDocxUrl={savedReportDocxUrl}
+                                    savedReportId={savedReportId}
                                 />
                             </div>
                         </div>
