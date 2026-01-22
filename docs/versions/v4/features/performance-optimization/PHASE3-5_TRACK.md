@@ -164,6 +164,46 @@
 
 ---
 
+### G. 报告生成上下文增强（REQ-F2）
+
+#### G1: 状态 Schema 变更
+
+- [ ] 在 `state.ts` 新增 `companyProfile` 字段
+- [ ] 在 `state.ts` 新增 `financialPolicy` 字段
+- [ ] 保持 `companyInfo` 字段向后兼容
+
+#### G2: 上下文文档检索
+
+- [ ] 实现 `fetchDocumentContent()` 函数（从 document_chunks 拼接内容）
+- [ ] 在 `gather-context.ts` 检索 `公司详细档案.md`（doc_type='business_info'）
+- [ ] 在 `gather-context.ts` 检索 `财务管理制度.md`（doc_type='policy'）
+- [ ] 两份文档并行查询以优化性能
+- [ ] 实现内容截断策略（~12000 字符上限）
+
+#### G3: 降级策略实现
+
+- [ ] 文档不存在时记录 warning 并继续
+- [ ] 文档内容为空时记录 warning 并继续
+- [ ] 设置 5s 查询超时，超时则跳过
+- [ ] 确保任何检索失败不阻断报告生成流程
+
+#### G4: Prompt 注入
+
+- [ ] 修改 `buildSectionAnalysisPrompt()` 接受 `companyContext` 参数
+- [ ] 实现上下文注入模板（公司档案摘要 + 财务管理基准）
+- [ ] 添加分析要求指导（使用公司基准而非通用基准）
+- [ ] 在 `analyze-sections.ts` 传递上下文到 prompt 构建
+
+#### G5: 验收测试
+
+- [ ] 验证 `gather-context` 能成功检索两份文档内容
+- [ ] 验证文档缺失时优雅降级（不阻断流程）
+- [ ] 验证 LLM prompt 包含公司上下文（通过日志确认）
+- [ ] 验证生成的报告分析体现公司特性（IDM 模式、行业基准）
+- [ ] 验证报告生成 P95 < 60s（性能不退化）
+
+---
+
 ## Phase 5: 综合测试清单
 
 - [ ] ESLint 通过（`npm run lint`）
