@@ -465,6 +465,7 @@ export type Database = {
           comparison_year: string | null
           content: Json
           created_at: string | null
+          docx_storage_path: string | null
           expires_at: string | null
           generation_time_ms: number | null
           id: string
@@ -481,6 +482,7 @@ export type Database = {
           comparison_year?: string | null
           content?: Json
           created_at?: string | null
+          docx_storage_path?: string | null
           expires_at?: string | null
           generation_time_ms?: number | null
           id?: string
@@ -497,6 +499,7 @@ export type Database = {
           comparison_year?: string | null
           content?: Json
           created_at?: string | null
+          docx_storage_path?: string | null
           expires_at?: string | null
           generation_time_ms?: number | null
           id?: string
