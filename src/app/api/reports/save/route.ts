@@ -1,8 +1,8 @@
 /**
  * API Route: /api/reports/save
  *
- * Save a generated report to the database and generate PDF.
- * v4.2: Report persistence with PDF generation.
+ * Save a generated report to the database and generate DOCX.
+ * v4.6: Report persistence with DOCX generation.
  */
 
 import { NextRequest, NextResponse } from 'next/server';
@@ -16,7 +16,7 @@ import {
 } from '@/lib/security';
 import { ReportSaveSchema, validateRequest } from '@/lib/validation/api-schemas';
 import type { ReportContent, ReportOwnerType } from '@/types/report';
-import { generateAndSaveReportPdf } from '@/lib/reports';
+import { generateAndSaveReportDocx } from '@/lib/reports';
 import { getSignedFileUrl } from '@/lib/documents/storage';
 
 export const runtime = 'nodejs';
@@ -78,7 +78,7 @@ export async function POST(req: NextRequest) {
         comparison_year: comparisonYear || null,
         content: reportContent as unknown as Json,
         summary_text: summaryText,
-        pdf_storage_path: null, // Will be set when PDF is generated
+        docx_storage_path: null, // Will be set when DOCX is generated
         generation_time_ms: generationTimeMs ?? null,
         expires_at: expiresAt,
       })
@@ -92,10 +92,10 @@ export async function POST(req: NextRequest) {
 
     const reportId = insertedReport.id;
 
-    // Generate PDF and upload to storage
-    let pdfUrl: string | null = null;
+    // Generate DOCX and upload to storage
+    let docxUrl: string | null = null;
     try {
-      const storagePath = await generateAndSaveReportPdf(
+      const storagePath = await generateAndSaveReportDocx(
         reportId,
         reportContent,
         year,
@@ -103,11 +103,11 @@ export async function POST(req: NextRequest) {
       );
 
       // Generate signed URL for immediate download (1 hour expiry)
-      pdfUrl = await getSignedFileUrl(storagePath, 3600);
-    } catch (pdfError) {
+      docxUrl = await getSignedFileUrl(storagePath, 3600);
+    } catch (docxError) {
       // Log error but don't fail the request - report is already saved
-      console.error('[ReportSave] PDF generation failed:', pdfError);
-      // User can still access the report, PDF can be generated later
+      console.error('[ReportSave] DOCX generation failed:', docxError);
+      // User can still access the report, DOCX can be generated later
     }
 
     // Build response
@@ -115,7 +115,7 @@ export async function POST(req: NextRequest) {
       success: true,
       data: {
         reportId,
-        pdfUrl,
+        docxUrl,
       },
     });
 

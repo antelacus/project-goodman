@@ -21,9 +21,10 @@ export interface UseReportGenerationReturn {
   report: ReportContent | null;
   error: string | undefined;
 
-  // Save state - PDF generation + upload takes 2-4 seconds
+  // Save state - DOCX generation + upload takes 2-4 seconds
   isSaving: boolean;
-  savedPdfUrl: string | undefined;
+  savedDocxUrl: string | undefined;
+  savedReportId: string | undefined;
 
   // Generation input tracking (for save operation)
   generationYear: string | undefined;
@@ -32,7 +33,7 @@ export interface UseReportGenerationReturn {
 
   // Operations
   startGeneration: (year: string, comparisonYear?: string) => Promise<ReportContent | null>;
-  saveReport: () => Promise<{ reportId: string; pdfUrl: string } | null>;
+  saveReport: () => Promise<{ reportId: string; docxUrl: string | null } | null>;
   reset: () => void;
   cancel: () => void;
 }
@@ -45,7 +46,7 @@ const PHASE_ORDER: ReportPhase[] = ['check', 'gather', 'analyze', 'generate'];
 /**
  * Hook for managing financial report generation
  *
- * Handles SSE streaming, phase tracking, and report saving with PDF generation.
+ * Handles SSE streaming, phase tracking, and report saving with DOCX generation.
  *
  * @example
  * ```tsx
@@ -75,7 +76,8 @@ export function useReportGeneration(): UseReportGenerationReturn {
 
   // Save state
   const [isSaving, setIsSaving] = useState(false);
-  const [savedPdfUrl, setSavedPdfUrl] = useState<string | undefined>();
+  const [savedDocxUrl, setSavedDocxUrl] = useState<string | undefined>();
+  const [savedReportId, setSavedReportId] = useState<string | undefined>();
 
   // Track generation input for save
   const [generationYear, setGenerationYear] = useState<string | undefined>();
@@ -159,7 +161,8 @@ export function useReportGeneration(): UseReportGenerationReturn {
     setIsGenerating(true);
     setError(undefined);
     setReport(null);
-    setSavedPdfUrl(undefined);
+    setSavedDocxUrl(undefined);
+    setSavedReportId(undefined);
     setPhases([...REPORT_PHASES]);
     setCurrentSection(undefined);
     setGenerationYear(year);
@@ -260,14 +263,14 @@ export function useReportGeneration(): UseReportGenerationReturn {
   }, []);
 
   /**
-   * Save the current report to database and generate PDF
+   * Save the current report to database and generate DOCX
    *
-   * Note: PDF generation with Chinese fonts + Supabase upload takes 2-4 seconds.
-   * The isSaving state should trigger explicit "正在生成PDF并保存..." message in UI.
+   * Note: DOCX generation + Supabase upload takes 2-4 seconds.
+   * The isSaving state should trigger explicit "正在生成DOCX并保存..." message in UI.
    *
-   * @returns Object with reportId and pdfUrl, or null if failed
+   * @returns Object with reportId and docxUrl, or null if failed
    */
-  const saveReport = useCallback(async (): Promise<{ reportId: string; pdfUrl: string } | null> => {
+  const saveReport = useCallback(async (): Promise<{ reportId: string; docxUrl: string | null } | null> => {
     if (!report) {
       console.warn('No report to save');
       return null;
@@ -297,12 +300,18 @@ export function useReportGeneration(): UseReportGenerationReturn {
 
       const data = await response.json();
 
-      if (data.success && data.data?.pdfUrl) {
-        setSavedPdfUrl(data.data.pdfUrl);
+      if (data.success && data.data?.reportId) {
+        const docxUrl = data.data.docxUrl ?? null;
+        setSavedReportId(data.data.reportId);
+        setSavedDocxUrl(docxUrl ?? undefined);
         return {
           reportId: data.data.reportId,
-          pdfUrl: data.data.pdfUrl,
+          docxUrl,
         };
+      }
+
+      if (data.success) {
+        throw new Error('保存成功但未返回报告信息');
       } else {
         throw new Error(data.error || '保存失败');
       }
@@ -325,7 +334,8 @@ export function useReportGeneration(): UseReportGenerationReturn {
     setReport(null);
     setError(undefined);
     setIsSaving(false);
-    setSavedPdfUrl(undefined);
+    setSavedDocxUrl(undefined);
+    setSavedReportId(undefined);
     setGenerationYear(undefined);
     setComparisonYear(undefined);
     setGenerationTimeMs(undefined);
@@ -358,7 +368,8 @@ export function useReportGeneration(): UseReportGenerationReturn {
     report,
     error,
     isSaving,
-    savedPdfUrl,
+    savedDocxUrl,
+    savedReportId,
     generationYear,
     comparisonYear,
     generationTimeMs,

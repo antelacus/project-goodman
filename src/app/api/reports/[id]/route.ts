@@ -94,6 +94,7 @@ export async function GET(
       comparisonYear: report.comparison_year || undefined,
       content: report.content as unknown as ReportContent,
       summaryText: report.summary_text || undefined,
+      docxStoragePath: report.docx_storage_path || undefined,
       pdfStoragePath: report.pdf_storage_path || undefined,
       generationTimeMs: report.generation_time_ms || undefined,
       createdAt: report.created_at || new Date().toISOString(),

@@ -11,7 +11,8 @@ interface ReportMessageProps {
   report: ReportContent;
   onSave?: () => void;
   isSaving?: boolean;
-  savedPdfUrl?: string;
+  savedDocxUrl?: string;
+  savedReportId?: string;
 }
 
 /**
@@ -22,7 +23,8 @@ export const ReportMessage: React.FC<ReportMessageProps> = ({
   report,
   onSave,
   isSaving = false,
-  savedPdfUrl,
+  savedDocxUrl,
+  savedReportId,
 }) => {
   // Track which sections are expanded (first section expanded by default)
   const [expandedSections, setExpandedSections] = useState<Set<string>>(
@@ -137,7 +139,8 @@ export const ReportMessage: React.FC<ReportMessageProps> = ({
         <ReportActions
           onSave={onSave}
           isSaving={isSaving}
-          savedPdfUrl={savedPdfUrl}
+          savedDocxUrl={savedDocxUrl}
+          savedReportId={savedReportId}
         />
       </div>
 
