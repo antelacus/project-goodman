@@ -47,7 +47,11 @@ async function analyzeSection(
   primaryMetrics: Record<string, MetricResult>,
   comparisonMetrics: Record<string, MetricResult>,
   year: string,
-  comparisonYear?: string
+  comparisonYear?: string,
+  companyContext?: {
+    companyProfile?: string;
+    financialPolicy?: string;
+  }
 ): Promise<ReportSection> {
   // Get metrics for this section
   const sectionMetrics = sectionConfig.metrics
@@ -65,7 +69,8 @@ async function analyzeSection(
     sectionMetrics,
     sectionComparisonMetrics,
     year,
-    comparisonYear
+    comparisonYear,
+    companyContext
   );
 
   // Call LLM
@@ -126,6 +131,11 @@ export async function analyzeSectionsNode(
 ): Promise<Partial<ReportWorkflowState>> {
   const { year, comparisonYear } = state.input;
   const { primary, comparison } = state.metricResults;
+  const { companyProfile, companyInfo, financialPolicy } = state.contextDocuments;
+  const companyContext = {
+    companyProfile: companyProfile ?? companyInfo,
+    financialPolicy,
+  };
 
   try {
     const sections: ReportSectionData[] = [];
@@ -145,7 +155,8 @@ export async function analyzeSectionsNode(
           primary,
           comparison,
           year,
-          comparisonYear
+          comparisonYear,
+          companyContext
         );
 
         sectionData.status = 'completed';
