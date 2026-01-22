@@ -44,27 +44,30 @@ export function ReportsList() {
     fetchReports();
   }, [fetchReports]);
 
-  // Handle PDF download
-  const handleDownloadPdf = useCallback(async (reportId: string) => {
+  // Handle DOCX download
+  const handleDownloadDocx = useCallback(async (reportId: string) => {
     setDownloadingId(reportId);
 
     try {
-      const response = await fetch(`/api/reports/${reportId}/pdf`, {
+      const response = await fetch(`/api/reports/${reportId}/docx`, {
         method: 'GET',
         headers: { 'Content-Type': 'application/json' },
       });
 
       if (!response.ok) {
         const errorData = await response.json();
+        if (response.status === 404 && errorData.error === 'DOCX 文件尚未生成') {
+          throw new Error('DOCX 尚未生成，请在聊天中重新保存报告后再下载。');
+        }
         throw new Error(errorData.error || '获取下载链接失败');
       }
 
       const data = await response.json();
-      const pdfUrl = data.data?.url;
+      const docxUrl = data.data?.url;
 
-      if (pdfUrl) {
-        // Open PDF in new tab or trigger download
-        window.open(pdfUrl, '_blank');
+      if (docxUrl) {
+        // Open DOCX in new tab or trigger download
+        window.open(docxUrl, '_blank');
       } else {
         throw new Error('未获取到下载链接');
       }
@@ -186,10 +189,10 @@ export function ReportsList() {
 
               {/* Download button */}
               <button
-                onClick={() => handleDownloadPdf(report.id)}
+                onClick={() => handleDownloadDocx(report.id)}
                 disabled={downloadingId === report.id}
                 className="flex-shrink-0 ml-4 px-3 py-2 bg-blue-50 text-blue-600 hover:bg-blue-100 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1 text-sm"
-                title="下载 PDF"
+                title="下载 DOCX"
               >
                 {downloadingId === report.id ? (
                   <>
@@ -199,7 +202,7 @@ export function ReportsList() {
                 ) : (
                   <>
                     <Download size={16} />
-                    PDF
+                    DOCX
                   </>
                 )}
               </button>
