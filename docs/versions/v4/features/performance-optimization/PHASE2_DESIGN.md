@@ -413,3 +413,54 @@ try {
 - [ ] LLM prompt 包含公司上下文（可通过日志验证）
 - [ ] 生成的报告分析体现公司特性
 - [ ] 报告生成 P95 < 60s（性能不退化）
+
+---
+
+## 13. 报告输出格式调整（DOCX）
+
+### 13.1 目标
+
+- 报告生成默认输出并保存为 DOCX，满足用户二次编辑需求
+- Supabase 存储、下载入口与文案统一为 DOCX（不再默认 PDF）
+
+### 13.2 数据流
+
+```
+ReportContent → DOCX Generator → Supabase Storage → Signed URL → 下载/分享
+```
+
+**存储要求**：
+- 文件扩展名：`.docx`
+- Content-Type：`application/vnd.openxmlformats-officedocument.wordprocessingml.document`
+- 命名规则延续现有报告命名规范（仅调整扩展名）
+
+### 13.3 数据模型
+
+- 在 `reports` 表新增 `docx_storage_path`
+- 保留 `pdf_storage_path` 仅用于历史数据兼容（不做批量迁移）
+- API 与前端优先读取 `docx_storage_path`
+
+### 13.4 兼容与降级策略
+
+- 若 `docx_storage_path` 为空：提示“尚未生成 DOCX”，引导重新保存报告
+- 旧 PDF 不回溯转换，避免引入额外迁移成本
+
+### 13.5 文件变更清单
+
+| 文件 | 变更类型 | 说明 |
+|------|---------|------|
+| `supabase/migrations/*` | 新增 | 增加 `docx_storage_path` 字段 |
+| `src/lib/reports/*` | 修改/新增 | 替换 PDF 生成/上传为 DOCX 生成/上传 |
+| `src/app/api/reports/save/route.ts` | 修改 | 生成 DOCX 并保存路径 |
+| `src/app/api/reports/[id]/docx/route.ts` | 新增 | 获取 DOCX 下载链接（替代 `/pdf`） |
+| `src/hooks/useReportGeneration.ts` | 修改 | 保存逻辑与状态提示改为 DOCX |
+| `src/components/reports/ReportActions.tsx` | 修改 | 保存与下载按钮文案/行为 |
+| `src/components/documents/ReportsList.tsx` | 修改 | 下载入口与标签更新 |
+| `src/types/report.ts` | 修改 | 添加 `docxStoragePath` 类型字段 |
+
+### 13.6 验收检查点
+
+- [ ] 新生成报告保存为 `.docx`，并可成功下载
+- [ ] UI/接口描述不再出现 PDF 输出文案
+- [ ] 旧报告无 DOCX 时给出清晰提示
+- [ ] 报告生成性能仍满足 P95 < 60s
