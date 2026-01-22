@@ -168,9 +168,9 @@
 
 #### G1: 数据模型与类型
 
-- [ ] 新增 `docx_storage_path` 字段（Supabase migration）
-- [ ] 更新 TypeScript 类型字段（`docxStoragePath`）
-- [ ] 保留 `pdf_storage_path` 仅兼容历史数据
+- [x] 新增 `docx_storage_path` 字段（Supabase migration）
+- [x] 更新 TypeScript 类型字段（`docxStoragePath`）
+- [x] 保留 `pdf_storage_path` 仅兼容历史数据
 
 #### G2: DOCX 生成与存储
 

@@ -107,6 +107,7 @@ export interface ReportRecord {
   comparisonYear?: string;
   content: ReportContent;
   summaryText?: string;
+  docxStoragePath?: string;
   pdfStoragePath?: string;
   generationTimeMs?: number;
   createdAt: string;
