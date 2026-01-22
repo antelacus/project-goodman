@@ -197,3 +197,219 @@ P1 流程为次要功能与低频操作，仅要求可用性保障与清晰提�
 - v4.4 的 observability 实施细节需与 v4.6 指标口径对齐。
 - 部分流程当前缺乏 `logRequest`/`logError` 覆盖，需要补齐。
 - P95 目标需在 staging 上验证采样规模与统计口径。
+
+---
+
+## 12. 报告生成上下文增强（REQ-F2）
+
+### 12.1 目标
+
+在报告生成工作流的分析阶段注入公司档案与财务制度上下文，使 LLM 能够结合公司特性（IDM 模式、行业基准、内部标准）生成更有针对性的分析。
+
+### 12.2 当前架构
+
+```
+┌─────────────────────────────────────────────────────────────────────────┐
+│                        Report Generation Workflow                        │
+├─────────────────────────────────────────────────────────────────────────┤
+│                                                                          │
+│  ┌──────────────┐   ┌──────────────┐   ┌──────────────┐   ┌───────────┐ │
+│  │ checkData    │ → │ gatherMetrics│ → │ gatherContext│ → │ analyze   │ │
+│  │ Availability │   │   (22 tools) │   │  (current)   │   │ Sections  │ │
+│  └──────────────┘   └──────────────┘   └──────────────┘   └───────────┘ │
+│                                              │                    │      │
+│                                              ▼                    ▼      │
+│                                     ┌────────────────┐   ┌─────────────┐│
+│                                     │ sourceDocuments│   │ LLM Prompt  ││
+│                                     │ companyInfo    │   │ (无公司上下文)││
+│                                     │ (仅文档名)      │   └─────────────┘│
+│                                     └────────────────┘                   │
+└─────────────────────────────────────────────────────────────────────────┘
+```
+
+**问题**：
+- `gatherContext` 仅获取 `公司章程` 的文档名，不获取内容
+- `analyzeSections` 的 LLM prompt 不包含任何公司上下文
+- 分析结果基于通用基准，缺乏针对性
+
+### 12.3 目标架构
+
+```
+┌─────────────────────────────────────────────────────────────────────────┐
+│                        Report Generation Workflow                        │
+├─────────────────────────────────────────────────────────────────────────┤
+│                                                                          │
+│  ┌──────────────┐   ┌──────────────┐   ┌──────────────┐   ┌───────────┐ │
+│  │ checkData    │ → │ gatherMetrics│ → │ gatherContext│ → │ analyze   │ │
+│  │ Availability │   │   (22 tools) │   │  (enhanced)  │   │ Sections  │ │
+│  └──────────────┘   └──────────────┘   └──────────────┘   └───────────┘ │
+│                                              │                    │      │
+│                                              ▼                    ▼      │
+│                                     ┌────────────────┐   ┌─────────────┐│
+│                                     │ sourceDocuments│   │ LLM Prompt  ││
+│                                     │ companyProfile │   │ + 公司上下文 ││
+│                                     │ financialPolicy│   └─────────────┘│
+│                                     │ (实际内容)      │                   │
+│                                     └────────────────┘                   │
+└─────────────────────────────────────────────────────────────────────────┘
+```
+
+### 12.4 数据流设计
+
+#### 12.4.1 上下文文档定位
+
+| 文档 | 定位方式 | 备选方案 |
+|-----|---------|---------|
+| `公司详细档案.md` | `doc_type = 'business_info'` + `name LIKE '%公司详细档案%'` | 按 `doc_type` 取最新 |
+| `财务管理制度.md` | `doc_type = 'policy'` + `name LIKE '%财务管理制度%'` | 按 `doc_type` 取最新 |
+
+#### 12.4.2 内容检索策略
+
+**方案 A：直接从 document_chunks 拼接（推荐）**
+
+```typescript
+// 从 document_chunks 获取完整内容
+const chunks = await supabase
+  .from('document_chunks')
+  .select('content, section_path')
+  .eq('document_id', documentId)
+  .order('section_path');
+
+const fullContent = chunks.map(c => c.content).join('\n\n');
+```
+
+**优点**：
+- 已有向量化内容，无需额外处理
+- 支持未来按 section 精准检索
+
+**方案 B：从 Storage 下载原文件**
+
+不推荐：需要额外 I/O，且 Markdown 已被 chunker 处理过。
+
+#### 12.4.3 内容截断策略
+
+为避免上下文过长影响性能和成本：
+
+| 文档 | 最大 token 数 | 截断策略 |
+|-----|-------------|---------|
+| `公司详细档案` | ~3000 tokens | 保留：实体属性、财务基准、业务结构、竞对对标 |
+| `财务管理制度` | ~1500 tokens | 保留：附录 A（健康区间）、存货管理、应收账款管理 |
+
+**实现**：在 `gather-context` 节点中使用简单字符截断（~12000 字符 ≈ 3000 tokens），或按 section 筛选关键章节。
+
+### 12.5 状态 Schema 变更
+
+```typescript
+// src/lib/workflows/report/state.ts
+
+interface ContextDocuments {
+  companyInfo?: string;           // 保留兼容（已废弃）
+  sourceDocuments: ReportSourceReference[];
+
+  // 新增字段
+  companyProfile?: string;        // 公司详细档案内容
+  financialPolicy?: string;       // 财务管理制度内容
+}
+```
+
+### 12.6 Prompt 注入设计
+
+#### 12.6.1 Section Analysis Prompt 变更
+
+```typescript
+// src/lib/workflows/report/prompts.ts
+
+export function buildSectionAnalysisPrompt(
+  sectionId: ReportSectionId,
+  sectionTitle: string,
+  metrics: MetricResult[],
+  comparisonMetrics: MetricResult[],
+  year: string,
+  comparisonYear?: string,
+  companyContext?: {              // 新增参数
+    companyProfile?: string;
+    financialPolicy?: string;
+  }
+): string {
+  // ... existing code ...
+
+  // 新增上下文注入
+  const contextSection = companyContext ? `
+## 公司背景
+
+${companyContext.companyProfile ? `### 公司档案摘要\n${companyContext.companyProfile}` : ''}
+
+${companyContext.financialPolicy ? `### 财务管理基准\n${companyContext.financialPolicy}` : ''}
+
+**分析要求**：请结合上述公司特性（行业、商业模式、内部基准）进行分析，避免使用通用行业标准进行简单对比。
+` : '';
+
+  return `你是一位专业的财务分析师...
+
+${contextSection}
+
+## 分析数据
+...`;
+}
+```
+
+#### 12.6.2 上下文使用指导
+
+在 prompt 中明确指导 LLM 如何使用上下文：
+
+```markdown
+**分析要求**：
+1. 使用公司档案中的行业基准（如 IDM 厂商存货周转 1.5-2.0x）而非通用制造业基准
+2. 参考财务管理制度中的健康区间（附录 A）进行指标评价
+3. 结合公司商业模式（IDM、电信+数通双轮驱动）解释异常值
+4. 引用竞对对标数据进行横向比较（如适用）
+```
+
+### 12.7 降级策略
+
+| 场景 | 处理方式 |
+|-----|---------|
+| 文档不存在 | 记录 warning，继续生成（无上下文注入） |
+| 文档内容为空 | 同上 |
+| 内容检索超时 | 设置 5s 超时，超时则跳过 |
+| 内容过长 | 截断至最大限制，记录 info |
+
+```typescript
+// gather-context.ts
+try {
+  const companyProfile = await fetchDocumentContent('business_info', '公司详细档案');
+  const financialPolicy = await fetchDocumentContent('policy', '财务管理制度');
+} catch (error) {
+  console.warn('Context fetch failed, proceeding without company context:', error);
+  // 继续执行，companyProfile 和 financialPolicy 保持 undefined
+}
+```
+
+### 12.8 性能预算
+
+| 阶段 | 当前耗时 | 新增耗时 | 预算 |
+|-----|---------|---------|------|
+| gather-context | ~200ms | +300ms (2次 DB 查询) | < 500ms |
+| analyze-sections (5 sections) | ~25s | +5s (更长 prompt) | < 35s |
+| **总计** | ~40s | +5.3s | < 50s (P95 < 60s) |
+
+**优化手段**：
+- 两份文档并行查询
+- 使用预处理/缓存的内容摘要（可选）
+
+### 12.9 文件变更清单
+
+| 文件 | 变更类型 | 说明 |
+|-----|---------|------|
+| `src/lib/workflows/report/state.ts` | 修改 | 新增 `companyProfile`, `financialPolicy` 字段 |
+| `src/lib/workflows/report/nodes/gather-context.ts` | 修改 | 新增文档内容检索逻辑 |
+| `src/lib/workflows/report/nodes/analyze-sections.ts` | 修改 | 传递上下文到 prompt 构建 |
+| `src/lib/workflows/report/prompts.ts` | 修改 | 新增上下文注入逻辑 |
+
+### 12.10 验收检查点
+
+- [ ] `gather-context` 能成功检索两份文档内容
+- [ ] 文档缺失时优雅降级，不阻断流程
+- [ ] LLM prompt 包含公司上下文（可通过日志验证）
+- [ ] 生成的报告分析体现公司特性
+- [ ] 报告生成 P95 < 60s（性能不退化）
