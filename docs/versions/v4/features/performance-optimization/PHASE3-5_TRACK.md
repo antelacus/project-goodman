@@ -174,9 +174,9 @@
 
 #### G2: DOCX 生成与存储
 
-- [ ] 实现 DOCX 生成与上传流程（替换 PDF 生成/上传）
-- [ ] 统一文件命名与 Content-Type（`.docx`）
-- [ ] 更新报告记录保存 `docx_storage_path`
+- [x] 实现 DOCX 生成与上传流程（替换 PDF 生成/上传）
+- [x] 统一文件命名与 Content-Type（`.docx`）
+- [x] 更新报告记录保存 `docx_storage_path`
 
 #### G3: API 与前端保存流程
 
