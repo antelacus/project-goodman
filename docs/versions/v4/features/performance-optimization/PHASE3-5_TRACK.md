@@ -164,15 +164,49 @@
 
 ---
 
-### G. 报告生成上下文增强（REQ-F2）
+### G. 报告输出格式调整（DOCX）
 
-#### G1: 状态 Schema 变更
+#### G1: 数据模型与类型
+
+- [ ] 新增 `docx_storage_path` 字段（Supabase migration）
+- [ ] 更新 TypeScript 类型字段（`docxStoragePath`）
+- [ ] 保留 `pdf_storage_path` 仅兼容历史数据
+
+#### G2: DOCX 生成与存储
+
+- [ ] 实现 DOCX 生成与上传流程（替换 PDF 生成/上传）
+- [ ] 统一文件命名与 Content-Type（`.docx`）
+- [ ] 更新报告记录保存 `docx_storage_path`
+
+#### G3: API 与前端保存流程
+
+- [ ] `/api/reports/save` 返回 DOCX 下载地址
+- [ ] 新增 `/api/reports/[id]/docx` 下载接口（替代 `/pdf`）
+- [ ] `useReportGeneration` 保存逻辑与提示文案改为 DOCX
+
+#### G4: UI 文案与下载入口
+
+- [ ] `ReportActions` 与 `ReportsList` 下载按钮替换为 DOCX
+- [ ] 移除 UI/文案中 PDF 输出描述
+- [ ] 无 DOCX 时显示清晰提示与引导
+
+#### G5: 验收测试
+
+- [ ] 新生成报告保存并下载 DOCX 成功
+- [ ] 无 DOCX 时提示明确（不回退到 PDF）
+- [ ] 报告生成 P95 < 60s（性能不退化）
+
+---
+
+### H. 报告生成上下文增强（REQ-F2）
+
+#### H1: 状态 Schema 变更
 
 - [ ] 在 `state.ts` 新增 `companyProfile` 字段
 - [ ] 在 `state.ts` 新增 `financialPolicy` 字段
 - [ ] 保持 `companyInfo` 字段向后兼容
 
-#### G2: 上下文文档检索
+#### H2: 上下文文档检索
 
 - [ ] 实现 `fetchDocumentContent()` 函数（从 document_chunks 拼接内容）
 - [ ] 在 `gather-context.ts` 检索 `公司详细档案.md`（doc_type='business_info'）
@@ -180,21 +214,21 @@
 - [ ] 两份文档并行查询以优化性能
 - [ ] 实现内容截断策略（~12000 字符上限）
 
-#### G3: 降级策略实现
+#### H3: 降级策略实现
 
 - [ ] 文档不存在时记录 warning 并继续
 - [ ] 文档内容为空时记录 warning 并继续
 - [ ] 设置 5s 查询超时，超时则跳过
 - [ ] 确保任何检索失败不阻断报告生成流程
 
-#### G4: Prompt 注入
+#### H4: Prompt 注入
 
 - [ ] 修改 `buildSectionAnalysisPrompt()` 接受 `companyContext` 参数
 - [ ] 实现上下文注入模板（公司档案摘要 + 财务管理基准）
 - [ ] 添加分析要求指导（使用公司基准而非通用基准）
 - [ ] 在 `analyze-sections.ts` 传递上下文到 prompt 构建
 
-#### G5: 验收测试
+#### H5: 验收测试
 
 - [ ] 验证 `gather-context` 能成功检索两份文档内容
 - [ ] 验证文档缺失时优雅降级（不阻断流程）
