@@ -73,6 +73,8 @@ export interface MetricResultsState {
  */
 export interface ContextDocumentsState {
   companyInfo?: string;
+  companyProfile?: string;
+  financialPolicy?: string;
   regulations?: string[];
   accountingStandards?: string[];
   sourceDocuments: ReportSourceReference[];

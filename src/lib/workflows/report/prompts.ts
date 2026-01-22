@@ -8,6 +8,11 @@
 import type { ReportSectionId } from '@/types/report';
 import type { MetricResult } from './state';
 
+type CompanyContext = {
+  companyProfile?: string;
+  financialPolicy?: string;
+};
+
 // ============================================================================
 // Section Analysis Prompts
 // ============================================================================
@@ -61,9 +66,11 @@ export function buildSectionAnalysisPrompt(
   metrics: MetricResult[],
   comparisonMetrics: MetricResult[],
   year: string,
-  comparisonYear?: string
+  comparisonYear?: string,
+  companyContext?: CompanyContext
 ): string {
   const guidance = SECTION_GUIDANCE[sectionId];
+  const companyContextBlock = buildCompanyContextBlock(companyContext);
 
   // Format metrics data
   const metricsTable = formatMetricsForPrompt(metrics, comparisonMetrics, year, comparisonYear);
@@ -74,6 +81,7 @@ export function buildSectionAnalysisPrompt(
 
 ${metricsTable}
 
+${companyContextBlock ? `## 公司上下文\n\n${companyContextBlock}\n` : ''}
 ## 分析指导
 
 ${guidance}
@@ -85,9 +93,26 @@ ${guidance}
 2. 结构：先概述本章节核心发现，再逐项分析关键指标，最后总结
 3. 语言：专业但易懂，适合财务人员阅读
 4. 数据：引用具体数值，${comparisonYear ? `对比${comparisonYear}年数据变化` : '无需对比'}
-5. 客观：基于数据分析，避免过度主观判断
+5. 基准：优先依据公司基准与财务管理制度中的标准或要求，避免仅使用通用行业均值
+6. 客观：基于数据分析，避免过度主观判断
 
 请直接输出分析文字，不要添加标题或其他格式。`;
+}
+
+function buildCompanyContextBlock(companyContext?: CompanyContext): string {
+  if (!companyContext) return '';
+
+  const sections: string[] = [];
+
+  if (companyContext.companyProfile) {
+    sections.push(`### 公司档案摘要\n${companyContext.companyProfile}`);
+  }
+
+  if (companyContext.financialPolicy) {
+    sections.push(`### 财务管理制度要点\n${companyContext.financialPolicy}`);
+  }
+
+  return sections.join('\n\n');
 }
 
 /**
