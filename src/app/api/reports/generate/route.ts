@@ -8,6 +8,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { v4 as uuidv4 } from 'uuid';
 import { reportWorkflowGraph, createInitialState } from '@/lib/workflows/report';
+import { createReportConversationSession } from '@/lib/reports/report-session';
 import {
   ensureSession,
   checkGuestRate,
@@ -86,7 +87,8 @@ function createSectionEvent(
 function createCompleteEvent(
   reportId: string,
   content: unknown,
-  generationTimeMs?: number
+  generationTimeMs?: number,
+  sessionId?: string
 ): ReportCompleteEvent {
   return {
     type: 'complete',
@@ -94,6 +96,7 @@ function createCompleteEvent(
       reportId,
       content: content as ReportCompleteEvent['data']['content'],
       generationTimeMs,
+      ...(sessionId ? { sessionId } : {}),
     },
   };
 }
@@ -358,12 +361,23 @@ export async function POST(req: NextRequest) {
               ));
               logWorkflowFailure('RETRIEVAL_EMPTY');
             } else if (finalState?.report) {
+              let reportSessionId: string | undefined;
+              try {
+                reportSessionId = await createReportConversationSession({
+                  ownerId,
+                  ownerType,
+                  report: finalState.report,
+                });
+              } catch (sessionError) {
+                console.error('[ReportSession] Failed to save session:', sessionError);
+              }
               sendEvent(
                 'report',
                 createCompleteEvent(
                   tempReportId,
                   finalState.report,
-                  finalState.meta?.generationTimeMs
+                  finalState.meta?.generationTimeMs,
+                  reportSessionId
                 )
               );
               logWorkflowSuccess();

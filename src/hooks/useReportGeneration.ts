@@ -9,6 +9,7 @@ import { useState, useRef, useCallback } from 'react';
 import type { ReportContent } from '@/types/report';
 import type { PhaseDisplayInfo, ReportPhase } from '@/types/report-events';
 import { REPORT_PHASES } from '@/types/report-events';
+import { notifyGuestRateUpdate } from '@/lib/security/guest-rate-client';
 
 /**
  * Return type for the useReportGeneration hook
@@ -20,6 +21,7 @@ export interface UseReportGenerationReturn {
   currentSection: string | undefined;
   report: ReportContent | null;
   error: string | undefined;
+  reportSessionId: string | undefined;
 
   // Save state - DOCX generation + upload takes 2-4 seconds
   isSaving: boolean;
@@ -73,6 +75,7 @@ export function useReportGeneration(): UseReportGenerationReturn {
   const [report, setReport] = useState<ReportContent | null>(null);
   const [generationTimeMs, setGenerationTimeMs] = useState<number | undefined>();
   const [error, setError] = useState<string | undefined>();
+  const [reportSessionId, setReportSessionId] = useState<string | undefined>();
 
   // Save state
   const [isSaving, setIsSaving] = useState(false);
@@ -124,13 +127,15 @@ export function useReportGeneration(): UseReportGenerationReturn {
         return null;
       }
       case 'complete': {
-        const { content, generationTimeMs: completedTime } = event.data as {
+        const { content, generationTimeMs: completedTime, sessionId } = event.data as {
           reportId: string;
           content: ReportContent;
           generationTimeMs?: number;
+          sessionId?: string;
         };
         setReport(content);
         setGenerationTimeMs(completedTime);
+        setReportSessionId(sessionId);
         setIsGenerating(false);
         setCurrentSection(undefined);
         return content;
@@ -168,6 +173,7 @@ export function useReportGeneration(): UseReportGenerationReturn {
     setGenerationYear(year);
     setComparisonYear(compYear);
     setGenerationTimeMs(undefined);
+    setReportSessionId(undefined);
 
     // Create abort controller
     if (abortControllerRef.current) {
@@ -188,6 +194,7 @@ export function useReportGeneration(): UseReportGenerationReturn {
       });
 
       console.log('[useReportGeneration] Response status:', response.status);
+      notifyGuestRateUpdate();
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
@@ -339,6 +346,7 @@ export function useReportGeneration(): UseReportGenerationReturn {
     setGenerationYear(undefined);
     setComparisonYear(undefined);
     setGenerationTimeMs(undefined);
+    setReportSessionId(undefined);
 
     if (abortControllerRef.current) {
       abortControllerRef.current.abort();
@@ -358,6 +366,7 @@ export function useReportGeneration(): UseReportGenerationReturn {
     setPhases([...REPORT_PHASES]);
     setCurrentSection(undefined);
     setError(undefined);
+    setReportSessionId(undefined);
   }, []);
 
   return {
@@ -367,6 +376,7 @@ export function useReportGeneration(): UseReportGenerationReturn {
     currentSection,
     report,
     error,
+    reportSessionId,
     isSaving,
     savedDocxUrl,
     savedReportId,

@@ -33,7 +33,7 @@ export default function AboutPage() {
         <h2 className="mb-8 text-2xl font-bold text-neutral-900">核心特性</h2>
         <div className="grid gap-6 md:grid-cols-3">
           <div className="flex flex-col items-center text-center">
-            <div className="mb-4 rounded-full bg-blue-50 p-4 text-blue-600">
+            <div className="mb-4 rounded-full bg-yellow-50 p-4 text-yellow-600">
               <FileText size={32} />
             </div>
             <h3 className="mb-2 font-semibold text-neutral-900">信息提取</h3>
@@ -47,7 +47,7 @@ export default function AboutPage() {
             <p className="text-sm text-neutral-500">支持常用财务指标计算与对比分析</p>
           </div>
           <div className="flex flex-col items-center text-center">
-            <div className="mb-4 rounded-full bg-green-50 p-4 text-green-600">
+            <div className="mb-4 rounded-full bg-yellow-50 p-4 text-yellow-600">
               <Shield size={32} />
             </div>
             <h3 className="mb-2 font-semibold text-neutral-900">合规参考</h3>

@@ -5,23 +5,6 @@ import Link from "next/link";
 import { PageContainer } from "@/components/layout";
 import { CheckCircle, Zap, TrendingUp, FileText } from "lucide-react";
 
-// Simple Landing Navbar
-function LandingNavbar() {
-    return (
-        <nav className="absolute top-0 w-full z-10 p-6 flex justify-between items-center max-w-7xl mx-auto left-0 right-0">
-            <div className="flex items-center">
-                <Image src="/logo.png" alt="Logo" width={40} height={40} className="rounded-sm" />
-                <span className="ml-3 text-xl font-bold">Goodman</span>
-            </div>
-            <div className="flex gap-4">
-                <Link href="/chat" className="text-sm font-semibold hover:text-yellow-600 transition-colors">
-                    进入工作台
-                </Link>
-            </div>
-        </nav>
-    );
-}
-
 export default function HomePage() {
     const featureRef = useRef<HTMLDivElement | null>(null);
     const [highlight, setHighlight] = useState(false);
@@ -45,8 +28,6 @@ export default function HomePage() {
     return (
         <div className="flex flex-col min-h-screen bg-white text-gray-900 relative selection:bg-yellow-100">
             <div className="bg-dot-pattern absolute inset-0 -z-10 h-[80vh] mask-image-gradient opacity-40" />
-
-            <LandingNavbar />
 
             <PageContainer maxWidth="7xl">
                 {/* HERO SECTION */}
@@ -104,7 +85,7 @@ export default function HomePage() {
                         <div
                             className={`bg-white border border-gray-100 rounded-3xl p-8 flex flex-col items-center transition-all duration-300 group ${highlight ? "ring-4 ring-yellow-400 scale-[1.02]" : "shadow-sm hover:shadow-2xl hover:-translate-y-2"}`}
                         >
-                            <div className="w-16 h-16 bg-blue-50 rounded-2xl flex items-center justify-center mb-6 text-blue-600 group-hover:bg-blue-600 group-hover:text-white transition-colors duration-300">
+                            <div className="w-16 h-16 bg-yellow-50 rounded-2xl flex items-center justify-center mb-6 text-yellow-600 group-hover:bg-yellow-500 group-hover:text-white transition-colors duration-300">
                                 <FileText size={32} />
                             </div>
                             <h3 className="text-xl font-bold text-gray-900 mb-3">财务信息提取</h3>
@@ -126,7 +107,7 @@ export default function HomePage() {
                         <div
                             className={`bg-white border border-gray-100 rounded-3xl p-8 flex flex-col items-center transition-all duration-300 group ${highlight ? "ring-4 ring-yellow-400 scale-[1.02]" : "shadow-sm hover:shadow-2xl hover:-translate-y-2"}`}
                         >
-                            <div className="w-16 h-16 bg-green-50 rounded-2xl flex items-center justify-center mb-6 text-green-600 group-hover:bg-green-600 group-hover:text-white transition-colors duration-300">
+                            <div className="w-16 h-16 bg-yellow-50 rounded-2xl flex items-center justify-center mb-6 text-yellow-600 group-hover:bg-yellow-500 group-hover:text-white transition-colors duration-300">
                                 <CheckCircle size={32} />
                             </div>
                             <h3 className="text-xl font-bold text-gray-900 mb-3">财务合规指导</h3>
@@ -144,11 +125,11 @@ export default function HomePage() {
                             <p className="text-gray-500 leading-relaxed">引用最新会计准则与法规，严谨可靠，杜绝虚假信息。</p>
                         </div>
                         <div className="flex flex-col items-center text-center">
-                            <h3 className="text-xl font-bold mb-4 text-blue-600">极致效率</h3>
+                            <h3 className="text-xl font-bold mb-4 text-yellow-600">极致效率</h3>
                             <p className="text-gray-500 leading-relaxed">从上传到结果仅需数秒，大幅提升工作效率。</p>
                         </div>
                         <div className="flex flex-col items-center text-center">
-                            <h3 className="text-xl font-bold mb-4 text-green-600">轻松集成</h3>
+                            <h3 className="text-xl font-bold mb-4 text-yellow-600">轻松集成</h3>
                             <p className="text-gray-500 leading-relaxed">现代化架构，可轻松托管或私有化部署，数据安全无忧。</p>
                         </div>
                     </div>

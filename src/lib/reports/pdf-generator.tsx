@@ -54,15 +54,15 @@ Font.registerHyphenationCallback((word) => [word]);
 // ============================================================================
 
 const colors = {
-  primary: '#1a365d',      // Dark blue for headers
-  secondary: '#2d3748',    // Dark gray for text
-  accent: '#3182ce',       // Blue accent
-  muted: '#718096',        // Muted gray
-  border: '#e2e8f0',       // Light border
-  background: '#f7fafc',   // Light background
-  success: '#38a169',      // Green for positive
-  warning: '#d69e2e',      // Yellow for warnings
-  danger: '#e53e3e',       // Red for negative/risks
+  primary: '#111827',      // Charcoal for headers
+  secondary: '#374151',    // Dark gray for text
+  accent: '#f59e0b',       // Yellow accent
+  muted: '#6b7280',        // Muted gray
+  border: '#e5e7eb',       // Light border
+  background: '#f9fafb',   // Light background
+  success: '#f59e0b',      // Yellow for positive
+  warning: '#f59e0b',      // Yellow for warnings
+  danger: '#dc2626',       // Red for negative/risks
 };
 
 const styles = StyleSheet.create({

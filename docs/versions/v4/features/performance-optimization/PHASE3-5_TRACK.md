@@ -258,3 +258,20 @@
 备注:
 - 补充单元测试覆盖：errors/base、tools/registry、database/helpers、documents/file-utils、database/supabase、tools/types
 ```
+
+```
+状态: ✅ 手动测试问题修复完成（第二轮）
+时间: 2026-01-23
+环境: 本地 sandbox
+范围:
+- 修复访客限额在报告生成被拒绝时不刷新（前端事件触发）
+- 修复 DOCX 保存失败（storage MIME allowlist + 回退上传策略）
+- Help 页面卡片标题与图标对齐到同一行
+- Documents 页面标题移除管理员登录入口触发
+测试:
+- npm run test -- --run tests/unit/hooks/useReportGeneration.test.tsx ✅
+- npm run test -- --run tests/unit/reports/docx-upload.test.ts ✅
+- npm run test -- --run tests/unit/help/help-card-layout.test.ts ✅
+- npm run test -- --run tests/unit/documents/documents-title-login.test.ts ✅
+- npm run test -- --run tests/unit/storage/storage-mime-types.test.ts ✅
+```

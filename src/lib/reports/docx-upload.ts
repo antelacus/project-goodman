@@ -21,6 +21,13 @@ import type { ReportContent } from '@/types/report';
 
 const BUCKET_NAME = 'document-files';
 const REPORTS_FOLDER = 'reports';
+const FALLBACK_CONTENT_TYPE = 'application/octet-stream';
+
+function shouldRetryMimeType(error: { message?: string; statusCode?: number; status?: number }): boolean {
+  const message = error.message?.toLowerCase() ?? '';
+  const status = error.statusCode ?? error.status;
+  return status === 415 && message.includes('mime type');
+}
 
 function createStorageClient(): SupabaseClient {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -70,6 +77,28 @@ export async function uploadReportDocx(
 
   if (error) {
     console.error('[ReportDocx] Upload error:', error);
+    if (shouldRetryMimeType(error)) {
+      console.warn('[ReportDocx] Retrying DOCX upload with fallback content type');
+      const { data: retryData, error: retryError } = await supabase.storage
+        .from(BUCKET_NAME)
+        .upload(storagePath, docxBuffer, {
+          contentType: FALLBACK_CONTENT_TYPE,
+          upsert: true,
+        });
+
+      if (retryError) {
+        console.error('[ReportDocx] Retry upload error:', retryError);
+        throw new Error(`DOCX 上传失败: ${retryError.message}`);
+      }
+
+      if (!retryData?.path) {
+        throw new Error('DOCX 上传失败: 未返回存储路径');
+      }
+
+      console.log(`[ReportDocx] DOCX uploaded successfully after retry: ${retryData.path}`);
+      return retryData.path;
+    }
+
     throw new Error(`DOCX 上传失败: ${error.message}`);
   }
 

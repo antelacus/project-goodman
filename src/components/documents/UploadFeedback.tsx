@@ -18,12 +18,12 @@ export const UploadFeedback: React.FC<UploadFeedbackProps> = ({ analysis, onClos
     const isModerate = analysis.quality === 'moderate';
 
     return (
-        <div className={`rounded-lg p-4 mb-4 border ${isGood ? 'bg-green-50 border-green-200' :
+        <div className={`rounded-lg p-4 mb-4 border ${isGood ? 'bg-yellow-100 border-yellow-200' :
                 isModerate ? 'bg-yellow-50 border-yellow-200' :
                     'bg-gray-50 border-gray-200'
             }`}>
             <div className="flex justify-between items-start">
-                <h4 className={`font-bold mb-2 ${isGood ? 'text-green-800' :
+                <h4 className={`font-bold mb-2 ${isGood ? 'text-yellow-900' :
                         isModerate ? 'text-yellow-800' :
                             'text-gray-800'
                     }`}>
@@ -37,7 +37,7 @@ export const UploadFeedback: React.FC<UploadFeedbackProps> = ({ analysis, onClos
             <div className="flex items-center gap-4 text-sm mb-3">
                 <div className="flex flex-col">
                     <span className="text-gray-500 text-xs uppercase tracking-wider">结构质量</span>
-                    <span className={`font-semibold ${isGood ? 'text-green-600' :
+                    <span className={`font-semibold ${isGood ? 'text-yellow-700' :
                             isModerate ? 'text-yellow-600' :
                                 'text-gray-600'
                         }`}>

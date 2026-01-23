@@ -3,6 +3,7 @@ import { useDocumentStore, Document } from "@/store/documents";
 import { UploadFeedback, StructureAnalysis } from "./UploadFeedback";
 import { useModalAccessibility } from "@/hooks/useModalAccessibility";
 import { SkeletonDocumentList } from "@/components/ui/Skeleton";
+import { notifyGuestRateUpdate } from "@/lib/security/guest-rate-client";
 
 interface DocumentSelectModalProps {
   open: boolean;
@@ -138,6 +139,8 @@ const DocumentSelectModal: React.FC<DocumentSelectModalProps> = ({
       } else {
         onSelect([...selectedIds, newDoc.id]);
       }
+
+      notifyGuestRateUpdate();
     } catch (err) {
       console.error("Upload error:", err);
       alert("上传失败：" + (err instanceof Error ? err.message : "未知错误"));

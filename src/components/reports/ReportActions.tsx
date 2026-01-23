@@ -34,7 +34,7 @@ export const ReportActions: React.FC<ReportActionsProps> = ({
         <button
           onClick={onSave}
           disabled={disabled || isSaving}
-          className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+          className="inline-flex items-center gap-2 px-4 py-2 bg-yellow-500 text-black rounded-lg hover:bg-yellow-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
         >
           {isSaving ? (
             <>
@@ -54,7 +54,7 @@ export const ReportActions: React.FC<ReportActionsProps> = ({
       {savedDocxUrl && (
         <button
           onClick={handleDownload}
-          className="inline-flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+          className="inline-flex items-center gap-2 px-4 py-2 bg-neutral-900 text-white rounded-lg hover:bg-neutral-800 transition-colors"
         >
           <FileDown size={16} />
           <span>下载 DOCX</span>
@@ -63,7 +63,7 @@ export const ReportActions: React.FC<ReportActionsProps> = ({
 
       {/* Status text when saved */}
       {savedReportId && (
-        <span className={`text-sm flex items-center gap-1 ${savedDocxUrl ? 'text-green-600' : 'text-amber-600'}`}>
+        <span className={`text-sm flex items-center gap-1 ${savedDocxUrl ? 'text-yellow-700' : 'text-gray-600'}`}>
           <Download size={14} />
           {savedDocxUrl ? '报告已保存' : '报告已保存，DOCX 未生成'}
         </span>
@@ -73,7 +73,7 @@ export const ReportActions: React.FC<ReportActionsProps> = ({
         <button
           onClick={onSave}
           disabled={disabled || isSaving}
-          className="inline-flex items-center gap-2 px-3 py-2 bg-amber-50 text-amber-700 rounded-lg hover:bg-amber-100 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+          className="inline-flex items-center gap-2 px-3 py-2 bg-yellow-50 text-yellow-700 rounded-lg hover:bg-yellow-100 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
         >
           <Save size={16} />
           <span>重新生成 DOCX</span>

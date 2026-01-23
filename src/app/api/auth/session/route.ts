@@ -6,6 +6,7 @@ import {
     verifySession,
     renewSession,
     COOKIE_NAME,
+    getGuestRateLimits,
 } from "@/lib/security";
 
 /**
@@ -23,7 +24,7 @@ export async function GET(req: NextRequest) {
         if (!token) {
             return NextResponse.json(
                 { authenticated: false },
-                { status: 200, headers: { 'X-Request-ID': requestId } }
+                { status: 200, headers: { 'X-Request-ID': requestId, 'Cache-Control': 'no-store' } }
             );
         }
 
@@ -33,7 +34,7 @@ export async function GET(req: NextRequest) {
             // Session expired or invalid
             const response = NextResponse.json(
                 { authenticated: false },
-                { status: 200 }
+                { status: 200, headers: { 'Cache-Control': 'no-store' } }
             );
 
             // Clear invalid cookie
@@ -65,11 +66,12 @@ export async function GET(req: NextRequest) {
                     },
                     expiresAt: new Date(session.expiresAt).getTime(),
                 },
-                { status: 200, headers: { 'X-Request-ID': requestId } }
+                { status: 200, headers: { 'X-Request-ID': requestId, 'Cache-Control': 'no-store' } }
             );
         }
 
         // Guest session
+        const limits = await getGuestRateLimits(session.sessionId);
         return NextResponse.json(
             {
                 authenticated: true,
@@ -77,8 +79,22 @@ export async function GET(req: NextRequest) {
                 role: 'guest',
                 sessionId: session.sessionId,
                 expiresAt: new Date(session.expiresAt).getTime(),
+                limits: {
+                    message: {
+                        remaining: limits.message.remaining,
+                        limit: limits.message.total,
+                    },
+                    upload: {
+                        remaining: limits.upload.remaining,
+                        limit: limits.upload.total,
+                    },
+                    extract: {
+                        remaining: limits.extract.remaining,
+                        limit: limits.extract.total,
+                    },
+                },
             },
-            { status: 200, headers: { 'X-Request-ID': requestId } }
+            { status: 200, headers: { 'X-Request-ID': requestId, 'Cache-Control': 'no-store' } }
         );
     } catch (error: unknown) {
         console.error('Session check error:', error);

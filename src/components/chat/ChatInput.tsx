@@ -97,7 +97,7 @@ const ChatInput: React.FC<ChatInputProps> = ({ onSendMessage, disabled, onReques
             )}
 
             {/* Main Input Container - Gemini Style */}
-            <div className="bg-[#f0f4f9] focus-within:bg-white border border-transparent focus-within:border-neutral-300 focus-within:shadow-sm transition-all duration-200 ease-in-out rounded-[28px] overflow-hidden">
+            <div className="bg-neutral-100 focus-within:bg-white border border-transparent focus-within:border-yellow-500 focus-within:shadow-sm transition-all duration-200 ease-in-out rounded-[28px]">
                 <div className="flex flex-col">
                     {/* Row 1: Text Area */}
                     <div className="w-full px-4 pt-4">
@@ -107,7 +107,7 @@ const ChatInput: React.FC<ChatInputProps> = ({ onSendMessage, disabled, onReques
                             onChange={(e) => { setMessage(e.target.value); autoResize(); }}
                             onKeyDown={handleKeyDown}
                             placeholder="输入您的问题..."
-                            className="w-full max-h-[200px] min-h-[48px] bg-transparent border-none focus:ring-0 resize-none p-0 text-neutral-900 placeholder:text-neutral-500 leading-relaxed text-base"
+                            className="w-full max-h-[200px] min-h-[48px] bg-transparent border-none focus:outline-none focus-visible:ring-0 resize-none p-0 text-neutral-900 placeholder:text-neutral-500 leading-relaxed text-base"
                             rows={1}
                             disabled={disabled}
                         />
@@ -130,7 +130,7 @@ const ChatInput: React.FC<ChatInputProps> = ({ onSendMessage, disabled, onReques
 
                                 {/* Dropdown Menu */}
                                 {isMenuOpen && (
-                                    <div className="absolute bottom-12 left-0 w-56 bg-white rounded-xl shadow-xl border border-neutral-100 overflow-hidden py-1 animate-in fade-in zoom-in-95 origin-bottom-left z-50">
+                                    <div className="absolute bottom-12 left-0 w-56 bg-white rounded-xl shadow-xl border border-neutral-100 overflow-hidden py-2 animate-in fade-in zoom-in-95 origin-bottom-left z-50">
                                         <button
                                             onClick={handleUploadClick}
                                             className="w-full text-left px-4 py-3 hover:bg-neutral-50 flex items-center gap-3 text-sm text-neutral-700"
@@ -138,10 +138,7 @@ const ChatInput: React.FC<ChatInputProps> = ({ onSendMessage, disabled, onReques
                                             <div className="w-8 h-8 rounded-full bg-red-50 text-red-500 flex items-center justify-center">
                                                 <Paperclip size={16} />
                                             </div>
-                                            <div>
-                                                <div className="font-medium">上传文件</div>
-                                                <div className="text-[10px] text-neutral-400">支持 PDF、Excel、图片、TXT/MD</div>
-                                            </div>
+                                            <div className="font-medium">上传文件</div>
                                         </button>
 
                                         {/* Other options masked for now as per requirement */}
@@ -168,7 +165,7 @@ const ChatInput: React.FC<ChatInputProps> = ({ onSendMessage, disabled, onReques
                                             onClick={handleGenerateReportClick}
                                             className="w-full text-left px-4 py-3 hover:bg-neutral-50 flex items-center gap-3 text-sm text-neutral-700"
                                         >
-                                            <div className="w-8 h-8 rounded-full bg-blue-50 text-blue-500 flex items-center justify-center">
+                                            <div className="w-8 h-8 rounded-full bg-yellow-50 text-yellow-600 flex items-center justify-center">
                                                 <FileText size={16} />
                                             </div>
                                             <div>

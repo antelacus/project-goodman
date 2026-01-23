@@ -115,7 +115,7 @@ export function ReportsList() {
         </div>
         <button
           onClick={fetchReports}
-          className="text-sm text-blue-600 hover:text-blue-700 flex items-center gap-1"
+          className="text-sm text-yellow-700 hover:text-yellow-800 flex items-center gap-1"
         >
           <RefreshCw size={14} />
           重试
@@ -157,13 +157,13 @@ export function ReportsList() {
         {reports.map((report) => (
           <div
             key={report.id}
-            className="bg-white border border-gray-200 rounded-lg p-4 hover:border-blue-300 hover:shadow-sm transition-all"
+            className="bg-white border border-gray-200 rounded-lg p-4 hover:border-yellow-300 hover:shadow-sm transition-all"
           >
             <div className="flex items-start justify-between">
               {/* Report info */}
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2 mb-1">
-                  <FileText size={18} className="text-blue-600 flex-shrink-0" />
+                  <FileText size={18} className="text-yellow-600 flex-shrink-0" />
                   <h4 className="font-medium text-gray-900 truncate">
                     {report.title}
                   </h4>
@@ -191,7 +191,7 @@ export function ReportsList() {
               <button
                 onClick={() => handleDownloadDocx(report.id)}
                 disabled={downloadingId === report.id}
-                className="flex-shrink-0 ml-4 px-3 py-2 bg-blue-50 text-blue-600 hover:bg-blue-100 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1 text-sm"
+                className="flex-shrink-0 ml-4 px-3 py-2 bg-yellow-50 text-yellow-700 hover:bg-yellow-100 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1 text-sm"
                 title="下载 DOCX"
               >
                 {downloadingId === report.id ? (

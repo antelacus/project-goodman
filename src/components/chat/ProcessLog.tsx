@@ -37,8 +37,10 @@ function SourceLink({ source }: { source: SourceReference }) {
         ? `${source.year}年${source.documentType || source.documentName}`
         : source.documentName;
 
-    // v4.3: Build link - prefer fileUrl, fallback to PDF preview API (opens in new tab)
-    const href = source.fileUrl || (source.documentId ? `/api/documents/pdf-preview?id=${source.documentId}` : '#');
+    // v4.6: Build link via preview-url redirect to support non-PDF files
+    const href = source.fileUrl
+        ? `/api/documents/preview-url?fileUrl=${encodeURIComponent(source.fileUrl)}&redirect=1`
+        : (source.documentId ? `/api/documents/preview-url?id=${encodeURIComponent(source.documentId)}&redirect=1` : '#');
 
     // Don't render if no meaningful link target
     if (!source.fileUrl && !source.documentId) {
@@ -54,7 +56,7 @@ function SourceLink({ source }: { source: SourceReference }) {
             href={href}
             target="_blank"
             rel="noopener noreferrer"
-            className="inline-flex items-center gap-1 ml-2 text-blue-600 hover:text-blue-800 hover:underline text-xs"
+            className="inline-flex items-center gap-1 ml-2 text-yellow-700 hover:text-yellow-800 hover:underline text-xs"
         >
             [{displayText}]
             <ExternalLink size={10} />

@@ -36,7 +36,7 @@ export const ReportSection: React.FC<ReportSectionProps> = ({
         className="w-full flex items-center justify-between px-4 py-3 bg-neutral-50 hover:bg-neutral-100 transition-colors"
       >
         <div className="flex items-center gap-3">
-          <span className="flex items-center justify-center w-6 h-6 rounded-full bg-blue-600 text-white text-sm font-medium">
+          <span className="flex items-center justify-center w-6 h-6 rounded-full bg-yellow-500 text-black text-sm font-medium">
             {sectionNumber}
           </span>
           <h3 className="font-medium text-neutral-900">{section.title}</h3>
@@ -140,7 +140,7 @@ const MetricRow: React.FC<MetricRowProps> = ({ metric, hasComparison, isOdd }) =
         <div className="flex items-center gap-2">
           {metric.name}
           {metric.warnings && metric.warnings.length > 0 && (
-            <span className="text-amber-500 text-xs">⚠</span>
+            <span className="text-yellow-600 text-xs">⚠</span>
           )}
         </div>
         {metric.interpretation && (
@@ -228,7 +228,7 @@ const ChangeDisplay: React.FC<{ changeInfo: ChangeInfo }> = ({ changeInfo }) => 
   }
 
   const colorClass = {
-    up: 'text-green-600',
+    up: 'text-yellow-700',
     down: 'text-red-600',
     neutral: 'text-neutral-500',
   }[direction];
