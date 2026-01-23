@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { AlertCircle, X, MessageSquare, Upload, FileText } from "lucide-react";
+import { resolveSessionRole, type SessionRole } from "@/lib/security/session-client";
 
 interface RateLimits {
     message: { remaining: number; limit: number };
@@ -12,7 +13,7 @@ interface RateLimits {
 
 interface SessionInfo {
     authenticated: boolean;
-    role: "admin" | "guest";
+    role: SessionRole;
     limits?: RateLimits;
 }
 
@@ -26,7 +27,11 @@ export default function GuestBanner() {
             try {
                 const res = await fetch("/api/auth/session");
                 const data = await res.json();
-                setSessionInfo(data);
+                setSessionInfo({
+                    authenticated: Boolean(data?.authenticated),
+                    role: resolveSessionRole(data),
+                    limits: data?.limits,
+                });
             } catch {
                 // Assume guest if failed
                 setSessionInfo({ authenticated: false, role: "guest" });
@@ -43,7 +48,7 @@ export default function GuestBanner() {
 
     // Don't show if loading, dismissed, or admin
     if (loading || dismissed) return null;
-    if (sessionInfo?.role === "admin") return null;
+    if (sessionInfo?.role !== "guest") return null;
 
     const limits = sessionInfo?.limits;
     const hasLowLimits =
