@@ -142,7 +142,7 @@ export default function DocumentsPage() {
   const businessDocs = documents.filter((d) => d.docCategory === "business");
 
   // Admin Auth
-  const { triggerRef, isAuthenticated, logout, modal } = useAdminAuth();
+  const { isAuthenticated, logout, modal } = useAdminAuth();
 
   // Upload State
   const [uploadStatus, setUploadStatus] = useState<'idle' | 'uploading' | 'success' | 'error' | 'unsupported'>('idle');
@@ -382,10 +382,10 @@ export default function DocumentsPage() {
 
   const getStatusColor = () => {
     switch (uploadStatus) {
-      case 'success': return 'text-green-600';
+      case 'success': return 'text-yellow-700';
       case 'error':
       case 'unsupported': return 'text-red-600';
-      case 'uploading': return 'text-blue-600';
+      case 'uploading': return 'text-yellow-600';
       default: return 'text-gray-500';
     }
   };
@@ -565,7 +565,7 @@ export default function DocumentsPage() {
       <div className="flex flex-col gap-8">
         <section className="w-full">
           <PageTitle className="flex items-center gap-3">
-            <span ref={triggerRef} className="cursor-pointer select-none">文档管理</span>
+            <span>文档管理</span>
             {isAuthenticated && (
               <span className="text-sm px-3 py-1 bg-yellow-100 text-yellow-800 rounded-full font-medium">
                 管理员模式
@@ -694,7 +694,7 @@ export default function DocumentsPage() {
 
               {/* PDF-only notice for certain document types */}
               {PDF_ONLY_TYPES.includes(documentType) && (
-                <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded text-sm text-blue-700">
+                <div className="mb-4 p-3 bg-yellow-50 border border-yellow-200 rounded text-sm text-yellow-700">
                   <strong>提示：</strong>此文档类型仅支持 PDF 格式上传。
                 </div>
               )}

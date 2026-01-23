@@ -39,7 +39,7 @@ export const ReportProgress: React.FC<ReportProgressProps> = ({
       {currentSection && (
         <div className="mt-4 pt-3 border-t border-neutral-100">
           <div className="flex items-center gap-2 text-sm text-neutral-600">
-            <Loader2 size={14} className="animate-spin text-blue-500" />
+            <Loader2 size={14} className="animate-spin text-yellow-500" />
             <span>正在分析: {getSectionLabel(currentSection)}</span>
           </div>
         </div>
@@ -73,15 +73,15 @@ const PhaseItem: React.FC<PhaseItemProps> = ({ phase, isLast }) => {
     },
     in_progress: {
       icon: Loader2,
-      iconClass: 'text-blue-500 animate-spin',
-      textClass: 'text-blue-600 font-medium',
-      lineClass: 'bg-blue-200',
+      iconClass: 'text-yellow-500 animate-spin',
+      textClass: 'text-yellow-700 font-medium',
+      lineClass: 'bg-yellow-200',
     },
     completed: {
       icon: Check,
-      iconClass: 'text-green-500',
+      iconClass: 'text-yellow-600',
       textClass: 'text-neutral-700',
-      lineClass: 'bg-green-400',
+      lineClass: 'bg-yellow-400',
     },
   };
 

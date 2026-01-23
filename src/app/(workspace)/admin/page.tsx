@@ -216,26 +216,26 @@ export default function AdminPage() {
                             icon={<Users className="w-5 h-5" />}
                             label="活跃访客"
                             value={stats.sessions.activeGuests}
-                            color="blue"
+                            tone="accent"
                         />
                         <StatCard
                             icon={<Activity className="w-5 h-5" />}
                             label="在线管理员"
                             value={stats.sessions.activeAdmins}
-                            color="green"
+                            tone="neutral"
                         />
                         <StatCard
                             icon={<Database className="w-5 h-5" />}
                             label="知识库文档"
                             value={stats.documents.knowledge}
-                            color="purple"
+                            tone="neutral"
                         />
                         <StatCard
                             icon={<Clock className="w-5 h-5" />}
                             label="临时文档"
                             value={stats.documents.temp}
                             subValue={stats.documents.pendingCleanup > 0 ? `(${stats.documents.pendingCleanup} 待清理)` : undefined}
-                            color="orange"
+                            tone="neutral"
                         />
                     </div>
                 )}
@@ -247,9 +247,9 @@ export default function AdminPage() {
                         <div className="flex flex-wrap gap-6 text-sm">
                             <div className="flex items-center gap-2">
                                 {stats.system.redisConnected ? (
-                                    <CheckCircle className="w-4 h-4 text-green-500" />
+                                    <CheckCircle className="w-4 h-4 text-yellow-600" />
                                 ) : (
-                                    <AlertCircle className="w-4 h-4 text-yellow-500" />
+                                    <AlertCircle className="w-4 h-4 text-gray-400" />
                                 )}
                                 <span>Redis: {stats.system.redisConnected ? "已连接" : "使用内存缓存"}</span>
                             </div>
@@ -308,8 +308,8 @@ export default function AdminPage() {
                                             <td className="px-4 py-3">
                                                 <span
                                                     className={`inline-flex px-2 py-1 rounded-full text-xs font-medium ${session.role === "admin"
-                                                            ? "bg-green-100 text-green-700"
-                                                            : "bg-blue-100 text-blue-700"
+                                                        ? "bg-yellow-100 text-yellow-800"
+                                                        : "bg-gray-100 text-gray-700"
                                                         }`}
                                                 >
                                                     {session.role === "admin" ? "管理员" : "访客"}
@@ -367,30 +367,28 @@ function StatCard({
     label,
     value,
     subValue,
-    color,
+    tone,
 }: {
     icon: React.ReactNode;
     label: string;
     value: number;
     subValue?: string;
-    color: "blue" | "green" | "purple" | "orange";
+    tone: "accent" | "neutral";
 }) {
-    const colorClasses = {
-        blue: "bg-blue-50 text-blue-600",
-        green: "bg-green-50 text-green-600",
-        purple: "bg-purple-50 text-purple-600",
-        orange: "bg-orange-50 text-orange-600",
+    const toneClasses = {
+        accent: "bg-yellow-50 text-yellow-700",
+        neutral: "bg-gray-100 text-gray-700",
     };
 
     return (
         <div className="bg-white rounded-xl border border-gray-200 p-4">
-            <div className={`inline-flex p-2 rounded-lg ${colorClasses[color]} mb-3`}>
+            <div className={`inline-flex p-2 rounded-lg ${toneClasses[tone]} mb-3`}>
                 {icon}
             </div>
             <div className="text-2xl font-bold text-gray-900">{value}</div>
             <div className="text-sm text-gray-500">
                 {label}
-                {subValue && <span className="text-orange-500 ml-1">{subValue}</span>}
+                {subValue && <span className="text-yellow-600 ml-1">{subValue}</span>}
             </div>
         </div>
     );

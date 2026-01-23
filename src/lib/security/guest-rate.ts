@@ -25,8 +25,8 @@ export const GUEST_RATE_LIMITS = {
         windowMs: 60 * 60 * 1000,
     },
     report: {
-        limit: 3,
-        windowMs: 60 * 60 * 1000,  // 3 reports per hour for guests
+        limit: 1,
+        windowMs: 60 * 60 * 1000,  // 1 report per hour for guests
     },
 } as const;
 

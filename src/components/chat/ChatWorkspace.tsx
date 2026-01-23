@@ -13,6 +13,8 @@ import { ReportProgress } from '@/components/reports';
 import { SkeletonMessage } from '@/components/ui/Skeleton';
 import type { ChatMessage } from '@/types/message';
 import { formatChatWarnings, type ChatWarning } from '@/lib/chat/warnings';
+import { notifyGuestRateUpdate } from '@/lib/security/guest-rate-client';
+import { decodeReportMessage } from '@/lib/reports/report-message';
 
 export default function ChatWorkspace() {
     const searchParams = useSearchParams();
@@ -33,6 +35,7 @@ export default function ChatWorkspace() {
         isSaving: isSavingReport,
         savedDocxUrl: savedReportDocxUrl,
         savedReportId,
+        reportSessionId,
         startGeneration,
         saveReport,
     } = useReportGeneration();
@@ -51,11 +54,24 @@ export default function ChatWorkspace() {
                 if (res.ok) {
                     const data = await res.json();
                     if (data.messages && data.messages.length > 0) {
-                        setMessages(data.messages.map((m: { role: string; content: string; id?: string }) => ({
-                            role: m.role,
-                            content: m.content,
-                            id: m.id || Date.now().toString(),
-                        })));
+                        setMessages(data.messages.map((m: { role: string; content: string; id?: string }) => {
+                            const decodedReport = decodeReportMessage(m.content);
+                            if (decodedReport && m.role === 'assistant') {
+                                return {
+                                    role: 'assistant',
+                                    content: '',
+                                    id: m.id || Date.now().toString(),
+                                    messageType: 'report',
+                                    reportContent: decodedReport,
+                                } satisfies ChatMessage;
+                            }
+
+                            return {
+                                role: m.role,
+                                content: m.content,
+                                id: m.id || Date.now().toString(),
+                            };
+                        }));
                     }
                     setLoadedSessionId(urlSessionId);
                 }
@@ -140,6 +156,8 @@ export default function ChatWorkspace() {
 
             return next;
         });
+
+        notifyGuestRateUpdate();
     };
 
     const handleError = (error: string) => {
@@ -167,6 +185,12 @@ export default function ChatWorkspace() {
             }
         }
     }, [sessionId, urlSessionId, refreshSessions]);
+
+    useEffect(() => {
+        if (reportSessionId) {
+            refreshSessions();
+        }
+    }, [reportSessionId, refreshSessions]);
 
     const handleSendMessage = async (text: string, files: File[], documentIds: string[]) => {
         console.log('[ChatWorkspace] handleSendMessage called, text:', text);
@@ -300,8 +324,8 @@ export default function ChatWorkspace() {
                         {/* v4.2: Report config mode indicator (above input) */}
                         {reportConfig.state.isActive && (
                             <div className="text-center mb-2">
-                                <span className="inline-flex items-center gap-1.5 text-xs text-blue-600 bg-blue-50 px-2.5 py-1 rounded-full border border-blue-100">
-                                    <span className="w-1.5 h-1.5 bg-blue-500 rounded-full animate-pulse"></span>
+                                <span className="inline-flex items-center gap-1.5 text-xs text-yellow-700 bg-yellow-50 px-2.5 py-1 rounded-full border border-yellow-200">
+                                    <span className="w-1.5 h-1.5 bg-yellow-500 rounded-full animate-pulse"></span>
                                     报告配置中 · 输入&quot;确认&quot;开始生成，或调整年份设置
                                 </span>
                             </div>

@@ -32,7 +32,7 @@ const MessageList: React.FC<MessageListProps> = ({
                     return (
                         <div key={msg.id || idx} className="flex items-start gap-4">
                             {/* Avatar for assistant */}
-                            <div className="flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center mt-1 text-blue-500">
+                            <div className="flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center mt-1 text-yellow-600">
                                 <span className="text-xl">✨</span>
                             </div>
                             {/* Report Message Component */}
@@ -57,7 +57,7 @@ const MessageList: React.FC<MessageListProps> = ({
                     >
                         {/* Avatar (Only for Assistant, User doesn't usually show avatar in Gemini chat flow next to bubble) */}
                         {msg.role === 'assistant' && (
-                            <div className="flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center mt-1 text-blue-500">
+                            <div className="flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center mt-1 text-yellow-600">
                                 <span className="text-xl">✨</span>
                             </div>
                         )}
@@ -65,7 +65,7 @@ const MessageList: React.FC<MessageListProps> = ({
                         {/* Content Bubble */}
                         <div className={`flex-1 max-w-[85%] text-base leading-relaxed
                             ${msg.role === 'user'
-                                ? 'bg-[#f0f4f9] text-[#1f1f1f] rounded-[24px] px-6 py-4'
+                                ? 'bg-neutral-100 text-[#1f1f1f] rounded-[24px] px-6 py-4'
                                 : 'bg-transparent text-[#1f1f1f] px-0 py-0'
                             }`}
                         >

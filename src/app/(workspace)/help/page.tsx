@@ -20,12 +20,12 @@ export default function HelpPage() {
       </div>
 
       {/* Access Note */}
-      <div className="mb-8 rounded-lg border border-blue-200 bg-blue-50 p-4">
+      <div className="mb-8 rounded-lg border border-yellow-200 bg-yellow-50 p-4">
         <div className="flex items-start gap-3">
-          <Info className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" />
-          <div className="text-sm text-blue-800">
+          <Info className="w-5 h-5 text-yellow-600 flex-shrink-0 mt-0.5" />
+          <div className="text-sm text-yellow-800">
             <p className="font-medium mb-1">访问权限说明</p>
-            <ul className="list-disc list-inside space-y-1 text-blue-700">
+            <ul className="list-disc list-inside space-y-1 text-yellow-700">
               <li>访客可使用对话、查看文档、信息提取等基础功能（有限额）</li>
               <li>文档上传与知识库管理仅限管理员使用</li>
             </ul>
@@ -37,35 +37,47 @@ export default function HelpPage() {
       <div className="grid gap-6 md:grid-cols-3 mb-16">
         {/* Smart Chat */}
         <div className="rounded-xl border border-neutral-200 bg-white p-6 shadow-sm hover:shadow-md transition-shadow">
-          <div className="mb-4 text-blue-600 bg-blue-50 w-12 h-12 rounded-full flex items-center justify-center">
-            <MessageSquare size={24} />
+          <div className="flex items-start gap-4">
+            <div className="text-yellow-600 bg-yellow-50 w-12 h-12 rounded-full flex items-center justify-center flex-shrink-0">
+              <MessageSquare size={24} />
+            </div>
+            <div>
+              <h3 className="mb-2 text-lg font-semibold text-neutral-900">智能对话</h3>
+              <p className="text-sm text-neutral-600">
+                AI 对话入口，可进行财务指标查询、计算和法规检索。支持多轮对话。
+              </p>
+            </div>
           </div>
-          <h3 className="mb-2 text-lg font-semibold text-neutral-900">智能对话</h3>
-          <p className="text-sm text-neutral-600">
-            AI 对话入口，可进行财务指标查询、计算和法规检索。支持多轮对话。
-          </p>
         </div>
 
         {/* Document Management */}
         <div className="rounded-xl border border-neutral-200 bg-white p-6 shadow-sm hover:shadow-md transition-shadow">
-          <div className="mb-4 text-yellow-600 bg-yellow-50 w-12 h-12 rounded-full flex items-center justify-center">
-            <FolderOpen size={24} />
+          <div className="flex items-start gap-4">
+            <div className="text-yellow-600 bg-yellow-50 w-12 h-12 rounded-full flex items-center justify-center flex-shrink-0">
+              <FolderOpen size={24} />
+            </div>
+            <div>
+              <h3 className="mb-2 text-lg font-semibold text-neutral-900">文档管理</h3>
+              <p className="text-sm text-neutral-600">
+                查看已上传的财务文档。管理员可上传新文档并进行结构化处理。
+              </p>
+            </div>
           </div>
-          <h3 className="mb-2 text-lg font-semibold text-neutral-900">文档管理</h3>
-          <p className="text-sm text-neutral-600">
-            查看已上传的财务文档。管理员可上传新文档并进行结构化处理。
-          </p>
         </div>
 
         {/* Quick Tools */}
         <div className="rounded-xl border border-neutral-200 bg-white p-6 shadow-sm hover:shadow-md transition-shadow">
-          <div className="mb-4 text-green-600 bg-green-50 w-12 h-12 rounded-full flex items-center justify-center">
-            <Zap size={24} />
+          <div className="flex items-start gap-4">
+            <div className="text-yellow-600 bg-yellow-50 w-12 h-12 rounded-full flex items-center justify-center flex-shrink-0">
+              <Zap size={24} />
+            </div>
+            <div>
+              <h3 className="mb-2 text-lg font-semibold text-neutral-900">快捷工具</h3>
+              <p className="text-sm text-neutral-600">
+                支持 PDF、Excel、图片等格式的信息提取，将文档转化为结构化数据。
+              </p>
+            </div>
           </div>
-          <h3 className="mb-2 text-lg font-semibold text-neutral-900">快捷工具</h3>
-          <p className="text-sm text-neutral-600">
-            支持 PDF、Excel、图片等格式的信息提取，将文档转化为结构化数据。
-          </p>
         </div>
       </div>
 
@@ -75,8 +87,8 @@ export default function HelpPage() {
           <Database className="text-yellow-500" size={28} />
           支持的文档类型
         </h2>
-        <div className="overflow-hidden rounded-xl border border-neutral-200 bg-white shadow-sm">
-          <table className="w-full text-left text-sm text-neutral-600">
+        <div className="overflow-x-auto rounded-xl border border-neutral-200 bg-white shadow-sm">
+          <table className="min-w-[720px] w-full text-left text-sm text-neutral-600">
             <thead className="bg-neutral-50 text-neutral-900">
               <tr>
                 <th className="px-6 py-4 font-semibold">主类别</th>
@@ -129,13 +141,13 @@ export default function HelpPage() {
       {/* Operation Guide */}
       <div className="mb-16">
         <h2 className="mb-6 text-2xl font-bold text-neutral-900 flex items-center gap-2">
-          <Upload className="text-blue-500" size={28} />
+          <Upload className="text-yellow-500" size={28} />
           如何添加知识库（仅管理员）
         </h2>
         <div className="rounded-xl border border-neutral-200 bg-white p-8 shadow-sm">
           <ol className="relative border-l border-neutral-200 ml-3 space-y-8">
             <li className="mb-10 ml-6">
-              <span className="absolute flex items-center justify-center w-8 h-8 bg-blue-100 rounded-full -left-4 ring-4 ring-white text-blue-600 font-bold text-sm">
+              <span className="absolute flex items-center justify-center w-8 h-8 bg-yellow-100 rounded-full -left-4 ring-4 ring-white text-yellow-700 font-bold text-sm">
                 1
               </span>
               <h3 className="flex items-center mb-1 text-lg font-semibold text-neutral-900">登录管理员账号</h3>
@@ -144,7 +156,7 @@ export default function HelpPage() {
               </p>
             </li>
             <li className="mb-10 ml-6">
-              <span className="absolute flex items-center justify-center w-8 h-8 bg-blue-100 rounded-full -left-4 ring-4 ring-white text-blue-600 font-bold text-sm">
+              <span className="absolute flex items-center justify-center w-8 h-8 bg-yellow-100 rounded-full -left-4 ring-4 ring-white text-yellow-700 font-bold text-sm">
                 2
               </span>
               <h3 className="mb-1 text-lg font-semibold text-neutral-900">选择文档类型</h3>
@@ -153,7 +165,7 @@ export default function HelpPage() {
               </p>
             </li>
             <li className="ml-6">
-              <span className="absolute flex items-center justify-center w-8 h-8 bg-blue-100 rounded-full -left-4 ring-4 ring-white text-blue-600 font-bold text-sm">
+              <span className="absolute flex items-center justify-center w-8 h-8 bg-yellow-100 rounded-full -left-4 ring-4 ring-white text-yellow-700 font-bold text-sm">
                 3
               </span>
               <h3 className="mb-1 text-lg font-semibold text-neutral-900">上传并等待处理</h3>

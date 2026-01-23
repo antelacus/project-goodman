@@ -2,8 +2,13 @@
 import React, { useEffect, act } from 'react';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { createRoot } from 'react-dom/client';
+import { notifyGuestRateUpdate } from '@/lib/security/guest-rate-client';
 import { useReportGeneration } from '@/hooks/useReportGeneration';
 import type { ReportContent } from '@/types/report';
+
+vi.mock('@/lib/security/guest-rate-client', () => ({
+  notifyGuestRateUpdate: vi.fn(),
+}));
 
 const reportFixture: ReportContent = {
   title: '2024年度财务综合分析报告',
@@ -75,6 +80,7 @@ describe('useReportGeneration', () => {
     container = null;
     root = null;
     globalThis.IS_REACT_ACT_ENVIRONMENT = false;
+    vi.clearAllMocks();
     vi.restoreAllMocks();
   });
 
@@ -124,5 +130,31 @@ describe('useReportGeneration', () => {
     expect(result?.docxUrl).toBe('https://example.com/report.docx');
     expect(hook?.savedDocxUrl).toBe('https://example.com/report.docx');
     expect(fetchMock).toHaveBeenCalledWith('/api/reports/save', expect.any(Object));
+  });
+
+  it('notifies guest rate updates when report generation is rejected', async () => {
+    const fetchMock = vi.fn(async (input: RequestInfo | URL) => {
+      const url = typeof input === 'string' ? input : input.toString();
+
+      if (url === '/api/reports/generate') {
+        return Response.json({ error: 'rate limited' }, { status: 429 });
+      }
+
+      throw new Error(`Unexpected fetch to ${url}`);
+    });
+
+    vi.stubGlobal('fetch', fetchMock);
+
+    let hook: ReturnType<typeof useReportGeneration> | null = null;
+
+    await act(async () => {
+      root?.render(<HookHarness onReady={(value) => { hook = value; }} />);
+    });
+
+    await act(async () => {
+      await hook?.startGeneration('2024');
+    });
+
+    expect(notifyGuestRateUpdate).toHaveBeenCalledTimes(1);
   });
 });

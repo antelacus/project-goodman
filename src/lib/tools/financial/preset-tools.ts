@@ -157,6 +157,7 @@ function createFinancialToolFromPreset(preset: PresetFunction): Tool {
             documentType: inferDocumentType(preset.requiredInputs),
             year: primaryData.year,
             period: primaryData.period,
+            fileUrl: primaryData.documents.file_url || undefined,
           } : undefined;
 
           return {

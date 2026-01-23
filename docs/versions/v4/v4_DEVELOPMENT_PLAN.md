@@ -346,6 +346,10 @@ docs/versions/v4/
 - 关键路径性能分析（报告生成/文档检索）
 - 性能与稳定性回归监控阈值
 
+**后续优化**:
+
+- 逐步引入统一 UI 主题体系（集中定义品牌色 token + 共用 Button/Badge/Alert 等基础组件），替换分散的颜色类，确保全局风格一致。
+
 详细需求见 [PHASE1_REQ.md](features/performance-optimization/PHASE1_REQ.md)
 
 ---

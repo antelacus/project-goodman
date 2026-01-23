@@ -100,4 +100,60 @@ describe('generateAndSaveReportDocx', () => {
     expect(dbFrom).toHaveBeenCalledWith('reports');
     expect(update).toHaveBeenCalledWith({ docx_storage_path: storagePath });
   });
+
+  it('retries DOCX upload with a fallback content type when storage rejects mime', async () => {
+    const upload = vi.fn()
+      .mockResolvedValueOnce({
+        data: null,
+        error: {
+          message: 'mime type application/vnd.openxmlformats-officedocument.wordprocessingml.document is not supported',
+          statusCode: 415,
+        },
+      })
+      .mockResolvedValueOnce({
+        data: { path: 'reports/report-id/report_2024_123.docx' },
+        error: null,
+      });
+    const storageFrom = vi.fn().mockReturnValue({ upload });
+    const update = vi.fn().mockReturnValue({
+      eq: vi.fn().mockResolvedValue({ error: null }),
+    });
+    const dbFrom = vi.fn().mockReturnValue({ update });
+
+    vi.mocked(createClient).mockImplementation(() => ({
+      storage: { from: storageFrom },
+      from: dbFrom,
+    }) as unknown as ReturnType<typeof createClient>);
+
+    vi.mocked(generateReportDocx).mockResolvedValue(Buffer.from('docx'));
+
+    const storagePath = await generateAndSaveReportDocx(
+      'report-id',
+      reportFixture,
+      '2024',
+      '2023'
+    );
+
+    expect(storagePath).toBe('reports/report-id/report_2024_123.docx');
+    expect(upload).toHaveBeenCalledTimes(2);
+    expect(upload).toHaveBeenNthCalledWith(
+      1,
+      expect.stringContaining('.docx'),
+      expect.any(Buffer),
+      expect.objectContaining({
+        contentType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+        upsert: true,
+      })
+    );
+    expect(upload).toHaveBeenNthCalledWith(
+      2,
+      expect.stringContaining('.docx'),
+      expect.any(Buffer),
+      expect.objectContaining({
+        contentType: 'application/octet-stream',
+        upsert: true,
+      })
+    );
+    expect(update).toHaveBeenCalledWith({ docx_storage_path: storagePath });
+  });
 });

@@ -61,7 +61,7 @@ export const ReportMessage: React.FC<ReportMessageProps> = ({
   return (
     <div className="bg-white border border-neutral-200 rounded-xl shadow-sm overflow-hidden">
       {/* Report Header */}
-      <div className="bg-gradient-to-r from-blue-600 to-blue-700 px-6 py-4 text-white">
+      <div className="bg-yellow-400 px-6 py-4 text-neutral-900">
         <div className="flex items-start justify-between">
           <div className="flex items-center gap-3">
             <div className="p-2 bg-white/20 rounded-lg">
@@ -69,7 +69,7 @@ export const ReportMessage: React.FC<ReportMessageProps> = ({
             </div>
             <div>
               <h2 className="text-lg font-semibold">{report.title}</h2>
-              <div className="flex items-center gap-4 mt-1 text-sm text-blue-100">
+              <div className="flex items-center gap-4 mt-1 text-sm text-neutral-700">
                 <span className="flex items-center gap-1">
                   <Calendar size={14} />
                   {report.year}年度
@@ -103,7 +103,7 @@ export const ReportMessage: React.FC<ReportMessageProps> = ({
             </h3>
             <button
               onClick={toggleAll}
-              className="text-sm text-blue-600 hover:text-blue-700 flex items-center gap-1"
+              className="text-sm text-yellow-700 hover:text-yellow-800 flex items-center gap-1"
             >
               {allExpanded ? (
                 <>

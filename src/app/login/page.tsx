@@ -1,9 +1,10 @@
 "use client";
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Lock, User, ArrowLeft, AlertCircle, Loader2 } from "lucide-react";
+import { requestSubmitOnEnter } from "@/lib/dom/request-submit-on-enter";
 
 export default function LoginPage() {
     const router = useRouter();
@@ -12,6 +13,7 @@ export default function LoginPage() {
     const [error, setError] = useState("");
     const [isLoading, setIsLoading] = useState(false);
     const [retryAfter, setRetryAfter] = useState<number | null>(null);
+    const formRef = useRef<HTMLFormElement>(null);
 
     // Check if already logged in
     useEffect(() => {
@@ -88,6 +90,7 @@ export default function LoginPage() {
     };
 
     const isLocked = retryAfter !== null && retryAfter > 0;
+    const submitDisabled = isLoading || isLocked || !username || !password;
 
     return (
         <div className="min-h-screen bg-gradient-to-br from-neutral-50 to-neutral-100 flex items-center justify-center p-4">
@@ -109,7 +112,14 @@ export default function LoginPage() {
 
                 {/* Login Form */}
                 <div className="bg-white rounded-2xl shadow-xl p-8 border border-gray-100">
-                    <form onSubmit={handleSubmit} className="space-y-6">
+                    <form
+                        ref={formRef}
+                        onSubmit={handleSubmit}
+                        onKeyDown={(e) => {
+                            requestSubmitOnEnter(e, formRef.current, { disabled: submitDisabled });
+                        }}
+                        className="space-y-6"
+                    >
                         {/* Error Message */}
                         {error && (
                             <div className="bg-red-50 border border-red-200 rounded-lg p-4 flex items-start gap-3">
@@ -174,7 +184,7 @@ export default function LoginPage() {
                         {/* Submit Button */}
                         <button
                             type="submit"
-                            disabled={isLoading || isLocked || !username || !password}
+                            disabled={submitDisabled}
                             className="w-full bg-neutral-900 hover:bg-neutral-800 disabled:bg-neutral-400 text-white font-semibold py-3 px-4 rounded-lg transition-all flex items-center justify-center gap-2"
                         >
                             {isLoading ? (

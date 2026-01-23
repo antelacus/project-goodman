@@ -4,6 +4,7 @@ import { DocumentSelectModal } from "@/components/documents";
 import { useDocumentStore } from "@/store/documents";
 import { useModalAccessibility } from "@/hooks/useModalAccessibility";
 import { formatExtractionValue } from "./extraction-utils";
+import { notifyGuestRateUpdate } from "@/lib/security/guest-rate-client";
 
 interface ExtractionModalProps {
     isOpen: boolean;
@@ -82,6 +83,7 @@ export default function ExtractionModal({
 
             setExtractionResult(result.data);
             setStep('result');
+            notifyGuestRateUpdate();
         } catch (error: unknown) {
             console.error('Extraction Error:', error);
             setErrorMsg(error instanceof Error ? error.message : 'Unknown error occurred');
@@ -163,7 +165,7 @@ export default function ExtractionModal({
                             <h3 className="text-xl font-bold text-neutral-900 mb-6">确认提取目标</h3>
 
                             <div className="bg-white p-6 rounded-xl border border-neutral-200 shadow-sm mb-8 flex items-center gap-4 text-left">
-                                <div className="bg-blue-50 p-3 rounded-lg text-blue-600">
+                                <div className="bg-yellow-50 p-3 rounded-lg text-yellow-600">
                                     <FileText size={24} />
                                 </div>
                                 <div>
@@ -250,15 +252,15 @@ export default function ExtractionModal({
                                                 <div className="absolute right-0 mt-2 w-32 bg-white rounded-lg shadow-xl z-20 border border-neutral-200 py-1 text-xs">
                                                     <button onClick={() => handleCopy(key, value, 'key')} className="w-full text-left px-3 py-2 hover:bg-neutral-50 text-neutral-700 flex items-center justify-between">
                                                         <span>复制标题</span>
-                                                        {copiedState?.key === key && copiedState?.type === 'key' && <Check size={12} className="text-green-500" />}
+                                                        {copiedState?.key === key && copiedState?.type === 'key' && <Check size={12} className="text-yellow-600" />}
                                                     </button>
                                                     <button onClick={() => handleCopy(key, value, 'value')} className="w-full text-left px-3 py-2 hover:bg-neutral-50 text-neutral-700 flex items-center justify-between">
                                                         <span>复制内容</span>
-                                                        {copiedState?.key === key && copiedState?.type === 'value' && <Check size={12} className="text-green-500" />}
+                                                        {copiedState?.key === key && copiedState?.type === 'value' && <Check size={12} className="text-yellow-600" />}
                                                     </button>
                                                     <button onClick={() => handleCopy(key, value, 'both')} className="w-full text-left px-3 py-2 hover:bg-neutral-50 text-neutral-700 flex items-center justify-between border-t border-neutral-100">
                                                         <span>复制全部</span>
-                                                        {copiedState?.key === key && copiedState?.type === 'both' && <Check size={12} className="text-green-500" />}
+                                                        {copiedState?.key === key && copiedState?.type === 'both' && <Check size={12} className="text-yellow-600" />}
                                                     </button>
                                                 </div>
                                             )}

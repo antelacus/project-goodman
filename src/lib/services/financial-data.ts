@@ -10,6 +10,7 @@ export interface FinancialDataPoint {
     documents: {
         id: string;
         name: string;
+        file_url: string | null;
     };
 }
 
@@ -30,7 +31,7 @@ export async function queryFinancialData(
       year,
       period,
       document_id,
-      documents!inner(id, name)
+      documents!inner(id, name, file_url)
     `)
         .in("metric_name", metricNames);
 
