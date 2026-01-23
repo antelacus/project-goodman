@@ -23,6 +23,7 @@ import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { useSidebar } from './SidebarProvider';
 import ExtractionModal from '../quick-actions/ExtractionModal';
 import { SkeletonSessionList } from '@/components/ui/Skeleton';
+import { postWithCsrf } from '@/lib/security/csrf-client';
 
 interface SessionItem {
     id: string;
@@ -322,8 +323,13 @@ export default function Sidebar() {
                         <button
                             onClick={async () => {
                                 try {
-                                    await fetch('/api/auth/logout', { method: 'POST' });
+                                    const response = await postWithCsrf('/api/auth/logout');
+                                    if (!response.ok) {
+                                        throw new Error('Logout failed');
+                                    }
                                     setIsAdmin(false);
+                                    setSessions([]);
+                                    setSessionsLoading(false);
                                     router.push('/chat');
                                 } catch {
                                     // Ignore errors

@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { useModalAccessibility } from '@/hooks/useModalAccessibility';
+import { postWithCsrf } from '@/lib/security/csrf-client';
 
 /**
  * AdminPasswordTrigger Component
@@ -123,11 +124,14 @@ export function useAdminAuth() {
 
   const logout = async () => {
     try {
-      await fetch('/api/auth/logout', { method: 'POST' });
+      const response = await postWithCsrf('/api/auth/logout');
+      if (!response.ok) {
+        throw new Error('Logout failed');
+      }
+      setIsAuthenticated(false);
     } catch (err) {
       console.error('Logout error:', err);
     }
-    setIsAuthenticated(false);
   };
 
   return {
