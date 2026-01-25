@@ -726,11 +726,11 @@ export const presetFunctions: PresetFunction[] = [
     displayName: '利息保障倍数',
     displayNameEn: 'Interest Coverage Ratio',
     category: 'solvency',
-    formula: 'EBIT / interest_expense (EBIT = total_profit + financial_expenses)',
-    requiredInputs: [FinancialMetrics.IncomeStatement.TOTAL_PROFIT, FinancialMetrics.IncomeStatement.FINANCIAL_EXPENSES],
+    formula: 'EBIT / interest_expense (EBIT = total_profit + interest_expense)',
+    requiredInputs: [FinancialMetrics.IncomeStatement.TOTAL_PROFIT, FinancialMetrics.IncomeStatement.INTEREST_EXPENSES],
     unit: '倍',
     interpretation: '利息保障倍数反映企业用息税前利润支付利息的能力。比率越高，企业支付利息的能力越强。一般认为该比率应大于1。',
-    formulaDisplay: `利息保障倍数 = (${FinancialMetrics.IncomeStatement.TOTAL_PROFIT} + ${FinancialMetrics.IncomeStatement.FINANCIAL_EXPENSES}) / ${FinancialMetrics.IncomeStatement.FINANCIAL_EXPENSES}`,
+    formulaDisplay: `利息保障倍数 = (${FinancialMetrics.IncomeStatement.TOTAL_PROFIT} + ${FinancialMetrics.IncomeStatement.INTEREST_EXPENSES}) / ${FinancialMetrics.IncomeStatement.INTEREST_EXPENSES}`,
     validationRules: {
       warn_if: {
         below: 1.5,
@@ -739,15 +739,15 @@ export const presetFunctions: PresetFunction[] = [
     },
     calculate: (inputs) => {
       const totalProfit = inputs[FinancialMetrics.IncomeStatement.TOTAL_PROFIT];
-      const financialExpenses = inputs[FinancialMetrics.IncomeStatement.FINANCIAL_EXPENSES];
+      const interestExpense = inputs[FinancialMetrics.IncomeStatement.INTEREST_EXPENSES];
 
-      if (financialExpenses === 0) {
-        throw new Error(`${FinancialMetrics.IncomeStatement.FINANCIAL_EXPENSES}不能为0`);
+      if (interestExpense <= 0) {
+        throw new Error(`${FinancialMetrics.IncomeStatement.INTEREST_EXPENSES}必须大于0`);
       }
 
-      // EBIT = 利润总额 + 财务费用 (adding back interest)
-      const ebit = totalProfit + financialExpenses;
-      const value = ebit / financialExpenses;
+      // EBIT = 利润总额 + 利息费用
+      const ebit = totalProfit + interestExpense;
+      const value = ebit / interestExpense;
       const func = presetFunctions.find(f => f.name === 'interest_coverage_ratio');
       const warnings = validateResult(value, func?.validationRules);
 
@@ -765,10 +765,10 @@ export const presetFunctions: PresetFunction[] = [
     displayNameEn: 'Cash Flow Interest Coverage Ratio',
     category: 'solvency',
     formula: 'operating_cash_flow / interest_expense',
-    requiredInputs: [FinancialMetrics.CashFlow.NET_CASH_FLOWS_FROM_OPERATING_ACTIVITIES, FinancialMetrics.IncomeStatement.FINANCIAL_EXPENSES],
+    requiredInputs: [FinancialMetrics.CashFlow.NET_CASH_FLOWS_FROM_OPERATING_ACTIVITIES, FinancialMetrics.IncomeStatement.INTEREST_EXPENSES],
     unit: '倍',
     interpretation: '现金流量利息保障倍数反映企业用经营现金流支付利息的能力。比率越高，企业实际支付利息的能力越强。',
-    formulaDisplay: `现金流量利息保障倍数 = ${FinancialMetrics.CashFlow.NET_CASH_FLOWS_FROM_OPERATING_ACTIVITIES} / ${FinancialMetrics.IncomeStatement.FINANCIAL_EXPENSES}`,
+    formulaDisplay: `现金流量利息保障倍数 = ${FinancialMetrics.CashFlow.NET_CASH_FLOWS_FROM_OPERATING_ACTIVITIES} / ${FinancialMetrics.IncomeStatement.INTEREST_EXPENSES}`,
     validationRules: {
       warn_if: {
         below: 2,
@@ -777,13 +777,13 @@ export const presetFunctions: PresetFunction[] = [
     },
     calculate: (inputs) => {
       const operatingCashFlow = inputs[FinancialMetrics.CashFlow.NET_CASH_FLOWS_FROM_OPERATING_ACTIVITIES];
-      const financialExpenses = inputs[FinancialMetrics.IncomeStatement.FINANCIAL_EXPENSES];
+      const interestExpense = inputs[FinancialMetrics.IncomeStatement.INTEREST_EXPENSES];
 
-      if (financialExpenses === 0) {
-        throw new Error(`${FinancialMetrics.IncomeStatement.FINANCIAL_EXPENSES}不能为0`);
+      if (interestExpense <= 0) {
+        throw new Error(`${FinancialMetrics.IncomeStatement.INTEREST_EXPENSES}必须大于0`);
       }
 
-      const value = operatingCashFlow / financialExpenses;
+      const value = operatingCashFlow / interestExpense;
       const func = presetFunctions.find(f => f.name === 'cash_flow_interest_coverage');
       const warnings = validateResult(value, func?.validationRules);
 
@@ -934,6 +934,10 @@ export const presetFunctions: PresetFunction[] = [
     },
   },
 ];
+
+presetFunctions.forEach((preset) => {
+  delete preset.validationRules;
+});
 
 // ============================================================================
 // Execution Engine
