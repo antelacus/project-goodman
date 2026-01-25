@@ -13,6 +13,11 @@
  */
 
 import { z } from 'zod';
+import {
+  getMetricDefinitions,
+  type FinancialTable,
+  type MetricDefinition,
+} from '@/lib/financial/metric-registry';
 
 // ============================================================================
 // Type Definitions
@@ -286,74 +291,32 @@ export function classifyDocumentType(
 // Financial Document Extraction
 // ============================================================================
 
-/**
- * Standard metric names for balance sheets
- */
-const BALANCE_SHEET_METRICS = {
-  // Current Assets
-  '流动资产合计': ['流动资产合计', '流动资产总计', '流动资产小计'],
-  '货币资金': ['货币资金', '现金', '银行存款', '其他货币资金'],
-  '交易性金融资产': ['交易性金融资产', '以公允价值计量且其变动计入当期损益的金融资产'],
-  '应收账款': ['应收账款', '应收账款净额'],
-  '预付款项': ['预付款项', '预付账款'],
-  '其他应收款': ['其他应收款', '其他应收款净额'],
-  '存货': ['存货', '存货净额'],
+const METRIC_DEFINITIONS = getMetricDefinitions();
 
-  // Non-Current Assets
-  '非流动资产合计': ['非流动资产合计', '非流动资产总计'],
-  '长期投资': ['长期投资', '长期股权投资'],
-  '固定资产': ['固定资产', '固定资产净额'],
-  '无形资产': ['无形资产', '无形资产净额'],
-  '商誉': ['商誉'],
-
-  // Total Assets
-  '资产总计': ['资产总计', '资产合计', '总资产'],
-
-  // Current Liabilities
-  '流动负债合计': ['流动负债合计', '流动负债总计'],
-  '短期借款': ['短期借款'],
-  '应付账款': ['应付账款'],
-  '预收款项': ['预收款项', '预收账款'],
-  '应付职工薪酬': ['应付职工薪酬'],
-  '应交税费': ['应交税费'],
-
-  // Non-Current Liabilities
-  '非流动负债合计': ['非流动负债合计', '非流动负债总计'],
-  '长期借款': ['长期借款'],
-  '应付债券': ['应付债券'],
-
-  // Total Liabilities
-  '负债总计': ['负债总计', '负债合计', '总负债'],
-
-  // Shareholders' Equity
-  '所有者权益合计': ['所有者权益合计', '股东权益合计', '所有者权益总计'],
-  '实收资本': ['实收资本', '股本'],
-  '资本公积': ['资本公积'],
-  '盈余公积': ['盈余公积'],
-  '未分配利润': ['未分配利润'],
+const DOCUMENT_TYPE_TO_TABLE: Record<
+  'balance_sheet' | 'income_statement' | 'cash_flow',
+  FinancialTable
+> = {
+  balance_sheet: 'balance_sheet',
+  income_statement: 'income_statement',
+  cash_flow: 'cash_flow',
 };
 
-/**
- * Standard metric names for income statements
- */
-const INCOME_STATEMENT_METRICS = {
-  '营业收入': ['营业收入', '主营业务收入', '收入'],
-  '营业成本': ['营业成本', '主营业务成本', '成本'],
-  '税金及附加': ['税金及附加'],
-  '销售费用': ['销售费用'],
-  '管理费用': ['管理费用'],
-  '研发费用': ['研发费用', 'R&D费用'],
-  '财务费用': ['财务费用'],
-  '利息费用': ['利息费用', '利息支出'],
-  '利息收入': ['利息收入'],
-  '投资收益': ['投资收益'],
-  '营业利润': ['营业利润'],
-  '利润总额': ['利润总额', '税前利润'],
-  '所得税费用': ['所得税费用', '所得税'],
-  '净利润': ['净利润', '净收益'],
-  '基本每股收益': ['基本每股收益'],
-  '稀释每股收益': ['稀释每股收益'],
-};
+function getMetricDefinitionsForDocumentType(
+  documentType: 'balance_sheet' | 'income_statement' | 'cash_flow'
+): MetricDefinition[] {
+  const table = DOCUMENT_TYPE_TO_TABLE[documentType];
+  return METRIC_DEFINITIONS.filter((metric) => metric.table === table);
+}
+
+function getMetricVariations(metric: MetricDefinition): string[] {
+  return Array.from(new Set([metric.label, metric.key, ...metric.aliases]));
+}
+
+function getSectionFromKey(key: string): string | undefined {
+  const parts = key.split('-');
+  return parts.length > 1 ? parts[1] : undefined;
+}
 
 /**
  * Extract financial metrics from text
@@ -372,11 +335,7 @@ export function extractFinancialMetrics(
   const metrics: FinancialMetric[] = [];
 
   // Select appropriate metric definitions
-  const metricDefinitions = documentType === 'balance_sheet'
-    ? BALANCE_SHEET_METRICS
-    : documentType === 'income_statement'
-      ? INCOME_STATEMENT_METRICS
-      : {};
+  const metricDefinitions = getMetricDefinitionsForDocumentType(documentType);
 
   // Pattern for extracting metrics: "metric_name ... number [unit]"
   // Supports formats like:
@@ -384,10 +343,12 @@ export function extractFinancialMetrics(
   // - "流动资产合计：2,500,000"
   // - "净利润 500,000.00"
 
-  for (const [standardName, variations] of Object.entries(metricDefinitions)) {
+  for (const metric of metricDefinitions) {
+    const standardName = metric.key;
+    const variations = getMetricVariations(metric);
     let found = false; // Track if we've found a match for this standardName
 
-    for (const variation of (variations as string[])) {
+    for (const variation of variations) {
       if (found) break; // Skip remaining variations if we've already found this metric
 
       // Build regex pattern to match metric and value
@@ -406,13 +367,7 @@ export function extractFinancialMetrics(
 
         if (!isNaN(value)) {
           // Determine section based on metric name
-          let section: string | undefined;
-          if (standardName.includes('流动资产')) section = '流动资产';
-          else if (standardName.includes('非流动资产')) section = '非流动资产';
-          else if (standardName.includes('流动负债')) section = '流动负债';
-          else if (standardName.includes('非流动负债')) section = '非流动负债';
-          else if (standardName.includes('所有者权益')) section = '所有者权益';
-          else if (documentType === 'income_statement') section = '利润表';
+          const section = getSectionFromKey(metric.key);
 
           metrics.push({
             name: standardName,
