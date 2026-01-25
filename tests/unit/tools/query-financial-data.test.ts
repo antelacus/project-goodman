@@ -20,6 +20,11 @@ describe('query_financial_data output normalization', () => {
       years: ['2024'],
     });
 
+    expect(queryFinancialData).toHaveBeenCalledWith(
+      ['资产负债表-资产总计'],
+      '2024',
+      'annual'
+    );
     expect(result.success).toBe(true);
     expect(result.data).toMatchObject({
       empty: true,
@@ -31,7 +36,7 @@ describe('query_financial_data output normalization', () => {
   it('marks results as non-empty when data exists', async () => {
     vi.mocked(queryFinancialData).mockResolvedValue([
       {
-        metric_name: '资产总计',
+        metric_name: '资产负债表-资产总计',
         metric_value: 1200,
         unit: '元',
         year: '2024',
@@ -52,5 +57,6 @@ describe('query_financial_data output normalization', () => {
     expect(result.success).toBe(true);
     expect(result.data?.empty).toBe(false);
     expect(result.data?.results?.length).toBe(1);
+    expect(result.data?.results?.[0]?.metric).toBe('资产总计');
   });
 });
