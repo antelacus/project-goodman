@@ -602,8 +602,17 @@ export async function POST(request: NextRequest) {
 
         if (!validationResult.isValid) {
           console.warn(`[Admin Upload] Validation failed for ${item.year}:`, validationResult.errors);
-          // Option: Throw error to reject upload, or store with warning flag
-          // For now, we store it but log the errors in metadata
+          return createErrorResponse(
+            new Error(
+              `Validation failed for ${item.year} (${item.period}): ${validationResult.errors.join('；')}`
+            ),
+            requestId,
+            400,
+            {
+              errorType: 'VALIDATION',
+              route: '/api/admin/upload-database-document',
+            }
+          );
         }
 
         // 4. Transform to standard metrics format for DB storage
