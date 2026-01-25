@@ -19,6 +19,7 @@ import { createServerSupabaseClient } from "@/lib/database";
 import type { InsertTables, Database } from "@/lib/database";
 import { SupabaseClient } from "@supabase/supabase-js";
 import { logWorkflowEvent } from "@/lib/logging";
+import { AI_CONFIG } from "@/lib/ai/config";
 import {
   verifyAdminPassword,
   generateRequestId,
@@ -182,11 +183,11 @@ async function extractTextFromFile(
       // Fall back to OpenAI Vision API
       console.log(`[extractTextFromFile] PDF text too short, falling back to Vision API...`);
       const response = await openaiClient.responses.create({
-        model: "gpt-5-mini",
+        model: AI_CONFIG.models.extraction,
         input: [{
           role: "user",
           content: [
-            { type: "input_text", text: "请完整提取这个PDF文档中的所有文本内容，保持原有的结构和格式。只返回文本内容，不要添加任何额外的解释。" },
+            { type: "input_text", text: AI_CONFIG.prompts.pdfTextExtract },
             {
               type: "input_file",
               filename: fileName,
@@ -201,11 +202,11 @@ async function extractTextFromFile(
       // Fall back to OpenAI if pdf-parse fails
       console.log(`[extractTextFromFile] Falling back to Vision API due to error...`);
       const response = await openaiClient.responses.create({
-        model: "gpt-5-mini",
+        model: AI_CONFIG.models.extraction,
         input: [{
           role: "user",
           content: [
-            { type: "input_text", text: "请完整提取这个PDF文档中的所有文本内容，保持原有的结构和格式。只返回文本内容，不要添加任何额外的解释。" },
+            { type: "input_text", text: AI_CONFIG.prompts.pdfTextExtract },
             {
               type: "input_file",
               filename: fileName,
@@ -220,11 +221,11 @@ async function extractTextFromFile(
     // Image file - use Vision API
     const mimeType = ext === 'jpg' ? 'image/jpeg' : `image/${ext}`;
     const response = await openaiClient.chat.completions.create({
-      model: "gpt-5-mini",
+      model: AI_CONFIG.models.extraction,
       messages: [{
         role: "user",
         content: [
-          { type: "text", text: "请完整提取这张图片中的所有文本内容，保持原有的结构和格式。只返回文本内容，不要添加任何额外的解释。" },
+          { type: "text", text: AI_CONFIG.prompts.pdfTextExtract },
           {
             type: "image_url",
             image_url: {
@@ -749,7 +750,7 @@ async function generateEmbeddings(chunks: string[]): Promise<number[][]> {
     const batch = chunks.slice(i, i + batchSize);
 
     const response = await openai.embeddings.create({
-      model: "text-embedding-3-small",
+      model: AI_CONFIG.models.embedding,
       input: batch,
     });
 

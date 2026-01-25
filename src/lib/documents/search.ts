@@ -137,13 +137,14 @@ async function searchDocumentsInternal(
 // ----------------------------------------------------------------------------
 
 import OpenAI from 'openai';
+import { AI_CONFIG } from '@/lib/ai/config';
 
 async function generateEmbedding(text: string): Promise<number[]> {
     // Simple OpenAI embedding wrapper
     // This should ideally reuse a shared instance from `src/lib/ai-extraction.ts` or similar
     const openai = new OpenAI();
     const response = await openai.embeddings.create({
-        model: 'text-embedding-3-small',
+        model: AI_CONFIG.models.embedding,
         input: text.replace(/\n/g, ' '),
     });
     return response.data[0].embedding;

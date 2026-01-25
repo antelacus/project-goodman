@@ -13,6 +13,7 @@ import OpenAI from "openai";
 import ExcelJS from "exceljs";
 import { getDataExtractPrompt } from "@/lib/prompts";
 import { logWorkflowEvent } from "@/lib/logging";
+import { AI_CONFIG } from "@/lib/ai/config";
 import {
   generateRequestId,
   createErrorResponse,
@@ -262,7 +263,7 @@ export async function POST(req: NextRequest) {
       if (SUPPORTED_IMAGE_TYPES.includes(fileType)) {
         // Image processing with Vision API
         const response = await openai.chat.completions.create({
-          model: "gpt-5-mini",
+          model: AI_CONFIG.models.extraction,
           messages: [{
             role: "user",
             content: [
@@ -285,7 +286,7 @@ export async function POST(req: NextRequest) {
         // PDF processing using Responses API with file input
         // Chat completions API doesn't support PDF, must use responses API
         const response = await openai.responses.create({
-          model: "gpt-5-mini",
+          model: AI_CONFIG.models.extraction,
           input: [
             {
               role: "user",
@@ -348,7 +349,7 @@ export async function POST(req: NextRequest) {
 
         // Send to LLM for structured extraction
         const response = await openai.chat.completions.create({
-          model: "gpt-5-mini",
+          model: AI_CONFIG.models.extraction,
           messages: [{
             role: "user",
             content: `${prompt}\n\n以下是Excel表格内容（制表符分隔）：\n\n${textContent}`

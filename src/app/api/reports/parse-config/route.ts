@@ -12,6 +12,7 @@ import {
   ensureSession,
   createErrorResponse,
 } from '@/lib/security';
+import { AI_CONFIG } from '@/lib/ai/config';
 import {
   ReportConfigParseSchema,
   ReportConfigIntentSchema,
@@ -70,7 +71,7 @@ export async function POST(req: NextRequest) {
 
     // 4. Call LLM to parse intent
     const completion = await openai.chat.completions.create({
-      model: 'gpt-4o-mini', // Fast and cheap for simple intent parsing
+      model: AI_CONFIG.models.title, // Fast and cheap for simple intent parsing
       messages: [
         {
           role: 'system',
@@ -81,8 +82,8 @@ export async function POST(req: NextRequest) {
           content: userMessage,
         },
       ],
-      temperature: 0.1, // Low temperature for consistent parsing
-      max_tokens: 200,
+      temperature: AI_CONFIG.params.title.temperature,
+      max_tokens: AI_CONFIG.params.title.maxTokens,
       response_format: { type: 'json_object' },
     });
 
