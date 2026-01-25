@@ -16,6 +16,7 @@ import {
 import { toolRegistry } from "../registry";
 import { queryFinancialData } from "../../services/financial-data";
 import { buildMissingMetricsReason } from "@/lib/tools/retrieval";
+import { resolveMetricKey } from "@/lib/financial/metric-registry";
 
 // ============================================================================
 // Query Financial Data Tool
@@ -45,6 +46,25 @@ export const queryFinancialDataTool: Tool = {
     try {
       // Default to current year if no years specified
       const yearsToQuery = years || [new Date().getFullYear().toString()];
+      const normalization = metric_names.map((name) => ({
+        original: name,
+        canonical: resolveMetricKey(name),
+      }));
+
+      const canonicalToOriginal = new Map<string, string>();
+      const unresolved = new Set<string>();
+
+      normalization.forEach(({ original, canonical }) => {
+        if (canonical) {
+          if (!canonicalToOriginal.has(canonical)) {
+            canonicalToOriginal.set(canonical, original);
+          }
+        } else {
+          unresolved.add(original);
+        }
+      });
+
+      const canonicalMetrics = Array.from(canonicalToOriginal.keys());
       const allResults: Array<{
         year: string;
         metric: string;
@@ -57,26 +77,36 @@ export const queryFinancialDataTool: Tool = {
 
       // Query each year sequentially
       for (const year of yearsToQuery) {
-        const data = await queryFinancialData(
-          metric_names,
-          year,
-          period || "annual"
-        );
-        data.forEach((d) => {
-          allResults.push({
-            year: d.year,
-            metric: d.metric_name,
-            value: d.metric_value,
-            unit: d.unit,
-            source: d.documents.name,
-            period: d.period,
+        if (canonicalMetrics.length > 0) {
+          const data = await queryFinancialData(
+            canonicalMetrics,
+            year,
+            period || "annual"
+          );
+          data.forEach((d) => {
+            allResults.push({
+              year: d.year,
+              metric: canonicalToOriginal.get(d.metric_name) || d.metric_name,
+              value: d.metric_value,
+              unit: d.unit,
+              source: d.documents.name,
+              period: d.period,
+            });
+            foundMetrics.add(d.metric_name);
           });
-          foundMetrics.add(d.metric_name);
-        });
+        }
       }
 
       // Calculate missing metrics
-      const missing = metric_names.filter((m) => !foundMetrics.has(m));
+      const missingCanonical = canonicalMetrics.filter(
+        (metric) => !foundMetrics.has(metric)
+      );
+      const missing = Array.from(
+        new Set([
+          ...Array.from(unresolved),
+          ...missingCanonical.map((metric) => canonicalToOriginal.get(metric) || metric),
+        ])
+      );
 
       allResults.sort((a, b) => {
         if (a.year !== b.year) {
