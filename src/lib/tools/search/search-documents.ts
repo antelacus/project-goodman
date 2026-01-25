@@ -18,12 +18,12 @@ import {
 
 export const SearchDocumentsInputSchema = z.object({
   query: z.string().describe("搜索关键词或问题"),
-  year: z.number().optional().describe("年份过滤 (例如 2024)"),
+  year: z.coerce.number().optional().describe("年份过滤 (例如 2024)"),
   docTypes: z
     .array(z.string())
     .optional()
     .describe("文档类型过滤 (例如 ['annual_report'])"),
-  limit: z.number().default(5).describe("返回文档数量限制"),
+  limit: z.coerce.number().default(5).describe("返回文档数量限制"),
 });
 
 export type SearchDocumentsInput = z.infer<typeof SearchDocumentsInputSchema>;

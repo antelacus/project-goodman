@@ -21,7 +21,7 @@ import {
 
 export const SearchRegulationsInputSchema = z.object({
   query: z.string().describe("关于法规的问题或关键词"),
-  limit: z.number().default(5).describe("返回结果数量"),
+  limit: z.coerce.number().default(5).describe("返回结果数量"),
 });
 
 export type SearchRegulationsInput = z.infer<typeof SearchRegulationsInputSchema>;

@@ -2,6 +2,12 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { searchDocumentsTool } from '@/lib/tools/search/search-documents';
 import { searchRegulationsTool } from '@/lib/tools/search/search-regulations';
+import {
+  SearchDocumentsInputSchema,
+} from '@/lib/tools/search/search-documents';
+import {
+  SearchRegulationsInputSchema,
+} from '@/lib/tools/search/search-regulations';
 import { searchDocuments } from '@/lib/documents/search';
 import { matchDocuments } from '@/lib/database';
 
@@ -90,5 +96,23 @@ describe('search tools output normalization', () => {
       reason: expect.stringContaining('未找到相关法规'),
       meta: { total: 0 },
     });
+  });
+
+  it('coerces search input year/limit from strings', () => {
+    const parsedDocs = SearchDocumentsInputSchema.parse({
+      query: '测试',
+      year: '2024',
+      limit: '3',
+    });
+
+    expect(parsedDocs.year).toBe(2024);
+    expect(parsedDocs.limit).toBe(3);
+
+    const parsedRegs = SearchRegulationsInputSchema.parse({
+      query: '税法',
+      limit: '2',
+    });
+
+    expect(parsedRegs.limit).toBe(2);
   });
 });
