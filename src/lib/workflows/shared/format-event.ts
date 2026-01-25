@@ -183,33 +183,27 @@ function formatCalculationWithValues(
   if (equalIndex === -1) return result;
 
   const rightSide = formula.substring(equalIndex + 1).trim();
-
-  // Build parts array showing each input with its value
-  const parts: string[] = [];
-  const sortedInputs = Object.entries(inputs).sort(
-    (a, b) => rightSide.indexOf(a[0]) - rightSide.indexOf(b[0])
-  );
-
-  for (const [metricName, value] of sortedInputs) {
-    if (rightSide.includes(metricName)) {
-      // Format the value nicely
+  const formattedInputs = Object.entries(inputs)
+    .map(([metricName, value]) => {
       const formattedValue = Math.abs(value) >= 10000
         ? value.toLocaleString('zh-CN', { maximumFractionDigits: 0 })
         : value.toLocaleString('zh-CN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-      parts.push(`${metricName} ${formattedValue}`);
-    }
+      return { metricName, formattedValue };
+    })
+    .sort((a, b) => b.metricName.length - a.metricName.length);
+
+  let replaced = rightSide;
+  for (const { metricName, formattedValue } of formattedInputs) {
+    const escaped = metricName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    replaced = replaced.replace(
+      new RegExp(escaped, 'g'),
+      `${metricName} ${formattedValue}`
+    );
   }
 
-  if (parts.length === 0) return result;
+  if (replaced === rightSide) return result;
 
-  // Determine the operator from the formula
-  let operator = '';
-  if (rightSide.includes('/')) operator = ' ÷ ';
-  else if (rightSide.includes('-')) operator = ' - ';
-  else if (rightSide.includes('+')) operator = ' + ';
-  else if (rightSide.includes('×') || rightSide.includes('*')) operator = ' × ';
-
-  return `${parts.join(operator)} = ${result}`;
+  return `${replaced} = ${result}`;
 }
 
 /**
