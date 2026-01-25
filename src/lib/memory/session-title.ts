@@ -5,6 +5,7 @@
  */
 
 import OpenAI from "openai";
+import { AI_CONFIG } from "@/lib/ai/config";
 
 const openai = new OpenAI({
     apiKey: process.env.OPENAI_API_KEY,
@@ -24,34 +25,19 @@ export async function generateSessionTitle(firstMessage: string): Promise<string
 
     try {
         const completion = await openai.chat.completions.create({
-            model: "gpt-4o-mini",
+            model: AI_CONFIG.models.title,
             messages: [
                 {
                     role: "system",
-                    content: `你是一个会话标题生成器。根据用户的第一条消息，生成一个简短的中文标题（最多15个字）。
-标题应该：
-- 概括对话的主题或目的
-- 使用简洁的中文表达
-- 不要使用引号或标点符号
-- 只输出标题，不要其他内容
-
-示例：
-用户消息："请帮我查看2024年第三季度的存货周转率"
-输出：2024Q3存货周转分析
-
-用户消息："公司的流动比率是多少"
-输出：流动比率查询
-
-用户消息："帮我提取这份财务报表里的关键数据"
-输出：财务报表数据提取`
+                    content: AI_CONFIG.prompts.sessionTitleSystem
                 },
                 {
                     role: "user",
                     content: firstMessage
                 }
             ],
-            temperature: 0.3,
-            max_tokens: 50,
+            temperature: AI_CONFIG.params.title.temperature,
+            max_tokens: AI_CONFIG.params.title.maxTokens,
         });
 
         const title = completion.choices[0]?.message?.content?.trim();

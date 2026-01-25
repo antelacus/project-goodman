@@ -9,14 +9,15 @@ import { BaseAgentState } from "../state/base-state";
 import { BaseMessage, HumanMessage, AIMessage, ToolMessage } from "@langchain/core/messages";
 import { toolRegistry } from "@/lib/tools/registry";
 import OpenAI from "openai";
+import { AI_CONFIG } from "@/lib/ai/config";
 
 const openai = new OpenAI({
     apiKey: process.env.OPENAI_API_KEY,
     baseURL: process.env.OPENAI_BASE_URL,
 });
 
-// Configurable model via environment variable with sensible default
-const OPENAI_MODEL = process.env.OPENAI_MODEL || "gpt-4o";
+const { chat: CHAT_MODEL } = AI_CONFIG.models;
+const { chat: chatParams } = AI_CONFIG.params;
 
 /**
  * Convert LangChain messages to OpenAI format
@@ -120,10 +121,12 @@ export async function agentLoopNode(
     const tools = toolRegistry.toOpenAIFunctionDefs();
 
     const completion = await openai.chat.completions.create({
-        model: OPENAI_MODEL,
+        model: CHAT_MODEL,
         messages: responseMessages,
         tools: tools.length > 0 ? tools : undefined,
         tool_choice: tools.length > 0 ? "auto" : undefined,
+        temperature: chatParams.temperature,
+        max_tokens: chatParams.maxTokens,
     });
 
     const choice = completion.choices[0];
