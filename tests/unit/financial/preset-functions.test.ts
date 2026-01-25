@@ -46,8 +46,7 @@ describe('Liquidity Ratios', () => {
       });
 
       expect(result.result.value).toBe(0.8);
-      expect(result.result.warnings).toBeDefined();
-      expect(result.result.warnings).toContain('流动比率低于1，可能存在短期偿债风险');
+      expect(result.result.warnings).toBeUndefined();
     });
 
     it('should throw error when current liabilities is zero', () => {
@@ -82,7 +81,7 @@ describe('Liquidity Ratios', () => {
 
       // (100000 - 80000) / 100000 = 0.2
       expect(result.result.value).toBe(0.2);
-      expect(result.result.warnings).toContain('速动比率过低，短期偿债能力较弱');
+      expect(result.result.warnings).toBeUndefined();
     });
   });
 
@@ -116,7 +115,7 @@ describe('Liquidity Ratios', () => {
       });
 
       expect(result.result.value).toBe(-20000);
-      expect(result.result.warnings).toContain('营运资本为负，可能存在短期偿债风险');
+      expect(result.result.warnings).toBeUndefined();
     });
   });
 });
@@ -144,7 +143,7 @@ describe('Solvency Ratios', () => {
       });
 
       expect(result.result.value).toBe(0.8);
-      expect(result.result.warnings).toContain('资产负债率较高，财务风险较大');
+      expect(result.result.warnings).toBeUndefined();
     });
 
     it('should throw error when total assets is zero', () => {
@@ -179,6 +178,32 @@ describe('Solvency Ratios', () => {
       // 1000000 / 400000 = 2.5
       expect(result.result.value).toBe(2.5);
       expect(result.result.formatted).toBe('2.50倍');
+    });
+  });
+
+  describe('interest_coverage_ratio (利息保障倍数)', () => {
+    it('should use interest expense from financial sub-account', () => {
+      const result = executeFunction('interest_coverage_ratio', {
+        [M.IncomeStatement.TOTAL_PROFIT]: 100,
+        [M.IncomeStatement.INTEREST_EXPENSES]: 20,
+      });
+
+      // (100 + 20) / 20 = 6
+      expect(result.result.value).toBe(6);
+      expect(result.result.formatted).toBe('6.00倍');
+    });
+  });
+
+  describe('cash_flow_interest_coverage (现金流量利息保障倍数)', () => {
+    it('should use interest expense from financial sub-account', () => {
+      const result = executeFunction('cash_flow_interest_coverage', {
+        [M.CashFlow.NET_CASH_FLOWS_FROM_OPERATING_ACTIVITIES]: 200,
+        [M.IncomeStatement.INTEREST_EXPENSES]: 40,
+      });
+
+      // 200 / 40 = 5
+      expect(result.result.value).toBe(5);
+      expect(result.result.formatted).toBe('5.00倍');
     });
   });
 });
