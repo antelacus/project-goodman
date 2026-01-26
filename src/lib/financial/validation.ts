@@ -246,6 +246,17 @@ export function validateIncomeStatement(data: StandardIncomeStatement): Validati
     );
     validateTotal(dataRecord, IS.NET_PROFIT, calculatedNetProfitByOwnership, errors);
 
+    const calculatedOciNetOfTax = safeAdd(
+        dataRecord[IS.OTHER_COMPREHENSIVE_INCOME_ATTRIBUTABLE_TO_PARENT_COMPANY],
+        dataRecord[IS.OTHER_COMPREHENSIVE_INCOME_ATTRIBUTABLE_TO_MINORITY_INTERESTS]
+    );
+    validateTotal(
+        dataRecord,
+        IS.OTHER_COMPREHENSIVE_INCOME_NET_OF_TAX,
+        calculatedOciNetOfTax,
+        errors
+    );
+
     return {
         isValid: errors.length === 0,
         errors,
