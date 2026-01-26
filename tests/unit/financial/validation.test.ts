@@ -167,4 +167,19 @@ describe('income statement validation', () => {
     expect(result.isValid).toBe(false);
     expect(result.errors.join('\n')).toContain(IS.OTHER_COMPREHENSIVE_INCOME_NET_OF_TAX);
   });
+
+  test('validates parent OCI net of tax equals non-reclassifiable + reclassifiable', () => {
+    const IS = FinancialMetrics.IncomeStatement;
+    const data = baseIncomeStatement();
+    data[IS.OCI_NON_RECLASSIFIABLE] = 4;
+    data[IS.OCI_RECLASSIFIABLE] = 6;
+    data[IS.OTHER_COMPREHENSIVE_INCOME_ATTRIBUTABLE_TO_PARENT_COMPANY] = 20; // mismatch (10 expected)
+    data[IS.OTHER_COMPREHENSIVE_INCOME_NET_OF_TAX] = 20;
+
+    const result = validateIncomeStatement(data as unknown as StandardIncomeStatement);
+    expect(result.isValid).toBe(false);
+    expect(result.errors.join('\n')).toContain(
+      IS.OTHER_COMPREHENSIVE_INCOME_ATTRIBUTABLE_TO_PARENT_COMPANY
+    );
+  });
 });
