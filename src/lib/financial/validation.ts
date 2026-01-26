@@ -57,10 +57,6 @@ function sumByPrefix(
     return sumKeys(data, getKeysByPrefix(prefix, excludeKeys));
 }
 
-function hasAnyValue(data: Record<string, number | undefined>, keys: string[]): boolean {
-    return keys.some((key) => typeof data[key] === 'number');
-}
-
 function validateTotal(
     data: Record<string, number | undefined>,
     key: string,
@@ -201,30 +197,12 @@ export function validateIncomeStatement(data: StandardIncomeStatement): Validati
     const revenueKeys = getKeysByPrefix('利润表-营业总收入-', new Set([IS.TOTAL_REVENUE]));
     const calculatedTotalRevenue = sumKeys(dataRecord, revenueKeys);
     const reportedTotalRevenue = getNumberValue(dataRecord, IS.TOTAL_REVENUE);
-
-    if (
-        reportedTotalRevenue !== undefined &&
-        hasAnyValue(dataRecord, revenueKeys) &&
-        !isApproximatelyEqual(reportedTotalRevenue, calculatedTotalRevenue)
-    ) {
-        warnings.push(
-            `${IS.TOTAL_REVENUE}与分项之和可能有差异: 报表值=${reportedTotalRevenue}, 计算值=${calculatedTotalRevenue}`
-        );
-    }
+    validateTotal(dataRecord, IS.TOTAL_REVENUE, calculatedTotalRevenue, errors);
 
     const costKeys = getKeysByPrefix('利润表-营业总成本-', new Set([IS.TOTAL_OPERATING_COSTS]));
     const calculatedTotalCost = sumKeys(dataRecord, costKeys);
     const reportedTotalCost = getNumberValue(dataRecord, IS.TOTAL_OPERATING_COSTS);
-
-    if (
-        reportedTotalCost !== undefined &&
-        hasAnyValue(dataRecord, costKeys) &&
-        !isApproximatelyEqual(reportedTotalCost, calculatedTotalCost)
-    ) {
-        warnings.push(
-            `${IS.TOTAL_OPERATING_COSTS}与分项之和可能有差异: 报表值=${reportedTotalCost}, 计算值=${calculatedTotalCost}`
-        );
-    }
+    validateTotal(dataRecord, IS.TOTAL_OPERATING_COSTS, calculatedTotalCost, errors);
 
     // 3. Validate Operating Profit
     const calculatedOperatingProfit = safeAdd(
