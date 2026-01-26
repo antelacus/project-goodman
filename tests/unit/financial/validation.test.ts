@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, test, expect } from 'vitest';
 import { BalanceSheetSchema, type StandardBalanceSheet } from '@/lib/financial/schema';
 import { validateBalanceSheet } from '@/lib/financial/validation';
 import { FinancialMetrics } from '@/lib/financial/metric-names';
@@ -49,5 +49,27 @@ describe('balance sheet schema + validation', () => {
 
     const result = validateBalanceSheet(data as unknown as StandardBalanceSheet);
     expect(result.isValid).toBe(true);
+  });
+
+  test('flags total assets mismatch with liabilities and equity total', () => {
+    const BS = FinancialMetrics.BalanceSheet;
+    const data = {
+      [BS.MONETARY_FUNDS]: 100,
+      [BS.TOTAL_CURRENT_ASSETS]: 100,
+      [BS.TOTAL_NON_CURRENT_ASSETS]: 0,
+      [BS.TOTAL_ASSETS]: 100,
+      [BS.TOTAL_CURRENT_LIABILITIES]: 0,
+      [BS.TOTAL_NON_CURRENT_LIABILITIES]: 0,
+      [BS.TOTAL_LIABILITIES]: 0,
+      [BS.PAID_IN_CAPITAL]: 90,
+      [BS.TOTAL_EQUITY_ATTRIBUTABLE_TO_PARENT_COMPANY]: 90,
+      [BS.MINORITY_INTERESTS]: 0,
+      [BS.TOTAL_OWNERS_EQUITY]: 90,
+      [BS.TOTAL_LIABILITIES_AND_OWNERS_EQUITY]: 90,
+    } as Record<string, number>;
+
+    const result = validateBalanceSheet(data as unknown as StandardBalanceSheet);
+    expect(result.isValid).toBe(false);
+    expect(result.errors.join('\n')).toContain(BS.TOTAL_ASSETS);
   });
 });

@@ -174,6 +174,17 @@ export function validateBalanceSheet(data: StandardBalanceSheet): ValidationResu
         errors
     );
 
+    const reportedLiabilitiesAndEquity = getNumberValue(
+        dataRecord,
+        BS.TOTAL_LIABILITIES_AND_OWNERS_EQUITY
+    );
+    validateTotal(
+        dataRecord,
+        BS.TOTAL_ASSETS,
+        reportedLiabilitiesAndEquity ?? 0,
+        errors
+    );
+
     return {
         isValid: errors.length === 0,
         errors,
