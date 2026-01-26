@@ -308,6 +308,17 @@ export function validateIncomeStatement(data: StandardIncomeStatement): Validati
         errors
     );
 
+    const calculatedComprehensiveIncomeByOwnership = safeAdd(
+        dataRecord[IS.TOTAL_COMPREHENSIVE_INCOME_ATTRIBUTABLE_TO_PARENT_COMPANY],
+        dataRecord[IS.TOTAL_COMPREHENSIVE_INCOME_ATTRIBUTABLE_TO_MINORITY_INTERESTS]
+    );
+    validateTotal(
+        dataRecord,
+        IS.TOTAL_COMPREHENSIVE_INCOME,
+        calculatedComprehensiveIncomeByOwnership,
+        errors
+    );
+
     return {
         isValid: errors.length === 0,
         errors,
