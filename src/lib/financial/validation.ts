@@ -240,6 +240,12 @@ export function validateIncomeStatement(data: StandardIncomeStatement): Validati
     );
     validateTotal(dataRecord, IS.NET_PROFIT, calculatedNetProfitByContinuing, errors);
 
+    const calculatedNetProfitByOwnership = safeAdd(
+        dataRecord[IS.NET_PROFIT_ATTRIBUTABLE_TO_PARENT_COMPANY],
+        dataRecord[IS.MINORITY_INTERESTS_INCOME]
+    );
+    validateTotal(dataRecord, IS.NET_PROFIT, calculatedNetProfitByOwnership, errors);
+
     return {
         isValid: errors.length === 0,
         errors,
