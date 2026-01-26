@@ -257,6 +257,17 @@ export function validateIncomeStatement(data: StandardIncomeStatement): Validati
         errors
     );
 
+    const calculatedParentOciNetOfTax = safeAdd(
+        dataRecord[IS.OCI_NON_RECLASSIFIABLE],
+        dataRecord[IS.OCI_RECLASSIFIABLE]
+    );
+    validateTotal(
+        dataRecord,
+        IS.OTHER_COMPREHENSIVE_INCOME_ATTRIBUTABLE_TO_PARENT_COMPANY,
+        calculatedParentOciNetOfTax,
+        errors
+    );
+
     return {
         isValid: errors.length === 0,
         errors,
