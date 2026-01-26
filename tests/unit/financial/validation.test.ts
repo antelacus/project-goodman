@@ -1,6 +1,10 @@
 import { describe, it, test, expect } from 'vitest';
-import { BalanceSheetSchema, type StandardBalanceSheet } from '@/lib/financial/schema';
-import { validateBalanceSheet } from '@/lib/financial/validation';
+import {
+  BalanceSheetSchema,
+  type StandardBalanceSheet,
+  type StandardIncomeStatement,
+} from '@/lib/financial/schema';
+import { validateBalanceSheet, validateIncomeStatement } from '@/lib/financial/validation';
 import { FinancialMetrics } from '@/lib/financial/metric-names';
 
 describe('balance sheet schema + validation', () => {
@@ -71,5 +75,60 @@ describe('balance sheet schema + validation', () => {
     const result = validateBalanceSheet(data as unknown as StandardBalanceSheet);
     expect(result.isValid).toBe(false);
     expect(result.errors.join('\n')).toContain(BS.TOTAL_ASSETS);
+  });
+});
+
+const baseIncomeStatement = () => {
+  const IS = FinancialMetrics.IncomeStatement;
+  return {
+    [IS.TOTAL_REVENUE]: 100,
+    [IS.REVENUE]: 60,
+    [IS.INTEREST_INCOME]: 20,
+    [IS.EARNED_PREMIUMS]: 10,
+    [IS.FEE_AND_COMMISSION_INCOME]: 10,
+
+    [IS.TOTAL_OPERATING_COSTS]: 50,
+    [IS.OPERATING_COSTS]: 30,
+    [IS.FEE_AND_COMMISSION_EXPENSES]: 5,
+    [IS.TAXES_AND_SURCHARGES]: 5,
+    [IS.SELLING_EXPENSES]: 5,
+    [IS.ADMINISTRATIVE_EXPENSES]: 5,
+    [IS.FINANCIAL_EXPENSES]: 0,
+
+    [IS.OPERATING_PROFIT]: 50,
+    [IS.ADD_NON_OPERATING_INCOME]: 0,
+    [IS.LESS_NON_OPERATING_EXPENSES]: 0,
+    [IS.TOTAL_PROFIT]: 50,
+    [IS.LESS_INCOME_TAX_EXPENSES]: 0,
+    [IS.NET_PROFIT]: 50,
+
+    [IS.NET_PROFIT_CONTINUING]: 50,
+    [IS.NET_PROFIT_DISCONTINUED]: 0,
+    [IS.NET_PROFIT_ATTRIBUTABLE_TO_PARENT_COMPANY]: 50,
+    [IS.MINORITY_INTERESTS_INCOME]: 0,
+
+    [IS.OTHER_COMPREHENSIVE_INCOME_NET_OF_TAX]: 0,
+    [IS.OTHER_COMPREHENSIVE_INCOME_ATTRIBUTABLE_TO_PARENT_COMPANY]: 0,
+    [IS.OTHER_COMPREHENSIVE_INCOME_ATTRIBUTABLE_TO_MINORITY_INTERESTS]: 0,
+    [IS.OCI_NON_RECLASSIFIABLE]: 0,
+    [IS.OCI_RECLASSIFIABLE]: 0,
+
+    [IS.TOTAL_COMPREHENSIVE_INCOME]: 50,
+    [IS.TOTAL_COMPREHENSIVE_INCOME_ATTRIBUTABLE_TO_PARENT_COMPANY]: 50,
+    [IS.TOTAL_COMPREHENSIVE_INCOME_ATTRIBUTABLE_TO_MINORITY_INTERESTS]: 0,
+  } as Record<string, number>;
+};
+
+describe('income statement validation', () => {
+  test('treats total revenue and operating costs mismatch as errors', () => {
+    const IS = FinancialMetrics.IncomeStatement;
+    const data = baseIncomeStatement();
+    data[IS.TOTAL_REVENUE] = 110; // mismatch: sum is 100
+    data[IS.TOTAL_OPERATING_COSTS] = 60; // mismatch: sum is 50
+
+    const result = validateIncomeStatement(data as unknown as StandardIncomeStatement);
+    expect(result.isValid).toBe(false);
+    expect(result.errors.join('\n')).toContain(IS.TOTAL_REVENUE);
+    expect(result.errors.join('\n')).toContain(IS.TOTAL_OPERATING_COSTS);
   });
 });
