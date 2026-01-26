@@ -234,6 +234,12 @@ export function validateIncomeStatement(data: StandardIncomeStatement): Validati
     );
     validateTotal(dataRecord, IS.NET_PROFIT, calculatedNetProfit, errors);
 
+    const calculatedNetProfitByContinuing = safeAdd(
+        dataRecord[IS.NET_PROFIT_CONTINUING],
+        dataRecord[IS.NET_PROFIT_DISCONTINUED]
+    );
+    validateTotal(dataRecord, IS.NET_PROFIT, calculatedNetProfitByContinuing, errors);
+
     return {
         isValid: errors.length === 0,
         errors,

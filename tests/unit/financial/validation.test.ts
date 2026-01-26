@@ -131,4 +131,16 @@ describe('income statement validation', () => {
     expect(result.errors.join('\n')).toContain(IS.TOTAL_REVENUE);
     expect(result.errors.join('\n')).toContain(IS.TOTAL_OPERATING_COSTS);
   });
+
+  test('validates net profit equals continuing + discontinued', () => {
+    const IS = FinancialMetrics.IncomeStatement;
+    const data = baseIncomeStatement();
+    data[IS.NET_PROFIT_CONTINUING] = 40;
+    data[IS.NET_PROFIT_DISCONTINUED] = 5;
+    data[IS.NET_PROFIT] = 50; // mismatch (45 expected)
+
+    const result = validateIncomeStatement(data as unknown as StandardIncomeStatement);
+    expect(result.isValid).toBe(false);
+    expect(result.errors.join('\n')).toContain(IS.NET_PROFIT);
+  });
 });
