@@ -13,7 +13,7 @@ export default function HelpPage() {
       {/* Hero Section */}
       <div className="mb-12 text-center">
         <h1 className="mb-4 text-4xl font-bold text-neutral-900">使用指南</h1>
-        <p className="text-neutral-600">了解 Goodman 能为您做什么</p>
+        <p className="text-neutral-600">Goodman 内置完整中国会计准则，部分财务相关法律，以及全套公司财务报表、财务报告、财务制度和公司档案。可供用户完整体验智能化财务工作流程。</p>
       </div>
 
       {/* Core Capabilities - Aligned with landing page */}
