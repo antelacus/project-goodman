@@ -45,4 +45,34 @@ describe('buildSectionAnalysisPrompt', () => {
     expect(prompt).not.toContain('公司上下文');
     expect(prompt).not.toContain('公司档案内容');
   });
+
+  it('does not include hard numeric thresholds', () => {
+    const prompt = buildSectionAnalysisPrompt(
+      'liquidity',
+      '流动性分析',
+      [],
+      [],
+      '2024',
+      '2023'
+    );
+
+    expect(prompt).not.toContain('>2');
+    expect(prompt).not.toContain('>1');
+    expect(prompt).not.toContain('40%-60%');
+    expect(prompt).not.toContain('>3');
+  });
+
+  it('adds 2024 cause guidance', () => {
+    const prompt = buildSectionAnalysisPrompt(
+      'liquidity',
+      '流动性分析',
+      [],
+      [],
+      '2024',
+      '2023'
+    );
+
+    expect(prompt).toContain('2024');
+    expect(prompt).toContain('原因');
+  });
 });
