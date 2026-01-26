@@ -127,9 +127,9 @@ export const presetFunctions: PresetFunction[] = [
     category: 'liquidity',
     formula: 'current_assets / current_liabilities',
     requiredInputs: [FinancialMetrics.BalanceSheet.TOTAL_CURRENT_ASSETS, FinancialMetrics.BalanceSheet.TOTAL_CURRENT_LIABILITIES],
-    unit: '倍',
-    interpretation: '流动比率衡量企业短期偿债能力。一般认为2:1较为合适，表明企业有足够的流动资产来偿还短期债务。',
-    formulaDisplay: `流动比率 = ${FinancialMetrics.BalanceSheet.TOTAL_CURRENT_ASSETS} / ${FinancialMetrics.BalanceSheet.TOTAL_CURRENT_LIABILITIES}`,
+    unit: '%',
+    interpretation: '流动比率衡量企业短期偿债能力，反映流动资产对短期负债的覆盖水平。',
+    formulaDisplay: `流动比率 = ${FinancialMetrics.BalanceSheet.TOTAL_CURRENT_ASSETS} / ${FinancialMetrics.BalanceSheet.TOTAL_CURRENT_LIABILITIES} × 100%`,
     validationRules: {
       min: 0,
       warn_if: {
@@ -150,7 +150,7 @@ export const presetFunctions: PresetFunction[] = [
 
       return {
         value,
-        formatted: formatNumber(value, 2) + '倍',
+        formatted: formatPercentage(value),
         warnings: warnings.length > 0 ? warnings : undefined,
       };
     },
@@ -163,9 +163,9 @@ export const presetFunctions: PresetFunction[] = [
     category: 'liquidity',
     formula: '(current_assets - inventory) / current_liabilities',
     requiredInputs: [FinancialMetrics.BalanceSheet.TOTAL_CURRENT_ASSETS, FinancialMetrics.BalanceSheet.INVENTORY, FinancialMetrics.BalanceSheet.TOTAL_CURRENT_LIABILITIES],
-    unit: '倍',
-    interpretation: '速动比率更严格地衡量短期偿债能力，剔除了变现能力较弱的存货。一般认为1:1较为合适。',
-    formulaDisplay: `速动比率 = (${FinancialMetrics.BalanceSheet.TOTAL_CURRENT_ASSETS} - ${FinancialMetrics.BalanceSheet.INVENTORY}) / ${FinancialMetrics.BalanceSheet.TOTAL_CURRENT_LIABILITIES}`,
+    unit: '%',
+    interpretation: '速动比率更严格地衡量短期偿债能力，剔除了变现能力较弱的存货。',
+    formulaDisplay: `速动比率 = (${FinancialMetrics.BalanceSheet.TOTAL_CURRENT_ASSETS} - ${FinancialMetrics.BalanceSheet.INVENTORY}) / ${FinancialMetrics.BalanceSheet.TOTAL_CURRENT_LIABILITIES} × 100%`,
     validationRules: {
       min: 0,
       warn_if: {
@@ -187,7 +187,7 @@ export const presetFunctions: PresetFunction[] = [
 
       return {
         value,
-        formatted: formatNumber(value, 2) + '倍',
+        formatted: formatPercentage(value),
         warnings: warnings.length > 0 ? warnings : undefined,
       };
     },
@@ -200,9 +200,9 @@ export const presetFunctions: PresetFunction[] = [
     category: 'liquidity',
     formula: 'cash / current_liabilities',
     requiredInputs: [FinancialMetrics.BalanceSheet.MONETARY_FUNDS, FinancialMetrics.BalanceSheet.TOTAL_CURRENT_LIABILITIES],
-    unit: '倍',
+    unit: '%',
     interpretation: '现金比率衡量企业最直接的偿债能力，反映企业用现金偿还短期债务的能力。',
-    formulaDisplay: `现金比率 = ${FinancialMetrics.BalanceSheet.MONETARY_FUNDS} / ${FinancialMetrics.BalanceSheet.TOTAL_CURRENT_LIABILITIES}`,
+    formulaDisplay: `现金比率 = ${FinancialMetrics.BalanceSheet.MONETARY_FUNDS} / ${FinancialMetrics.BalanceSheet.TOTAL_CURRENT_LIABILITIES} × 100%`,
     validationRules: {
       min: 0,
     },
@@ -219,7 +219,7 @@ export const presetFunctions: PresetFunction[] = [
 
       return {
         value,
-        formatted: formatNumber(value, 2) + '倍',
+        formatted: formatPercentage(value),
         warnings: warnings.length > 0 ? warnings : undefined,
       };
     },
@@ -237,7 +237,7 @@ export const presetFunctions: PresetFunction[] = [
     formula: 'total_liabilities / total_assets',
     requiredInputs: [FinancialMetrics.BalanceSheet.TOTAL_LIABILITIES, FinancialMetrics.BalanceSheet.TOTAL_ASSETS],
     unit: '%',
-    interpretation: '资产负债率反映企业资产中有多少是通过负债筹集的。一般认为50%-70%比较合理，过高可能存在财务风险。',
+    interpretation: '资产负债率反映企业资产中有多少是通过负债筹集的，体现财务杠杆水平。',
     formulaDisplay: `资产负债率 = ${FinancialMetrics.BalanceSheet.TOTAL_LIABILITIES} / ${FinancialMetrics.BalanceSheet.TOTAL_ASSETS} × 100%`,
     validationRules: {
       min: 0,
@@ -305,9 +305,9 @@ export const presetFunctions: PresetFunction[] = [
     category: 'solvency',
     formula: 'total_assets / shareholders_equity',
     requiredInputs: [FinancialMetrics.BalanceSheet.TOTAL_ASSETS, FinancialMetrics.BalanceSheet.TOTAL_OWNERS_EQUITY],
-    unit: '倍',
+    unit: '%',
     interpretation: '权益乘数反映企业财务杠杆程度，数值越大说明股东投入的资本在资产中所占比重越小。',
-    formulaDisplay: `权益乘数 = ${FinancialMetrics.BalanceSheet.TOTAL_ASSETS} / ${FinancialMetrics.BalanceSheet.TOTAL_OWNERS_EQUITY}`,
+    formulaDisplay: `权益乘数 = ${FinancialMetrics.BalanceSheet.TOTAL_ASSETS} / ${FinancialMetrics.BalanceSheet.TOTAL_OWNERS_EQUITY} × 100%`,
     validationRules: {
       min: 1,
     },
@@ -324,7 +324,7 @@ export const presetFunctions: PresetFunction[] = [
 
       return {
         value,
-        formatted: formatNumber(value, 2) + '倍',
+        formatted: formatPercentage(value),
         warnings: warnings.length > 0 ? warnings : undefined,
       };
     },
@@ -648,9 +648,9 @@ export const presetFunctions: PresetFunction[] = [
     category: 'liquidity',
     formula: 'operating_cash_flow / current_liabilities',
     requiredInputs: [FinancialMetrics.CashFlow.NET_CASH_FLOWS_FROM_OPERATING_ACTIVITIES, FinancialMetrics.BalanceSheet.TOTAL_CURRENT_LIABILITIES],
-    unit: '倍',
+    unit: '%',
     interpretation: '现金流量比率反映企业经营活动产生的现金流量偿还短期债务的能力。比率越高，短期偿债能力越强。',
-    formulaDisplay: `现金流量比率 = ${FinancialMetrics.CashFlow.NET_CASH_FLOWS_FROM_OPERATING_ACTIVITIES} / ${FinancialMetrics.BalanceSheet.TOTAL_CURRENT_LIABILITIES}`,
+    formulaDisplay: `现金流量比率 = ${FinancialMetrics.CashFlow.NET_CASH_FLOWS_FROM_OPERATING_ACTIVITIES} / ${FinancialMetrics.BalanceSheet.TOTAL_CURRENT_LIABILITIES} × 100%`,
     validationRules: {
       warn_if: {
         below: 0.4,
@@ -671,7 +671,7 @@ export const presetFunctions: PresetFunction[] = [
 
       return {
         value,
-        formatted: formatNumber(value, 2) + '倍',
+        formatted: formatPercentage(value),
         warnings: warnings.length > 0 ? warnings : undefined,
       };
     },
@@ -728,9 +728,9 @@ export const presetFunctions: PresetFunction[] = [
     category: 'solvency',
     formula: 'EBIT / interest_expense (EBIT = total_profit + interest_expense)',
     requiredInputs: [FinancialMetrics.IncomeStatement.TOTAL_PROFIT, FinancialMetrics.IncomeStatement.INTEREST_EXPENSES],
-    unit: '倍',
-    interpretation: '利息保障倍数反映企业用息税前利润支付利息的能力。比率越高，企业支付利息的能力越强。一般认为该比率应大于1。',
-    formulaDisplay: `利息保障倍数 = (${FinancialMetrics.IncomeStatement.TOTAL_PROFIT} + ${FinancialMetrics.IncomeStatement.INTEREST_EXPENSES}) / ${FinancialMetrics.IncomeStatement.INTEREST_EXPENSES}`,
+    unit: '%',
+    interpretation: '利息保障倍数反映企业用息税前利润支付利息的能力，比率越高说明支付能力越强。',
+    formulaDisplay: `利息保障倍数 = (${FinancialMetrics.IncomeStatement.TOTAL_PROFIT} + ${FinancialMetrics.IncomeStatement.INTEREST_EXPENSES}) / ${FinancialMetrics.IncomeStatement.INTEREST_EXPENSES} × 100%`,
     validationRules: {
       warn_if: {
         below: 1.5,
@@ -753,7 +753,7 @@ export const presetFunctions: PresetFunction[] = [
 
       return {
         value,
-        formatted: formatNumber(value, 2) + '倍',
+        formatted: formatPercentage(value),
         warnings: warnings.length > 0 ? warnings : undefined,
       };
     },
@@ -766,9 +766,9 @@ export const presetFunctions: PresetFunction[] = [
     category: 'solvency',
     formula: 'operating_cash_flow / interest_expense',
     requiredInputs: [FinancialMetrics.CashFlow.NET_CASH_FLOWS_FROM_OPERATING_ACTIVITIES, FinancialMetrics.IncomeStatement.INTEREST_EXPENSES],
-    unit: '倍',
+    unit: '%',
     interpretation: '现金流量利息保障倍数反映企业用经营现金流支付利息的能力。比率越高，企业实际支付利息的能力越强。',
-    formulaDisplay: `现金流量利息保障倍数 = ${FinancialMetrics.CashFlow.NET_CASH_FLOWS_FROM_OPERATING_ACTIVITIES} / ${FinancialMetrics.IncomeStatement.INTEREST_EXPENSES}`,
+    formulaDisplay: `现金流量利息保障倍数 = ${FinancialMetrics.CashFlow.NET_CASH_FLOWS_FROM_OPERATING_ACTIVITIES} / ${FinancialMetrics.IncomeStatement.INTEREST_EXPENSES} × 100%`,
     validationRules: {
       warn_if: {
         below: 2,
@@ -789,7 +789,7 @@ export const presetFunctions: PresetFunction[] = [
 
       return {
         value,
-        formatted: formatNumber(value, 2) + '倍',
+        formatted: formatPercentage(value),
         warnings: warnings.length > 0 ? warnings : undefined,
       };
     },
