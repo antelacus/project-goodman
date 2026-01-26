@@ -159,13 +159,13 @@ export function getMetricDisplayName(toolName: string): string {
  * Metric unit types
  */
 export const METRIC_UNITS: Record<string, string> = {
-  // Ratios (倍)
-  current_ratio: '倍',
-  quick_ratio: '倍',
-  cash_ratio: '倍',
-  equity_multiplier: '倍',
-  interest_coverage_ratio: '倍',
-  cash_flow_interest_coverage: '倍',
+  // Ratios (统一百分比)
+  current_ratio: '%',
+  quick_ratio: '%',
+  cash_ratio: '%',
+  equity_multiplier: '%',
+  interest_coverage_ratio: '%',
+  cash_flow_interest_coverage: '%',
   asset_turnover: '次',
   inventory_turnover: '次',
   receivables_turnover: '次',
@@ -199,23 +199,23 @@ export function formatMetricValue(toolName: string, value: number): string {
   if (unit === '元') {
     // Format as currency with thousands separator
     return value >= 10000
-      ? `${(value / 10000).toFixed(2)}万元`
-      : `${value.toFixed(2)}元`;
+      ? `${(value / 10000).toLocaleString('zh-CN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}万元`
+      : `${value.toLocaleString('zh-CN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}元`;
   }
 
   if (unit === '%') {
-    return `${value.toFixed(2)}%`;
+    return `${(value * 100).toLocaleString('zh-CN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}%`;
   }
 
   if (unit === '天') {
-    return `${value.toFixed(0)}天`;
+    return `${value.toLocaleString('zh-CN', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}天`;
   }
 
-  if (unit === '倍' || unit === '次') {
-    return `${value.toFixed(2)}${unit}`;
+  if (unit === '次') {
+    return `${value.toLocaleString('zh-CN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}${unit}`;
   }
 
-  return `${value.toFixed(2)}`;
+  return `${value.toLocaleString('zh-CN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 }
 
 /**
