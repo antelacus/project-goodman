@@ -297,6 +297,17 @@ export function validateIncomeStatement(data: StandardIncomeStatement): Validati
         errors
     );
 
+    const calculatedTotalComprehensiveIncome = safeAdd(
+        dataRecord[IS.NET_PROFIT],
+        dataRecord[IS.OTHER_COMPREHENSIVE_INCOME_NET_OF_TAX]
+    );
+    validateTotal(
+        dataRecord,
+        IS.TOTAL_COMPREHENSIVE_INCOME,
+        calculatedTotalComprehensiveIncome,
+        errors
+    );
+
     return {
         isValid: errors.length === 0,
         errors,
