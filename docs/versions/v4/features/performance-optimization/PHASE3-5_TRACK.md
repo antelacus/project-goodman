@@ -237,6 +237,94 @@
 
 ---
 
+### I. Agent 工具测试与问题修复（计划外）
+
+> 通过 70 题 Agent 测试脚本 (`tests/agent-tool-test.ts`) 进行多轮测试，发现并修复问题。
+
+#### 第一轮测试 (2026-01-23)
+
+**测试发现**: 见 `docs/manual-test-log/agent-test-2026-01-23.md`
+
+主要问题：
+1. 财务指标名称不一致导致取数失败（Q17/Q18/Q21/Q43/Q49/Q62/Q70）
+2. 过程日志中的公式展示误导（Q31/Q39/Q51/Q52）
+3. 文档/法规搜索输入校验失败（Q55–Q60）
+4. 利息保障倍数类指标与财务费用负值处理不明确（Q40/Q41）
+5. "现金流状况"类问题的响应不符合期望（Q63）
+6. 文档搜索问题被动追问而非直接检索（Q57）
+
+**实施计划**: 见 `docs/plans/2026-01-25-v4-6-manual-test-fixes.md`
+
+主要修复：
+- [x] Task 1: 集中管理模型/Prompt/参数 → `src/lib/ai/config.ts`
+- [x] Task 2: 新财务科目注册表 + 别名归一化 → `src/lib/financial/metric-registry.ts`
+- [x] Task 3-4: 统一 AI 抽取 schema 与校验规则
+- [x] Task 5: 预设函数更新（禁用阈值提示）
+- [x] Task 6: 查询工具别名归一化 + 原始指标名回显
+- [x] Task 7: 搜索工具输入容错（year/limit coercion）
+- [x] Task 8: 过程日志公式展示修复
+- [x] Task 9: 统一提示词约束（现金流状况 + 文档搜索默认先检索）
+- [x] Task 10: 严格校验失败拒绝入库
+- [x] Task 11: 数据清理（Supabase）
+
+#### 第二轮测试 (2026-01-26)
+
+**实施计划**: 见 `docs/plans/2026-01-26-financial-validation-rules.md`
+
+为财务校验新增并强化 16 条规则（含利润表净利润以下与现金流投资/筹资小计），全部作为阻断性错误：
+
+- [x] Task 1: 资产总计=负债和所有者权益总计
+- [x] Task 2: 营业总收入/营业总成本由 warning 改为 error
+- [x] Task 3: 净利润拆分校验（持续经营+终止经营）
+- [x] Task 4: 净利润归属校验（母公司+少数股东）
+- [x] Task 5: 其他综合收益拆分校验
+- [x] Task 6: 母公司其他综合收益拆分校验
+- [x] Task 7: 不可重分类其他综合收益子项加总校验
+- [x] Task 8: 可重分类其他综合收益子项加总校验
+- [x] Task 9: 综合收益总额公式校验
+- [x] Task 10: 综合收益归属校验
+- [x] Task 11: 母公司综合收益公式校验
+- [x] Task 12: 少数股东综合收益公式校验
+- [x] Task 13-14: 投资活动现金流入/流出小计
+- [x] Task 15-16: 筹资活动现金流入/流出小计
+
+#### 第三轮测试 (2026-01-26)
+
+**测试发现**: 见 `docs/manual-test-log/agent-test-2026-01-26.md`
+
+#### I1: 营业成本查询失败 (Q18)
+
+- [x] 问题：LLM 传递部分 key `营业总成本-营业成本` 未被识别
+- [x] 修复：在 `metric-registry.ts` 的 `IS.OPERATING_COSTS` 添加别名 `'营业总成本-营业成本'`
+- [x] 验证：Q18 测试通过
+
+#### I2: 文档搜索失败 (Q55-57)
+
+- [x] 问题：`search_documents_hybrid` 函数报错 `operator does not exist: extensions.vector <=> extensions.vector`
+- [x] 根因：函数 `search_path` 未包含 `extensions` schema（pgvector 操作符所在位置）
+- [x] 修复：创建迁移 `20260126000000_fix_search_documents_hybrid_search_path.sql`，添加 `SET search_path TO 'public', 'extensions'`
+- [x] 验证：Q55-57 测试通过
+
+#### I3: 法规搜索优先级问题 (Q59)
+
+- [x] 问题：Agent 未优先搜索公司相关文档，直接搜索通用法规
+- [x] 修复：在 `config.ts` 系统提示词中添加搜索优先级指导
+- [x] 验证：Q59 测试通过
+
+#### I4: Agent 要求澄清公司名称 (Q66-67)
+
+- [x] 问题：Agent 询问"请问您需要查询的是哪家公司？"
+- [x] 修复：在 `config.ts` 系统提示词中添加 Context 区块，明确服务于单一公司，并添加约束"禁止询问公司名称"
+- [x] 验证：Q66-67 测试通过
+
+#### I5: 毛利率查询未要求年份澄清 (Q70)
+
+- [x] 问题：Agent 直接返回 2024 年数据，未询问用户想查询哪一年
+- [x] 修复：在 `config.ts` 系统提示词中添加年份澄清要求
+- [x] 验证：Q70 测试通过
+
+---
+
 ## Phase 5: 综合测试清单
 
 - [ ] ESLint 通过（`npm run lint`）
@@ -274,4 +362,22 @@
 - npm run test -- --run tests/unit/help/help-card-layout.test.ts ✅
 - npm run test -- --run tests/unit/documents/documents-title-login.test.ts ✅
 - npm run test -- --run tests/unit/storage/storage-mime-types.test.ts ✅
+```
+
+```
+状态: ✅ Agent 手动测试问题修复完成（第三轮）
+时间: 2026-01-26
+环境: 本地 sandbox + Supabase 生产数据库
+范围:
+- Q18: 营业成本查询失败 → 添加 metric alias
+- Q55-57: 文档搜索失败 → 修复 search_documents_hybrid search_path
+- Q59: 法规搜索优先级 → 更新系统提示词
+- Q66-67: Agent 询问公司名称 → 更新系统提示词
+- Q70: 毛利率未询问年份 → 更新系统提示词
+测试:
+- tests/agent-tool-test.ts Q18 ✅
+- tests/agent-tool-test.ts Q55-57 ✅
+- tests/agent-tool-test.ts Q59 ✅
+- tests/agent-tool-test.ts Q66-67 ✅
+- tests/agent-tool-test.ts Q70 ✅
 ```
