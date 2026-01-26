@@ -182,4 +182,21 @@ describe('income statement validation', () => {
       IS.OTHER_COMPREHENSIVE_INCOME_ATTRIBUTABLE_TO_PARENT_COMPANY
     );
   });
+
+  test('validates OCI non-reclassifiable subtotal equals its components', () => {
+    const IS = FinancialMetrics.IncomeStatement;
+    const data = baseIncomeStatement();
+    data[IS.OCI_REMEASUREMENT_BENEFIT_PLANS] = 1;
+    data[IS.OCI_EQUITY_METHOD_NON_RECLASS] = 2;
+    data[IS.OCI_OTHER_EQUITY_TOOL_FAIR_VALUE] = 3;
+    data[IS.OCI_OWN_CREDIT_RISK] = 4;
+    data[IS.OCI_NON_RECLASSIFIABLE] = 20; // mismatch (10 expected)
+    data[IS.OTHER_COMPREHENSIVE_INCOME_ATTRIBUTABLE_TO_PARENT_COMPANY] = 20;
+    data[IS.OTHER_COMPREHENSIVE_INCOME_NET_OF_TAX] = 20;
+    data[IS.OTHER_COMPREHENSIVE_INCOME_ATTRIBUTABLE_TO_MINORITY_INTERESTS] = 0;
+
+    const result = validateIncomeStatement(data as unknown as StandardIncomeStatement);
+    expect(result.isValid).toBe(false);
+    expect(result.errors.join('\n')).toContain(IS.OCI_NON_RECLASSIFIABLE);
+  });
 });
