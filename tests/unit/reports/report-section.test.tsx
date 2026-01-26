@@ -37,4 +37,38 @@ describe('ReportSection', () => {
 
     expect(html).toContain('306.48%');
   });
+
+  it('keeps report tables wide and numeric cells on one line', () => {
+    const section: ReportSectionType = {
+      id: 'liquidity',
+      title: '流动性分析',
+      metrics: [
+        {
+          name: '流动比率',
+          toolName: 'current_ratio',
+          value: 2.2733,
+          formatted: '227.33%',
+          previousValue: 3.064837,
+          change: '-25.83%',
+        },
+      ],
+      analysis: '测试分析',
+      sourceDocuments: [],
+    };
+
+    const html = renderToStaticMarkup(
+      React.createElement(ReportSection, {
+        section,
+        index: 0,
+        isExpanded: true,
+        onToggle: () => {},
+        hasComparison: true,
+        comparisonYear: '2023',
+        primaryYear: '2024',
+      })
+    );
+
+    expect(html).toContain('min-w-[640px]');
+    expect(html).toContain('whitespace-nowrap');
+  });
 });
