@@ -319,6 +319,17 @@ export function validateIncomeStatement(data: StandardIncomeStatement): Validati
         errors
     );
 
+    const calculatedParentComprehensiveIncome = safeAdd(
+        dataRecord[IS.NET_PROFIT_ATTRIBUTABLE_TO_PARENT_COMPANY],
+        dataRecord[IS.OTHER_COMPREHENSIVE_INCOME_ATTRIBUTABLE_TO_PARENT_COMPANY]
+    );
+    validateTotal(
+        dataRecord,
+        IS.TOTAL_COMPREHENSIVE_INCOME_ATTRIBUTABLE_TO_PARENT_COMPANY,
+        calculatedParentComprehensiveIncome,
+        errors
+    );
+
     return {
         isValid: errors.length === 0,
         errors,
