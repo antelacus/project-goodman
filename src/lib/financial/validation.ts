@@ -441,6 +441,18 @@ export function validateCashFlow(data: StandardCashFlow): ValidationResult {
     );
     validateTotal(dataRecord, CF.NET_CASH_FLOWS_FROM_INVESTING_ACTIVITIES, calculatedNetInvesting, errors);
 
+    const calculatedFinancingInflow = safeAdd(
+        dataRecord[CF.CASH_RECEIVED_FROM_CAPITAL_CONTRIBUTIONS],
+        dataRecord[CF.CASH_RECEIVED_FROM_BORROWINGS],
+        dataRecord[CF.CASH_RECEIVED_RELATING_TO_OTHER_FINANCING_ACTIVITIES]
+    );
+    validateTotal(
+        dataRecord,
+        CF.SUBTOTAL_OF_CASH_INFLOWS_FROM_FINANCING_ACTIVITIES,
+        calculatedFinancingInflow,
+        errors
+    );
+
     const calculatedNetFinancing = safeAdd(
         getNumberValue(dataRecord, CF.SUBTOTAL_OF_CASH_INFLOWS_FROM_FINANCING_ACTIVITIES),
         -(getNumberValue(dataRecord, CF.SUBTOTAL_OF_CASH_OUTFLOWS_FROM_FINANCING_ACTIVITIES) ?? 0)

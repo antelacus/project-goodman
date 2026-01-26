@@ -357,4 +357,17 @@ describe('cash flow validation', () => {
       CF.SUBTOTAL_OF_CASH_OUTFLOWS_FROM_INVESTING_ACTIVITIES
     );
   });
+
+  test('validates financing cash inflow subtotal', () => {
+    const CF = FinancialMetrics.CashFlow;
+    const data = baseCashFlow();
+    data[CF.CASH_RECEIVED_FROM_CAPITAL_CONTRIBUTIONS] = 8;
+    data[CF.SUBTOTAL_OF_CASH_INFLOWS_FROM_FINANCING_ACTIVITIES] = 0; // mismatch
+
+    const result = validateCashFlow(data as unknown as StandardCashFlow);
+    expect(result.isValid).toBe(false);
+    expect(result.errors.join('\n')).toContain(
+      CF.SUBTOTAL_OF_CASH_INFLOWS_FROM_FINANCING_ACTIVITIES
+    );
+  });
 });
