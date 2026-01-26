@@ -155,4 +155,16 @@ describe('income statement validation', () => {
     expect(result.isValid).toBe(false);
     expect(result.errors.join('\n')).toContain(IS.NET_PROFIT);
   });
+
+  test('validates OCI net of tax equals parent + minority', () => {
+    const IS = FinancialMetrics.IncomeStatement;
+    const data = baseIncomeStatement();
+    data[IS.OTHER_COMPREHENSIVE_INCOME_ATTRIBUTABLE_TO_PARENT_COMPANY] = 6;
+    data[IS.OTHER_COMPREHENSIVE_INCOME_ATTRIBUTABLE_TO_MINORITY_INTERESTS] = 3;
+    data[IS.OTHER_COMPREHENSIVE_INCOME_NET_OF_TAX] = 12; // mismatch (9 expected)
+
+    const result = validateIncomeStatement(data as unknown as StandardIncomeStatement);
+    expect(result.isValid).toBe(false);
+    expect(result.errors.join('\n')).toContain(IS.OTHER_COMPREHENSIVE_INCOME_NET_OF_TAX);
+  });
 });
