@@ -3,8 +3,13 @@ import {
   BalanceSheetSchema,
   type StandardBalanceSheet,
   type StandardIncomeStatement,
+  type StandardCashFlow,
 } from '@/lib/financial/schema';
-import { validateBalanceSheet, validateIncomeStatement } from '@/lib/financial/validation';
+import {
+  validateBalanceSheet,
+  validateCashFlow,
+  validateIncomeStatement,
+} from '@/lib/financial/validation';
 import { FinancialMetrics } from '@/lib/financial/metric-names';
 
 describe('balance sheet schema + validation', () => {
@@ -304,6 +309,39 @@ describe('income statement validation', () => {
     expect(result.isValid).toBe(false);
     expect(result.errors.join('\n')).toContain(
       IS.TOTAL_COMPREHENSIVE_INCOME_ATTRIBUTABLE_TO_MINORITY_INTERESTS
+    );
+  });
+});
+
+const baseCashFlow = () => {
+  const CF = FinancialMetrics.CashFlow;
+  return {
+    [CF.SUBTOTAL_OF_CASH_INFLOWS_FROM_OPERATING_ACTIVITIES]: 0,
+    [CF.SUBTOTAL_OF_CASH_OUTFLOWS_FROM_OPERATING_ACTIVITIES]: 0,
+    [CF.NET_CASH_FLOWS_FROM_OPERATING_ACTIVITIES]: 0,
+    [CF.SUBTOTAL_OF_CASH_INFLOWS_FROM_INVESTING_ACTIVITIES]: 0,
+    [CF.SUBTOTAL_OF_CASH_OUTFLOWS_FROM_INVESTING_ACTIVITIES]: 0,
+    [CF.NET_CASH_FLOWS_FROM_INVESTING_ACTIVITIES]: 0,
+    [CF.SUBTOTAL_OF_CASH_INFLOWS_FROM_FINANCING_ACTIVITIES]: 0,
+    [CF.SUBTOTAL_OF_CASH_OUTFLOWS_FROM_FINANCING_ACTIVITIES]: 0,
+    [CF.NET_CASH_FLOWS_FROM_FINANCING_ACTIVITIES]: 0,
+    [CF.NET_INCREASE_IN_CASH_AND_CASH_EQUIVALENTS]: 0,
+    [CF.CASH_AND_CASH_EQUIVALENTS_AT_END_OF_PERIOD]: 0,
+    [CF.ADD_CASH_AND_CASH_EQUIVALENTS_AT_BEGINNING_OF_PERIOD]: 0,
+  } as Record<string, number>;
+};
+
+describe('cash flow validation', () => {
+  test('validates investing cash inflow subtotal', () => {
+    const CF = FinancialMetrics.CashFlow;
+    const data = baseCashFlow();
+    data[CF.CASH_RECEIVED_FROM_DISPOSAL_OF_INVESTMENTS] = 10;
+    data[CF.SUBTOTAL_OF_CASH_INFLOWS_FROM_INVESTING_ACTIVITIES] = 0; // mismatch
+
+    const result = validateCashFlow(data as unknown as StandardCashFlow);
+    expect(result.isValid).toBe(false);
+    expect(result.errors.join('\n')).toContain(
+      CF.SUBTOTAL_OF_CASH_INFLOWS_FROM_INVESTING_ACTIVITIES
     );
   });
 });

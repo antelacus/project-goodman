@@ -403,6 +403,22 @@ export function validateCashFlow(data: StandardCashFlow): ValidationResult {
     validateTotal(dataRecord, CF.NET_CASH_FLOWS_FROM_OPERATING_ACTIVITIES, calculatedNetOperating, errors);
 
     // 2. Investing Activities
+    const calculatedInvestingInflow = safeAdd(
+        dataRecord[CF.CASH_RECEIVED_FROM_DISPOSAL_OF_INVESTMENTS],
+        dataRecord[CF.CASH_RECEIVED_FROM_RETURNS_ON_INVESTMENTS],
+        dataRecord[
+            CF.NET_CASH_RECEIVED_FROM_DISPOSAL_OF_FIXED_ASSETS_INTANGIBLE_ASSETS_AND_OTHER_LONG_TERM_ASSETS
+        ],
+        dataRecord[CF.NET_CASH_RECEIVED_FROM_DISPOSAL_OF_SUBSIDIARIES_AND_OTHER_BUSINESS_UNITS],
+        dataRecord[CF.CASH_RECEIVED_RELATING_TO_OTHER_INVESTING_ACTIVITIES]
+    );
+    validateTotal(
+        dataRecord,
+        CF.SUBTOTAL_OF_CASH_INFLOWS_FROM_INVESTING_ACTIVITIES,
+        calculatedInvestingInflow,
+        errors
+    );
+
     const calculatedNetInvesting = safeAdd(
         getNumberValue(dataRecord, CF.SUBTOTAL_OF_CASH_INFLOWS_FROM_INVESTING_ACTIVITIES),
         -(getNumberValue(dataRecord, CF.SUBTOTAL_OF_CASH_OUTFLOWS_FROM_INVESTING_ACTIVITIES) ?? 0)
