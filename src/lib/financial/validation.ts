@@ -330,6 +330,17 @@ export function validateIncomeStatement(data: StandardIncomeStatement): Validati
         errors
     );
 
+    const calculatedMinorityComprehensiveIncome = safeAdd(
+        dataRecord[IS.MINORITY_INTERESTS_INCOME],
+        dataRecord[IS.OTHER_COMPREHENSIVE_INCOME_ATTRIBUTABLE_TO_MINORITY_INTERESTS]
+    );
+    validateTotal(
+        dataRecord,
+        IS.TOTAL_COMPREHENSIVE_INCOME_ATTRIBUTABLE_TO_MINORITY_INTERESTS,
+        calculatedMinorityComprehensiveIncome,
+        errors
+    );
+
     return {
         isValid: errors.length === 0,
         errors,
