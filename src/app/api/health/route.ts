@@ -64,7 +64,7 @@ export async function GET(): Promise<NextResponse<HealthCheckResult>> {
   return NextResponse.json(
     {
       status,
-      version: process.env.npm_package_version || '4.3.0',
+      version: process.env.NEXT_PUBLIC_APP_VERSION || 'unknown',
       timestamp: new Date().toISOString(),
       checks,
     },

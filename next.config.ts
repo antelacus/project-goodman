@@ -1,5 +1,6 @@
 import type { NextConfig } from "next";
 import bundleAnalyzer from '@next/bundle-analyzer';
+import packageJson from './package.json';
 
 const withBundleAnalyzer = bundleAnalyzer({
   enabled: process.env.ANALYZE === 'true',
@@ -48,6 +49,10 @@ const securityHeaders = [
 
 const nextConfig: NextConfig = {
   output: 'standalone',
+  // Inject version from package.json at build time
+  env: {
+    NEXT_PUBLIC_APP_VERSION: packageJson.version,
+  },
   // Externalize @sentry/node to prevent webpack bundling Node.js-specific modules
   serverExternalPackages: ['@sentry/node', '@sentry/node-core'],
   // V3.10: instrumentation.ts is used for cleanup scheduler and admin init
