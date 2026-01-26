@@ -3,6 +3,7 @@
 import React from 'react';
 import { ChevronDown, ChevronRight, FileText, TrendingUp, TrendingDown, Minus } from 'lucide-react';
 import type { ReportSection as ReportSectionType, ReportMetric } from '@/types/report';
+import { formatMetricValue } from '@/lib/workflows/report/constants';
 
 interface ReportSectionProps {
   section: ReportSectionType;
@@ -174,17 +175,9 @@ const MetricRow: React.FC<MetricRowProps> = ({ metric, hasComparison, isOdd }) =
  */
 function formatPreviousValue(metric: ReportMetric): string {
   if (metric.previousValue === undefined) return '-';
+  if (typeof metric.previousValue !== 'number') return String(metric.previousValue);
 
-  // Extract the unit/suffix from formatted value
-  const match = metric.formatted.match(/[\u4e00-\u9fa5%]+$/);
-  const suffix = match ? match[0] : '';
-
-  // Format the number
-  const formatted = typeof metric.previousValue === 'number'
-    ? metric.previousValue.toFixed(2)
-    : String(metric.previousValue);
-
-  return formatted + suffix;
+  return formatMetricValue(metric.toolName, metric.previousValue);
 }
 
 /**

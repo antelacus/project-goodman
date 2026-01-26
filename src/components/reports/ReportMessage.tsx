@@ -26,9 +26,9 @@ export const ReportMessage: React.FC<ReportMessageProps> = ({
   savedDocxUrl,
   savedReportId,
 }) => {
-  // Track which sections are expanded (first section expanded by default)
+  // Track which sections are expanded (all collapsed by default)
   const [expandedSections, setExpandedSections] = useState<Set<string>>(
-    new Set([report.sections[0]?.id])
+    new Set()
   );
 
   // Toggle section expansion
