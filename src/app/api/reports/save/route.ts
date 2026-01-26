@@ -6,7 +6,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { createServerSupabaseClient, type Json } from '@/lib/database';
+import { createServerSupabaseClient, type InsertTables, type Json } from '@/lib/database';
 import {
   ensureSession,
   generateRequestId,
@@ -67,30 +67,52 @@ export async function POST(req: NextRequest) {
     // Insert report into database
     const supabase = createServerSupabaseClient();
 
-    const { data: insertedReport, error: insertError } = await supabase
+    const baseInsertPayload: InsertTables<'reports'> = {
+      owner_id: ownerId,
+      owner_type: ownerType,
+      title: reportContent.title,
+      report_type: 'comprehensive_financial',
+      year,
+      comparison_year: comparisonYear || null,
+      content: reportContent as unknown as Json,
+      summary_text: summaryText,
+      generation_time_ms: generationTimeMs ?? null,
+      expires_at: expiresAt,
+    };
+
+    const insertPayload: InsertTables<'reports'> = {
+      ...baseInsertPayload,
+      docx_storage_path: null,
+    };
+
+    let { data: insertedReport, error: insertError } = await supabase
       .from('reports')
-      .insert({
-        owner_id: ownerId,
-        owner_type: ownerType,
-        title: reportContent.title,
-        report_type: 'comprehensive_financial',
-        year,
-        comparison_year: comparisonYear || null,
-        content: reportContent as unknown as Json,
-        summary_text: summaryText,
-        docx_storage_path: null, // Will be set when DOCX is generated
-        generation_time_ms: generationTimeMs ?? null,
-        expires_at: expiresAt,
-      })
+      .insert(insertPayload)
       .select('id')
       .single();
+
+    if (
+      insertError?.code === 'PGRST204'
+      && insertError.message?.includes('docx_storage_path')
+    ) {
+      const fallbackResult = await supabase
+        .from('reports')
+        .insert(baseInsertPayload)
+        .select('id')
+        .single();
+      insertedReport = fallbackResult.data;
+      insertError = fallbackResult.error;
+    }
 
     if (insertError) {
       console.error('[ReportSave] Insert error:', insertError);
       throw new Error(`保存报告失败: ${insertError.message}`);
     }
 
-    const reportId = insertedReport.id;
+    const reportId = insertedReport?.id;
+    if (!reportId) {
+      throw new Error('保存报告失败: 未获取报告编号');
+    }
 
     // Generate DOCX and upload to storage
     let docxUrl: string | null = null;

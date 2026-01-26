@@ -788,7 +788,7 @@ const METRICS: MetricDefinition[] = [
     key: '利润表-营业总成本-营业成本',
     label: '营业成本',
     table: 'income_statement',
-    aliases: ['其中：营业成本', '营业成本'],
+    aliases: ['其中：营业成本', '营业成本', '营业总成本-营业成本'],
   },
   {
     id: 'IS.FEE_AND_COMMISSION_EXPENSES',

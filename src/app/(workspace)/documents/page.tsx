@@ -687,6 +687,14 @@ export default function DocumentsPage() {
                       <p className="text-xs text-gray-500 mt-2">
                         * 请确保 Excel 文件中对应列包含正确的数据。系统将根据这些列提取财务数据。
                       </p>
+                      <div className="mt-3 p-3 bg-yellow-50 border border-yellow-200 rounded text-xs text-yellow-800">
+                        <p className="font-medium mb-1">Excel 科目命名要求：</p>
+                        <ul className="list-disc list-inside space-y-1 text-yellow-700">
+                          <li>同名子科目需使用父科目前缀区分，例如：「数据资源」，「优先股」和「永续债」</li>
+                          <li>系统会自动去除「其中:」「加:」「减:」等前缀和括号说明（如「亏损以&quot;-&quot;号填列」）</li>
+                          <li>科目名称需与标准会计科目一致，否则无法识别</li>
+                        </ul>
+                      </div>
                     </div>
                   )}
                 </div>

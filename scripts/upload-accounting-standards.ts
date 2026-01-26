@@ -7,26 +7,10 @@ import * as fs from 'fs';
 import * as path from 'path';
 
 const BASE_URL = 'http://localhost:3000';
-const FOLDER_PATH = path.join(process.cwd(), 'data', 'knowledge_documents', '会计准则');
+const FOLDER_PATH = path.join(process.cwd(), 'data', '会计准则');
 
 // Files already uploaded (will be skipped)
-const ALREADY_UPLOADED = [
-  '企业会计准则-基本准则-2014.pdf',
-  '企业会计准则第1号-存货-2007.pdf',
-  '企业会计准则第2号-长期股权投资-2014.pdf',
-  '企业会计准则第10号-企业年金基金-2007.pdf',
-  '企业会计准则第11号-股份支付-2007.pdf',
-  '企业会计准则第12号-债务重组-2019.pdf',
-  '企业会计准则第13号-或有事项-2007.pdf',
-  '企业会计准则第14号-收入-2018.pdf',
-  '企业会计准则第15号-建造合同-2007.pdf',
-  '企业会计准则第16号-政府补助-2017.pdf',
-  '企业会计准则第17号-借款费用-2007.pdf',
-  '企业会计准则第18号-所得税-2007.pdf',
-  '企业会计准则第19号-外币折算-2007.pdf',
-  '企业会计准则第20号-企业合并-2007.pdf',
-  '企业会计准则第21号-租赁-2019.pdf',
-];
+const ALREADY_UPLOADED: string[] = [];
 
 async function uploadFile(filePath: string, fileName: string, adminPassword: string): Promise<{ success: boolean; message: string }> {
   try {
