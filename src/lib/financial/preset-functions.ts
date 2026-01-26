@@ -923,7 +923,7 @@ export const presetFunctions: PresetFunction[] = [
         `ROE: ${formatPercentage(value)}`,
         `= 营业净利率 ${formatPercentage(netProfitMargin)}`,
         `× 总资产周转率 ${formatNumber(assetTurnover, 2)}次`,
-        `× 权益乘数 ${formatNumber(equityMultiplier, 2)}倍`,
+        `× 权益乘数 ${formatPercentage(equityMultiplier)}`,
       ].join('\n');
 
       return {
