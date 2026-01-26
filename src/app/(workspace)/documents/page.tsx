@@ -573,7 +573,7 @@ export default function DocumentsPage() {
             )}
           </PageTitle>
           <p className="text-gray-700 mb-6">
-            统一管理数据库文档与待处理文档。
+            数据库文档为系统内置文档，待处理文档为您上传的文档。PDF 文档不支持预览。
             {isAuthenticated && "（您可以上传、删除、重命名及修改文档属性）"}
           </p>
 

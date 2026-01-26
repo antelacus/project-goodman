@@ -148,7 +148,7 @@ export default function ExtractionModal({
                             </div>
                             <h3 className="text-2xl font-bold text-neutral-900 mb-3">开始提取结构化数据</h3>
                             <p className="text-neutral-500 mb-8 leading-relaxed">
-                                请选择一个已上传的财务文档（如发票、合同、报表），AI 将自动分析并提取其中的关键键值对信息。
+                                请选择一个已上传的财务文档（如发票、合同、报表），AI 将自动分析并提取其中的关键财务信息，可自由复制信息主题或内容。
                             </p>
                             <button
                                 onClick={() => setIsDocSelectOpen(true)}
@@ -235,38 +235,39 @@ export default function ExtractionModal({
                                 {Object.entries(extractionResult).map(([key, value]) => {
                                     const displayValue = formatExtractionValue(value);
                                     return (
-                                    <div key={key} className="p-4 bg-white rounded-lg border border-neutral-200 shadow-sm relative group hover:border-yellow-400 transition-colors">
-                                        <p className="text-xs font-medium text-neutral-500 uppercase tracking-wider mb-1">{key.replace(/_/g, ' ')}</p>
-                                        <p className="text-lg font-semibold text-neutral-900 break-words line-clamp-3" title={displayValue}>
-                                            {displayValue}
-                                        </p>
+                                        <div key={key} className="p-4 bg-white rounded-lg border border-neutral-200 shadow-sm relative group hover:border-yellow-400 transition-colors">
+                                            <p className="text-xs font-medium text-neutral-500 uppercase tracking-wider mb-1">{key.replace(/_/g, ' ')}</p>
+                                            <p className="text-lg font-semibold text-neutral-900 break-words line-clamp-3" title={displayValue}>
+                                                {displayValue}
+                                            </p>
 
-                                        <div className="absolute top-2 right-2" ref={openCopyMenu === key ? menuRef : null}>
-                                            <button
-                                                onClick={() => setOpenCopyMenu(openCopyMenu === key ? null : key)}
-                                                className="p-1.5 rounded-full hover:bg-neutral-100 text-neutral-400 hover:text-neutral-900 focus:outline-none opacity-0 group-hover:opacity-100 transition-opacity"
-                                            >
-                                                <Copy size={16} />
-                                            </button>
-                                            {openCopyMenu === key && (
-                                                <div className="absolute right-0 mt-2 w-32 bg-white rounded-lg shadow-xl z-20 border border-neutral-200 py-1 text-xs">
-                                                    <button onClick={() => handleCopy(key, value, 'key')} className="w-full text-left px-3 py-2 hover:bg-neutral-50 text-neutral-700 flex items-center justify-between">
-                                                        <span>复制标题</span>
-                                                        {copiedState?.key === key && copiedState?.type === 'key' && <Check size={12} className="text-yellow-600" />}
-                                                    </button>
-                                                    <button onClick={() => handleCopy(key, value, 'value')} className="w-full text-left px-3 py-2 hover:bg-neutral-50 text-neutral-700 flex items-center justify-between">
-                                                        <span>复制内容</span>
-                                                        {copiedState?.key === key && copiedState?.type === 'value' && <Check size={12} className="text-yellow-600" />}
-                                                    </button>
-                                                    <button onClick={() => handleCopy(key, value, 'both')} className="w-full text-left px-3 py-2 hover:bg-neutral-50 text-neutral-700 flex items-center justify-between border-t border-neutral-100">
-                                                        <span>复制全部</span>
-                                                        {copiedState?.key === key && copiedState?.type === 'both' && <Check size={12} className="text-yellow-600" />}
-                                                    </button>
-                                                </div>
-                                            )}
+                                            <div className="absolute top-2 right-2" ref={openCopyMenu === key ? menuRef : null}>
+                                                <button
+                                                    onClick={() => setOpenCopyMenu(openCopyMenu === key ? null : key)}
+                                                    className="p-1.5 rounded-full hover:bg-neutral-100 text-neutral-400 hover:text-neutral-900 focus:outline-none opacity-0 group-hover:opacity-100 transition-opacity"
+                                                >
+                                                    <Copy size={16} />
+                                                </button>
+                                                {openCopyMenu === key && (
+                                                    <div className="absolute right-0 mt-2 w-32 bg-white rounded-lg shadow-xl z-20 border border-neutral-200 py-1 text-xs">
+                                                        <button onClick={() => handleCopy(key, value, 'key')} className="w-full text-left px-3 py-2 hover:bg-neutral-50 text-neutral-700 flex items-center justify-between">
+                                                            <span>复制标题</span>
+                                                            {copiedState?.key === key && copiedState?.type === 'key' && <Check size={12} className="text-yellow-600" />}
+                                                        </button>
+                                                        <button onClick={() => handleCopy(key, value, 'value')} className="w-full text-left px-3 py-2 hover:bg-neutral-50 text-neutral-700 flex items-center justify-between">
+                                                            <span>复制内容</span>
+                                                            {copiedState?.key === key && copiedState?.type === 'value' && <Check size={12} className="text-yellow-600" />}
+                                                        </button>
+                                                        <button onClick={() => handleCopy(key, value, 'both')} className="w-full text-left px-3 py-2 hover:bg-neutral-50 text-neutral-700 flex items-center justify-between border-t border-neutral-100">
+                                                            <span>复制全部</span>
+                                                            {copiedState?.key === key && copiedState?.type === 'both' && <Check size={12} className="text-yellow-600" />}
+                                                        </button>
+                                                    </div>
+                                                )}
+                                            </div>
                                         </div>
-                                    </div>
-                                )})}
+                                    )
+                                })}
                             </div>
                         </div>
                     )}

@@ -50,9 +50,9 @@ export default function HomePage() {
                     </p>
 
                     <p className="max-w-2xl mt-8 text-lg text-gray-500 leading-relaxed animate-in slide-in-from-bottom-4 duration-700 delay-300">
-                        专为财务领域打造，集信息提取、指标分析与合规指导于一体的智能助手。
+                        专为财务领域打造，集数据查询与文档检索、指标分析与报告生成于一体的 agent。
                         <br />
-                        让繁琐的数据处理变为简单的自然对话。
+                        让繁琐的财务工作变为简单的自然对话。
                     </p>
 
                     <div className="flex flex-col sm:flex-row gap-6 mt-12 animate-in slide-in-from-bottom-8 duration-700 delay-500">
@@ -81,37 +81,37 @@ export default function HomePage() {
                     </div>
 
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-8 w-full px-4">
-                        {/* 财务信息提取 */}
+                        {/* 数据信息检索 */}
                         <div
                             className={`bg-white border border-gray-100 rounded-3xl p-8 flex flex-col items-center transition-all duration-300 group ${highlight ? "ring-4 ring-yellow-400 scale-[1.02]" : "shadow-sm hover:shadow-2xl hover:-translate-y-2"}`}
                         >
                             <div className="w-16 h-16 bg-yellow-50 rounded-2xl flex items-center justify-center mb-6 text-yellow-600 group-hover:bg-yellow-500 group-hover:text-white transition-colors duration-300">
                                 <FileText size={32} />
                             </div>
-                            <h3 className="text-xl font-bold text-gray-900 mb-3">财务信息提取</h3>
-                            <p className="text-gray-500 text-base mb-6 text-center leading-relaxed">上传发票、合同等文档，AI 自动识别并结构化提取关键信息。</p>
+                            <h3 className="text-xl font-bold text-gray-900 mb-3">数据信息检索</h3>
+                            <p className="text-gray-500 text-base mb-6 text-center leading-relaxed">agent 自动检索数据库中的财务数据，并支持文档内容的语义搜索。</p>
                         </div>
 
-                        {/* 财务指标分析 */}
+                        {/* 参数指标分析 */}
                         <div
                             className={`bg-white border border-gray-100 rounded-3xl p-8 flex flex-col items-center transition-all duration-300 group ${highlight ? "ring-4 ring-yellow-400 scale-[1.02]" : "shadow-sm hover:shadow-2xl hover:-translate-y-2"}`}
                         >
                             <div className="w-16 h-16 bg-yellow-50 rounded-2xl flex items-center justify-center mb-6 text-yellow-600 group-hover:bg-yellow-500 group-hover:text-white transition-colors duration-300">
                                 <TrendingUp size={32} />
                             </div>
-                            <h3 className="text-xl font-bold text-gray-900 mb-3">财务指标分析</h3>
-                            <p className="text-gray-500 text-base mb-6 text-center leading-relaxed">基于财务报表，AI 智能计算并分析财务指标，支持多文档对比。</p>
+                            <h3 className="text-xl font-bold text-gray-900 mb-3">参数指标分析</h3>
+                            <p className="text-gray-500 text-base mb-6 text-center leading-relaxed">基于财务报表数据，agent 智能计算各类财务指标，支持多期对比分析。</p>
                         </div>
 
-                        {/* 财务合规指导 */}
+                        {/* 综合报告生成 */}
                         <div
                             className={`bg-white border border-gray-100 rounded-3xl p-8 flex flex-col items-center transition-all duration-300 group ${highlight ? "ring-4 ring-yellow-400 scale-[1.02]" : "shadow-sm hover:shadow-2xl hover:-translate-y-2"}`}
                         >
                             <div className="w-16 h-16 bg-yellow-50 rounded-2xl flex items-center justify-center mb-6 text-yellow-600 group-hover:bg-yellow-500 group-hover:text-white transition-colors duration-300">
                                 <CheckCircle size={32} />
                             </div>
-                            <h3 className="text-xl font-bold text-gray-900 mb-3">财务合规指导</h3>
-                            <p className="text-gray-500 text-base mb-6 text-center leading-relaxed">结合会计准则与法规，AI 实时判断业务合规性并给出专业建议。</p>
+                            <h3 className="text-xl font-bold text-gray-900 mb-3">综合报告生成</h3>
+                            <p className="text-gray-500 text-base mb-6 text-center leading-relaxed">整合检索结果与分析数据，agent 自动生成结构化的综合分析报告。</p>
                         </div>
                     </div>
                 </section>
@@ -126,7 +126,7 @@ export default function HomePage() {
                         </div>
                         <div className="flex flex-col items-center text-center">
                             <h3 className="text-xl font-bold mb-4 text-yellow-600">极致效率</h3>
-                            <p className="text-gray-500 leading-relaxed">从上传到结果仅需数秒，大幅提升工作效率。</p>
+                            <p className="text-gray-500 leading-relaxed">通过自然语言完成数据和信息检索，参数指标分析以及自动生成财务分析报告。</p>
                         </div>
                         <div className="flex flex-col items-center text-center">
                             <h3 className="text-xl font-bold mb-4 text-yellow-600">轻松集成</h3>
