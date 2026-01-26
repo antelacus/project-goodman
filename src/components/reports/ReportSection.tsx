@@ -57,21 +57,21 @@ export const ReportSection: React.FC<ReportSectionProps> = ({
         <div className="p-4 space-y-4">
           {/* Metrics Table */}
           <div className="overflow-x-auto">
-            <table className="w-full text-sm">
+            <table className="w-full text-sm min-w-[640px]">
               <thead>
                 <tr className="border-b border-neutral-200">
                   <th className="text-left py-2 px-3 font-medium text-neutral-600">
                     指标名称
                   </th>
-                  <th className="text-right py-2 px-3 font-medium text-neutral-600">
+                  <th className="text-right py-2 px-3 font-medium text-neutral-600 whitespace-nowrap">
                     {primaryYear}年
                   </th>
                   {hasComparison && (
                     <>
-                      <th className="text-right py-2 px-3 font-medium text-neutral-600">
+                      <th className="text-right py-2 px-3 font-medium text-neutral-600 whitespace-nowrap">
                         {comparisonYear}年
                       </th>
-                      <th className="text-right py-2 px-3 font-medium text-neutral-600">
+                      <th className="text-right py-2 px-3 font-medium text-neutral-600 whitespace-nowrap">
                         变化
                       </th>
                     </>
@@ -150,18 +150,18 @@ const MetricRow: React.FC<MetricRowProps> = ({ metric, hasComparison, isOdd }) =
           </div>
         )}
       </td>
-      <td className="py-2 px-3 text-right font-mono text-neutral-800">
+      <td className="py-2 px-3 text-right font-mono text-neutral-800 whitespace-nowrap">
         {metric.formatted}
       </td>
       {hasComparison && (
         <>
-          <td className="py-2 px-3 text-right font-mono text-neutral-500">
+          <td className="py-2 px-3 text-right font-mono text-neutral-500 whitespace-nowrap">
             {metric.previousValue !== undefined
               ? formatPreviousValue(metric)
               : '-'
             }
           </td>
-          <td className="py-2 px-3 text-right">
+          <td className="py-2 px-3 text-right whitespace-nowrap">
             <ChangeDisplay changeInfo={changeInfo} />
           </td>
         </>
