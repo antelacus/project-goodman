@@ -137,9 +137,9 @@ const METRICS: MetricDefinition[] = [
   {
     id: 'BS.INVENTORY_DATA_RESOURCES',
     key: '资产负债表-流动资产-存货-数据资源',
-    label: '数据资源',
+    label: '存货数据资源',
     table: 'balance_sheet',
-    aliases: ['数据资源', '存货-数据资源', '其中：数据资源'],
+    aliases: ['存货数据资源', '存货-数据资源'],
     includeInTotals: false,
   },
   {
@@ -282,9 +282,9 @@ const METRICS: MetricDefinition[] = [
   {
     id: 'BS.INTANGIBLE_ASSETS_DATA_RESOURCES',
     key: '资产负债表-非流动资产-无形资产-数据资源',
-    label: '数据资源',
+    label: '无形资产数据资源',
     table: 'balance_sheet',
-    aliases: ['无形资产-数据资源', '其中：数据资源'],
+    aliases: ['无形资产数据资源', '无形资产-数据资源'],
     includeInTotals: false,
   },
   {
@@ -297,9 +297,9 @@ const METRICS: MetricDefinition[] = [
   {
     id: 'BS.DEVELOPMENT_EXPENDITURE_DATA_RESOURCES',
     key: '资产负债表-非流动资产-开发支出-数据资源',
-    label: '数据资源',
+    label: '开发支出数据资源',
     table: 'balance_sheet',
-    aliases: ['开发支出-数据资源', '其中：数据资源'],
+    aliases: ['开发支出数据资源', '开发支出-数据资源'],
     includeInTotals: false,
   },
   {
@@ -546,17 +546,17 @@ const METRICS: MetricDefinition[] = [
   {
     id: 'BS.BONDS_PAYABLE_PREFERRED_SHARES',
     key: '资产负债表-非流动负债-应付债券-优先股',
-    label: '优先股',
+    label: '应付债券优先股',
     table: 'balance_sheet',
-    aliases: ['优先股', '应付债券-优先股'],
+    aliases: ['应付债券优先股', '应付债券-优先股'],
     includeInTotals: false,
   },
   {
     id: 'BS.BONDS_PAYABLE_PERPETUAL_BONDS',
     key: '资产负债表-非流动负债-应付债券-永续债',
-    label: '永续债',
+    label: '应付债券永续债',
     table: 'balance_sheet',
-    aliases: ['永续债', '应付债券-永续债'],
+    aliases: ['应付债券永续债', '应付债券-永续债'],
     includeInTotals: false,
   },
   {
@@ -643,17 +643,17 @@ const METRICS: MetricDefinition[] = [
   {
     id: 'BS.OTHER_EQUITY_INSTRUMENTS_PREFERRED_SHARES',
     key: '资产负债表-所有者权益-其他权益工具-优先股',
-    label: '优先股',
+    label: '其他权益工具优先股',
     table: 'balance_sheet',
-    aliases: ['优先股', '其他权益工具-优先股'],
+    aliases: ['其他权益工具优先股', '其他权益工具-优先股'],
     includeInTotals: false,
   },
   {
     id: 'BS.OTHER_EQUITY_INSTRUMENTS_PERPETUAL_BONDS',
     key: '资产负债表-所有者权益-其他权益工具-永续债',
-    label: '永续债',
+    label: '其他权益工具永续债',
     table: 'balance_sheet',
-    aliases: ['永续债', '其他权益工具-永续债'],
+    aliases: ['其他权益工具永续债', '其他权益工具-永续债'],
     includeInTotals: false,
   },
   {
@@ -665,8 +665,8 @@ const METRICS: MetricDefinition[] = [
   },
   {
     id: 'BS.LESS_TREASURY_STOCK',
-    key: '资产负债表-所有者权益-减：库存股',
-    label: '减：库存股',
+    key: '资产负债表-所有者权益-库存股',
+    label: '库存股',
     table: 'balance_sheet',
     aliases: ['减：库存股', '库存股', '减:库存股'],
   },
@@ -791,22 +791,6 @@ const METRICS: MetricDefinition[] = [
     aliases: ['其中：营业成本', '营业成本'],
   },
   {
-    id: 'IS.INTEREST_EXPENSES',
-    key: '利润表-营业总成本-财务费用-利息费用',
-    label: '利息费用',
-    table: 'income_statement',
-    aliases: ['利息费用', '利息支出', '其中：利息费用'],
-    includeInTotals: false,
-  },
-  {
-    id: 'IS.FINANCIAL_EXPENSES_INTEREST_INCOME',
-    key: '利润表-营业总成本-财务费用-利息收入',
-    label: '利息收入',
-    table: 'income_statement',
-    aliases: ['财务费用-利息收入', '利息收入'],
-    includeInTotals: false,
-  },
-  {
     id: 'IS.FEE_AND_COMMISSION_EXPENSES',
     key: '利润表-营业总成本-手续费及佣金支出',
     label: '手续费及佣金支出',
@@ -882,6 +866,22 @@ const METRICS: MetricDefinition[] = [
     label: '财务费用',
     table: 'income_statement',
     aliases: ['财务费用'],
+  },
+  {
+    id: 'IS.INTEREST_EXPENSES',
+    key: '利润表-营业总成本-财务费用-利息费用',
+    label: '利息费用',
+    table: 'income_statement',
+    aliases: ['利息费用', '其中：利息费用'],
+    includeInTotals: false,
+  },
+  {
+    id: 'IS.FINANCIAL_EXPENSES_INTEREST_INCOME',
+    key: '利润表-营业总成本-财务费用-利息收入',
+    label: '利息收入',
+    table: 'income_statement',
+    aliases: ['财务费用-利息收入', '利息收入'],
+    includeInTotals: false,
   },
 
   // ==========================================================================
@@ -1051,7 +1051,10 @@ const METRICS: MetricDefinition[] = [
     key: '利润表-其他综合收益-归属于母公司所有者的其他综合收益的税后净额',
     label: '归属于母公司所有者的其他综合收益的税后净额',
     table: 'income_statement',
-    aliases: ['归属于母公司所有者的其他综合收益的税后净额'],
+    aliases: [
+      '归属于母公司所有者的其他综合收益的税后净额',
+      '归属母公司所有者的其他综合收益的税后净额',
+    ],
   },
   {
     id: 'IS.OTHER_COMPREHENSIVE_INCOME_ATTRIBUTABLE_TO_MINORITY_INTERESTS',
@@ -1605,10 +1608,11 @@ function normalizeName(input: string): string {
     .replace(/\s+/g, '')
     .replace(/[：:]/g, '：')
     .replace(/^(一、|二、|三、|四、|五、|六、|七、|八、|九、|十、)/, '')
-    .replace(/^（[一二三四五六七八九十]）/, '')
+    .replace(/^[（(][一二三四五六七八九十][）)]/, '') // Handle both Chinese （） and English ()
     .replace(/^\d+\./, '')
     .replace(/^(其中：|加：|减：)/, '')
-    .replace(/金额$/, '');
+    .replace(/金额$/, '')
+    .replace(/[（(][^）)]*[）)]$/, ''); // Remove trailing parenthetical notes - both Chinese （） and English ()
 }
 
 const ALIAS_TO_KEY = (() => {
