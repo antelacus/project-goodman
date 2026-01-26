@@ -281,6 +281,22 @@ export function validateIncomeStatement(data: StandardIncomeStatement): Validati
         errors
     );
 
+    const calculatedOciReclassifiable = safeAdd(
+        dataRecord[IS.OCI_EQUITY_METHOD_RECLASS],
+        dataRecord[IS.OCI_OTHER_DEBT_FAIR_VALUE],
+        dataRecord[IS.OCI_FINANCIAL_ASSET_RECLASS],
+        dataRecord[IS.OCI_OTHER_DEBT_CREDIT_IMPAIRMENT],
+        dataRecord[IS.OCI_CASH_FLOW_HEDGE_RESERVE],
+        dataRecord[IS.OCI_FOREIGN_CURRENCY_TRANSLATION],
+        dataRecord[IS.OCI_OTHER]
+    );
+    validateTotal(
+        dataRecord,
+        IS.OCI_RECLASSIFIABLE,
+        calculatedOciReclassifiable,
+        errors
+    );
+
     return {
         isValid: errors.length === 0,
         errors,
