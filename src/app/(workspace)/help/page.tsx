@@ -1,13 +1,10 @@
 import React from 'react';
 import {
   MessageSquare,
-  FolderOpen,
-  Zap,
-  BookOpen,
-  FileSpreadsheet,
-  Database,
-  Upload,
-  Info
+  Search,
+  FileText,
+  HelpCircle,
+  Sparkles,
 } from 'lucide-react';
 
 export default function HelpPage() {
@@ -16,164 +13,108 @@ export default function HelpPage() {
       {/* Hero Section */}
       <div className="mb-12 text-center">
         <h1 className="mb-4 text-4xl font-bold text-neutral-900">使用指南</h1>
-        <p className="text-neutral-600">了解如何使用 Goodman 的各项功能</p>
+        <p className="text-neutral-600">了解 Goodman 能为您做什么</p>
       </div>
 
-      {/* Access Note */}
-      <div className="mb-8 rounded-lg border border-yellow-200 bg-yellow-50 p-4">
-        <div className="flex items-start gap-3">
-          <Info className="w-5 h-5 text-yellow-600 flex-shrink-0 mt-0.5" />
-          <div className="text-sm text-yellow-800">
-            <p className="font-medium mb-1">访问权限说明</p>
-            <ul className="list-disc list-inside space-y-1 text-yellow-700">
-              <li>访客可使用对话、查看文档、信息提取等基础功能（有限额）</li>
-              <li>文档上传与知识库管理仅限管理员使用</li>
-            </ul>
-          </div>
-        </div>
-      </div>
-
-      {/* Module Overview Cards */}
+      {/* Core Capabilities - Aligned with landing page */}
       <div className="grid gap-6 md:grid-cols-3 mb-16">
-        {/* Smart Chat */}
+        {/* 数据信息检索 */}
         <div className="rounded-xl border border-neutral-200 bg-white p-6 shadow-sm hover:shadow-md transition-shadow">
-          <div className="flex items-start gap-4">
-            <div className="text-yellow-600 bg-yellow-50 w-12 h-12 rounded-full flex items-center justify-center flex-shrink-0">
-              <MessageSquare size={24} />
+          <div className="flex flex-col items-center text-center">
+            <div className="text-yellow-600 bg-yellow-50 w-14 h-14 rounded-full flex items-center justify-center mb-4">
+              <Search size={28} />
             </div>
-            <div>
-              <h3 className="mb-2 text-lg font-semibold text-neutral-900">智能对话</h3>
-              <p className="text-sm text-neutral-600">
-                AI 对话入口，可进行财务指标查询、计算和法规检索。支持多轮对话。
-              </p>
-            </div>
+            <h3 className="mb-2 text-lg font-semibold text-neutral-900">数据信息检索</h3>
+            <p className="text-sm text-neutral-600">
+              智能检索财务数据与文档内容，支持语义搜索。
+            </p>
           </div>
         </div>
 
-        {/* Document Management */}
+        {/* 参数指标分析 */}
         <div className="rounded-xl border border-neutral-200 bg-white p-6 shadow-sm hover:shadow-md transition-shadow">
-          <div className="flex items-start gap-4">
-            <div className="text-yellow-600 bg-yellow-50 w-12 h-12 rounded-full flex items-center justify-center flex-shrink-0">
-              <FolderOpen size={24} />
+          <div className="flex flex-col items-center text-center">
+            <div className="text-yellow-600 bg-yellow-50 w-14 h-14 rounded-full flex items-center justify-center mb-4">
+              <Sparkles size={28} />
             </div>
-            <div>
-              <h3 className="mb-2 text-lg font-semibold text-neutral-900">文档管理</h3>
-              <p className="text-sm text-neutral-600">
-                查看已上传的财务文档。管理员可上传新文档并进行结构化处理。
-              </p>
-            </div>
+            <h3 className="mb-2 text-lg font-semibold text-neutral-900">参数指标分析</h3>
+            <p className="text-sm text-neutral-600">
+              自动计算财务指标，支持多期对比分析。
+            </p>
           </div>
         </div>
 
-        {/* Quick Tools */}
+        {/* 综合报告生成 */}
         <div className="rounded-xl border border-neutral-200 bg-white p-6 shadow-sm hover:shadow-md transition-shadow">
-          <div className="flex items-start gap-4">
-            <div className="text-yellow-600 bg-yellow-50 w-12 h-12 rounded-full flex items-center justify-center flex-shrink-0">
-              <Zap size={24} />
+          <div className="flex flex-col items-center text-center">
+            <div className="text-yellow-600 bg-yellow-50 w-14 h-14 rounded-full flex items-center justify-center mb-4">
+              <FileText size={28} />
             </div>
-            <div>
-              <h3 className="mb-2 text-lg font-semibold text-neutral-900">快捷工具</h3>
-              <p className="text-sm text-neutral-600">
-                支持 PDF、Excel、图片等格式的信息提取，将文档转化为结构化数据。
-              </p>
+            <h3 className="mb-2 text-lg font-semibold text-neutral-900">综合报告生成</h3>
+            <p className="text-sm text-neutral-600">
+              整合数据与分析，生成结构化报告。
+            </p>
+          </div>
+        </div>
+      </div>
+
+      {/* Usage Examples */}
+      <div className="mb-16">
+        <h2 className="mb-6 text-2xl font-bold text-neutral-900 flex items-center gap-2">
+          <MessageSquare className="text-yellow-500" size={28} />
+          使用示例
+        </h2>
+        <div className="rounded-xl border border-neutral-200 bg-white shadow-sm overflow-hidden">
+          <div className="divide-y divide-neutral-100">
+            <div className="p-5 hover:bg-neutral-50 transition-colors">
+              <p className="font-medium text-neutral-900 mb-1">数据查询</p>
+              <p className="text-sm text-neutral-500">&ldquo;查询公司2024年的流动比率&rdquo;</p>
+            </div>
+            <div className="p-5 hover:bg-neutral-50 transition-colors">
+              <p className="font-medium text-neutral-900 mb-1">指标计算</p>
+              <p className="text-sm text-neutral-500">&ldquo;帮我计算资产负债率和速动比率&rdquo;</p>
+            </div>
+            <div className="p-5 hover:bg-neutral-50 transition-colors">
+              <p className="font-medium text-neutral-900 mb-1">文档检索</p>
+              <p className="text-sm text-neutral-500">&ldquo;搜索关于收入确认的会计准则&rdquo;</p>
+            </div>
+            <div className="p-5 hover:bg-neutral-50 transition-colors">
+              <p className="font-medium text-neutral-900 mb-1">报告生成</p>
+              <p className="text-sm text-neutral-500">&ldquo;生成公司的财务分析报告&rdquo;</p>
+            </div>
+            <div className="p-5 hover:bg-neutral-50 transition-colors">
+              <p className="font-medium text-neutral-900 mb-1">多期对比</p>
+              <p className="text-sm text-neutral-500">&ldquo;对比2023年和2024年的盈利能力指标&rdquo;</p>
             </div>
           </div>
         </div>
       </div>
 
-      {/* Document Types Section */}
+      {/* FAQ */}
       <div className="mb-16">
         <h2 className="mb-6 text-2xl font-bold text-neutral-900 flex items-center gap-2">
-          <Database className="text-yellow-500" size={28} />
-          支持的文档类型
+          <HelpCircle className="text-yellow-500" size={28} />
+          常见问题
         </h2>
-        <div className="overflow-x-auto rounded-xl border border-neutral-200 bg-white shadow-sm">
-          <table className="min-w-[720px] w-full text-left text-sm text-neutral-600">
-            <thead className="bg-neutral-50 text-neutral-900">
-              <tr>
-                <th className="px-6 py-4 font-semibold">主类别</th>
-                <th className="px-6 py-4 font-semibold">文档类型</th>
-                <th className="px-6 py-4 font-semibold">处理方式</th>
-                <th className="px-6 py-4 font-semibold">说明</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-neutral-200">
-              <tr className="hover:bg-neutral-50 transition-colors">
-                <td className="px-6 py-4 font-medium text-neutral-900">财务报表</td>
-                <td className="px-6 py-4">
-                  <div className="flex flex-col gap-1">
-                    <span className="inline-flex items-center gap-1"><FileSpreadsheet size={14} /> 资产负债表</span>
-                    <span className="inline-flex items-center gap-1"><FileSpreadsheet size={14} /> 利润表</span>
-                    <span className="inline-flex items-center gap-1"><FileSpreadsheet size={14} /> 现金流量表</span>
-                  </div>
-                </td>
-                <td className="px-6 py-4">指标提取 + 向量化</td>
-                <td className="px-6 py-4">需指定年份和期间，数据将存入结构化数据库</td>
-              </tr>
-              <tr className="hover:bg-neutral-50 transition-colors">
-                <td className="px-6 py-4 font-medium text-neutral-900">法规准则</td>
-                <td className="px-6 py-4">
-                  <div className="flex flex-col gap-1">
-                    <span className="inline-flex items-center gap-1"><BookOpen size={14} /> 法律法规</span>
-                    <span className="inline-flex items-center gap-1"><BookOpen size={14} /> 会计准则</span>
-                  </div>
-                </td>
-                <td className="px-6 py-4">条款结构化 + 向量化</td>
-                <td className="px-6 py-4">要求文档遵循标准的&ldquo;第X条&rdquo;格式以便提取</td>
-              </tr>
-              <tr className="hover:bg-neutral-50 transition-colors">
-                <td className="px-6 py-4 font-medium text-neutral-900">其他信息</td>
-                <td className="px-6 py-4">
-                  <div className="flex flex-col gap-1">
-                    <span>业务情况</span>
-                    <span>财务报告 (PDF)</span>
-                    <span>规章制度</span>
-                  </div>
-                </td>
-                <td className="px-6 py-4">仅向量化</td>
-                <td className="px-6 py-4">用于语义搜索，增强 AI 上下文理解</td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-      </div>
-
-      {/* Operation Guide */}
-      <div className="mb-16">
-        <h2 className="mb-6 text-2xl font-bold text-neutral-900 flex items-center gap-2">
-          <Upload className="text-yellow-500" size={28} />
-          如何添加知识库（仅管理员）
-        </h2>
-        <div className="rounded-xl border border-neutral-200 bg-white p-8 shadow-sm">
-          <ol className="relative border-l border-neutral-200 ml-3 space-y-8">
-            <li className="mb-10 ml-6">
-              <span className="absolute flex items-center justify-center w-8 h-8 bg-yellow-100 rounded-full -left-4 ring-4 ring-white text-yellow-700 font-bold text-sm">
-                1
-              </span>
-              <h3 className="flex items-center mb-1 text-lg font-semibold text-neutral-900">登录管理员账号</h3>
-              <p className="mb-4 text-base font-normal text-neutral-600">
-                知识库文档上传功能仅限管理员使用。请先使用管理员账号登录。
-              </p>
-            </li>
-            <li className="mb-10 ml-6">
-              <span className="absolute flex items-center justify-center w-8 h-8 bg-yellow-100 rounded-full -left-4 ring-4 ring-white text-yellow-700 font-bold text-sm">
-                2
-              </span>
-              <h3 className="mb-1 text-lg font-semibold text-neutral-900">选择文档类型</h3>
-              <p className="text-base font-normal text-neutral-600">
-                在上传界面，选择文档所属的类别（如资产负债表、法律法规等）。正确的分类有助于后续的检索和分析。
-              </p>
-            </li>
-            <li className="ml-6">
-              <span className="absolute flex items-center justify-center w-8 h-8 bg-yellow-100 rounded-full -left-4 ring-4 ring-white text-yellow-700 font-bold text-sm">
-                3
-              </span>
-              <h3 className="mb-1 text-lg font-semibold text-neutral-900">上传并等待处理</h3>
-              <p className="text-base font-normal text-neutral-600">
-                点击上传后，系统会进行文件解析、数据提取和向量化索引。处理完成后即可在对话中引用。
-              </p>
-            </li>
-          </ol>
+        <div className="space-y-4">
+          <div className="rounded-xl border border-neutral-200 bg-white p-6 shadow-sm">
+            <h3 className="font-semibold text-neutral-900 mb-2">AI 回答准确吗？</h3>
+            <p className="text-sm text-neutral-600 leading-relaxed">
+              Goodman 基于您上传的文档和数据进行分析，计算过程透明可追溯。对于法规查询，系统会引用具体条款来源。建议将 AI 输出作为参考，重要决策请结合专业判断。
+            </p>
+          </div>
+          <div className="rounded-xl border border-neutral-200 bg-white p-6 shadow-sm">
+            <h3 className="font-semibold text-neutral-900 mb-2">支持哪些文件格式？</h3>
+            <p className="text-sm text-neutral-600 leading-relaxed">
+              系统支持 PDF、Excel（.xlsx/.xls）、Word（.docx）等常见格式。财务报表建议使用 Excel 格式以获得更精确的数据提取。
+            </p>
+          </div>
+          <div className="rounded-xl border border-neutral-200 bg-white p-6 shadow-sm">
+            <h3 className="font-semibold text-neutral-900 mb-2">如何获得更好的回答？</h3>
+            <p className="text-sm text-neutral-600 leading-relaxed">
+              提问时尽量具体，包含公司名称、时间范围、具体指标等信息。例如，&ldquo;计算流动比率&rdquo;不如&ldquo;计算XX公司2024年Q3的流动比率&rdquo;效果好。
+            </p>
+          </div>
         </div>
       </div>
 

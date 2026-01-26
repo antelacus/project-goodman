@@ -1,7 +1,7 @@
 # Project Goodman - Deployment Checklist
 
-**Version**: v4.5
-**Last Updated**: 2026-01-20
+**Version**: v4.6
+**Last Updated**: 2026-01-26
 **Target Platform**: Docker on VPS + Supabase Cloud
 
 ---
@@ -279,6 +279,7 @@ These should always be true:
 
 | Version | Date | Changes |
 |---------|------|---------|
+| v4.6 | 2026-01-26 | v4.6 release (performance-optimization) |
 | v4.5 | 2026-01-20 | Added quality gates (Lighthouse/A11y/Perf/Audit) and v4.5 release flow updates |
 | v4.4 | 2026-01-18 | Restructured for clarity; added visual flow diagram; separated phases |
 | v4.3 | 2026-01-15 | Added CI/CD automation notes, marked automated sections |
@@ -288,4 +289,4 @@ These should always be true:
 
 ---
 
-*Project Goodman v4.5*
+*Project Goodman v4.6*

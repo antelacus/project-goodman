@@ -1,6 +1,31 @@
 /* @vitest-environment node */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { NextRequest } from 'next/server';
+
+// Mock database modules before importing route
+vi.mock('@/lib/database/supabase', () => ({
+  createServerSupabaseClient: vi.fn(() => ({
+    from: vi.fn(() => ({
+      select: vi.fn(() => ({ data: [], error: null })),
+      insert: vi.fn(() => ({ data: null, error: null })),
+    })),
+  })),
+}));
+
+vi.mock('@/lib/memory/conversation-memory', () => ({
+  conversationMemory: {
+    getMessages: vi.fn(() => []),
+    saveMessages: vi.fn(),
+  },
+}));
+
+vi.mock('@/lib/reports/report-session', () => ({
+  reportSessionManager: {
+    getSession: vi.fn(),
+    createSession: vi.fn(),
+  },
+}));
+
 import type { EnsureSessionResult } from '@/lib/security';
 import { POST } from '@/app/api/reports/generate/route';
 import * as logging from '@/lib/logging';

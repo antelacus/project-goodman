@@ -152,10 +152,10 @@ const ChatInput: React.FC<ChatInputProps> = ({ onSendMessage, disabled, onReques
                                     onClick={() => setIsToolsMenuOpen(!isToolsMenuOpen)}
                                     className="flex items-center gap-2 h-10 px-4 rounded-full hover:bg-neutral-200/50 text-neutral-600 transition-colors"
                                     disabled={disabled}
-                                    title="工具"
+                                    title="高级工具"
                                 >
                                     <BarChart2 size={18} />
-                                    <span className="text-sm font-medium">工具</span>
+                                    <span className="text-sm font-medium">高级工具</span>
                                 </button>
 
                                 {/* Tools Dropdown Menu */}

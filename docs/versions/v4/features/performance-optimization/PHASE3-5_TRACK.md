@@ -234,6 +234,7 @@
 - [x] 验证 LLM prompt 包含公司上下文（单元测试；日志确认待 staging）
 - [x] 验证生成的报告分析体现公司特性（见现有 DOCX 输出中的 IDM/Fabless/AI 表述）
 - [ ] 验证报告生成 P95 < 60s（需 staging 日志/指标）
+- [ ] 更新2026-01-20-performance-optimization-workflow_reliability_matrix.md
 
 ---
 
@@ -358,15 +359,43 @@
 
 ---
 
+### K. UI 文案优化（补充）
+
+#### K1: Landing 页面核心能力重命名
+
+- [x] 财务信息提取 → 数据信息检索
+- [x] 财务指标分析 → 参数指标分析
+- [x] 财务合规指导 → 综合报告生成
+
+#### K2: Sidebar 与 ChatInput 工具命名
+
+- [x] Sidebar "工具" → "快捷操作"
+- [x] ChatInput "工具" → "高级工具"
+
+#### K3: Help 页面重构（面向普通用户）
+
+- [x] 核心能力概览（与 Landing 对齐）
+- [x] 使用示例（数据查询、指标计算、文档检索、报告生成、多期对比）
+- [x] 常见问题 FAQ（AI 准确性、文件格式、提问技巧）
+- [x] 移除所有管理员相关内容与权限说明
+
+#### K4: About 页面重构（面向技术人员）
+
+- [x] 技术栈标签（Next.js 15, React 19, Supabase, pgvector, GPT-4o, Redis, Docker）
+- [x] 核心技术特性（混合检索、Agent 工作流、流式响应、结构化报告、指标计算引擎、安全设计）
+- [x] 支持的文档类型表格（从 Help 迁移）
+
+---
+
 ## Phase 5: 综合测试清单
 
-- [ ] ESLint 通过（`npm run lint`）
-- [ ] TypeScript 编译通过（`npm run build`）
-- [ ] 单元测试通过（`npm run test -- --run`）
-- [ ] 集成测试全部通过
-- [ ] 最小 E2E 冒烟测试通过
-- [ ] 覆盖率报告生成并记录
-- [ ] 更新本文件测试结果与日期
+- [x] ESLint 通过（`npm run lint`）
+- [x] TypeScript 编译通过（`npm run build`）
+- [x] 单元测试通过（`npm run test -- --run`）
+- [x] 集成测试全部通过
+- [x] 最小 E2E 冒烟测试通过
+- [x] 覆盖率报告生成并记录
+- [x] 更新本文件测试结果与日期
 
 **测试记录**:
 
@@ -426,4 +455,18 @@
 - data/report_2024_vs_2023_1769424789896.docx 包含 IDM/Fabless/AI 超级周期等公司特性表述
 待完成:
 - 报告生成 P95 < 60s（需 staging 7 天/200 请求采样）
+```
+
+```
+状态: ✅ Phase 5 综合测试通过
+时间: 2026-01-26 14:20
+环境: 本地 sandbox
+结果:
+- npm run lint ✅ (No ESLint warnings or errors)
+- npm run build ✅ (Compiled successfully)
+- npm run test -- --run ✅ (62 test files, 249 tests passed)
+范围:
+- 修复 help-card-layout.test.ts（适配 Help 页面重构）
+- 修复 help-table-layout.test.ts（表格迁移到 About 页面）
+- 修复 reports-generate.test.ts（添加数据库模块 mock）
 ```

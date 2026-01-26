@@ -247,7 +247,7 @@ export default function Sidebar() {
                     <div className="mt-2">
                         {!isCollapsed && (
                             <div className="mb-2 px-2 text-xs font-semibold uppercase text-neutral-400">
-                                工具
+                                快捷操作
                             </div>
                         )}
 
