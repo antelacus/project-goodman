@@ -25,6 +25,7 @@ import {
   WidthType,
 } from 'docx';
 import type { ReportContent, ReportMetric, ReportSection, ReportSourceReference } from '@/types/report';
+import { formatReportMetricPreviousValue, formatReportMetricValue } from './formatting';
 
 const DOCX_MIME_TYPE = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
 
@@ -50,17 +51,6 @@ function buildBulletList(items: string[]): Paragraph[] {
   }));
 }
 
-function formatMetricValue(metric: ReportMetric): string {
-  return metric.formatted || `${metric.value}`;
-}
-
-function formatPreviousValue(metric: ReportMetric): string {
-  if (metric.previousValue === undefined || metric.previousValue === null) {
-    return '—';
-  }
-  return `${metric.previousValue}`;
-}
-
 function buildTableCell(text: string, bold = false): TableCell {
   return new TableCell({
     children: [
@@ -84,8 +74,8 @@ function buildMetricsTable(metrics: ReportMetric[]): Table {
     ...metrics.map(metric => new TableRow({
       children: [
         buildTableCell(metric.name),
-        buildTableCell(formatMetricValue(metric)),
-        buildTableCell(formatPreviousValue(metric)),
+        buildTableCell(formatReportMetricValue(metric)),
+        buildTableCell(formatReportMetricPreviousValue(metric)),
         buildTableCell(metric.change || '—'),
       ],
     })),
