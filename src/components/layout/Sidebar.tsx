@@ -55,6 +55,9 @@ export default function Sidebar() {
     const [sessions, setSessions] = useState<SessionItem[]>([]);
     const [sessionsLoading, setSessionsLoading] = useState(true);
 
+    // Show text labels when expanded on desktop OR when mobile sidebar is open
+    const showLabels = !isCollapsed || isMobileOpen;
+
     // Get current session ID from URL
     const currentSessionId = searchParams.get('session');
 
@@ -134,18 +137,18 @@ export default function Sidebar() {
             >
                 {/* Header (Logo + Toggle) */}
                 <div className="flex h-14 items-center justify-between px-3 md:h-16">
-                    <Link href="/" className={cn("flex items-center overflow-hidden whitespace-nowrap", isCollapsed && "md:justify-center md:px-0")} onClick={handleNavigation}>
+                    <Link href="/" className={cn("flex items-center overflow-hidden whitespace-nowrap", isCollapsed && !isMobileOpen && "md:justify-center md:px-0")} onClick={handleNavigation}>
                         <Image
                             src="/logo.png"
                             alt="Goodman"
-                            width={isCollapsed ? 32 : 36}
-                            height={isCollapsed ? 32 : 36}
+                            width={isCollapsed && !isMobileOpen ? 32 : 36}
+                            height={isCollapsed && !isMobileOpen ? 32 : 36}
                             className="rounded-sm flex-shrink-0"
                         />
                         <span
                             className={cn(
                                 'ml-3 text-lg font-bold text-neutral-900 transition-opacity duration-200',
-                                isCollapsed ? 'md:hidden md:opacity-0' : 'opacity-100'
+                                isCollapsed && !isMobileOpen ? 'md:hidden md:opacity-0' : 'opacity-100'
                             )}
                         >
                             Goodman
@@ -178,11 +181,11 @@ export default function Sidebar() {
                         onClick={handleNewChat}
                         className={cn(
                             "flex items-center justify-center rounded-lg bg-yellow-400 font-medium text-black hover:bg-yellow-500 shadow-sm transition-all",
-                            isCollapsed ? "h-10 w-10 p-0" : "h-10 px-4 w-full"
+                            !showLabels ? "h-10 w-10 p-0" : "h-10 px-4 w-full"
                         )}
                         title="New Chat"
                     >
-                        {isCollapsed ? <Plus size={20} /> : (
+                        {!showLabels ? <Plus size={20} /> : (
                             <>
                                 <Plus size={18} className="mr-2" />
                                 <span>新建对话</span>
@@ -191,7 +194,7 @@ export default function Sidebar() {
                     </button>
 
                     {/* Session History Section */}
-                    {!isCollapsed && (
+                    {showLabels && (
                         <div className="mt-3 flex-1 overflow-y-auto max-h-48">
                             <div className="mb-2 px-2 text-xs font-semibold uppercase text-neutral-400">
                                 对话历史
@@ -231,7 +234,7 @@ export default function Sidebar() {
                     )}
 
                     {/* Collapsed Session Indicator */}
-                    {isCollapsed && sessions.length > 0 && (
+                    {!showLabels && sessions.length > 0 && (
                         <button
                             onClick={() => sessions[0] && handleSessionClick(sessions[0].id)}
                             className={cn(
@@ -245,7 +248,7 @@ export default function Sidebar() {
 
                     {/* Quick Tools Section */}
                     <div className="mt-2">
-                        {!isCollapsed && (
+                        {showLabels && (
                             <div className="mb-2 px-2 text-xs font-semibold uppercase text-neutral-400">
                                 快捷操作
                             </div>
@@ -254,7 +257,7 @@ export default function Sidebar() {
                         <button
                             className={cn(
                                 "flex w-full items-center rounded-lg p-2 text-neutral-600 hover:bg-neutral-100 hover:text-neutral-900 transition-colors",
-                                isCollapsed && "justify-center"
+                                !showLabels && "justify-center"
                             )}
                             title="财务信息提取"
                             onClick={() => {
@@ -262,8 +265,8 @@ export default function Sidebar() {
                                 if (isMobileOpen) closeMobile();
                             }}
                         >
-                            <FileSpreadsheet size={20} className={cn(!isCollapsed && "mr-3")} />
-                            {!isCollapsed && <span>信息提取</span>}
+                            <FileSpreadsheet size={20} className={cn(showLabels && "mr-3")} />
+                            {showLabels && <span>信息提取</span>}
                         </button>
                     </div>
 
@@ -283,13 +286,13 @@ export default function Sidebar() {
                                         isActive
                                             ? "bg-yellow-50 text-yellow-700 font-medium"
                                             : "text-neutral-600 hover:bg-neutral-100 hover:text-neutral-900",
-                                        isCollapsed && "justify-center",
-                                        isActive && isCollapsed && "bg-yellow-50"
+                                        !showLabels && "justify-center",
+                                        isActive && !showLabels && "bg-yellow-50"
                                     )}
                                     title={item.name}
                                 >
-                                    <item.icon size={20} className={cn(!isCollapsed && "mr-3")} />
-                                    {!isCollapsed && <span>{item.name}</span>}
+                                    <item.icon size={20} className={cn(showLabels && "mr-3")} />
+                                    {showLabels && <span>{item.name}</span>}
                                 </Link>
                             )
                         })}
@@ -304,13 +307,13 @@ export default function Sidebar() {
                                     pathname.startsWith('/admin')
                                         ? "bg-yellow-50 text-yellow-700 font-medium"
                                         : "text-neutral-600 hover:bg-neutral-100 hover:text-neutral-900",
-                                    isCollapsed && "justify-center",
-                                    pathname.startsWith('/admin') && isCollapsed && "bg-yellow-50"
+                                    !showLabels && "justify-center",
+                                    pathname.startsWith('/admin') && !showLabels && "bg-yellow-50"
                                 )}
                                 title="管理面板"
                             >
-                                <Settings size={20} className={cn(!isCollapsed && "mr-3")} />
-                                {!isCollapsed && <span>管理面板</span>}
+                                <Settings size={20} className={cn(showLabels && "mr-3")} />
+                                {showLabels && <span>管理面板</span>}
                             </Link>
                         )}
                     </nav>
@@ -337,12 +340,12 @@ export default function Sidebar() {
                             }}
                             className={cn(
                                 "flex w-full items-center rounded-lg p-2 text-neutral-500 hover:bg-neutral-100 hover:text-neutral-900 transition-colors",
-                                isCollapsed && "justify-center"
+                                !showLabels && "justify-center"
                             )}
                             title="登出"
                         >
-                            <LogOut size={20} className={cn(!isCollapsed && "mr-3")} />
-                            {!isCollapsed && <span>登出</span>}
+                            <LogOut size={20} className={cn(showLabels && "mr-3")} />
+                            {showLabels && <span>登出</span>}
                         </button>
                     ) : (
                         <Link
@@ -350,12 +353,12 @@ export default function Sidebar() {
                             onClick={handleNavigation}
                             className={cn(
                                 "flex items-center rounded-lg p-2 text-neutral-500 hover:bg-neutral-100 hover:text-neutral-900 transition-colors",
-                                isCollapsed && "justify-center"
+                                !showLabels && "justify-center"
                             )}
                             title="管理员登录"
                         >
-                            <LogIn size={20} className={cn(!isCollapsed && "mr-3")} />
-                            {!isCollapsed && <span>管理员登录</span>}
+                            <LogIn size={20} className={cn(showLabels && "mr-3")} />
+                            {showLabels && <span>管理员登录</span>}
                         </Link>
                     )}
 
@@ -363,12 +366,12 @@ export default function Sidebar() {
                         href="mailto:me@antelacus.com"
                         className={cn(
                             "flex items-center rounded-lg p-2 text-neutral-500 hover:bg-neutral-100 hover:text-neutral-900 transition-colors",
-                            isCollapsed && "justify-center"
+                            !showLabels && "justify-center"
                         )}
                         title="Contact"
                     >
-                        <Mail size={20} className={cn(!isCollapsed && "mr-3")} />
-                        {!isCollapsed && <span>联系我</span>}
+                        <Mail size={20} className={cn(showLabels && "mr-3")} />
+                        {showLabels && <span>联系我</span>}
                     </a>
                 </div>
             </aside>

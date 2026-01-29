@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, memo } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkMath from 'remark-math';
+import remarkBreaks from 'remark-breaks';
 import rehypeKatex from 'rehype-katex';
 import { Bot } from 'lucide-react';
 import 'katex/dist/katex.min.css';
@@ -74,7 +75,7 @@ const MessageList: React.FC<MessageListProps> = ({
                             ) : (
                                 <div className="prose prose-neutral max-w-none prose-p:leading-relaxed prose-pre:bg-neutral-100 prose-pre:rounded-xl prose-pre:p-4">
                                     <ReactMarkdown
-                                        remarkPlugins={[remarkMath]}
+                                        remarkPlugins={[remarkMath, remarkBreaks]}
                                         rehypePlugins={[rehypeKatex]}
                                     >
                                         {msg.content}

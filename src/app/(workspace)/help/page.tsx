@@ -13,7 +13,7 @@ export default function HelpPage() {
       {/* Hero Section */}
       <div className="mb-12 text-center">
         <h1 className="mb-4 text-4xl font-bold text-neutral-900">使用指南</h1>
-        <p className="text-neutral-600">Goodman 内置完整中国会计准则，部分财务相关法律，以及全套公司财务报表、财务报告、财务制度和公司档案。可供用户完整体验智能化财务工作流程。</p>
+        <p className="text-neutral-600">Goodman 内置常见财务指标和完整中国会计准则，部分财务相关法律，以及全套公司财务报表、财务报告、财务制度和公司档案。可供用户完整体验智能化财务工作流程。</p>
       </div>
 
       {/* Core Capabilities - Aligned with landing page */}
@@ -80,7 +80,7 @@ export default function HelpPage() {
             </div>
             <div className="p-5 hover:bg-neutral-50 transition-colors">
               <p className="font-medium text-neutral-900 mb-1">报告生成</p>
-              <p className="text-sm text-neutral-500">&ldquo;生成公司的财务分析报告&rdquo;</p>
+              <p className="text-sm text-neutral-500">点击对话框的“生成报告”按钮，并确认报告配置</p>
             </div>
             <div className="p-5 hover:bg-neutral-50 transition-colors">
               <p className="font-medium text-neutral-900 mb-1">多期对比</p>
@@ -112,7 +112,7 @@ export default function HelpPage() {
           <div className="rounded-xl border border-neutral-200 bg-white p-6 shadow-sm">
             <h3 className="font-semibold text-neutral-900 mb-2">如何获得更好的回答？</h3>
             <p className="text-sm text-neutral-600 leading-relaxed">
-              提问时尽量具体，包含公司名称、时间范围、具体指标等信息。例如，&ldquo;计算流动比率&rdquo;不如&ldquo;计算XX公司2024年Q3的流动比率&rdquo;效果好。
+              提问时尽量具体，包含时间范围、具体指标等信息。例如，&ldquo;计算流动比率&rdquo;不如&ldquo;计算公司2024年Q3的流动比率&rdquo;效果好。
             </p>
           </div>
         </div>

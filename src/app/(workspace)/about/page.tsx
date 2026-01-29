@@ -27,7 +27,7 @@ export default function AboutPage() {
         <div className="rounded-xl border border-neutral-200 bg-white p-6 shadow-sm">
           <h2 className="mb-4 text-xl font-semibold text-neutral-900">项目愿景</h2>
           <p className="leading-relaxed text-neutral-600">
-            Project Goodman 旨在为财务人员提供 AI 辅助能力，帮助处理文档信息提取、财务指标计算和合规查询等日常工作，
+            Project Goodman 旨在为财务人员提供 AI 辅助能力，帮助处理文档信息提取、财务指标计算、财务文档查询和财务合规咨询等日常工作，
             减少重复性劳动，让您有更多时间专注于分析和决策。
           </p>
         </div>
@@ -35,14 +35,15 @@ export default function AboutPage() {
         <div className="rounded-xl border border-neutral-200 bg-white p-6 shadow-sm">
           <h2 className="mb-4 text-xl font-semibold text-neutral-900">技术架构</h2>
           <p className="leading-relaxed text-neutral-600 mb-4">
-            基于现代 Web 技术栈构建，采用结构化数据与向量检索相结合的混合存储方案。
+            基于现代 Web 技术栈与 LangGraph 框架构建，采用结构化数据与向量检索相结合的混合存储方案。
           </p>
           <div className="flex flex-wrap gap-2">
             <span className="px-2 py-1 bg-neutral-100 text-neutral-700 text-xs rounded-md">Next.js 15</span>
             <span className="px-2 py-1 bg-neutral-100 text-neutral-700 text-xs rounded-md">React 19</span>
+            <span className="px-2 py-1 bg-neutral-100 text-neutral-700 text-xs rounded-md">LangGraph</span>
             <span className="px-2 py-1 bg-neutral-100 text-neutral-700 text-xs rounded-md">Supabase</span>
             <span className="px-2 py-1 bg-neutral-100 text-neutral-700 text-xs rounded-md">PostgreSQL + pgvector</span>
-            <span className="px-2 py-1 bg-neutral-100 text-neutral-700 text-xs rounded-md">OpenAI GPT-4o</span>
+            <span className="px-2 py-1 bg-neutral-100 text-neutral-700 text-xs rounded-md">OpenAI API</span>
             <span className="px-2 py-1 bg-neutral-100 text-neutral-700 text-xs rounded-md">Redis</span>
             <span className="px-2 py-1 bg-neutral-100 text-neutral-700 text-xs rounded-md">Docker</span>
           </div>

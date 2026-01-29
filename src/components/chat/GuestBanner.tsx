@@ -2,13 +2,14 @@
 
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import Link from "next/link";
-import { AlertCircle, X, MessageSquare, Upload, FileText } from "lucide-react";
+import { AlertCircle, X, MessageSquare, Upload, FileText, FileBarChart } from "lucide-react";
 import { resolveSessionRole, type SessionRole } from "@/lib/security/session-client";
 
 interface RateLimits {
     message: { remaining: number; limit: number };
     upload: { remaining: number; limit: number };
     extract: { remaining: number; limit: number };
+    report: { remaining: number; limit: number };
 }
 
 interface SessionInfo {
@@ -89,7 +90,8 @@ export default function GuestBanner() {
         limits &&
         (limits.message.remaining < 5 ||
             limits.upload.remaining < 2 ||
-            limits.extract.remaining < 3);
+            limits.extract.remaining < 2 ||
+            limits.report.remaining < 1);
 
     return (
         <div className="bg-yellow-50 border-b border-yellow-100">
@@ -97,6 +99,7 @@ export default function GuestBanner() {
                 <div className="flex items-center gap-3 text-sm min-w-0">
                     <AlertCircle className="w-4 h-4 text-yellow-600 flex-shrink-0" />
                     <span className="text-yellow-800">访客模式</span>
+                    <span className="text-yellow-600 text-xs hidden lg:inline">· 闲置1小时后数据清除，每小时限额：</span>
 
                     <button
                         type="button"
@@ -114,19 +117,29 @@ export default function GuestBanner() {
                             icon={<MessageSquare className="w-3 h-3" />}
                             remaining={limits?.message.remaining ?? 20}
                             limit={limits?.message.limit ?? 20}
-                            label="消息"
+                            label="发送消息"
+                            showLabel
                         />
                         <LimitBadge
                             icon={<Upload className="w-3 h-3" />}
-                            remaining={limits?.upload.remaining ?? 5}
-                            limit={limits?.upload.limit ?? 5}
-                            label="上传"
+                            remaining={limits?.upload.remaining ?? 2}
+                            limit={limits?.upload.limit ?? 2}
+                            label="上传文件"
+                            showLabel
                         />
                         <LimitBadge
                             icon={<FileText className="w-3 h-3" />}
-                            remaining={limits?.extract.remaining ?? 10}
-                            limit={limits?.extract.limit ?? 10}
-                            label="提取"
+                            remaining={limits?.extract.remaining ?? 2}
+                            limit={limits?.extract.limit ?? 2}
+                            label="提取信息"
+                            showLabel
+                        />
+                        <LimitBadge
+                            icon={<FileBarChart className="w-3 h-3" />}
+                            remaining={limits?.report.remaining ?? 1}
+                            limit={limits?.report.limit ?? 1}
+                            label="生成报告"
+                            showLabel
                         />
                     </div>
 
@@ -171,7 +184,7 @@ export default function GuestBanner() {
                             className="max-w-4xl mx-auto rounded-xl border border-yellow-200 bg-white shadow-lg p-4"
                         >
                             <div className="flex items-center justify-between mb-3">
-                                <span className="text-sm font-medium text-yellow-800">访客限额详情</span>
+                                <span className="text-sm font-medium text-yellow-800">访客每小时限额详情</span>
                                 <button
                                     type="button"
                                     className="text-xs text-yellow-600 hover:text-yellow-800"
@@ -180,24 +193,35 @@ export default function GuestBanner() {
                                     收起
                                 </button>
                             </div>
+                            <p className="text-xs text-yellow-600 mb-3">闲置1小时后数据清除</p>
                             <div className="flex flex-wrap gap-2 text-xs">
                                 <LimitBadge
                                     icon={<MessageSquare className="w-3 h-3" />}
                                     remaining={limits?.message.remaining ?? 20}
                                     limit={limits?.message.limit ?? 20}
-                                    label="消息"
+                                    label="发送消息"
+                                    showLabel
                                 />
                                 <LimitBadge
                                     icon={<Upload className="w-3 h-3" />}
-                                    remaining={limits?.upload.remaining ?? 5}
-                                    limit={limits?.upload.limit ?? 5}
-                                    label="上传"
+                                    remaining={limits?.upload.remaining ?? 2}
+                                    limit={limits?.upload.limit ?? 2}
+                                    label="上传文件"
+                                    showLabel
                                 />
                                 <LimitBadge
                                     icon={<FileText className="w-3 h-3" />}
-                                    remaining={limits?.extract.remaining ?? 10}
-                                    limit={limits?.extract.limit ?? 10}
-                                    label="提取"
+                                    remaining={limits?.extract.remaining ?? 2}
+                                    limit={limits?.extract.limit ?? 2}
+                                    label="提取信息"
+                                    showLabel
+                                />
+                                <LimitBadge
+                                    icon={<FileBarChart className="w-3 h-3" />}
+                                    remaining={limits?.report.remaining ?? 1}
+                                    limit={limits?.report.limit ?? 1}
+                                    label="生成报告"
+                                    showLabel
                                 />
                             </div>
                         </div>
@@ -213,19 +237,21 @@ function LimitBadge({
     remaining,
     limit,
     label,
+    showLabel = false,
 }: {
     icon: React.ReactNode;
     remaining: number;
     limit: number;
     label: string;
+    showLabel?: boolean;
 }) {
     const percentage = (remaining / limit) * 100;
     const colorClass =
         percentage > 50
             ? "text-gray-700 bg-gray-100"
             : percentage > 20
-            ? "text-yellow-700 bg-yellow-50"
-            : "text-red-600 bg-red-50";
+                ? "text-yellow-700 bg-yellow-50"
+                : "text-red-600 bg-red-50";
 
     return (
         <div
@@ -233,6 +259,7 @@ function LimitBadge({
             title={`${label}: 剩余 ${remaining}/${limit}`}
         >
             {icon}
+            {showLabel && <span className="font-medium">{label}</span>}
             <span>
                 {remaining}/{limit}
             </span>
