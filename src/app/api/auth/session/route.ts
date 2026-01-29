@@ -92,6 +92,10 @@ export async function GET(req: NextRequest) {
                         remaining: limits.extract.remaining,
                         limit: limits.extract.total,
                     },
+                    report: {
+                        remaining: limits.report.remaining,
+                        limit: limits.report.total,
+                    },
                 },
             },
             { status: 200, headers: { 'X-Request-ID': requestId, 'Cache-Control': 'no-store' } }

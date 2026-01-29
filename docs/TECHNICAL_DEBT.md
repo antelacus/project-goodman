@@ -1,6 +1,6 @@
 # 技术债务登记表
 
-> **最后更新**: 2026-01-28
+> **最后更新**: 2026-01-29
 > **下次评审**: V5.0 之前
 
 ---
@@ -25,6 +25,8 @@
 | TD-021 | 可观测性 | **LLM 成本无追踪**：OpenAI 调用未记录 token 用量和成本，无法按用户/功能归因费用，无响应缓存。影响：无法预测和控制 AI 成本。 | 中 | V5.0 |
 | TD-022 | 架构 | **长任务同步执行**：文档解析、AI 提取、报告生成均为同步请求，大文件可能超时。影响：用户体验差，服务器资源阻塞。 | 中 | V5.0+ |
 | TD-023 | 代码规范 | **3 个 API 路由缺少 Zod 验证**：`/api/documents/preview-url`（query params）、`/api/sessions/[id]`（path param UUID）、`/api/admin/upload-database-document`（仅 TypeScript 接口）。与"所有输入使用 Zod 验证"的约定不一致。影响：可能接受格式错误的请求，风险低（有其他安全层）。 | 低 | V5.0 |
+| TD-024 | 可观测性 | **报告生成 P95 未验证**：V4.6 性能优化目标为报告生成 P95 < 60s，但缺少 staging 环境日志/指标来验证。影响：无法确认性能目标是否达成。 | 低 | V5.0 |
+| TD-025 | 文档 | **性能优化可靠性矩阵待更新**：`docs/versions/v4/features/performance-optimization/workflow_reliability_matrix.md` 需根据 V4.6 实际实现更新。影响：文档与代码不同步。 | 低 | V5.0 |
 
 ## 开发注意事项
 
@@ -41,7 +43,12 @@
 
 | ID | 描述 | 解决版本 | 解决说明 |
 |----|------|----------|----------|
-| TD-018 | @sentry/node webpack 构建失败：Edge middleware 引入 error-handler，触发 @sentry/node 依赖 Node 内置模块。 | V4.4 | 拆分 request-id 模块，middleware 仅依赖 edge-safe 实现，Sentry 仅在 server 端加载 |
+| TD-000 | 遗留的多 Agent 架构 | V3.0 | 统一为单一 Agent |
+| TD-000 | API 缺少输入验证 | V3.9 | 添加了 Zod 验证 |
+| TD-000 | 不一致的错误响应 | V3.9 | 使用 createErrorResponse() 标准化 |
+| TD-000 | localStorage 安全风险 | V3.9 | 敏感数据移至 HttpOnly cookies |
+| TD-001 | 44 处 `as any` 类型断言 | V3.11 | 减少至 8 处，全部添加 REASON 注释 |
+| TD-002 | XLSX 外部库类型限制 | V3.11 | 添加 REASON 注释，标记为已接受 |
 | TD-003 | 无 LangSmith 集成用于 Agent 追踪 | V4.3 | 集成 LangSmith 追踪与自定义 span |
 | TD-004 | 手动部署，无自动化流水线 | V4.3 | GitHub Actions CI/CD 覆盖 lint/test/build/deploy |
 | TD-005 | 无性能基线（打包大小、API 响应时间、Core Web Vitals） | V4.3 | 添加打包分析、结构化日志、Web Vitals |
@@ -57,12 +64,7 @@
 | TD-015 | xlsx 高危漏洞 | V4.3 | 替换为 exceljs |
 | TD-016 | Next.js 15.3.6 高危漏洞 | V4.3 | 升级到 15.5+ |
 | TD-017 | API 路由缺少 Zod schema 验证 | V4.3 | 统一 Zod 验证并标准化错误响应 |
-| TD-001 | 44 处 `as any` 类型断言 | V3.11 | 减少至 8 处，全部添加 REASON 注释 |
-| TD-002 | XLSX 外部库类型限制 | V3.11 | 添加 REASON 注释，标记为已接受 |
-| TD-000 | 遗留的多 Agent 架构 | V3.0 | 统一为单一 Agent |
-| TD-000 | API 缺少输入验证 | V3.9 | 添加了 Zod 验证 |
-| TD-000 | 不一致的错误响应 | V3.9 | 使用 createErrorResponse() 标准化 |
-| TD-000 | localStorage 安全风险 | V3.9 | 敏感数据移至 HttpOnly cookies |
+| TD-018 | @sentry/node webpack 构建失败：Edge middleware 引入 error-handler，触发 @sentry/node 依赖 Node 内置模块。 | V4.4 | 拆分 request-id 模块，middleware 仅依赖 edge-safe 实现，Sentry 仅在 server 端加载 |
 
 ---
 
@@ -72,10 +74,11 @@
 |------|------|----|----|----|----|
 | 可靠性 | 0 | 1 | 0 | 0 | 1 |
 | 数据完整性 | 0 | 1 | 0 | 0 | 1 |
-| 可观测性 | 0 | 0 | 1 | 0 | 1 |
+| 可观测性 | 0 | 0 | 1 | 1 | 2 |
 | 架构 | 0 | 0 | 1 | 0 | 1 |
 | 代码规范 | 0 | 0 | 0 | 1 | 1 |
-| **总计** | **0** | **2** | **2** | **1** | **5** |
+| 文档 | 0 | 0 | 0 | 1 | 1 |
+| **总计** | **0** | **2** | **2** | **3** | **7** |
 
 ---
 
@@ -83,6 +86,7 @@
 
 | 日期 | 评审人 | 采取的行动 |
 |------|--------|------------|
+| 2026-01-29 | V4.6.1 | 新增 TD-024~TD-025：V4.6 性能优化遗留验证任务（报告生成 P95 验证、可靠性矩阵文档更新） |
 | 2026-01-28 | V4.6 | 新增 TD-023：安全审计发现 3 个 API 路由缺少 Zod 验证（Reddit 部署清单对照检查） |
 | 2026-01-28 | V4.6 | 新增 TD-019~TD-022：生产就绪性审计（外部服务重试、幂等性、LLM 成本追踪、异步处理） |
 | 2026-01-17 | V4.3 | 发布完成，TD-003~TD-017 全部解决并归档 |
@@ -95,6 +99,6 @@
 
 ---
 
-*文档版本: 1.7*
+*文档版本: 1.8*
 *创建日期: 2026-01-06*
-*最后更新: 2026-01-28*
+*最后更新: 2026-01-29*

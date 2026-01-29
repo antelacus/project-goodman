@@ -66,7 +66,7 @@ export default function HomePage() {
                         <Link
                             href="#core-modules"
                             onClick={handleExperienceClick}
-                            className="bg-white hover:bg-gray-50 text-gray-900 border border-gray-200 font-bold py-4 px-10 rounded-full shadow-sm hover:shadow-md transition-all flex items-center gap-2"
+                            className="bg-white hover:bg-gray-50 text-gray-900 border border-gray-200 font-bold py-4 px-10 rounded-full shadow-sm hover:shadow-md transition-all flex items-center justify-center"
                         >
                             了解更多
                         </Link>

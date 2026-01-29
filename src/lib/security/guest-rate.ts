@@ -17,11 +17,11 @@ export const GUEST_RATE_LIMITS = {
         windowMs: 60 * 60 * 1000,  // 1 hour
     },
     upload: {
-        limit: 5,
+        limit: 2,
         windowMs: 60 * 60 * 1000,
     },
     extract: {
-        limit: 10,
+        limit: 2,
         windowMs: 60 * 60 * 1000,
     },
     report: {

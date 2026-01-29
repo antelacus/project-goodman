@@ -148,7 +148,7 @@ export default function ExtractionModal({
                             </div>
                             <h3 className="text-2xl font-bold text-neutral-900 mb-3">开始提取结构化数据</h3>
                             <p className="text-neutral-500 mb-8 leading-relaxed">
-                                请选择一个已上传的财务文档（如发票、合同、报表），AI 将自动分析并提取其中的关键财务信息，可自由复制信息主题或内容。
+                                请选择一个财务文档（如发票、合同、报表），AI 将自动分析并提取其中的关键财务信息，可自由复制信息主题或内容。
                             </p>
                             <button
                                 onClick={() => setIsDocSelectOpen(true)}
