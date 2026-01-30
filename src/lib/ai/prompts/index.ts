@@ -21,13 +21,26 @@ const PROMPTS_DIR = path.join(process.cwd(), 'src', 'lib', 'ai', 'prompts');
  */
 export function loadPrompt(filename: string): LoadedPrompt {
   const filePath = path.join(PROMPTS_DIR, filename);
-  const fileContent = fs.readFileSync(filePath, 'utf-8');
-  const { data, content } = matter(fileContent);
 
-  return {
-    metadata: data as PromptMetadata,
-    content: content.trim(),
-  };
+  try {
+    const fileContent = fs.readFileSync(filePath, 'utf-8');
+    const { data, content } = matter(fileContent);
+
+    // Basic metadata validation
+    if (data.variables && !Array.isArray(data.variables)) {
+      throw new Error(`Invalid metadata in ${filename}: 'variables' must be an array`);
+    }
+
+    return {
+      metadata: data as PromptMetadata,
+      content: content.trim(),
+    };
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
+      throw new Error(`Prompt file not found: ${filename}`);
+    }
+    throw error;
+  }
 }
 
 /**
