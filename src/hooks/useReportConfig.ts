@@ -16,7 +16,7 @@ import {
   getNoDataAvailableMessage,
   getUnclearIntentMessage,
   getGenerationStartingMessage,
-} from '@/lib/prompts/report-config-messages';
+} from '@/lib/ai/prompts/report-config-messages';
 
 /**
  * Report configuration state
