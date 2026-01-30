@@ -4,14 +4,11 @@
  * Generates concise Chinese titles for conversation sessions based on the first user message.
  */
 
-import OpenAI from "openai";
+import { getLLMClient } from "@/lib/ai/client";
 import { AI_CONFIG } from "@/lib/ai/config";
 import { getPromptContent } from "@/lib/ai/prompts";
 
-const openai = new OpenAI({
-    apiKey: process.env.OPENAI_API_KEY,
-    baseURL: process.env.OPENAI_BASE_URL,
-});
+const openai = getLLMClient();
 
 const SESSION_TITLE_PROMPT = getPromptContent('session-title.md');
 
