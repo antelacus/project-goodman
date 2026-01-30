@@ -9,12 +9,10 @@ import { BaseAgentState } from "../state/base-state";
 import { BaseMessage, HumanMessage, AIMessage, ToolMessage } from "@langchain/core/messages";
 import { toolRegistry } from "@/lib/tools/registry";
 import OpenAI from "openai";
+import { getLLMClient } from "@/lib/ai/client";
 import { AI_CONFIG } from "@/lib/ai/config";
 
-const openai = new OpenAI({
-    apiKey: process.env.OPENAI_API_KEY,
-    baseURL: process.env.OPENAI_BASE_URL,
-});
+const openai = getLLMClient();
 
 const { chat: CHAT_MODEL } = AI_CONFIG.models;
 const { chat: chatParams } = AI_CONFIG.params;
