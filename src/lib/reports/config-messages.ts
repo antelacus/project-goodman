@@ -3,11 +3,39 @@
  * Used by: useReportConfig hook and ChatWorkspace
  */
 
+import type { ReportSectionId } from '@/types/report';
+
+/**
+ * Section display names mapping
+ */
+const SECTION_DISPLAY_NAMES: Record<ReportSectionId, string> = {
+  liquidity: '流动性分析',
+  solvency: '偿债能力分析',
+  profitability: '盈利能力分析',
+  efficiency: '运营效率分析',
+  comprehensive: '综合评价与建议',
+};
+
+/**
+ * Format sections for display
+ */
+function formatSections(sections?: ReportSectionId[]): string {
+  if (!sections || sections.length === 0) {
+    return '全部（5个章节）';
+  }
+  return sections.map(id => SECTION_DISPLAY_NAMES[id]).join('、');
+}
+
 /**
  * Initial configuration proposal message.
  * Shown when user clicks "生成报告" from tools menu.
  */
-export function getInitialConfigMessage(year: string, comparisonYear?: string): string {
+export function getInitialConfigMessage(
+  year: string,
+  comparisonYear?: string,
+  sections?: ReportSectionId[]
+): string {
+  const sectionsDisplay = formatSections(sections);
   return `**财务分析报告生成工具**
 
 此工具将基于您上传的财务报表数据，自动生成一份综合财务分析报告，包含：
@@ -24,21 +52,47 @@ export function getInitialConfigMessage(year: string, comparisonYear?: string): 
 默认配置如下：
 • 分析年份: ${year}
 • 对比年份: ${comparisonYear || '无'} (可选)
+• 分析章节: ${sectionsDisplay}
 
 如需调整请告诉我，或回复"确认"开始生成。`;
 }
 
 /**
  * Configuration updated message.
- * Shown after user changes year or comparison year.
+ * Shown after user changes year, comparison year, or sections.
  */
-export function getConfigUpdatedMessage(year: string, comparisonYear?: string): string {
+export function getConfigUpdatedMessage(
+  year: string,
+  comparisonYear?: string,
+  sections?: ReportSectionId[]
+): string {
+  const sectionsDisplay = formatSections(sections);
   return `已更新配置：
 
 • 分析年份: ${year}
 • 对比年份: ${comparisonYear || '无'}
+• 分析章节: ${sectionsDisplay}
 
 确认无误请回复"确认"，或继续调整。`;
+}
+
+/**
+ * Sections updated message.
+ * Shown when user changes the analysis sections.
+ */
+export function getSectionsUpdatedMessage(
+  year: string,
+  comparisonYear?: string,
+  sections?: ReportSectionId[]
+): string {
+  const sectionsDisplay = formatSections(sections);
+  return `已更新分析章节为：${sectionsDisplay}
+
+当前配置：
+• 分析年份: ${year}
+• 对比年份: ${comparisonYear || '无'}
+
+确认无误请回复"确认"开始生成。`;
 }
 
 /**
@@ -92,6 +146,7 @@ export function getUnclearIntentMessage(clarificationHint?: string): string {
 • 说明要分析的年份（如"分析2023年"）
 • 说明对比年份（如"和2022年对比"）
 • 回复"不要对比"移除对比年份
+• 选择分析章节（如"只分析流动性和盈利能力"或"不要综合评价"）
 • 回复"取消"退出`;
 }
 
@@ -99,7 +154,14 @@ export function getUnclearIntentMessage(clarificationHint?: string): string {
  * Generation starting message.
  * Brief acknowledgment before SSE streaming begins.
  */
-export function getGenerationStartingMessage(year: string, comparisonYear?: string): string {
+export function getGenerationStartingMessage(
+  year: string,
+  comparisonYear?: string,
+  sections?: ReportSectionId[]
+): string {
   const comparison = comparisonYear ? `（与${comparisonYear}年对比）` : '';
-  return `好的，正在为您生成 ${year} 年度财务分析报告${comparison}...`;
+  const sectionsInfo = sections && sections.length > 0 && sections.length < 5
+    ? `，包含${sections.length}个分析章节`
+    : '';
+  return `好的，正在为您生成 ${year} 年度财务分析报告${comparison}${sectionsInfo}...`;
 }
