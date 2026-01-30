@@ -13,12 +13,13 @@
 export const runtime = "nodejs";
 
 import { NextRequest, NextResponse } from "next/server";
-import OpenAI from "openai";
+import type OpenAI from "openai";
 import ExcelJS from "exceljs";
 import { createServerSupabaseClient } from "@/lib/database";
 import type { InsertTables, Database } from "@/lib/database";
 import { SupabaseClient } from "@supabase/supabase-js";
 import { logWorkflowEvent } from "@/lib/logging";
+import { getLLMClient } from "@/lib/ai/client";
 import { AI_CONFIG } from "@/lib/ai/config";
 import { getPromptContent } from "@/lib/ai/prompts";
 import {
@@ -51,9 +52,7 @@ import {
 } from "@/lib/financial";
 import { uploadFileToStorage } from "@/lib/documents/storage";
 
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-});
+const openai = getLLMClient();
 
 const PDF_TEXT_EXTRACT_PROMPT = getPromptContent('pdf-extract.md');
 
@@ -238,7 +237,7 @@ async function extractTextFromFile(
           }
         ]
       }],
-      max_completion_tokens: 4096
+      max_completion_tokens: AI_CONFIG.params.extraction.maxTokens
     });
     return response.choices[0]?.message?.content || '';
   } else if (ext === 'txt' || ext === 'md') {

@@ -13,8 +13,9 @@
 export const runtime = "nodejs";
 
 import { NextRequest, NextResponse } from "next/server";
-import OpenAI from "openai";
 import ExcelJS from "exceljs";
+import { getLLMClient } from "@/lib/ai/client";
+import { AI_CONFIG } from "@/lib/ai/config";
 import { createServerSupabaseClient } from "@/lib/database";
 import type { InsertTables } from "@/lib/database";
 import { logError, logWorkflowEvent } from "@/lib/logging";
@@ -38,9 +39,7 @@ import { withSentrySpan } from "@/lib/observability/error-tracking";
 import { isPerfTestRequest } from "@/lib/quality-gates/perf-test";
 import type { WorkflowErrorType } from "@/lib/errors";
 
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-});
+const openai = getLLMClient();
 
 // Supported file types
 const SUPPORTED_IMAGE_TYPES = ['image/png', 'image/jpeg', 'image/webp', 'image/gif'];
@@ -135,7 +134,7 @@ async function extractTextFromFile(
     // Fallback to Vision API for scanned PDFs
     console.log(`[upload-temp] PDF text too short, using Vision API...`);
     const response = await openai.responses.create({
-      model: "gpt-5-mini",
+      model: AI_CONFIG.models.extraction,
       input: [{
         role: "user",
         content: [
@@ -156,7 +155,7 @@ async function extractTextFromFile(
   if (SUPPORTED_IMAGE_TYPES.includes(fileType) || ['png', 'jpg', 'jpeg', 'gif', 'webp'].includes(ext || '')) {
     console.log(`[upload-temp] Using Vision API for image: ${fileName}`);
     const response = await openai.chat.completions.create({
-      model: "gpt-5-mini",
+      model: AI_CONFIG.models.extraction,
       messages: [{
         role: "user",
         content: [
@@ -170,7 +169,7 @@ async function extractTextFromFile(
           }
         ]
       }],
-      max_completion_tokens: 4096
+      max_completion_tokens: AI_CONFIG.params.extraction.maxTokens
     });
 
     return response.choices[0]?.message?.content || '';
@@ -342,7 +341,7 @@ export async function POST(req: NextRequest) {
       const embeddings: number[][] = [];
       for (const chunk of chunks) {
         const embeddingResponse = await openai.embeddings.create({
-          model: "text-embedding-3-small",
+          model: AI_CONFIG.models.embedding,
           input: chunk.content,
           encoding_format: "float",
         });
