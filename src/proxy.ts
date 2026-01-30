@@ -1,10 +1,12 @@
 /**
- * Next.js Middleware for Security
+ * Next.js Proxy for Security
  *
  * Centralized security checks applied to all requests:
  * - Rate limiting
  * - Request ID generation
  * - Security headers for rate limit info
+ *
+ * Note: Renamed from middleware.ts to proxy.ts for Next.js 16 compatibility.
  */
 
 import { NextResponse } from 'next/server';
@@ -17,16 +19,16 @@ import {
 import { generateRequestId } from './lib/security/request-id';
 
 // =============================================================================
-// Middleware
+// Proxy
 // =============================================================================
 
-export async function middleware(request: NextRequest) {
+export async function proxy(request: NextRequest) {
     const requestId = generateRequestId();
     const pathname = request.nextUrl.pathname;
     const ip = getClientIP(request);
 
     // Skip non-API routes and static assets
-    if (shouldSkipMiddleware(pathname)) {
+    if (shouldSkipProxy(pathname)) {
         return NextResponse.next();
     }
 
@@ -98,9 +100,9 @@ function getClientIP(request: NextRequest): string {
 }
 
 /**
- * Check if middleware should skip this path
+ * Check if proxy should skip this path
  */
-function shouldSkipMiddleware(pathname: string): boolean {
+function shouldSkipProxy(pathname: string): boolean {
     // Skip static assets
     if (pathname.startsWith('/_next')) {
         return true;
