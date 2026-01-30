@@ -8,9 +8,11 @@
 
 import { useState, useCallback, useRef } from 'react';
 import type { ReportConfigIntent } from '@/lib/validation/api-schemas';
+import type { ReportSectionId } from '@/types/report';
 import {
   getInitialConfigMessage,
   getConfigUpdatedMessage,
+  getSectionsUpdatedMessage,
   getComparisonRemovedMessage,
   getCancelledMessage,
   getNoDataAvailableMessage,
@@ -25,6 +27,7 @@ export interface ReportConfigState {
   isActive: boolean;
   year: string;
   comparisonYear: string | undefined;
+  sections: ReportSectionId[] | undefined;
   availableYears: string[];
   isProcessing: boolean;
   error: string | undefined;
@@ -42,6 +45,7 @@ export interface HandleUserResponseResult {
   finalConfig?: {
     year: string;
     comparisonYear?: string;
+    sections?: ReportSectionId[];
   };
   /** Whether config mode ended (cancelled or started generation) */
   configEnded?: boolean;
@@ -102,6 +106,7 @@ export function useReportConfig(): UseReportConfigReturn {
     isActive: false,
     year: '',
     comparisonYear: undefined,
+    sections: undefined,
     availableYears: [],
     isProcessing: false,
     error: undefined,
@@ -146,6 +151,7 @@ export function useReportConfig(): UseReportConfigReturn {
           isActive: false,
           year: '',
           comparisonYear: undefined,
+          sections: undefined,
           availableYears: [],
           isProcessing: false,
           error: 'No data available',
@@ -161,6 +167,7 @@ export function useReportConfig(): UseReportConfigReturn {
         isActive: true,
         year: primaryYear,
         comparisonYear,
+        sections: undefined, // Default: all sections
         availableYears: years,
         isProcessing: false,
         error: undefined,
@@ -193,7 +200,7 @@ export function useReportConfig(): UseReportConfigReturn {
       setState(prev => ({ ...prev, isProcessing: true }));
 
       try {
-        console.log('[useReportConfig] Making API call with:', { message, year: state.year, comparisonYear: state.comparisonYear });
+        console.log('[useReportConfig] Making API call with:', { message, year: state.year, comparisonYear: state.comparisonYear, sections: state.sections });
         // Call parse-config API
         const response = await fetch('/api/reports/parse-config', {
           method: 'POST',
@@ -203,6 +210,7 @@ export function useReportConfig(): UseReportConfigReturn {
             currentConfig: {
               year: state.year,
               comparisonYear: state.comparisonYear || null,
+              sections: state.sections || null,
             },
             availableYears: state.availableYears,
           }),
@@ -227,6 +235,7 @@ export function useReportConfig(): UseReportConfigReturn {
             const finalConfig = {
               year: state.year,
               comparisonYear: state.comparisonYear,
+              sections: state.sections,
             };
 
             setState(prev => ({
@@ -238,7 +247,8 @@ export function useReportConfig(): UseReportConfigReturn {
             return {
               agentResponse: getGenerationStartingMessage(
                 finalConfig.year,
-                finalConfig.comparisonYear
+                finalConfig.comparisonYear,
+                finalConfig.sections
               ),
               shouldStartGeneration: true,
               finalConfig,
@@ -247,7 +257,7 @@ export function useReportConfig(): UseReportConfigReturn {
           }
 
           case 'change_year': {
-            // Update primary year (and optionally comparison year)
+            // Update primary year (and optionally comparison year and sections)
             const newYear = intent.year || state.year;
             // If comparison year was also specified, use it; otherwise auto-select previous year
             let newComparisonYear = intent.comparisonYear;
@@ -258,31 +268,51 @@ export function useReportConfig(): UseReportConfigReturn {
                 newComparisonYear = state.availableYears[yearIndex + 1];
               }
             }
+            // If sections were also specified, use them
+            const newSections = intent.sections || state.sections;
 
             setState(prev => ({
               ...prev,
               year: newYear,
               comparisonYear: newComparisonYear || undefined,
+              sections: newSections || undefined,
               isProcessing: false,
             }));
 
             return {
-              agentResponse: getConfigUpdatedMessage(newYear, newComparisonYear || undefined),
+              agentResponse: getConfigUpdatedMessage(newYear, newComparisonYear || undefined, newSections || undefined),
             };
           }
 
           case 'change_comparison': {
-            // Update comparison year only
+            // Update comparison year only (and optionally sections)
             const newComparisonYear = intent.comparisonYear || undefined;
+            const newSections = intent.sections || state.sections;
 
             setState(prev => ({
               ...prev,
               comparisonYear: newComparisonYear,
+              sections: newSections || undefined,
               isProcessing: false,
             }));
 
             return {
-              agentResponse: getConfigUpdatedMessage(state.year, newComparisonYear),
+              agentResponse: getConfigUpdatedMessage(state.year, newComparisonYear, newSections || undefined),
+            };
+          }
+
+          case 'change_sections': {
+            // Update sections only
+            const newSections = intent.sections || undefined;
+
+            setState(prev => ({
+              ...prev,
+              sections: newSections,
+              isProcessing: false,
+            }));
+
+            return {
+              agentResponse: getSectionsUpdatedMessage(state.year, state.comparisonYear, newSections),
             };
           }
 
@@ -305,6 +335,7 @@ export function useReportConfig(): UseReportConfigReturn {
               isActive: false,
               year: '',
               comparisonYear: undefined,
+              sections: undefined,
               availableYears: [],
               isProcessing: false,
               error: undefined,
@@ -352,6 +383,7 @@ export function useReportConfig(): UseReportConfigReturn {
       isActive: false,
       year: '',
       comparisonYear: undefined,
+      sections: undefined,
       availableYears: [],
       isProcessing: false,
       error: undefined,
