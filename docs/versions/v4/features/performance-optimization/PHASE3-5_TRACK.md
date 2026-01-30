@@ -508,7 +508,15 @@
 - [x] 更新 `gather-metrics.ts` 根据选定章节过滤指标
 - [x] 更新 `analyze-sections.ts` 根据选定章节过滤分析
 
-#### N5: 验收测试
+#### N5: 前端集成
+
+- [x] 更新 `config-messages.ts` 添加 `sections` 参数到消息函数
+- [x] 新增 `getSectionsUpdatedMessage()` 函数
+- [x] 更新 `useReportConfig.ts` 处理 `change_sections` 意图
+- [x] 更新 `useReportGeneration.ts` 添加 `sections` 参数到 `startGeneration`
+- [x] 更新 `ChatWorkspace.tsx` 传递 `sections` 到生成流程
+
+#### N6: 验收测试
 
 - [ ] 单章节选择测试（"只分析流动性"）
 - [ ] 多章节选择测试（"流动性和盈利能力"）
