@@ -346,6 +346,58 @@ export class ToolRegistry {
   }
 
   /**
+   * Generate a human-readable capabilities summary for system prompts
+   * Groups tools by category with Chinese descriptions
+   */
+  generateCapabilitiesSummary(): string {
+    const tools = this.getAll();
+
+    // Group tools by category
+    const byCategory = new Map<ToolCategory, Tool[]>();
+    for (const tool of tools) {
+      const list = byCategory.get(tool.category) || [];
+      list.push(tool);
+      byCategory.set(tool.category, list);
+    }
+
+    // Category display names in Chinese
+    const categoryNames: Record<ToolCategory, string> = {
+      financial: "财务比率计算",
+      query: "数据查询与计算",
+      search: "文档搜索",
+      extraction: "信息提取",
+      storage: "存储工具",
+      compliance: "法规搜索",
+    };
+
+    // Build summary
+    const sections: string[] = [];
+
+    // Define category order (only include categories that have tools)
+    const categoryOrder: ToolCategory[] = [
+      "query",
+      "financial",
+      "search",
+      "compliance",
+      "extraction",
+    ];
+
+    for (const category of categoryOrder) {
+      const categoryTools = byCategory.get(category);
+      if (!categoryTools || categoryTools.length === 0) continue;
+
+      const categoryName = categoryNames[category];
+      const toolLines = categoryTools.map(
+        (t) => `- \`${t.name}\`: ${t.displayName}`
+      );
+
+      sections.push(`### ${categoryName}\n${toolLines.join("\n")}`);
+    }
+
+    return sections.join("\n\n");
+  }
+
+  /**
    * Clear all registered tools (useful for testing)
    */
   clear(): void {

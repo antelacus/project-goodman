@@ -1,7 +1,21 @@
 /**
  * Unified Agent Prompts
+ *
+ * The system prompt is dynamically generated to include the auto-generated
+ * tool list from the registry, ensuring it always reflects actual capabilities.
  */
 
-import { getPromptContent } from '@/lib/ai/prompts';
+import { loadPromptWithVariables } from '@/lib/ai/prompts';
+import { toolRegistry } from '@/lib/tools/registry';
 
-export const UNIFIED_AGENT_SYSTEM_PROMPT = getPromptContent('chat-system.md');
+/**
+ * Get the unified agent system prompt with auto-generated tool list
+ * This ensures the prompt always reflects the actual registered tools
+ */
+export function getUnifiedAgentSystemPrompt(): string {
+  const toolsSummary = toolRegistry.generateCapabilitiesSummary();
+
+  return loadPromptWithVariables('chat-system.md', {
+    tools_summary: toolsSummary,
+  });
+}

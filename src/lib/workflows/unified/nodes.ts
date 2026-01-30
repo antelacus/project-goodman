@@ -7,7 +7,7 @@
 import { agentLoopNode as coreAgentLoop } from "../core/nodes/agent-loop";
 import { registerUnifiedTools } from "@/lib/tools";
 import { UnifiedAgentState } from "./state";
-import { UNIFIED_AGENT_SYSTEM_PROMPT } from "./prompts";
+import { getUnifiedAgentSystemPrompt } from "./prompts";
 
 export { loadMemoryNode } from "../core/nodes/load-memory";
 export { toolExecutorNode } from "../core/nodes/tool-executor";
@@ -30,8 +30,8 @@ export async function unifiedAgentLoop(state: UnifiedAgentState) {
     // Ensure tools are registered (idempotent, only runs once per process)
     ensureToolsRegistered();
 
-    // Call core loop with specific prompt
+    // Call core loop with dynamically generated prompt (includes auto-generated tool list)
     return coreAgentLoop(state, {
-        systemPrompt: UNIFIED_AGENT_SYSTEM_PROMPT
+        systemPrompt: getUnifiedAgentSystemPrompt()
     });
 }

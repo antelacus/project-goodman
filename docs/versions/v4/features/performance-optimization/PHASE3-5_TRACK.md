@@ -560,3 +560,26 @@
 - 2be8e66 docs(env): add LLM configuration variables
 - b34cc38 test(ai): add tests for prompt loader and client factory
 ```
+
+### M. 系统提示词优化（部署后修复）
+
+#### M1: 提示词翻译与重组
+
+- [x] 将 `chat-system.md` 全文翻译为简体中文
+- [x] 重组核心能力描述（指标查询、比率查询、自定义计算、文档检索、综合报告生成、快捷操作）
+- [x] 更新工具选择决策树顺序（原始指标优先于标准比率）
+- [x] 添加快捷操作和高级工具入口提示
+
+#### M2: 工具列表自动生成
+
+- [x] 在 `registry.ts` 添加 `generateCapabilitiesSummary()` 方法
+- [x] 工具列表按类别分组（数据查询、财务比率、文档搜索、法规搜索、信息提取）
+- [x] 更新 `prompts.ts` 使用 `loadPromptWithVariables` 注入工具列表
+- [x] 更新 `nodes.ts` 使用动态生成的系统提示词
+- [x] 移除 `chat-system.md` 中硬编码的工具列表
+
+**文件变更**:
+- `src/lib/ai/prompts/chat-system.md`: 翻译 + 重组 + 添加 `{{tools_summary}}` 变量
+- `src/lib/tools/registry.ts`: 新增 `generateCapabilitiesSummary()` 方法
+- `src/lib/workflows/unified/prompts.ts`: 改为动态生成函数
+- `src/lib/workflows/unified/nodes.ts`: 使用 `getUnifiedAgentSystemPrompt()` 函数
