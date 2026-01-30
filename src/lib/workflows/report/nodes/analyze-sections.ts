@@ -5,16 +5,15 @@
  * v4.2: Calls LLM sequentially for each of 5 sections.
  */
 
-import OpenAI from 'openai';
+import { getLLMClient } from '@/lib/ai/client';
+import { AI_CONFIG } from '@/lib/ai/config';
 import type { ReportWorkflowState, ReportSectionData, MetricResult } from '../state';
 import type { ReportSection, ReportMetric } from '@/types/report';
 import { REPORT_SECTIONS, calculateChange } from '../constants';
 import { buildSectionAnalysisPrompt } from '../prompts';
 
-// Initialize OpenAI client
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-});
+// Get shared LLM client
+const openai = getLLMClient();
 
 /**
  * Convert MetricResult to ReportMetric format
@@ -78,10 +77,10 @@ async function analyzeSection(
 
   try {
     const response = await openai.chat.completions.create({
-      model: 'gpt-4o',
+      model: AI_CONFIG.models.report,
       messages: [{ role: 'user', content: prompt }],
-      temperature: 0.3,
-      max_tokens: 800,
+      temperature: AI_CONFIG.params.report.temperature,
+      max_tokens: AI_CONFIG.params.report.maxTokens,
     });
 
     analysis = response.choices[0]?.message?.content || '分析生成失败';

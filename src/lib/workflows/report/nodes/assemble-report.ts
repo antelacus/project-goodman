@@ -5,15 +5,14 @@
  * v4.2: Combines all sections and generates executive summary.
  */
 
-import OpenAI from 'openai';
+import { getLLMClient } from '@/lib/ai/client';
+import { AI_CONFIG } from '@/lib/ai/config';
 import type { ReportWorkflowState } from '../state';
 import type { ReportContent, ReportSection, ReportSummary } from '@/types/report';
 import { buildSummaryPrompt } from '../prompts';
 
-// Initialize OpenAI client
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-});
+// Get shared LLM client
+const openai = getLLMClient();
 
 /**
  * Generate executive summary using LLM
@@ -31,10 +30,10 @@ async function generateSummary(
 
   try {
     const response = await openai.chat.completions.create({
-      model: 'gpt-4o',
+      model: AI_CONFIG.models.report,
       messages: [{ role: 'user', content: prompt }],
-      temperature: 0.3,
-      max_tokens: 600,
+      temperature: AI_CONFIG.params.report.temperature,
+      max_tokens: AI_CONFIG.params.report.maxTokens,
       response_format: { type: 'json_object' },
     });
 
