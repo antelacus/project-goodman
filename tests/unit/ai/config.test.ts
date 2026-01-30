@@ -12,9 +12,10 @@ describe('AI config', () => {
     expect(AI_CONFIG.models.embedding).toBeTruthy();
   });
 
-  it('exposes unified system prompt', async () => {
+  it('exposes model params configuration', async () => {
     const { AI_CONFIG } = await import('@/lib/ai/config');
 
-    expect(AI_CONFIG.prompts.unifiedSystem).toContain('Goodman Agent');
+    expect(AI_CONFIG.params.chat.temperature).toBeDefined();
+    expect(AI_CONFIG.params.extraction.maxTokens).toBeDefined();
   });
 });
