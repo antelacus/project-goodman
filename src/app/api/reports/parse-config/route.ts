@@ -59,9 +59,14 @@ export async function POST(req: NextRequest) {
     const { userMessage, currentConfig, availableYears } = validation.data;
 
     // 3. Build prompt for LLM
+    const sectionsDisplay = currentConfig.sections
+      ? currentConfig.sections.join('、')
+      : '全部（流动性、偿债能力、盈利能力、运营效率、综合评价）';
+
     const prompt = loadPromptWithVariables('report-config-intent.md', {
       year: currentConfig.year,
       comparisonYear: currentConfig.comparisonYear || '无',
+      sections: sectionsDisplay,
       availableYears: availableYears.join('、'),
       userMessage,
     });
@@ -94,6 +99,7 @@ export async function POST(req: NextRequest) {
           intent: 'unclear',
           year: null,
           comparisonYear: null,
+          sections: null,
           clarificationNeeded: '抱歉，我没有理解您的意思，请重新描述。',
         } satisfies ReportConfigIntent,
       });
@@ -117,6 +123,7 @@ export async function POST(req: NextRequest) {
           intent: 'unclear',
           year: null,
           comparisonYear: null,
+          sections: null,
           clarificationNeeded: '抱歉，我没有理解您的意思，请重新描述。',
         };
       } else {
@@ -128,6 +135,7 @@ export async function POST(req: NextRequest) {
         intent: 'unclear',
         year: null,
         comparisonYear: null,
+        sections: null,
         clarificationNeeded: '抱歉，我没有理解您的意思，请重新描述。',
       };
     }
@@ -140,6 +148,7 @@ export async function POST(req: NextRequest) {
           intent: 'unclear',
           year: null,
           comparisonYear: null,
+          sections: null,
           clarificationNeeded: `${parsedIntent.year} 年的财务数据暂不可用。可用年份：${availableYears.join('、')}`,
         };
       }
@@ -152,12 +161,26 @@ export async function POST(req: NextRequest) {
           intent: 'unclear',
           year: null,
           comparisonYear: null,
+          sections: null,
           clarificationNeeded: `${parsedIntent.comparisonYear} 年的财务数据暂不可用。可用年份：${availableYears.join('、')}`,
         };
       }
     }
 
-    // 7. Return parsed intent
+    // 7. Validate sections if intent involves section change
+    if (parsedIntent.intent === 'change_sections' && parsedIntent.sections) {
+      if (parsedIntent.sections.length === 0) {
+        parsedIntent = {
+          intent: 'unclear',
+          year: null,
+          comparisonYear: null,
+          sections: null,
+          clarificationNeeded: '请至少选择一个分析章节。可选章节：流动性分析、偿债能力分析、盈利能力分析、运营效率分析、综合评价与建议',
+        };
+      }
+    }
+
+    // 8. Return parsed intent
     return NextResponse.json({
       success: true,
       data: parsedIntent,

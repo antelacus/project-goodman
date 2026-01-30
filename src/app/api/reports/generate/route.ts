@@ -225,7 +225,7 @@ export async function POST(req: NextRequest) {
         );
       }
 
-      const { year, comparisonYear } = validation.data;
+      const { year, comparisonYear, sections } = validation.data;
 
       // Increment rate limit for guest after validation
       if (session.role === 'guest') {
@@ -243,6 +243,7 @@ export async function POST(req: NextRequest) {
       const initialState = createInitialState({
         year,
         comparisonYear,
+        sections,
         ownerId,
         ownerType,
       });

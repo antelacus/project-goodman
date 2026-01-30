@@ -12,6 +12,7 @@
 import { toolRegistry, registerUnifiedTools } from '@/lib/tools';
 import type { ReportWorkflowState, MetricResult } from '../state';
 import {
+  REPORT_SECTIONS,
   getAllMetricNames,
   getMetricDisplayName,
   formatMetricValue,
@@ -93,11 +94,23 @@ async function executeMetricTool(
 
 /**
  * Gather all metrics for a given year
+ * @param year - The year to gather metrics for
+ * @param selectedSections - Optional array of section IDs to filter metrics
  */
 async function gatherMetricsForYear(
-  year: string
+  year: string,
+  selectedSections?: string[]
 ): Promise<Record<string, MetricResult>> {
-  const metricNames = getAllMetricNames();
+  // Get metrics based on selected sections
+  let metricNames: string[];
+  if (selectedSections && selectedSections.length > 0) {
+    // Only gather metrics for selected sections
+    const sectionsToProcess = REPORT_SECTIONS.filter(s => selectedSections.includes(s.id));
+    metricNames = sectionsToProcess.flatMap(s => s.metrics);
+  } else {
+    // Gather all metrics (default behavior)
+    metricNames = getAllMetricNames();
+  }
 
   // Execute all metrics in parallel
   const results = await Promise.all(
@@ -122,17 +135,17 @@ export async function gatherMetricsNode(
   // Ensure tools are registered before execution
   ensureToolsRegistered();
 
-  const { year, comparisonYear } = state.input;
+  const { year, comparisonYear, sections } = state.input;
 
   try {
-    // Gather primary year metrics
-    const primaryMetrics = await gatherMetricsForYear(year);
+    // Gather primary year metrics (filtered by selected sections if specified)
+    const primaryMetrics = await gatherMetricsForYear(year, sections);
 
     // Gather comparison year metrics if available
     let comparisonMetrics: Record<string, MetricResult> = {};
 
     if (comparisonYear && state.dataAvailability.comparisonYearAvailable) {
-      comparisonMetrics = await gatherMetricsForYear(comparisonYear);
+      comparisonMetrics = await gatherMetricsForYear(comparisonYear, sections);
     }
 
     // Count successful metrics

@@ -128,7 +128,7 @@ async function analyzeSection(
 export async function analyzeSectionsNode(
   state: ReportWorkflowState
 ): Promise<Partial<ReportWorkflowState>> {
-  const { year, comparisonYear } = state.input;
+  const { year, comparisonYear, sections: selectedSections } = state.input;
   const { primary, comparison } = state.metricResults;
   const { companyProfile, companyInfo, financialPolicy } = state.contextDocuments;
   const companyContext = {
@@ -136,11 +136,16 @@ export async function analyzeSectionsNode(
     financialPolicy,
   };
 
+  // Filter sections based on user selection (default: all sections)
+  const sectionsToAnalyze = selectedSections && selectedSections.length > 0
+    ? REPORT_SECTIONS.filter(s => selectedSections.includes(s.id))
+    : REPORT_SECTIONS;
+
   try {
     const sections: ReportSectionData[] = [];
 
     // Process each section sequentially (to manage API rate limits)
-    for (const sectionConfig of REPORT_SECTIONS) {
+    for (const sectionConfig of sectionsToAnalyze) {
       const sectionData: ReportSectionData = {
         id: sectionConfig.id,
         title: sectionConfig.title,
@@ -178,7 +183,7 @@ export async function analyzeSectionsNode(
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : '未知错误';
     return {
-      sections: REPORT_SECTIONS.map(config => ({
+      sections: sectionsToAnalyze.map(config => ({
         id: config.id,
         title: config.title,
         metrics: config.metrics,

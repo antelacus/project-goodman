@@ -201,6 +201,19 @@ export type SessionTerminateRequest = z.infer<typeof SessionTerminateSchema>;
 // =============================================================================
 
 /**
+ * Valid report section IDs
+ */
+export const ReportSectionIdSchema = z.enum([
+    'liquidity',
+    'solvency',
+    'profitability',
+    'efficiency',
+    'comprehensive',
+]);
+
+export type ReportSectionIdType = z.infer<typeof ReportSectionIdSchema>;
+
+/**
  * Report Generation Request
  * POST /api/reports/generate
  */
@@ -211,6 +224,10 @@ export const ReportGenerateSchema = z.object({
     comparisonYear: z
         .string()
         .regex(/^\d{4}$/, '对比年份格式错误（需要4位数字）')
+        .optional(),
+    sections: z
+        .array(ReportSectionIdSchema)
+        .min(1, '至少选择一个分析章节')
         .optional(),
 });
 
@@ -273,6 +290,7 @@ export const ReportConfigParseSchema = z.object({
     currentConfig: z.object({
         year: z.string().regex(/^\d{4}$/, '年份格式错误'),
         comparisonYear: z.string().regex(/^\d{4}$/).nullable(),
+        sections: z.array(ReportSectionIdSchema).nullable(),
     }),
     availableYears: z.array(z.string().regex(/^\d{4}$/)),
 });
@@ -288,11 +306,13 @@ export const ReportConfigIntentSchema = z.object({
         'change_year',
         'change_comparison',
         'remove_comparison',
+        'change_sections',
         'cancel',
         'unclear',
     ]),
     year: z.string().nullable(),
     comparisonYear: z.string().nullable(),
+    sections: z.array(ReportSectionIdSchema).nullable(),
     clarificationNeeded: z.string().nullable(),
 });
 
