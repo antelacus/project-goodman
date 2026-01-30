@@ -583,3 +583,15 @@
 - `src/lib/tools/registry.ts`: 新增 `generateCapabilitiesSummary()` 方法
 - `src/lib/workflows/unified/prompts.ts`: 改为动态生成函数
 - `src/lib/workflows/unified/nodes.ts`: 使用 `getUnifiedAgentSystemPrompt()` 函数
+
+#### M3: 产品上下文自动注入
+
+- [x] 从 README.md 提取产品介绍、功能概览、用户角色、功能详解
+- [x] 在 `prompts.ts` 添加 `extractProductContext()` 函数
+- [x] 更新 `chat-system.md` 添加 `{{product_context}}` 变量
+- [x] Agent 现在可以回答产品功能、访客限额、文档管理等问题
+
+**优势**:
+- README.md 是单一信息源，主动维护
+- 系统提示词自动同步产品信息
+- 无需手动维护重复内容
