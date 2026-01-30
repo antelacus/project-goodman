@@ -76,8 +76,10 @@ jobs:
         if: ${{ always() && (hashFiles('tests/quality-baselines/performance/perf-baseline.json') != '' || hashFiles('tests/quality-baselines/lighthouse/*.json') != '' || hashFiles('tests/quality-baselines/a11y/a11y-baseline.json') != '') }}
         run: |
           if [ -f /tmp/next-dev.pid ]; then
-            kill "$(cat /tmp/next-dev.pid)"
+            kill "$(cat /tmp/next-dev.pid)" || true
           fi
+          # Clean up Next.js dev lock file to allow E2E tests to start their own server
+          rm -f .next/dev/lock
 
       - name: Upload coverage report
         uses: actions/upload-artifact@v4
