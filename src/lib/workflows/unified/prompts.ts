@@ -2,6 +2,6 @@
  * Unified Agent Prompts
  */
 
-import { AI_CONFIG } from '@/lib/ai/config';
+import { getPromptContent } from '@/lib/ai/prompts';
 
-export const UNIFIED_AGENT_SYSTEM_PROMPT = AI_CONFIG.prompts.unifiedSystem;
+export const UNIFIED_AGENT_SYSTEM_PROMPT = getPromptContent('chat-system.md');

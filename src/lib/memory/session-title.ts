@@ -6,11 +6,14 @@
 
 import OpenAI from "openai";
 import { AI_CONFIG } from "@/lib/ai/config";
+import { getPromptContent } from "@/lib/ai/prompts";
 
 const openai = new OpenAI({
     apiKey: process.env.OPENAI_API_KEY,
     baseURL: process.env.OPENAI_BASE_URL,
 });
+
+const SESSION_TITLE_PROMPT = getPromptContent('session-title.md');
 
 /**
  * Generates a short Chinese session title based on the user's first message.
@@ -29,7 +32,7 @@ export async function generateSessionTitle(firstMessage: string): Promise<string
             messages: [
                 {
                     role: "system",
-                    content: AI_CONFIG.prompts.sessionTitleSystem
+                    content: SESSION_TITLE_PROMPT
                 },
                 {
                     role: "user",
