@@ -7,27 +7,24 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import OpenAI from 'openai';
 import {
   ensureSession,
   createErrorResponse,
 } from '@/lib/security';
 import { AI_CONFIG } from '@/lib/ai/config';
+import { getLLMClient } from '@/lib/ai/client';
+import { loadPromptWithVariables } from '@/lib/ai/prompts';
 import {
   ReportConfigParseSchema,
   ReportConfigIntentSchema,
   validateRequest,
   type ReportConfigIntent,
 } from '@/lib/validation/api-schemas';
-import { getReportConfigIntentPrompt } from '@/lib/prompts';
 
 export const runtime = 'nodejs';
 
 // Initialize OpenAI client
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-  baseURL: process.env.OPENAI_BASE_URL,
-});
+const openai = getLLMClient();
 
 // ============================================================================
 // POST Handler
@@ -62,12 +59,12 @@ export async function POST(req: NextRequest) {
     const { userMessage, currentConfig, availableYears } = validation.data;
 
     // 3. Build prompt for LLM
-    const prompt = getReportConfigIntentPrompt(
-      currentConfig.year,
-      currentConfig.comparisonYear,
-      availableYears,
-      userMessage
-    );
+    const prompt = loadPromptWithVariables('report-config-intent.md', {
+      year: currentConfig.year,
+      comparisonYear: currentConfig.comparisonYear || '无',
+      availableYears: availableYears.join('、'),
+      userMessage,
+    });
 
     // 4. Call LLM to parse intent
     const completion = await openai.chat.completions.create({

@@ -9,9 +9,9 @@
  */
 export const runtime = "nodejs";
 import { NextRequest, NextResponse } from "next/server";
-import OpenAI from "openai";
 import ExcelJS from "exceljs";
-import { getDataExtractPrompt } from "@/lib/prompts";
+import { getPromptContent } from "@/lib/ai/prompts";
+import { getLLMClient } from "@/lib/ai/client";
 import { logWorkflowEvent } from "@/lib/logging";
 import { AI_CONFIG } from "@/lib/ai/config";
 import {
@@ -28,9 +28,7 @@ import { withSentrySpan } from "@/lib/observability/error-tracking";
 import { isPerfTestRequest } from "@/lib/quality-gates/perf-test";
 import type { WorkflowErrorType } from "@/lib/errors";
 
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-});
+const openai = getLLMClient();
 
 // Supported file types
 const SUPPORTED_IMAGE_TYPES = [
@@ -255,7 +253,7 @@ export async function POST(req: NextRequest) {
         }, 400);
       }
 
-      const prompt = getDataExtractPrompt();
+      const prompt = getPromptContent('data-extract.md');
 
       let result: string | null = null;
 
