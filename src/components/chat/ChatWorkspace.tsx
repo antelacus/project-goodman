@@ -12,6 +12,7 @@ import GuestBanner from './GuestBanner';
 import { ReportProgress } from '@/components/reports';
 import { SkeletonMessage } from '@/components/ui/Skeleton';
 import type { ChatMessage } from '@/types/message';
+import type { ReportSectionId } from '@/types/report';
 import { formatChatWarnings, type ChatWarning } from '@/lib/chat/warnings';
 import { notifyGuestRateUpdate } from '@/lib/security/guest-rate-client';
 import { decodeReportMessage } from '@/lib/reports/report-message';
@@ -110,9 +111,13 @@ export default function ChatWorkspace() {
     }, [reportConfig]);
 
     // v4.2: Start report generation (called after user confirms config)
-    const handleGenerateReport = useCallback(async (year: string, comparisonYear?: string) => {
+    const handleGenerateReport = useCallback(async (
+        year: string,
+        comparisonYear?: string,
+        sections?: ReportSectionId[]
+    ) => {
         // Start generation via hook - it handles SSE parsing internally
-        const generatedReport = await startGeneration(year, comparisonYear);
+        const generatedReport = await startGeneration(year, comparisonYear, sections);
 
         // Add report as a message when complete
         if (generatedReport) {
@@ -225,7 +230,8 @@ export default function ChatWorkspace() {
             if (result.shouldStartGeneration && result.finalConfig) {
                 await handleGenerateReport(
                     result.finalConfig.year,
-                    result.finalConfig.comparisonYear
+                    result.finalConfig.comparisonYear,
+                    result.finalConfig.sections
                 );
             }
 

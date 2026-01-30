@@ -6,7 +6,7 @@
  */
 
 import { useState, useRef, useCallback } from 'react';
-import type { ReportContent } from '@/types/report';
+import type { ReportContent, ReportSectionId } from '@/types/report';
 import type { PhaseDisplayInfo, ReportPhase } from '@/types/report-events';
 import { REPORT_PHASES } from '@/types/report-events';
 import { notifyGuestRateUpdate } from '@/lib/security/guest-rate-client';
@@ -34,7 +34,7 @@ export interface UseReportGenerationReturn {
   generationTimeMs: number | undefined;
 
   // Operations
-  startGeneration: (year: string, comparisonYear?: string) => Promise<ReportContent | null>;
+  startGeneration: (year: string, comparisonYear?: string, sections?: ReportSectionId[]) => Promise<ReportContent | null>;
   saveReport: () => Promise<{ reportId: string; docxUrl: string | null } | null>;
   reset: () => void;
   cancel: () => void;
@@ -160,7 +160,8 @@ export function useReportGeneration(): UseReportGenerationReturn {
    */
   const startGeneration = useCallback(async (
     year: string,
-    compYear?: string
+    compYear?: string,
+    sections?: ReportSectionId[]
   ): Promise<ReportContent | null> => {
     // Reset state
     setIsGenerating(true);
@@ -189,7 +190,7 @@ export function useReportGeneration(): UseReportGenerationReturn {
       const response = await fetch('/api/reports/generate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ year, comparisonYear: compYear }),
+        body: JSON.stringify({ year, comparisonYear: compYear, sections }),
         signal: abortController.signal,
       });
 
