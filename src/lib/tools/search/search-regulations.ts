@@ -9,7 +9,7 @@ import { z } from "zod";
 import { Tool } from "../types";
 import { createServerSupabaseClient, matchDocuments } from "@/lib/database";
 import type { MatchDocumentsResult } from "@/lib/database";
-import OpenAI from "openai";
+import { getLLMClient } from "@/lib/ai/client";
 import { AI_CONFIG } from "@/lib/ai/config";
 import {
   RETRIEVAL_EMPTY_REGULATIONS_REASON,
@@ -60,7 +60,7 @@ export const searchRegulationsTool: Tool<SearchRegulationsInput, SearchRegulatio
   execute: async (input) => {
     try {
       const supabase = createServerSupabaseClient();
-      const openai = new OpenAI();
+      const openai = getLLMClient();
 
       // 1. Generate embedding
       const embeddingResponse = await openai.embeddings.create({

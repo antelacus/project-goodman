@@ -136,13 +136,13 @@ async function searchDocumentsInternal(
 // Helpers
 // ----------------------------------------------------------------------------
 
-import OpenAI from 'openai';
+import { getLLMClient } from '@/lib/ai/client';
 import { AI_CONFIG } from '@/lib/ai/config';
 
 async function generateEmbedding(text: string): Promise<number[]> {
     // Simple OpenAI embedding wrapper
     // This should ideally reuse a shared instance from `src/lib/ai-extraction.ts` or similar
-    const openai = new OpenAI();
+    const openai = getLLMClient();
     const response = await openai.embeddings.create({
         model: AI_CONFIG.models.embedding,
         input: text.replace(/\n/g, ' '),
