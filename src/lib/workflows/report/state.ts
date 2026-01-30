@@ -8,6 +8,7 @@
 import type {
   ReportContent,
   ReportSection,
+  ReportSectionId,
   ReportSourceReference,
 } from '@/types/report';
 
@@ -40,6 +41,7 @@ export interface MetricResult {
 export interface ReportWorkflowInput {
   year: string;
   comparisonYear?: string;
+  sections?: ReportSectionId[];  // Selected sections (undefined = all)
   ownerId: string;
   ownerType: 'admin' | 'user' | 'guest';
 }

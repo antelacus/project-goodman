@@ -1,10 +1,11 @@
 ---
 name: report-config-intent
 description: Parse user intent for report configuration
-version: "1.0"
+version: "2.0"
 variables:
   - year
   - comparisonYear
+  - sections
   - availableYears
   - userMessage
 ---
@@ -14,8 +15,16 @@ variables:
 当前配置：
 - 分析年份: {{year}}
 - 对比年份: {{comparisonYear}}
+- 分析章节: {{sections}}
 
 可用年份: {{availableYears}}
+
+可用章节:
+- liquidity (流动性分析)
+- solvency (偿债能力分析)
+- profitability (盈利能力分析)
+- efficiency (运营效率分析)
+- comprehensive (综合评价与建议)
 
 用户回复: {{userMessage}}
 
@@ -25,6 +34,7 @@ variables:
   "intent": "<意图类型>",
   "year": "<如果更改主年份，填写新年份，否则为 null>",
   "comparisonYear": "<如果更改对比年份，填写新年份；如果移除对比，填写 null>",
+  "sections": "<如果更改章节，填写章节ID数组，否则为 null>",
   "clarificationNeeded": "<如果意图不明确，返回用中文写的澄清问题，否则为 null>"
 }
 
@@ -40,6 +50,9 @@ variables:
 
 - "remove_comparison": 用户不要对比年份
   示例: "不要对比"、"不需要对比年份"、"只分析单年"、"去掉对比"、"不用对比了"、"不对比"
+
+- "change_sections": 用户要更改分析章节
+  示例: "只分析流动性"、"流动性和盈利能力"、"不要综合评价"、"只看偿债能力"、"全部分析"
 
 - "cancel": 用户取消报告生成
   示例: "取消"、"算了"、"不要了"、"退出"、"不生成了"、"放弃"
@@ -61,4 +74,18 @@ variables:
 
 5. 如果用户只是询问（不是确认或更改），设为 "unclear" 并提供帮助性的澄清消息。
 
-6. 只返回 JSON，不要任何其他文字或解释。
+6. 章节选择解析规则：
+   - 包含模式: "只分析X和Y" → sections: ["X", "Y"]
+   - 排除模式: "不要X" → sections: [除X外的所有章节]
+   - "全部分析" 或 "所有章节" → sections: null (表示全部)
+   - 章节名称匹配支持部分匹配：
+     - "流动性" → "liquidity"
+     - "偿债" → "solvency"
+     - "盈利" → "profitability"
+     - "运营" 或 "效率" → "efficiency"
+     - "综合" 或 "评价" 或 "建议" → "comprehensive"
+
+7. 如果用户同时更改年份和章节，优先使用 "change_year" 或 "change_comparison"，并同时设置 sections。
+   示例: "2023年，只看流动性" → intent: "change_year", year: "2023", sections: ["liquidity"]
+
+8. 只返回 JSON，不要任何其他文字或解释。

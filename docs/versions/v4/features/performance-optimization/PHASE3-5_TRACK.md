@@ -487,26 +487,26 @@
 
 #### N1: Schema 与类型扩展
 
-- [ ] 在 `api-schemas.ts` 的 `ReportGenerateSchema` 新增 `sections` 字段
-- [ ] 在 `api-schemas.ts` 的 `ReportConfigIntentSchema` 新增 `sections` 字段和 `change_sections` 意图
-- [ ] 在 `state.ts` 的 `ReportWorkflowInput` 新增 `sections` 字段
+- [x] 在 `api-schemas.ts` 的 `ReportGenerateSchema` 新增 `sections` 字段
+- [x] 在 `api-schemas.ts` 的 `ReportConfigIntentSchema` 新增 `sections` 字段和 `change_sections` 意图
+- [x] 在 `state.ts` 的 `ReportWorkflowInput` 新增 `sections` 字段
 
 #### N2: 意图解析增强
 
-- [ ] 更新 `report-config-intent.md` 添加章节解析指令
-- [ ] 添加章节名称映射（中文 → ID）
-- [ ] 添加包含/排除两种解析模式示例
+- [x] 更新 `report-config-intent.md` 添加章节解析指令
+- [x] 添加章节名称映射（中文 → ID）
+- [x] 添加包含/排除两种解析模式示例
 
 #### N3: API 路由更新
 
-- [ ] 更新 `parse-config/route.ts` 处理 `change_sections` 意图
-- [ ] 添加章节 ID 验证逻辑
-- [ ] 更新 `generate/route.ts` 传递 `sections` 到工作流
+- [x] 更新 `parse-config/route.ts` 处理 `change_sections` 意图
+- [x] 添加章节 ID 验证逻辑
+- [x] 更新 `generate/route.ts` 传递 `sections` 到工作流
 
 #### N4: 工作流节点优化
 
-- [ ] 更新 `gather-metrics.ts` 根据选定章节过滤指标
-- [ ] 更新 `analyze-sections.ts` 根据选定章节过滤分析
+- [x] 更新 `gather-metrics.ts` 根据选定章节过滤指标
+- [x] 更新 `analyze-sections.ts` 根据选定章节过滤分析
 
 #### N5: 验收测试
 
