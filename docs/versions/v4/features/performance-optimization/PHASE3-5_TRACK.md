@@ -387,6 +387,65 @@
 
 ---
 
+### L. AI 配置系统重构（后续优化）
+
+> 将所有 LLM 相关配置（模型、参数、提示词、Provider 设置）集中管理，支持 Provider 切换。
+
+#### L1: 提示词加载器基础设施
+
+- [x] 安装 `gray-matter` 依赖（YAML frontmatter 解析）
+- [x] 创建 `src/lib/ai/prompts/index.ts`（loadPrompt, loadPromptWithVariables, getPromptContent）
+- [x] 添加错误处理（文件不存在、metadata 校验）
+
+#### L2: 提示词迁移到 Markdown 文件
+
+- [x] 创建 `src/lib/ai/prompts/chat-system.md`（主 Agent 系统提示词）
+- [x] 创建 `src/lib/ai/prompts/session-title.md`（会话标题生成）
+- [x] 创建 `src/lib/ai/prompts/pdf-extract.md`（PDF 文本提取）
+- [x] 创建 `src/lib/ai/prompts/data-extract.md`（文档数据提取）
+- [x] 创建 `src/lib/ai/prompts/report-config-intent.md`（报告配置意图解析）
+- [x] 创建 `src/lib/ai/prompts/financial-extraction.md`（财务数据结构化提取）
+
+#### L3: LLM 客户端工厂
+
+- [x] 创建 `src/lib/ai/client.ts`（getLLMClient 单例 + createLLMClient）
+- [x] 支持 `LLM_API_KEY` 和 `LLM_BASE_URL` 环境变量
+- [x] 保持 `OPENAI_API_KEY` 向后兼容
+
+#### L4: 配置文件重构
+
+- [x] 简化 `src/lib/ai/config.ts`（移除 prompts 对象）
+- [x] 新增 `report` 模型和参数配置
+- [x] 环境变量更名为 `LLM_MODEL_*`（保持向后兼容）
+- [x] 导出类型 `ModelType` 和 `ParamsType`
+
+#### L5: 消费者更新
+
+- [x] `agent-loop.ts` 使用 `getLLMClient()`
+- [x] `unified/prompts.ts` 使用 `getPromptContent('chat-system.md')`
+- [x] `session-title.ts` 使用客户端工厂和提示词加载器
+- [x] `analyze-sections.ts` 和 `assemble-report.ts` 使用 `AI_CONFIG.models.report`
+- [x] `upload-temp/route.ts` 使用集中配置
+- [x] `extraction/ai.ts` 使用 `getPromptContent('financial-extraction.md')`
+- [x] `quick-actions/extract/route.ts` 使用新提示词加载器
+- [x] `reports/parse-config/route.ts` 使用 `loadPromptWithVariables`
+- [x] `documents/search.ts` 和 `search-regulations.ts` 使用客户端工厂
+
+#### L6: 清理与文档
+
+- [x] 删除旧 `src/lib/prompts/` 目录
+- [x] 迁移 `report-config-messages.ts` 到新位置
+- [x] 更新 `.env.example` 添加 LLM 配置说明
+
+#### L7: 测试
+
+- [x] 创建 `tests/unit/ai/prompt-loader.test.ts`
+- [x] 创建 `tests/unit/ai/client.test.ts`
+- [x] 更新 `tests/unit/ai/config.test.ts` 和 `unified-prompt.test.ts`
+- [x] 全部 256 测试通过
+
+---
+
 ## Phase 5: 综合测试清单
 
 - [x] ESLint 通过（`npm run lint`）
@@ -469,4 +528,35 @@
 - 修复 help-card-layout.test.ts（适配 Help 页面重构）
 - 修复 help-table-layout.test.ts（表格迁移到 About 页面）
 - 修复 reports-generate.test.ts（添加数据库模块 mock）
+```
+
+```
+状态: ✅ AI 配置系统重构完成
+时间: 2026-01-30 05:00
+环境: 本地 sandbox
+结果:
+- npm run lint ✅ (No ESLint warnings or errors)
+- npm run build ✅ (Compiled successfully)
+- npm run test -- --run ✅ (64 test files, 256 tests passed)
+范围:
+- 提示词迁移到 Markdown 文件（6 个 .md 文件 + frontmatter）
+- LLM 客户端工厂（单例模式 + Provider 切换支持）
+- 配置集中化（模型、参数、环境变量）
+- 消费者更新（10+ 文件使用新系统）
+- 旧 prompts 目录删除
+- 新增测试（prompt-loader.test.ts, client.test.ts）
+提交:
+- d747ae0 feat(ai): add prompt loader with frontmatter support
+- d28570d fix(ai): add error handling to prompt loader
+- 1be8b15 feat(ai): migrate prompts to markdown files with frontmatter
+- cfe93ec feat(ai): add LLM client factory with provider flexibility
+- 25a5b5f refactor(ai): simplify config.ts, move prompts to external files
+- dc31a8f refactor(ai): update agent loop to use client factory
+- bcd9c68 refactor(ai): update session-title to use client factory and prompt loader
+- 1a69b6e refactor(ai): update report workflow to use centralized config
+- 9be3e0c refactor(ai): update document extraction to use centralized config
+- f8b6da2 refactor(ai): update quick actions and search to use centralized config
+- 182229c chore(ai): remove old prompts directory
+- 2be8e66 docs(env): add LLM configuration variables
+- b34cc38 test(ai): add tests for prompt loader and client factory
 ```
