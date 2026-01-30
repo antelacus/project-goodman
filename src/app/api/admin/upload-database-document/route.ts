@@ -20,6 +20,7 @@ import type { InsertTables, Database } from "@/lib/database";
 import { SupabaseClient } from "@supabase/supabase-js";
 import { logWorkflowEvent } from "@/lib/logging";
 import { AI_CONFIG } from "@/lib/ai/config";
+import { getPromptContent } from "@/lib/ai/prompts";
 import {
   verifyAdminPassword,
   generateRequestId,
@@ -53,6 +54,8 @@ import { uploadFileToStorage } from "@/lib/documents/storage";
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 });
+
+const PDF_TEXT_EXTRACT_PROMPT = getPromptContent('pdf-extract.md');
 
 /**
  * Request body schema
@@ -187,7 +190,7 @@ async function extractTextFromFile(
         input: [{
           role: "user",
           content: [
-            { type: "input_text", text: AI_CONFIG.prompts.pdfTextExtract },
+            { type: "input_text", text: PDF_TEXT_EXTRACT_PROMPT },
             {
               type: "input_file",
               filename: fileName,
@@ -206,7 +209,7 @@ async function extractTextFromFile(
         input: [{
           role: "user",
           content: [
-            { type: "input_text", text: AI_CONFIG.prompts.pdfTextExtract },
+            { type: "input_text", text: PDF_TEXT_EXTRACT_PROMPT },
             {
               type: "input_file",
               filename: fileName,
@@ -225,7 +228,7 @@ async function extractTextFromFile(
       messages: [{
         role: "user",
         content: [
-          { type: "text", text: AI_CONFIG.prompts.pdfTextExtract },
+          { type: "text", text: PDF_TEXT_EXTRACT_PROMPT },
           {
             type: "image_url",
             image_url: {
