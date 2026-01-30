@@ -86,12 +86,6 @@ export default function GuestBanner() {
     if (sessionInfo?.role !== "guest") return null;
 
     const limits = sessionInfo?.limits;
-    const hasLowLimits =
-        limits &&
-        (limits.message.remaining < 5 ||
-            limits.upload.remaining < 2 ||
-            limits.extract.remaining < 2 ||
-            limits.report.remaining < 1);
 
     return (
         <div className="bg-yellow-50 border-b border-yellow-100">
@@ -143,11 +137,6 @@ export default function GuestBanner() {
                         />
                     </div>
 
-                    {hasLowLimits && (
-                        <span className="text-yellow-700 text-xs hidden sm:inline">
-                            限额即将用尽
-                        </span>
-                    )}
                 </div>
 
                 <div className="flex items-center gap-2">
