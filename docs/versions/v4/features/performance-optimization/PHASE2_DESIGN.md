@@ -464,3 +464,152 @@ ReportContent → DOCX Generator → Supabase Storage → Signed URL → 下载/
 - [ ] UI/接口描述不再出现 PDF 输出文案
 - [ ] 旧报告无 DOCX 时给出清晰提示
 - [ ] 报告生成性能仍满足 P95 < 60s
+
+---
+
+## 14. 报告分析章节可配置（REQ-F3）
+
+### 14.1 目标
+
+允许用户通过自然语言对话选择报告中包含的分析章节，而非固定生成全部 5 个章节。
+
+**用户价值**：
+- 快速生成单一维度分析（如仅流动性分析）
+- 减少不需要的章节，提高报告针对性
+- 缩短生成时间（减少 LLM 调用次数）
+
+### 14.2 当前架构
+
+```
+用户请求 → parse-config → ReportConfig{year, comparisonYear} → 生成全部 5 章节
+```
+
+**现有章节**（固定生成）：
+
+| ID | 名称 | 指标数量 |
+|----|------|---------|
+| `liquidity` | 流动性分析 | 5 |
+| `solvency` | 偿债能力分析 | 7 |
+| `profitability` | 盈利能力分析 | 4 |
+| `efficiency` | 运营效率分析 | 5 |
+| `comprehensive` | 综合评价与建议 | 1 |
+
+### 14.3 目标架构
+
+```
+用户请求 → parse-config → ReportConfig{year, comparisonYear, sections?} → 生成选定章节
+```
+
+### 14.4 配置模型
+
+#### 14.4.1 扩展 ReportConfig
+
+```typescript
+interface ReportConfig {
+  year: string;                    // 必填：分析年份
+  comparisonYear?: string | null;  // 可选：对比年份
+  sections?: ReportSectionId[];    // 可选：选定章节
+}
+```
+
+#### 14.4.2 章节选择规则
+
+| 规则 | 说明 |
+|------|------|
+| 默认行为 | `sections` 为空/undefined 时，生成全部 5 章节（向后兼容） |
+| 最小数量 | 至少选择 1 个章节 |
+| 有效 ID | `liquidity`, `solvency`, `profitability`, `efficiency`, `comprehensive` |
+
+### 14.5 意图解析增强
+
+#### 14.5.1 扩展意图 Schema
+
+```typescript
+interface ReportConfigIntent {
+  intent: 'confirm' | 'change_year' | 'change_comparison' | 'remove_comparison'
+        | 'change_sections' | 'cancel' | 'unclear';  // 新增: change_sections
+  year: string | null;
+  comparisonYear: string | null;
+  sections: ReportSectionId[] | null;  // 新增字段
+  clarificationNeeded: string | null;
+}
+```
+
+#### 14.5.2 自然语言解析规则
+
+| 用户输入 | 解析结果 |
+|----------|----------|
+| "只分析流动性" | `sections: ["liquidity"]` |
+| "流动性和盈利能力" | `sections: ["liquidity", "profitability"]` |
+| "不要综合评价" | `sections: ["liquidity", "solvency", "profitability", "efficiency"]` |
+| "全部分析" / 默认 | `sections: null`（全部章节） |
+| "2023年，只看偿债能力" | `year: "2023", sections: ["solvency"]` |
+
+#### 14.5.3 章节名称映射
+
+```
+流动性分析 / 流动性 → liquidity
+偿债能力分析 / 偿债能力 → solvency
+盈利能力分析 / 盈利能力 → profitability
+运营效率分析 / 运营效率 → efficiency
+综合评价与建议 / 综合评价 → comprehensive
+```
+
+### 14.6 工作流变更
+
+#### 14.6.1 状态扩展
+
+```typescript
+// state.ts
+interface ReportWorkflowInput {
+  year: string;
+  comparisonYear?: string;
+  sections?: ReportSectionId[];  // 新增
+  ownerId: string;
+  ownerType: 'user' | 'guest';
+}
+```
+
+#### 14.6.2 指标收集优化
+
+```typescript
+// gather-metrics.ts
+const selectedSections = state.input.sections ?? REPORT_SECTIONS.map(s => s.id);
+const sectionsToProcess = REPORT_SECTIONS.filter(s => selectedSections.includes(s.id));
+const metricsToFetch = sectionsToProcess.flatMap(s => s.metrics);
+```
+
+#### 14.6.3 章节分析过滤
+
+```typescript
+// analyze-sections.ts
+const selectedSectionIds = state.input.sections ?? REPORT_SECTIONS.map(s => s.id);
+const sectionsToAnalyze = REPORT_SECTIONS.filter(s => selectedSectionIds.includes(s.id));
+```
+
+### 14.7 文件变更清单
+
+| 文件 | 变更类型 | 说明 |
+|------|---------|------|
+| `src/lib/validation/api-schemas.ts` | 修改 | `ReportGenerateSchema` 和 `ReportConfigIntentSchema` 新增 `sections` 字段 |
+| `src/lib/ai/prompts/report-config-intent.md` | 修改 | 添加章节解析指令和示例 |
+| `src/app/api/reports/parse-config/route.ts` | 修改 | 处理 `change_sections` 意图，验证章节 ID |
+| `src/lib/workflows/report/state.ts` | 修改 | `ReportWorkflowInput` 新增 `sections` 字段 |
+| `src/lib/workflows/report/nodes/gather-metrics.ts` | 修改 | 根据选定章节过滤指标 |
+| `src/lib/workflows/report/nodes/analyze-sections.ts` | 修改 | 根据选定章节过滤分析 |
+| `src/app/api/reports/generate/route.ts` | 修改 | 传递 `sections` 到工作流输入 |
+
+### 14.8 向后兼容性
+
+- 所有变更为增量添加
+- 不带 `sections` 字段的 API 调用保持原有行为（生成全部章节）
+- 无数据库迁移
+
+### 14.9 验收检查点
+
+- [ ] 用户可通过自然语言选择单个章节（如"只分析流动性"）
+- [ ] 用户可通过自然语言选择多个章节（如"流动性和盈利能力"）
+- [ ] 用户可通过排除方式选择章节（如"不要综合评价"）
+- [ ] 默认行为不变（无指定时生成全部章节）
+- [ ] 选择部分章节时，仅收集相关指标（性能优化）
+- [ ] 生成的报告仅包含选定章节

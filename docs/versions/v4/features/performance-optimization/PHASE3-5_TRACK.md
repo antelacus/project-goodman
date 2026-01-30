@@ -444,6 +444,78 @@
 - [x] 更新 `tests/unit/ai/config.test.ts` 和 `unified-prompt.test.ts`
 - [x] 全部 256 测试通过
 
+### M. 系统提示词优化（部署后修复）
+
+#### M1: 提示词翻译与重组
+
+- [x] 将 `chat-system.md` 全文翻译为简体中文
+- [x] 重组核心能力描述（指标查询、比率查询、自定义计算、文档检索、综合报告生成、快捷操作）
+- [x] 更新工具选择决策树顺序（原始指标优先于标准比率）
+- [x] 添加快捷操作和高级工具入口提示
+
+#### M2: 工具列表自动生成
+
+- [x] 在 `registry.ts` 添加 `generateCapabilitiesSummary()` 方法
+- [x] 工具列表按类别分组（数据查询、财务比率、文档搜索、法规搜索、信息提取）
+- [x] 更新 `prompts.ts` 使用 `loadPromptWithVariables` 注入工具列表
+- [x] 更新 `nodes.ts` 使用动态生成的系统提示词
+- [x] 移除 `chat-system.md` 中硬编码的工具列表
+
+**文件变更**:
+
+- `src/lib/ai/prompts/chat-system.md`: 翻译 + 重组 + 添加 `{{tools_summary}}` 变量
+- `src/lib/tools/registry.ts`: 新增 `generateCapabilitiesSummary()` 方法
+- `src/lib/workflows/unified/prompts.ts`: 改为动态生成函数
+- `src/lib/workflows/unified/nodes.ts`: 使用 `getUnifiedAgentSystemPrompt()` 函数
+
+#### M3: 产品上下文自动注入
+
+- [x] 从 README.md 提取产品介绍、功能概览、用户角色、功能详解
+- [x] 在 `prompts.ts` 添加 `extractProductContext()` 函数
+- [x] 更新 `chat-system.md` 添加 `{{product_context}}` 变量
+- [x] Agent 现在可以回答产品功能、访客限额、文档管理等问题
+
+**优势**:
+
+- README.md 是单一信息源，主动维护
+- 系统提示词自动同步产品信息
+- 无需手动维护重复内容
+
+### N. 报告分析章节可配置（REQ-F3）
+
+> 允许用户通过自然语言对话选择报告中包含的分析章节。
+
+#### N1: Schema 与类型扩展
+
+- [ ] 在 `api-schemas.ts` 的 `ReportGenerateSchema` 新增 `sections` 字段
+- [ ] 在 `api-schemas.ts` 的 `ReportConfigIntentSchema` 新增 `sections` 字段和 `change_sections` 意图
+- [ ] 在 `state.ts` 的 `ReportWorkflowInput` 新增 `sections` 字段
+
+#### N2: 意图解析增强
+
+- [ ] 更新 `report-config-intent.md` 添加章节解析指令
+- [ ] 添加章节名称映射（中文 → ID）
+- [ ] 添加包含/排除两种解析模式示例
+
+#### N3: API 路由更新
+
+- [ ] 更新 `parse-config/route.ts` 处理 `change_sections` 意图
+- [ ] 添加章节 ID 验证逻辑
+- [ ] 更新 `generate/route.ts` 传递 `sections` 到工作流
+
+#### N4: 工作流节点优化
+
+- [ ] 更新 `gather-metrics.ts` 根据选定章节过滤指标
+- [ ] 更新 `analyze-sections.ts` 根据选定章节过滤分析
+
+#### N5: 验收测试
+
+- [ ] 单章节选择测试（"只分析流动性"）
+- [ ] 多章节选择测试（"流动性和盈利能力"）
+- [ ] 排除模式测试（"不要综合评价"）
+- [ ] 默认行为测试（无指定时生成全部章节）
+- [ ] 性能验证（部分章节时指标收集减少）
+
 ---
 
 ## Phase 5: 综合测试清单
@@ -561,37 +633,4 @@
 - b34cc38 test(ai): add tests for prompt loader and client factory
 ```
 
-### M. 系统提示词优化（部署后修复）
-
-#### M1: 提示词翻译与重组
-
-- [x] 将 `chat-system.md` 全文翻译为简体中文
-- [x] 重组核心能力描述（指标查询、比率查询、自定义计算、文档检索、综合报告生成、快捷操作）
-- [x] 更新工具选择决策树顺序（原始指标优先于标准比率）
-- [x] 添加快捷操作和高级工具入口提示
-
-#### M2: 工具列表自动生成
-
-- [x] 在 `registry.ts` 添加 `generateCapabilitiesSummary()` 方法
-- [x] 工具列表按类别分组（数据查询、财务比率、文档搜索、法规搜索、信息提取）
-- [x] 更新 `prompts.ts` 使用 `loadPromptWithVariables` 注入工具列表
-- [x] 更新 `nodes.ts` 使用动态生成的系统提示词
-- [x] 移除 `chat-system.md` 中硬编码的工具列表
-
-**文件变更**:
-- `src/lib/ai/prompts/chat-system.md`: 翻译 + 重组 + 添加 `{{tools_summary}}` 变量
-- `src/lib/tools/registry.ts`: 新增 `generateCapabilitiesSummary()` 方法
-- `src/lib/workflows/unified/prompts.ts`: 改为动态生成函数
-- `src/lib/workflows/unified/nodes.ts`: 使用 `getUnifiedAgentSystemPrompt()` 函数
-
-#### M3: 产品上下文自动注入
-
-- [x] 从 README.md 提取产品介绍、功能概览、用户角色、功能详解
-- [x] 在 `prompts.ts` 添加 `extractProductContext()` 函数
-- [x] 更新 `chat-system.md` 添加 `{{product_context}}` 变量
-- [x] Agent 现在可以回答产品功能、访客限额、文档管理等问题
-
-**优势**:
-- README.md 是单一信息源，主动维护
-- 系统提示词自动同步产品信息
-- 无需手动维护重复内容
+---
