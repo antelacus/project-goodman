@@ -59,13 +59,14 @@ For new indexes:
 
 ### 6. Type Synchronization
 
-After migration approval:
+After migration approval, regenerate types and verify compilation:
 
 ```bash
-# Regenerate types
-npx supabase gen types typescript \
-  --project-id YOUR_PROJECT_ID \
-  > src/lib/database/types.ts
+# Discover project ID from existing types or env
+grep -r "project-id\|project_id" supabase/.env* 2>/dev/null || echo "Check supabase config for project ID"
+
+# Regenerate types (project ID from supabase config)
+npx supabase gen types typescript --project-id "$PROJECT_ID" > src/lib/database/types.ts
 
 # Verify types compile
 npx tsc --noEmit

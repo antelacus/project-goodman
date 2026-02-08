@@ -17,9 +17,15 @@ You are a PostgreSQL/Supabase database migration specialist for Project Goodman,
 ## Project Context
 
 - Database: Supabase PostgreSQL with pgvector extension
-- Existing migrations: `supabase/migrations/` (5 files)
-- Key tables: `documents`, `document_chunks`, `financial_data`, `structured_regulations`
-- Vector column: `document_chunks.embedding` (1536 dimensions, text-embedding-3-small)
+- Existing migrations: `supabase/migrations/` (discover count dynamically)
+- Vector embeddings: 1536 dimensions (text-embedding-3-small)
+
+**Always discover current schema first**:
+
+```
+list_tables(project_id, schemas=['public'])
+list_migrations(project_id)
+```
 
 ## Migration Workflow
 
