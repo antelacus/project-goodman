@@ -9,10 +9,30 @@ You are a deployment readiness checker for Project Goodman. Your job is to valid
 
 ## Deployment Architecture
 
-- **Container**: Docker (Next.js app in `goodman` container)
-- **Cache**: Redis (`goodman-redis` container)
-- **Proxy**: nginx reverse proxy with SSL
-- **Location**: VPS at `/home/deploy/goodman/`
+Two environments:
+
+| Environment | Port | Container | Deploys from |
+|-------------|------|-----------|-------------|
+| **Production** | 3000 | `goodman` | `main` branch |
+| **Staging** | 3001 | `goodman-staging` | `development` branch (auto) |
+
+Both use:
+- Docker (Next.js app container + Redis container)
+- nginx reverse proxy with SSL
+- VPS deployment
+
+**Discover actual config** rather than assuming:
+
+```bash
+# Find docker-compose files
+find /home/deploy/goodman* -name "docker-compose.yml" -maxdepth 2
+
+# Check current containers
+docker ps --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}"
+
+# Find nginx config
+find /etc/nginx -name "*.conf" | head -5
+```
 
 ## Pre-Deployment Checklist
 
@@ -65,7 +85,13 @@ Check for:
 
 ### 5. Docker Configuration
 
-Check `docker-compose.yml` in `/home/deploy/goodman/`:
+Check docker-compose files for both environments:
+
+```bash
+# Discover compose files
+cat /home/deploy/goodman/docker-compose.yml
+cat /home/deploy/goodman-staging/docker-compose.yml 2>/dev/null
+```
 
 - [ ] Correct image/build configuration
 - [ ] Environment variables passed correctly
@@ -73,7 +99,19 @@ Check `docker-compose.yml` in `/home/deploy/goodman/`:
 - [ ] Network configuration correct
 - [ ] Restart policy set (`unless-stopped`)
 
-### 6. Application Health
+### 6. Staging Verification
+
+If staging is running, verify it first:
+
+```bash
+# Check staging health
+curl -s http://localhost:3001/api/health || echo "Staging health check failed"
+
+# Check staging logs for errors
+docker logs --tail 50 goodman-staging 2>&1 | grep -i error
+```
+
+### 7. Application Health
 
 - [ ] All API routes respond correctly
 - [ ] Static assets load
@@ -150,14 +188,14 @@ cd /home/deploy/goodman && docker compose up -d --build goodman
 After deployment, verify:
 
 ```bash
-# Check container is running
+# Check containers are running
 docker ps | grep goodman
 
 # Check logs for errors
 docker logs --tail 50 goodman
 
-# Test endpoints
-curl -s https://your-domain.com/api/health
+# Health check (discover domain from nginx config)
+curl -s http://localhost:3000/api/health
 ```
 
 ## Rollback Procedure
