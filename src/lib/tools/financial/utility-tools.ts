@@ -209,9 +209,18 @@ export const evaluateExpressionTool: Tool = {
         }
       }
 
-      // Evaluate the expression using mathjs
-      // mathjs.evaluate returns number | Matrix | BigNumber, but our expressions are simple arithmetic
-      const result = evaluate(expression, variables) as number;
+      // The expression comes from an LLM tool call and the result lands in a financial report,
+      // so a wrong-but-successful value is worse than a failure: division by zero yields
+      // Infinity, 0/0 yields NaN, and mathjs can also return a matrix, a function or a string.
+      const evaluated: unknown = evaluate(expression, variables);
+      if (typeof evaluated !== "number" || !Number.isFinite(evaluated)) {
+        return {
+          success: false,
+          error:
+            "表达式计算失败: 结果不是有限数值（请检查是否除以零，或表达式是否返回了非数值）",
+        };
+      }
+      const result = evaluated;
 
       // Format the result based on magnitude
       let formatted: string;
