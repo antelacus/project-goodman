@@ -4,17 +4,25 @@ on:
   push:
     branches: [development]
 
+# this workflow neither checks out code nor calls the GitHub API
+permissions: {}
+
 jobs:
   deploy:
     runs-on: ubuntu-latest
     steps:
       - name: Deploy to staging
-        uses: appleboy/ssh-action@v1
+        # pinned to a commit SHA: a tag can be re-pointed, a SHA cannot
+        uses: appleboy/ssh-action@0ff4204d59e8e51228ff73bce53f80d53301dee2 # v1.2.5
         with:
           host: ${{ secrets.DEPLOY_HOST }}
           username: ${{ secrets.DEPLOY_USER }}
           key: ${{ secrets.DEPLOY_KEY }}
+          # verify the server's host key so the connection cannot be hijacked
+          fingerprint: ${{ secrets.DEPLOY_HOST_FINGERPRINT }}
           script: |
+            # abort on the first failing step: never rebuild stale code and report success
+            set -euo pipefail
             cd /home/deploy/goodman-staging/project-goodman
             git checkout -- . && git clean -fd
             git pull origin development

@@ -4,24 +4,45 @@ on:
   push:
     branches: [main]
 
+# this workflow neither checks out code nor calls the GitHub API
+permissions: {}
+
 jobs:
   deploy:
     runs-on: ubuntu-latest
     steps:
       - name: Deploy to production
-        uses: appleboy/ssh-action@v1
+        # pinned to a commit SHA: a tag can be re-pointed, a SHA cannot
+        uses: appleboy/ssh-action@0ff4204d59e8e51228ff73bce53f80d53301dee2 # v1.2.5
         with:
           host: ${{ secrets.DEPLOY_HOST }}
           username: ${{ secrets.DEPLOY_USER }}
           key: ${{ secrets.DEPLOY_KEY }}
+          # verify the server's host key so the connection cannot be hijacked
+          fingerprint: ${{ secrets.DEPLOY_HOST_FINGERPRINT }}
+          command_timeout: 20m
           script: |
+            # abort on the first failing step: a failed pull must never be followed by
+            # a rebuild of stale code that then reports success
+            set -euo pipefail
+            # the git repository is the project-goodman subdirectory; docker-compose.yml
+            # and .env live one level up and build from ./project-goodman
+            cd /home/deploy/goodman/project-goodman
+            git fetch --prune origin
+            git checkout main
+            # fast-forward only: if the server checkout was edited, fail instead of overwriting
+            git merge --ff-only origin/main
+            echo "deploying $(git rev-parse --short HEAD)"
             cd /home/deploy/goodman
-            git pull origin main
-            # Export env vars for docker compose build args
+            # export env vars for docker compose build args
             set -a && source /home/deploy/goodman/.env && set +a
+            # the old container keeps serving if the build fails
             docker compose up -d --build
-            sleep 15
-            curl -f http://localhost:3000/api/health || exit 1
+            for i in $(seq 1 20); do
+              if curl -fsS -o /dev/null http://localhost:3000/api/health; then echo "healthy after $((i*3))s"; exit 0; fi
+              sleep 3
+            done
+            echo "health check failed"; docker compose logs --tail 60; exit 1
 
       - name: Notify on failure
         if: failure()
