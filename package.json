@@ -40,9 +40,9 @@
     "gray-matter": "^4.0.3",
     "ioredis": "^5.8.2",
     "katex": "^0.16.22",
-    "langsmith": "^0.4.7",
+    "langsmith": "^0.10.4",
     "lucide-react": "^0.562.0",
-    "mathjs": "^14.5.3",
+    "mathjs": "^15.2.0",
     "next": "^16.1.6",
     "node-cron": "^4.2.1",
     "openai": "^5.6.0",
@@ -95,5 +95,8 @@
       "eslint --fix",
       "bash -c 'npx tsc --noEmit'"
     ]
+  },
+  "overrides": {
+    "tmp": "^0.2.6"
   }
 }
