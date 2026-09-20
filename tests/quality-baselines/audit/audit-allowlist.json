@@ -1,3 +1,60 @@
 {
-  "entries": []
+  "entries": [
+    {
+      "package": "extract-zip",
+      "advisoryId": "1139346",
+      "severity": "high",
+      "reason": "extract-zip has no patched release upstream (latest is 2.0.1, advisory covers <=2.0.1). It is pulled in only by @lhci/cli -> lighthouse -> puppeteer-core -> @puppeteer/browsers, a dev-only Lighthouse CI tool that downloads Chrome from Google's own endpoints; it is not part of the production image. Re-check on expiry: upgrade @lhci/cli if a release drops the chain.",
+      "expiresOn": "2026-12-19",
+      "fixPlan": "On or before expiry: check for an extract-zip release newer than 2.0.1 or an @lhci/cli release newer than 0.15.1 that drops the puppeteer/extract-zip chain, upgrade, and delete these entries. If neither exists, consider replacing @lhci/cli with a direct lighthouse + playwright invocation before renewing."
+    },
+    {
+      "package": "extract-zip",
+      "advisoryId": "1193685",
+      "severity": "high",
+      "reason": "extract-zip has no patched release upstream (latest is 2.0.1, advisory covers <=2.0.1). It is pulled in only by @lhci/cli -> lighthouse -> puppeteer-core -> @puppeteer/browsers, a dev-only Lighthouse CI tool that downloads Chrome from Google's own endpoints; it is not part of the production image. Re-check on expiry: upgrade @lhci/cli if a release drops the chain.",
+      "expiresOn": "2026-12-19",
+      "fixPlan": "On or before expiry: check for an extract-zip release newer than 2.0.1 or an @lhci/cli release newer than 0.15.1 that drops the puppeteer/extract-zip chain, upgrade, and delete these entries. If neither exists, consider replacing @lhci/cli with a direct lighthouse + playwright invocation before renewing."
+    },
+    {
+      "package": "@puppeteer/browsers",
+      "advisoryId": "unknown",
+      "severity": "high",
+      "reason": "Flagged only because it depends on extract-zip (see the extract-zip entries). Dev-only Lighthouse CI tooling, not in the production image.",
+      "expiresOn": "2026-12-19",
+      "fixPlan": "On or before expiry: check for an extract-zip release newer than 2.0.1 or an @lhci/cli release newer than 0.15.1 that drops the puppeteer/extract-zip chain, upgrade, and delete these entries. If neither exists, consider replacing @lhci/cli with a direct lighthouse + playwright invocation before renewing."
+    },
+    {
+      "package": "puppeteer-core",
+      "advisoryId": "unknown",
+      "severity": "high",
+      "reason": "Flagged only because it depends on extract-zip (see the extract-zip entries). Dev-only Lighthouse CI tooling, not in the production image.",
+      "expiresOn": "2026-12-19",
+      "fixPlan": "On or before expiry: check for an extract-zip release newer than 2.0.1 or an @lhci/cli release newer than 0.15.1 that drops the puppeteer/extract-zip chain, upgrade, and delete these entries. If neither exists, consider replacing @lhci/cli with a direct lighthouse + playwright invocation before renewing."
+    },
+    {
+      "package": "lighthouse",
+      "advisoryId": "unknown",
+      "severity": "high",
+      "reason": "Flagged only because it depends on extract-zip (see the extract-zip entries). Dev-only Lighthouse CI tooling, not in the production image.",
+      "expiresOn": "2026-12-19",
+      "fixPlan": "On or before expiry: check for an extract-zip release newer than 2.0.1 or an @lhci/cli release newer than 0.15.1 that drops the puppeteer/extract-zip chain, upgrade, and delete these entries. If neither exists, consider replacing @lhci/cli with a direct lighthouse + playwright invocation before renewing."
+    },
+    {
+      "package": "@lhci/utils",
+      "advisoryId": "unknown",
+      "severity": "high",
+      "reason": "Flagged only because it depends on extract-zip (see the extract-zip entries). Dev-only Lighthouse CI tooling, not in the production image.",
+      "expiresOn": "2026-12-19",
+      "fixPlan": "On or before expiry: check for an extract-zip release newer than 2.0.1 or an @lhci/cli release newer than 0.15.1 that drops the puppeteer/extract-zip chain, upgrade, and delete these entries. If neither exists, consider replacing @lhci/cli with a direct lighthouse + playwright invocation before renewing."
+    },
+    {
+      "package": "@lhci/cli",
+      "advisoryId": "unknown",
+      "severity": "high",
+      "reason": "Flagged only because it depends on extract-zip (see the extract-zip entries). Dev-only Lighthouse CI tooling, not in the production image.",
+      "expiresOn": "2026-12-19",
+      "fixPlan": "On or before expiry: check for an extract-zip release newer than 2.0.1 or an @lhci/cli release newer than 0.15.1 that drops the puppeteer/extract-zip chain, upgrade, and delete these entries. If neither exists, consider replacing @lhci/cli with a direct lighthouse + playwright invocation before renewing."
+    }
+  ]
 }
