@@ -9,6 +9,7 @@
   3. 依赖安全：Next 16.3.5 → 16.4.0；`eslint-config-next` 对齐至 16，ESLint 配置改为原生 flat config，删除 `@eslint/eslintrc`；`basic-ftp` 经 override 升至已修复版本；`braces` 链无上游修复，入 audit 允许清单
   4. 旧值清扫：CLAUDE.md / README / AGENTS.md / `next.config.ts` 注释 / about 页技术栈标签去掉版本号
   5. `.mcp.json` 加入 `.gitignore`
+  6. Playwright 1.57 → 1.64：1.60 之前的版本在 Node 26 上解压浏览器时卡死（CI 卡在 `playwright install` 65 分钟）；CI job 加 `timeout-minutes: 20`
 - 明确不做：CI 拦截部署、构建一次推广镜像、served SHA、密钥移出构建参数、Dependabot、EOL 检查（全部属于 v4.7.0 发布流水线移植）；旧技术债裁定（v4.7.0 Phase 0）；TD-028 的 12 处修复
 - 全局约束：
   - 版本地板：Node → `.nvmrc`；依赖 → `package.json`
@@ -29,7 +30,8 @@
 **Phase 4 证据**：
 - 本地 Node 26.8.2，干净 `npm ci`：lint 0 error（12 warning = TD-028）· `tsc` 通过 · vitest 65 文件 / 272 测试通过 · audit 门通过 · `next build` 通过
 - Docker 演练（本机 arm64，VPS 为 amd64）：镜像构建通过；容器内 Node 26.11.1、`canvas` 可加载、Next 16.4.0；启动后页面 200，health 仅因占位数据库 503
-- staging 部署 + 冒烟：
+- CI 首跑（`48f8b1b`）：卡在 `playwright install chromium`，本地 Node 26 复现（下载 100% 后解压停滞），升级 Playwright 后 20 秒装完。本地 Phase 4 没拦住：本机已缓存浏览器，安装步骤从未执行
+- staging 部署 + 冒烟（`48f8b1b`，VPS amd64 构建）：通过 · health `healthy`、`version` 4.6.4、database / redis ok · 冒烟四项（health、管理员登录、sessions API、报告生成）通过
 - staging 关键业务路径端到端（上传 PDF → 预览 → 生成报告）：
 
 **本版观察题**：哪些步骤从头到尾没用到 Jason 的判断，或从未拦下任何东西。
