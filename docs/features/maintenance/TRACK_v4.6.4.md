@@ -37,11 +37,34 @@
 
 **本版观察题**：哪些步骤从头到尾没用到 Jason 的判断，或从未拦下任何东西。
 
+**各门读数**（运行次数 / 改变了输出的拦截次数）：
+
+| 门 | 运行 | 拦截 | 处置 |
+|---|---|---|---|
+| audit 门（本地 + CI） | 5 | 1：Next.js 等新公告 → 升级 / override / 允许清单 | 保留 |
+| npm 11 安装脚本拦截 | 1 | 1：`canvas` 未编译 → 批准；后查出仅服务无调用方的路由（TD-029） | 保留 |
+| lint | 4 | 1：新规则 12 处 → TD-028 | 保留 |
+| 旧值清扫 | 2 | 1：about 页显示过时版本号 | 保留 |
+| CI 全流程 | 3 | 1：Playwright 安装在 Node 26 上卡死 | 保留；已加 20 分钟上限 |
+| `tsc` · vitest · `next build` | 各 4 | 0 | 保留：维护版不改行为，零拦截是预期，不构成退役理由 |
+| perf / Lighthouse / a11y 门 | 2 | 0 | 退役触发：v4.7.0 设计部署门时裁定是否留在部署路径上 |
+| staging 部署 + 冒烟 | 2 | 0 | 保留：它是部署演练；v4.7.0 改为推广同一镜像后重估 |
+| Jason 在 staging 走关键路径 | 1 | 0（准备时查出 TD-029） | 保留：唯一经过 UI 的检查 |
+| 本地 Docker 演练 | 1 | 0 | 已退役（改由 staging 演练） |
+| 合并 main 前人工确认 CI 为绿 | 1 | 0：PR #3 的 CI 未跑完即合并；所部署的树已在 development 上通过 CI，无实际风险 | v4.7.0 以必需检查取代 |
+| E2E（非阻断） | 2 | 0（3/3 通过） | 不在部署路径上，不算门；TD-027 |
+| Codex · `/code-review` | 0 | — | 按维护模式规则未触发 |
+
+**观察题结论**：
+- 用到 Jason 判断的只有两处：lint 方案 B，以及质疑本地 Docker 演练（使其退役）。staging 走查用的是 Jason 的眼睛，不是判断。
+- 三次合并（PR #1–#3）都没有用到判断：内容此前已讨论清楚，合并只是盖章。其中唯一要求判断的一步，是合并 main 前确认 CI 为绿，而这一步恰恰被跳过了。所以人工把关的步骤靠不住，应由机器强制执行（v4.7.0 的必需检查）。这样 Jason 的合并就只看范围与结构。
+- 真正拦下问题的都是机械检查：audit、安装脚本拦截、lint、CI、旧值清扫。本地检查因缓存而漏掉了 Playwright 问题，说明本地通过不能代替 CI 在干净环境里跑一遍。
+
 **Phase 6 boxes**：
-- [ ] CHANGELOG 条目
-- [ ] TECHNICAL_DEBT 定稿
-- [ ] 旧值清扫（`node:20`、`Next.js 15`）
-- [ ] tag `v4.6.4`
-- [ ] 生产部署 + 核对 served SHA（health 只报 package 版本号、不报提交；本版以 health 的 `version` 为 4.6.4 加 VPS 上 `git rev-parse HEAD` 代替）
-- [ ] 各门读数：运行次数 / 改变了输出的拦截次数
-- [ ] **关版（最后一项）**：未了事项各归其位 → `git mv TRACK.md TRACK_v4.6.4.md`
+- [x] CHANGELOG 条目
+- [x] TECHNICAL_DEBT 定稿（新增 TD-028、TD-029）
+- [x] 旧值清扫（`node:20`、`Next.js 15`；剩余命中均在已冻结的归档或待 v4.7.0 删除的"已解决的债务"一节）
+- [x] tag `v4.6.4` → `e19178b`
+- [x] 生产部署 + 核对 served SHA：部署日志 `Fast-forward 9b272b7..e19178b`；`https://goodman.antelacus.com/api/health` 返回 `healthy`、`version` 4.6.4
+- [x] 各门读数（上表）
+- [x] **关版（最后一项）**：v4.7.0 范围 → `docs/versions/v4/v4_DEVELOPMENT_PLAN.md` §3.11；TD-028 / TD-029 → `TECHNICAL_DEBT.md`；`git mv TRACK.md TRACK_v4.6.4.md`
