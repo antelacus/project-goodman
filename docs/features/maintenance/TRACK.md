@@ -5,7 +5,7 @@
 - 模式：maintenance · 目标：运行时升级至 Node 26，清除依赖安全公告，行为不变
 - 范围：
   1. Node 版本只写在 `.nvmrc`；CI 经 `node-version-file` 读取；Dockerfile 三个阶段改用 `node:26-bookworm-slim`
-  2. npm 11 默认拦截依赖安装脚本：`package.json` 的 `allowScripts` 批准 `canvas`（PDF 预览运行时动态导入，未编译则仅在预览时报错），拒绝 esbuild / fsevents / unrs-resolver（已验证不需要）
+  2. npm 11 默认拦截依赖安装脚本：`package.json` 的 `allowScripts` 批准 `canvas`（仅 `/api/documents/pdf-preview` 运行时动态导入，未编译则仅在调用时报错；该路由已无调用方 → TD-029），拒绝 esbuild / fsevents / unrs-resolver（已验证不需要）
   3. 依赖安全：Next 16.3.5 → 16.4.0；`eslint-config-next` 对齐至 16，ESLint 配置改为原生 flat config，删除 `@eslint/eslintrc`；`basic-ftp` 经 override 升至已修复版本；`braces` 链无上游修复，入 audit 允许清单
   4. 旧值清扫：CLAUDE.md / README / AGENTS.md / `next.config.ts` 注释 / about 页技术栈标签去掉版本号
   5. `.mcp.json` 加入 `.gitignore`
@@ -31,8 +31,9 @@
 - 本地 Node 26.8.2，干净 `npm ci`：lint 0 error（12 warning = TD-028）· `tsc` 通过 · vitest 65 文件 / 272 测试通过 · audit 门通过 · `next build` 通过
 - Docker 演练（本机 arm64，VPS 为 amd64）：镜像构建通过；容器内 Node 26.11.1、`canvas` 可加载、Next 16.4.0；启动后页面 200，health 仅因占位数据库 503
 - CI 首跑（`48f8b1b`）：卡在 `playwright install chromium`，本地 Node 26 复现（下载 100% 后解压停滞），升级 Playwright 后 20 秒装完。本地 Phase 4 没拦住：本机已缓存浏览器，安装步骤从未执行
-- staging 部署 + 冒烟（`48f8b1b`，VPS amd64 构建）：通过 · health `healthy`、`version` 4.6.4、database / redis ok · 冒烟四项（health、管理员登录、sessions API、报告生成）通过
-- staging 关键业务路径端到端（上传 PDF → 预览 → 生成报告）：
+- CI（`6a1eba0`）：全绿 · Playwright 安装 13s · perf / Lighthouse / a11y 门通过 · E2E 3/3 通过（非阻断，TD-027）· audit · build
+- staging 部署 + 冒烟（`48f8b1b` 与 `6a1eba0`，VPS amd64 构建，两次结果相同）：通过 · health `healthy`、`version` 4.6.4、database / redis ok · 冒烟四项（health、管理员登录、sessions API、报告生成）通过
+- staging 关键业务路径端到端（上传 PDF → 预览 → 生成报告）：Jason 在 UI 上走通，三步均通过
 
 **本版观察题**：哪些步骤从头到尾没用到 Jason 的判断，或从未拦下任何东西。
 
