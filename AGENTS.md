@@ -21,7 +21,7 @@
 
 ## Coding Style & Naming Conventions
 
-- TypeScript + React (Next.js 15) with strict compiler settings.
+- TypeScript + React (Next.js) with strict compiler settings.
 - Follow existing formatting: 2-space indentation and consistent quote usage within each file.
 - Components use PascalCase, hooks use `useX`, and shared logic lives in `src/lib`.
 - Use the `@/` alias for `src/` imports.

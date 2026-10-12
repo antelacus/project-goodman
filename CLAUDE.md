@@ -35,7 +35,7 @@
 
 | Category | Choice |
 |----------|--------|
-| Frontend | Next.js 15, React 19, Tailwind CSS |
+| Frontend | Next.js, React, Tailwind CSS (versions: `package.json`) |
 | Backend | Supabase (PostgreSQL + pgvector) |
 | AI | OpenAI GPT-4o |
 | Storage | Supabase Storage (`document-files` bucket) |

@@ -1,6 +1,6 @@
 {
   "name": "project-goodman",
-  "version": "4.6.3",
+  "version": "4.6.4",
   "private": true,
   "license": "AGPL-3.0",
   "scripts": {
@@ -65,10 +65,9 @@
   },
   "devDependencies": {
     "@axe-core/playwright": "^4.11.0",
-    "@eslint/eslintrc": "^3",
     "@lhci/cli": "^0.15.1",
     "@next/bundle-analyzer": "^15.5.9",
-    "@playwright/test": "^1.55.1",
+    "@playwright/test": "^1.64.0",
     "@tailwindcss/postcss": "^4.1.18",
     "@types/bcryptjs": "^2.4.6",
     "@types/node": "^20",
@@ -80,7 +79,7 @@
     "@vitest/coverage-v8": "^4.0.17",
     "autocannon": "^8.0.0",
     "eslint": "^9",
-    "eslint-config-next": "^15.5.9",
+    "eslint-config-next": "^16.4.0",
     "husky": "^9.1.7",
     "jsdom": "^27.4.0",
     "lint-staged": "^16.2.7",
@@ -97,6 +96,13 @@
     ]
   },
   "overrides": {
-    "tmp": "^0.2.6"
+    "tmp": "^0.2.6",
+    "basic-ftp": "^6.2.3"
+  },
+  "allowScripts": {
+    "canvas@3.2.0": true,
+    "esbuild": false,
+    "fsevents": false,
+    "unrs-resolver": false
   }
 }
