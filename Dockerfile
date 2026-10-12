@@ -1,7 +1,7 @@
 # ============================================
 # Stage 1: Dependencies
 # ============================================
-FROM node:20-bookworm-slim AS deps
+FROM node:26-bookworm-slim AS deps
 
 # Install build dependencies for native modules (canvas, etc.)
 RUN apt-get update && apt-get install -y \
@@ -26,7 +26,7 @@ RUN npm ci && npm cache clean --force
 # ============================================
 # Stage 2: Builder
 # ============================================
-FROM node:20-bookworm-slim AS builder
+FROM node:26-bookworm-slim AS builder
 WORKDIR /app
 
 # Copy dependencies from deps stage
@@ -52,7 +52,7 @@ RUN npm run build
 # ============================================
 # Stage 3: Runner
 # ============================================
-FROM node:20-bookworm-slim AS runner
+FROM node:26-bookworm-slim AS runner
 WORKDIR /app
 
 # Install runtime dependencies for canvas

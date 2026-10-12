@@ -38,8 +38,8 @@ export default function AboutPage() {
             基于现代 Web 技术栈与 LangGraph 框架构建，采用结构化数据与向量检索相结合的混合存储方案。
           </p>
           <div className="flex flex-wrap gap-2">
-            <span className="px-2 py-1 bg-neutral-100 text-neutral-700 text-xs rounded-md">Next.js 15</span>
-            <span className="px-2 py-1 bg-neutral-100 text-neutral-700 text-xs rounded-md">React 19</span>
+            <span className="px-2 py-1 bg-neutral-100 text-neutral-700 text-xs rounded-md">Next.js</span>
+            <span className="px-2 py-1 bg-neutral-100 text-neutral-700 text-xs rounded-md">React</span>
             <span className="px-2 py-1 bg-neutral-100 text-neutral-700 text-xs rounded-md">LangGraph</span>
             <span className="px-2 py-1 bg-neutral-100 text-neutral-700 text-xs rounded-md">Supabase</span>
             <span className="px-2 py-1 bg-neutral-100 text-neutral-700 text-xs rounded-md">PostgreSQL + pgvector</span>
