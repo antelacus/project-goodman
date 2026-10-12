@@ -30,6 +30,7 @@
 | TD-026 | 代码规范 | **命名规范混淆**：`upload-temp`（实际永久存储）、`extract`（既指文件解析又指数据提取）、`local-documents`（实际从 Supabase 获取）等命名误导。工作区文档与知识库文档概念未在代码中清晰区分。影响：开发者理解成本高，维护困难。详见 `docs/versions/v4/features/performance-optimization/NAMING_REFACTOR_PLAN.md`。 | 中 | V4.7 |
 | TD-027 | CI/CD | **E2E 测试在 CI 中不稳定**：Playwright E2E 测试因 Next.js dev server 锁文件冲突而失败（质量门控步骤与 E2E 步骤共享 `.next/dev/lock`）。已添加锁文件清理但仍偶发失败。当前标记为 `continue-on-error: true`。影响：E2E 测试无法在 CI 中可靠运行，需手动验证。 | 低 | V5.0 |
 | TD-028 | 代码规范 | **`react-hooks/set-state-in-effect` 暂降为 warn**：eslint-config-next 16 新增此规则，现有 12 处违规（10 个 UI 文件，`npx eslint .` 可列出）。暂缓原因：v4.6.4 携带 Next.js 安全修复，不应等待 UI 重构；UI 层缺少可靠的 E2E 安全网（TD-027）。退役条件：TD-027 解决后修复这 12 处，并在 `eslint.config.mjs` 中恢复为 error。 | 中 | TD-027 之后 |
+| TD-029 | 代码规范 | **无调用方的 PDF 预览路由**：`src/app/api/documents/pdf-preview/route.ts` 用 pdfjs-dist + canvas 在服务端渲染 PDF 页；v4.6（`464d5c7`）起前端预览改走 `/api/documents/preview-url` 签名链接，该路由再无调用方（`grep -rn pdf-preview src` 只命中其自身）。它是 `canvas` 原生依赖与 `allowScripts` 批准项的唯一理由，也是 `pdfjs-dist` 的唯一使用者。影响：一个未被使用的公开 API 面与一个需编译的原生依赖。待裁定：删除路由及 `canvas` / `pdfjs-dist` / `src/types/pdfjs-dist.d.ts`。 | 低 | v4.7.0 Phase 0 |
 
 ## 开发注意事项
 
