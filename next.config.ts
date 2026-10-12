@@ -37,7 +37,7 @@ const securityHeaders = [
     key: 'Content-Security-Policy',
     value: [
       "default-src 'self'",
-      "script-src 'self' 'unsafe-inline' https://static.cloudflareinsights.com",  // Next.js 15 hydration requires unsafe-inline; Cloudflare Web Analytics
+      "script-src 'self' 'unsafe-inline' https://static.cloudflareinsights.com",  // Next.js hydration requires unsafe-inline; Cloudflare Web Analytics
       "style-src 'self' 'unsafe-inline'",   // Tailwind CSS requires unsafe-inline
       "img-src 'self' data: https:",
       "font-src 'self'",
