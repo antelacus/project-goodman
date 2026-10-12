@@ -1,27 +1,23 @@
-import { dirname } from "path";
-import { fileURLToPath } from "url";
-import { FlatCompat } from "@eslint/eslintrc";
+import { defineConfig, globalIgnores } from "eslint/config";
+import nextVitals from "eslint-config-next/core-web-vitals";
+import nextTs from "eslint-config-next/typescript";
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
-
-const compat = new FlatCompat({
-  baseDirectory: __dirname,
-});
-
-const eslintConfig = [
-  // Global ignores for build artifacts and utility scripts
+// eslint-config-next 16 ships flat configs only; FlatCompat can no longer load it.
+export default defineConfig([
+  globalIgnores([
+    ".next/**",
+    "node_modules/**",
+    "coverage/**",
+    "dist/**",
+    "build/**",
+    "scripts/**",
+  ]),
+  ...nextVitals,
+  ...nextTs,
   {
-    ignores: [
-      ".next/**",
-      "node_modules/**",
-      "coverage/**",
-      "dist/**",
-      "build/**",
-      "scripts/**",
-    ],
+    // Stopgap (TD-028): 12 existing sites; back to "error" once they are fixed.
+    // Same files as the "next" config, where the react-hooks plugin is defined.
+    files: ["**/*.{js,jsx,mjs,ts,tsx,mts,cts}"],
+    rules: { "react-hooks/set-state-in-effect": "warn" },
   },
-  ...compat.extends("next/core-web-vitals", "next/typescript"),
-];
-
-export default eslintConfig;
+]);

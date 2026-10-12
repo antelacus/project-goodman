@@ -55,6 +55,46 @@
       "reason": "Flagged only because it depends on extract-zip (see the extract-zip entries). Dev-only Lighthouse CI tooling, not in the production image.",
       "expiresOn": "2026-12-19",
       "fixPlan": "On or before expiry: check for an extract-zip release newer than 2.0.1 or an @lhci/cli release newer than 0.15.1 that drops the puppeteer/extract-zip chain, upgrade, and delete these entries. If neither exists, consider replacing @lhci/cli with a direct lighthouse + playwright invocation before renewing."
+    },
+    {
+      "package": "braces",
+      "advisoryId": "1240992",
+      "severity": "high",
+      "reason": "braces has no patched release upstream (latest is 3.0.3, advisory covers <=3.0.3). It is pulled in only by eslint-config-next -> @next/eslint-plugin-next -> fast-glob -> micromatch, dev-only lint tooling that expands glob patterns from this repo's own config; it is not part of the production image.",
+      "expiresOn": "2027-01-12",
+      "fixPlan": "On or before expiry: check for a braces release newer than 3.0.3, or an eslint-config-next / @next/eslint-plugin-next release that drops the fast-glob chain; upgrade and delete these entries."
+    },
+    {
+      "package": "micromatch",
+      "advisoryId": "unknown",
+      "severity": "high",
+      "reason": "Flagged only because it depends on braces (see the braces entry). Dev-only lint tooling, not in the production image.",
+      "expiresOn": "2027-01-12",
+      "fixPlan": "Removed together with the braces entry."
+    },
+    {
+      "package": "fast-glob",
+      "advisoryId": "unknown",
+      "severity": "high",
+      "reason": "Flagged only because it depends on braces (see the braces entry). Dev-only lint tooling, not in the production image.",
+      "expiresOn": "2027-01-12",
+      "fixPlan": "Removed together with the braces entry."
+    },
+    {
+      "package": "@next/eslint-plugin-next",
+      "advisoryId": "unknown",
+      "severity": "high",
+      "reason": "Flagged only because it depends on braces (see the braces entry). Dev-only lint tooling, not in the production image.",
+      "expiresOn": "2027-01-12",
+      "fixPlan": "Removed together with the braces entry."
+    },
+    {
+      "package": "eslint-config-next",
+      "advisoryId": "unknown",
+      "severity": "high",
+      "reason": "Flagged only because it depends on braces (see the braces entry). Dev-only lint tooling, not in the production image.",
+      "expiresOn": "2027-01-12",
+      "fixPlan": "Removed together with the braces entry."
     }
   ]
 }
