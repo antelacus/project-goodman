@@ -9,6 +9,8 @@ on:
 jobs:
   quality:
     runs-on: ubuntu-latest
+    # A green run takes 4–7 min; without a cap a hung step holds the run for GitHub's 6-hour default.
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
 
