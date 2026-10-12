@@ -199,7 +199,7 @@ Receipts (收据):
 
 ### 技术栈概览
 
-- Next.js 15 / React 19 / TypeScript
+- Next.js / React / TypeScript
 - Supabase (Postgres) + Redis
 - LangGraph + OpenAI
 - Tailwind CSS
