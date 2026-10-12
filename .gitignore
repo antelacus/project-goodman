@@ -73,3 +73,6 @@ supabase/.temp/
 # git worktrees (local)
 .worktrees/
 .a11y
+
+# Local MCP config (per-machine)
+.mcp.json
