@@ -1,9 +1,6 @@
 # 技术债务登记表
 
-> **最后更新**: 2026-01-30
-> **下次评审**: V5.0 之前
-
----
+> 只登记未解决的事项。已解决的条目直接删除（记录在关闭它的提交里）；已接受的条目保留，它是仍然生效的约束。
 
 ## 严重性指南
 
@@ -14,23 +11,27 @@
 | **中**  | 代码异味、老旧模式、开发摩擦 | 规划到大版本 |
 | **低**  | 锦上添花、优化机会         | 有机会时处理 |
 
----
-
 ## 活跃债务
 
-| ID     | 领域    | 描述                                                  | 严重性 | 处理版本 |
+| ID     | 领域    | 描述                                                  | 严重性 | 处理版本 / 触发条件 |
 |--------|---------|------------------------------------------------------|--------|--------|
-| TD-019 | 可靠性 | **外部服务无重试逻辑**：OpenAI/Supabase 调用失败即报错，无指数退避重试，无熔断器模式。影响：瞬时故障直接暴露给用户。 | 高 | V5.0 |
-| TD-020 | 数据完整性 | **关键操作无幂等性**：文档上传、财务数据写入无幂等键，重试可能产生重复数据���影响：用户刷新或网络重试导致数据重复。 | 高 | V5.0 |
-| TD-021 | 可观测性 | **LLM 成本无追踪**：OpenAI 调用未记录 token 用量和成本，无法按用户/功能归因费用，无响应缓存。影响：无法预测和控制 AI 成本。 | 中 | V5.0 |
-| TD-022 | 架构 | **长任务同步执行**：文档解析、AI 提取、报告生成均为同步请求，大文件可能超时。影响：用户体验差，服务器资源阻塞。 | 中 | V5.0+ |
-| TD-023 | 代码规范 | **3 个 API 路由缺少 Zod 验证**：`/api/documents/preview-url`（query params）、`/api/sessions/[id]`（path param UUID）、`/api/admin/upload-database-document`（仅 TypeScript 接口）。与"所有输入使用 Zod 验证"的约定不一致。影响：可能接受格式错误的请求，风险低（有其他安全层）。 | 低 | V5.0 |
-| TD-024 | 可观测性 | **报告生成 P95 未验证**：V4.6 性能优化目标为报告生成 P95 < 60s，但缺少 staging 环境日志/指标来验证。影响：无法确认性能目标是否达成。 | 低 | V5.0 |
-| TD-025 | 文档 | **性能优化可靠性矩阵待更新**：`docs/versions/v4/features/performance-optimization/workflow_reliability_matrix.md` 需根据 V4.6 实际实现更新。影响：文档与代码不同步。 | 低 | V5.0 |
-| TD-026 | 代码规范 | **命名规范混淆**：`upload-temp`（实际永久存储）、`extract`（既指文件解析又指数据提取）、`local-documents`（实际从 Supabase 获取）等命名误导。工作区文档与知识库文档概念未在代码中清晰区分。影响：开发者理解成本高，维护困难。详见 `docs/versions/v4/features/performance-optimization/NAMING_REFACTOR_PLAN.md`。 | 中 | V4.7 |
-| TD-027 | CI/CD | **E2E 测试在 CI 中不稳定**：Playwright E2E 测试因 Next.js dev server 锁文件冲突而失败（质量门控步骤与 E2E 步骤共享 `.next/dev/lock`）。已添加锁文件清理但仍偶发失败。当前标记为 `continue-on-error: true`。影响：E2E 测试无法在 CI 中可靠运行，需手动验证。 | 低 | V5.0 |
-| TD-028 | 代码规范 | **`react-hooks/set-state-in-effect` 暂降为 warn**：eslint-config-next 16 新增此规则，现有 12 处违规（10 个 UI 文件，`npx eslint .` 可列出）。暂缓原因：v4.6.4 携带 Next.js 安全修复，不应等待 UI 重构；UI 层缺少可靠的 E2E 安全网（TD-027）。退役条件：TD-027 解决后修复这 12 处，并在 `eslint.config.mjs` 中恢复为 error。 | 中 | TD-027 之后 |
-| TD-029 | 代码规范 | **无调用方的 PDF 预览路由**：`src/app/api/documents/pdf-preview/route.ts` 用 pdfjs-dist + canvas 在服务端渲染 PDF 页；v4.6（`464d5c7`）起前端预览改走 `/api/documents/preview-url` 签名链接，该路由再无调用方（`grep -rn pdf-preview src` 只命中其自身）。它是 `canvas` 原生依赖与 `allowScripts` 批准项的唯一理由，也是 `pdfjs-dist` 的唯一使用者。影响：一个未被使用的公开 API 面与一个需编译的原生依赖。待裁定：删除路由及 `canvas` / `pdfjs-dist` / `src/types/pdfjs-dist.d.ts`。 | 低 | v4.7.0 Phase 0 |
+| TD-023 | 代码规范 | **3 个 API 路由缺少 Zod 验证**：`/api/documents/preview-url`（query params）、`/api/sessions/[id]`（path param UUID）、`/api/admin/upload-database-document`（仅 TypeScript 接口）。与"所有输入使用 Zod 验证"的约定不一致。仓库公开后，读代码的人能直接看到这些缺口。 | 低 | v4.7.0（公开前） |
+| TD-024 | 性能 | **报告生成 P95 未达 V4.6 目标（< 60s）**：生产 `reports.generation_time_ms` 共 5 条（均在 V4.6 发布当周），P50 56.8s、P95 71.3s、最大 74.0s。样本很小，但 5 条中已有超过 60s 的。待裁定：优化、调整目标，或接受。 | 低 | 待 Jason 裁定 |
+| TD-026 | 代码规范 | **命名规范混淆**：`upload-temp`（实际永久存储）、`extract`（既指文件解析又指数据提取）、`local-documents`（实际从 Supabase 获取）等命名误导。工作区文档与知识库文档概念未在代码中清晰区分。影响：开发者理解成本高，维护困难。详见 `docs/versions/v4/features/performance-optimization/NAMING_REFACTOR_PLAN.md`。 | 中 | v4.8 Phase 0 裁定 |
+| TD-027 | CI/CD | **E2E 测试曾在 CI 中不稳定**：Playwright E2E 因 Next.js dev server 锁文件冲突偶发失败，CI 中标记为 `continue-on-error: true`。2026-09 起能读到结果的 5 次运行均为 3/3 通过。 | 低 | v4.7.0：新流水线中改为阻断；本版内一直为绿则删除本条 |
+| TD-028 | 代码规范 | **`react-hooks/set-state-in-effect` 暂降为 warn**：eslint-config-next 16 新增此规则，现有 12 处违规（10 个 UI 文件，`npx eslint .` 可列出）。暂缓原因：UI 层缺少可靠的 E2E 安全网（TD-027）。退役条件：修复这 12 处，并在 `eslint.config.mjs` 中恢复为 error。 | 中 | TD-027 删除后，紧接着的 light 版本 |
+| TD-029 | 代码规范 | **无调用方的 PDF 预览路由**：`src/app/api/documents/pdf-preview/route.ts` 用 pdfjs-dist + canvas 在服务端渲染 PDF 页；v4.6（`464d5c7`）起前端预览改走 `/api/documents/preview-url` 签名链接，该路由再无调用方。它是 `canvas` 原生依赖与 `allowScripts` 批准项的唯一理由，也是 `pdfjs-dist` 的唯一使用者。处理：删除路由及 `canvas` / `pdfjs-dist` / `src/types/pdfjs-dist.d.ts`。 | 低 | v4.7.0（公开前） |
+
+## 已接受
+
+> 接受的理由与重新评估的触发条件写在条目里；触发条件出现时重新裁定。
+
+| ID     | 领域    | 描述与接受理由                                          | 触发条件 |
+|--------|---------|------------------------------------------------------|--------|
+| TD-019 | 可靠性 | **Supabase 调用无重试，外部服务无熔断**。OpenAI 调用由 SDK 自带重试（默认 2 次，指数退避，覆盖 408/409/429/5xx 与连接错误）。接受理由：目前只有 Jason 一个用户，瞬时故障的影响面很小。 | 第一位真实外部用户 |
+| TD-020 | 数据完整性 | **文档上传、财务数据写入无幂等键**，重试可能产生重复数据。接受理由：单用户，重复数据看得见、删得掉。 | 第一位真实外部用户 |
+| TD-021 | 可观测性 | **LLM 用量无法按用户 / 功能归因，无响应缓存**。总花费的兜底是 LLM 服务商控制台的预算上限或提醒（仓库公开前由 Jason 设置），请求频率由 `src/proxy.ts` 的限流约束。接受理由：单用户，总量可控即可。 | 第一位真实外部用户 |
+| TD-022 | 架构 | **文档解析、AI 提取、报告生成均为同步请求**，大文件可能超时。接受理由：目前没有出现过超时。 | 有人报告超时，或第一位真实外部用户 |
 
 ## 开发注意事项
 
@@ -40,72 +41,3 @@
 - **环境变量**: `.env` 中包含 `$` 字符的变量需要转义
 - **Docker**: 仅用于生产环境；本地开发使用 `npm run dev`
 - **Supabase**: `.temp/` 目录已 gitignore，会自动重新生成
-
----
-
-## 已解决的债务
-
-| ID | 描述 | 解决版本 | 解决说明 |
-|----|------|----------|----------|
-| TD-000 | 遗留的多 Agent 架构 | V3.0 | 统一为单一 Agent |
-| TD-000 | API 缺少输入验证 | V3.9 | 添加了 Zod 验证 |
-| TD-000 | 不一致的错误响应 | V3.9 | 使用 createErrorResponse() 标准化 |
-| TD-000 | localStorage 安全风险 | V3.9 | 敏感数据移至 HttpOnly cookies |
-| TD-001 | 44 处 `as any` 类型断言 | V3.11 | 减少至 8 处，全部添加 REASON 注释 |
-| TD-002 | XLSX 外部库类型限制 | V3.11 | 添加 REASON 注释，标记为已接受 |
-| TD-003 | 无 LangSmith 集成用于 Agent 追踪 | V4.3 | 集成 LangSmith 追踪与自定义 span |
-| TD-004 | 手动部署，无自动化流水线 | V4.3 | GitHub Actions CI/CD 覆盖 lint/test/build/deploy |
-| TD-005 | 无性能基线（打包大小、API 响应时间、Core Web Vitals） | V4.3 | 添加打包分析、结构化日志、Web Vitals |
-| TD-006 | 测试覆盖不完整（提取/工作流/API 路由需覆盖） | V4.3 | 引入 Vitest 并补充核心测试 |
-| TD-007 | 无健康检查端点 | V4.3 | 新增 `/api/health` |
-| TD-008 | reports 表 `generation_time_ms` 未填充 | V4.3 | 生成流程写入 `generation_time_ms` |
-| TD-009 | 23 个数据库索引未使用 | V4.3 | 审查并记录决策（删除/保留） |
-| TD-010 | 部分测试脚本已过时 | V4.3 | 清理过时测试脚本并统一 Vitest |
-| TD-011 | RPC mutable search_path 警告 | V4.3 | 为 5 个函数设置 `search_path` |
-| TD-012 | users/guest_activity 表未启用 RLS | V4.3 | 设计决策已文档化 |
-| TD-013 | 9 个表 USING(true) RLS 策略 | V4.3 | 设计决策已文档化 |
-| TD-014 | expr-eval 高危漏洞 | V4.3 | 替换为 mathjs |
-| TD-015 | xlsx 高危漏洞 | V4.3 | 替换为 exceljs |
-| TD-016 | Next.js 15.3.6 高危漏洞 | V4.3 | 升级到 15.5+ |
-| TD-017 | API 路由缺少 Zod schema 验证 | V4.3 | 统一 Zod 验证并标准化错误响应 |
-| TD-018 | @sentry/node webpack 构建失败：Edge middleware 引入 error-handler，触发 @sentry/node 依赖 Node 内置模块。 | V4.4 | 拆分 request-id 模块，middleware 仅依赖 edge-safe 实现，Sentry 仅在 server 端加载 |
-
----
-
-## 按领域统计
-
-| 领域 | 紧急 | 高 | 中 | 低 | 总计 |
-|------|------|----|----|----|----|
-| 可靠性 | 0 | 1 | 0 | 0 | 1 |
-| 数据完整性 | 0 | 1 | 0 | 0 | 1 |
-| 可观测性 | 0 | 0 | 1 | 1 | 2 |
-| 架构 | 0 | 0 | 1 | 0 | 1 |
-| 代码规范 | 0 | 0 | 1 | 1 | 2 |
-| 文档 | 0 | 0 | 0 | 1 | 1 |
-| CI/CD | 0 | 0 | 0 | 1 | 1 |
-| **总计** | **0** | **2** | **3** | **4** | **9** |
-
----
-
-## 评审历史
-
-| 日期 | 评审人 | 采取的行动 |
-|------|--------|------------|
-| 2026-01-30 | V4.6.3 | 新增 TD-027：E2E 测试在 CI 中不稳定（Next.js dev server 锁文件冲突），标记为非阻断 |
-| 2026-01-30 | V4.6 | 新增 TD-026：命名规范混淆（upload-temp/extract/local-documents 等命名误导），计划 V4.7 重构 |
-| 2026-01-29 | V4.6.1 | 新增 TD-024~TD-025：V4.6 性能优化遗留验证任务（报告生成 P95 验证、可靠性矩阵文档更新） |
-| 2026-01-28 | V4.6 | 新增 TD-023：安全审计发现 3 个 API 路由缺少 Zod 验证（Reddit 部署清单对照检查） |
-| 2026-01-28 | V4.6 | 新增 TD-019~TD-022：生产就绪性审计（外部服务重试、幂等性、LLM 成本追踪、异步处理） |
-| 2026-01-17 | V4.3 | 发布完成，TD-003~TD-017 全部解决并归档 |
-| 2026-01-15 | V4.3 | Task H 安全审计：新增 TD-014~TD-016（依赖漏洞），修复 4 个可修复漏洞 |
-| 2026-01-14 | V4.3 | 精简债务表，将 9/11 项纳入 V4.3 处理（仅保留 TD-003/TD-004 延迟至 V5+） |
-| 2026-01-14 | V4.3 | 合并 KNOWN_ISSUES.md 到活跃债务表（TD-014~TD-021），精简为单一追踪系统 |
-| 2026-01-09 | V4.x | 评审完成，TD-003/TD-004 确认延迟至 V5+，下次评审更新为 V5.0 之前 |
-| 2026-01-07 | V3.11 | TD-001、TD-002 已解决，类型系统改进完成 |
-| 2026-01-06 | 初始 | 基于 V3.9 代码评审创建登记表 |
-
----
-
-*文档版本: 1.9*
-*创建日期: 2026-01-06*
-*最后更新: 2026-01-30*
