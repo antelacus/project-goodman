@@ -2,7 +2,7 @@
 
 > 让财务工作更智能、更透明
 
-[在线体验](https://goodman.antelacus.com) · [License: AGPL-3.0](https://www.gnu.org/licenses/agpl-3.0.html)
+[在线体验](https://goodman.antelacus.com)
 
 ---
 
@@ -230,6 +230,6 @@ Receipts (收据):
 
 ---
 
-## License
+## 版权
 
-[AGPL-3.0](https://www.gnu.org/licenses/agpl-3.0.html)
+保留所有权利。本仓库公开仅供查看，未授予使用、复制、修改或分发代码的许可。
