@@ -16,6 +16,7 @@
 | ID     | 领域    | 描述                                                  | 严重性 | 处理版本 / 触发条件 |
 |--------|---------|------------------------------------------------------|--------|--------|
 | TD-023 | 代码规范 | **3 个 API 路由缺少 Zod 验证**：`/api/documents/preview-url`（query params）、`/api/sessions/[id]`（path param UUID）、`/api/admin/upload-database-document`（仅 TypeScript 接口）。与"所有输入使用 Zod 验证"的约定不一致。仓库公开后，读代码的人能直接看到这些缺口。 | 低 | 发布流水线版本（公开前） |
+| TD-030 | 数据正确性 | **AI 调用失败时报告编造结论（P0）**：`src/lib/workflows/report/nodes/analyze-sections.ts` 的兜底把"`{章节名}`：基于当前数据，各项指标表现正常，详情请参考具体数值。"写进章节分析，与实际数据无关；`assemble-report.ts` 的摘要兜底同样掩盖失败。AI 服务自额度用尽起不可用，所以此刻生产上的每份报告都会这样显示。staging 冒烟与人工走查都未拦下（流程正常走完）。不走 hotfix 的理由（Jason）：访问量很低，接受在 v4.7.0 上线前生产报告仍可能显示编造的结论。 | 紧急 | v4.7.0 |
 | TD-024 | 性能 | **报告生成 P95 未达 V4.6 目标（< 60s）**：生产 `reports.generation_time_ms` 共 5 条（均在 V4.6 发布当周），P50 56.8s、P95 71.3s、最大 74.0s。样本很小，但 5 条中已有超过 60s 的。处理：优化，不在 v4.7.0；v4.7.0 换模型后在 Phase 4 重新测量。 | 中 | v4.7.0 之后、发布流水线之后的下一个版本 Phase 0 排期 |
 | TD-026 | 代码规范 | **命名规范混淆**：`upload-temp`（实际永久存储）、`extract`（既指文件解析又指数据提取）、`local-documents`（实际从 Supabase 获取）等命名误导。工作区文档与知识库文档概念未在代码中清晰区分。影响：开发者理解成本高，维护困难。详见 `docs/versions/v4/features/performance-optimization/NAMING_REFACTOR_PLAN.md`。 | 中 | 发布流水线之后的下一个版本 Phase 0 裁定 |
 | TD-027 | CI/CD | **E2E 测试曾在 CI 中不稳定**：Playwright E2E 因 Next.js dev server 锁文件冲突偶发失败，CI 中标记为 `continue-on-error: true`。2026-09 起能读到结果的 5 次运行均为 3/3 通过。 | 低 | 发布流水线版本：新流水线中改为阻断；该版内一直为绿则删除本条 |
