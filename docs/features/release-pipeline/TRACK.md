@@ -1,4 +1,4 @@
-# TRACK — release-pipeline v4.7.0
+# TRACK — release-pipeline（版本号在开工时分配）
 
 ## 一、范围与裁定
 
@@ -24,6 +24,7 @@
   - 2026-10-19 · 技术债逐条裁定：TD-023、TD-029 公开前修；TD-027 新流水线中改为阻断；TD-025 删除（目标文件是历史快照）；TD-019 / 020 / 021 / 022 接受并附触发条件（TD-019 描述更正：OpenAI SDK 自带重试）；TD-021 的总花费兜底为公开前在服务商控制台设预算；TD-026 交 v4.8 Phase 0；TD-028 在 TD-027 删除后开 light 版本 · Jason · 级联：`docs/TECHNICAL_DEBT.md`
   - 2026-10-19 · 不放许可证：删除 AGPL-3.0（删 `LICENSE` 文件；`package.json` 改为 `UNLICENSED`；README 改为"保留所有权利"）；公开仅供查看 · Jason · 级联：`LICENSE`、`package.json`、`README.md`
   - 2026-10-19 · TD-024 需要优化，但不在本版 · Jason · 级联：`docs/TECHNICAL_DEBT.md`（v4.8 Phase 0 排期）
+  - 2026-10-19 · 发布流水线顺延到 AI 服务切换（v4.7.0）之后：AI 不通，staging 检查无法验证；本 TRACK 的 Phase 0 工作与裁定保留，开工时重新执行 Phase 0 的核对 · Jason · 级联：`v4_DEVELOPMENT_PLAN.md` §3.11、§3.12
 
 ## 二、批次
 

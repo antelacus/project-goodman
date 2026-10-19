@@ -15,12 +15,12 @@
 
 | ID     | 领域    | 描述                                                  | 严重性 | 处理版本 / 触发条件 |
 |--------|---------|------------------------------------------------------|--------|--------|
-| TD-023 | 代码规范 | **3 个 API 路由缺少 Zod 验证**：`/api/documents/preview-url`（query params）、`/api/sessions/[id]`（path param UUID）、`/api/admin/upload-database-document`（仅 TypeScript 接口）。与"所有输入使用 Zod 验证"的约定不一致。仓库公开后，读代码的人能直接看到这些缺口。 | 低 | v4.7.0（公开前） |
-| TD-024 | 性能 | **报告生成 P95 未达 V4.6 目标（< 60s）**：生产 `reports.generation_time_ms` 共 5 条（均在 V4.6 发布当周），P50 56.8s、P95 71.3s、最大 74.0s。样本很小，但 5 条中已有超过 60s 的。处理：优化（不在 v4.7.0）。 | 中 | v4.8 Phase 0 排期 |
-| TD-026 | 代码规范 | **命名规范混淆**：`upload-temp`（实际永久存储）、`extract`（既指文件解析又指数据提取）、`local-documents`（实际从 Supabase 获取）等命名误导。工作区文档与知识库文档概念未在代码中清晰区分。影响：开发者理解成本高，维护困难。详见 `docs/versions/v4/features/performance-optimization/NAMING_REFACTOR_PLAN.md`。 | 中 | v4.8 Phase 0 裁定 |
-| TD-027 | CI/CD | **E2E 测试曾在 CI 中不稳定**：Playwright E2E 因 Next.js dev server 锁文件冲突偶发失败，CI 中标记为 `continue-on-error: true`。2026-09 起能读到结果的 5 次运行均为 3/3 通过。 | 低 | v4.7.0：新流水线中改为阻断；本版内一直为绿则删除本条 |
+| TD-023 | 代码规范 | **3 个 API 路由缺少 Zod 验证**：`/api/documents/preview-url`（query params）、`/api/sessions/[id]`（path param UUID）、`/api/admin/upload-database-document`（仅 TypeScript 接口）。与"所有输入使用 Zod 验证"的约定不一致。仓库公开后，读代码的人能直接看到这些缺口。 | 低 | 发布流水线版本（公开前） |
+| TD-024 | 性能 | **报告生成 P95 未达 V4.6 目标（< 60s）**：生产 `reports.generation_time_ms` 共 5 条（均在 V4.6 发布当周），P50 56.8s、P95 71.3s、最大 74.0s。样本很小，但 5 条中已有超过 60s 的。处理：优化，不在 v4.7.0；v4.7.0 换模型后在 Phase 4 重新测量。 | 中 | v4.7.0 之后、发布流水线之后的下一个版本 Phase 0 排期 |
+| TD-026 | 代码规范 | **命名规范混淆**：`upload-temp`（实际永久存储）、`extract`（既指文件解析又指数据提取）、`local-documents`（实际从 Supabase 获取）等命名误导。工作区文档与知识库文档概念未在代码中清晰区分。影响：开发者理解成本高，维护困难。详见 `docs/versions/v4/features/performance-optimization/NAMING_REFACTOR_PLAN.md`。 | 中 | 发布流水线之后的下一个版本 Phase 0 裁定 |
+| TD-027 | CI/CD | **E2E 测试曾在 CI 中不稳定**：Playwright E2E 因 Next.js dev server 锁文件冲突偶发失败，CI 中标记为 `continue-on-error: true`。2026-09 起能读到结果的 5 次运行均为 3/3 通过。 | 低 | 发布流水线版本：新流水线中改为阻断；该版内一直为绿则删除本条 |
 | TD-028 | 代码规范 | **`react-hooks/set-state-in-effect` 暂降为 warn**：eslint-config-next 16 新增此规则，现有 12 处违规（10 个 UI 文件，`npx eslint .` 可列出）。暂缓原因：UI 层缺少可靠的 E2E 安全网（TD-027）。退役条件：修复这 12 处，并在 `eslint.config.mjs` 中恢复为 error。 | 中 | TD-027 删除后，紧接着的 light 版本 |
-| TD-029 | 代码规范 | **无调用方的 PDF 预览路由**：`src/app/api/documents/pdf-preview/route.ts` 用 pdfjs-dist + canvas 在服务端渲染 PDF 页；v4.6（`464d5c7`）起前端预览改走 `/api/documents/preview-url` 签名链接，该路由再无调用方。它是 `canvas` 原生依赖与 `allowScripts` 批准项的唯一理由，也是 `pdfjs-dist` 的唯一使用者。处理：删除路由及 `canvas` / `pdfjs-dist` / `src/types/pdfjs-dist.d.ts`。 | 低 | v4.7.0（公开前） |
+| TD-029 | 代码规范 | **无调用方的 PDF 预览路由**：`src/app/api/documents/pdf-preview/route.ts` 用 pdfjs-dist + canvas 在服务端渲染 PDF 页；v4.6（`464d5c7`）起前端预览改走 `/api/documents/preview-url` 签名链接，该路由再无调用方。它是 `canvas` 原生依赖与 `allowScripts` 批准项的唯一理由，也是 `pdfjs-dist` 的唯一使用者。处理：删除路由及 `canvas` / `pdfjs-dist` / `src/types/pdfjs-dist.d.ts`。 | 低 | 发布流水线版本（公开前） |
 
 ## 已接受
 
