@@ -123,7 +123,7 @@ loadMemory → agentLoop ⇄ toolExecutor（检索 ≤ 3 次）
 | 表 | 粒度 | 本版变化 |
 |----|------|---------|
 | `structured_regulations` | 一行 = 一部法规的一条条款 | 数据整体替换（REQ §5.6）；新增生成列 `search_text`（去掉换行的正文）及其 PGroonga 索引 |
-| `structured_regulations_backup` | 替换前的整表副本 | 新增；Phase 6 删除 |
+| `backup.structured_regulations_v4_6` | 替换前的整表副本（`backup` schema 不经 Data API 暴露，无需授权） | 新增；Phase 6 删除 |
 | `document_chunks` | 一行 = 一个文档切块 | 新增生成列 `search_text` 及 PGroonga 索引；`embedding` 列 Phase 6 删除 |
 | `documents` | 一行 = 一份文档 | 不变 |
 
@@ -132,7 +132,7 @@ loadMemory → agentLoop ⇄ toolExecutor（检索 ≤ 3 次）
 - `search_regulation_articles(p_query, p_limit)`、`search_knowledge_chunks(p_query, p_limit, p_year, p_doc_type)`：`scorer_tf_idf` 排序；后者把资料库范围写死。
 - `replace_regulation_articles(p_document_id, p_articles jsonb)`：一个函数调用即一个事务，删去该文档的旧条款、插入新条款；可重复执行。
 
-Phase 6 删除：`match_documents`、`search_documents_hybrid`、`search_regulations_hybrid`、`embedding` 列、`structured_regulations_backup`、`vector` 扩展（若无他用）。删除语句由 Jason 在控制台执行（§8）。
+Phase 6 删除：`match_documents`、`search_documents_hybrid`、`search_regulations_hybrid`、`embedding` 列、`backup` schema（含备份表）、`vector` 扩展（若无他用）。删除语句由 Jason 在控制台执行（§8）。
 
 迁移规则：本版迁移只增不删，直到 Phase 6（REQ §6.1）。每个迁移经 Supabase MCP 执行后，以数据库登记的编号同时提交到 `supabase/migrations/`（TD-031）。逐列定义见 `src/lib/database/types.ts`，迁移后重新生成。
 
@@ -184,7 +184,7 @@ Phase 6 删除：`match_documents`、`search_documents_hybrid`、`search_regulat
 - PGroonga 3.2.5（装在 `extensions` schema）：两字词可检索；空格为 AND、`OR` 为或；默认 `pgroonga_score` 只是词频，要用 `pgroonga_condition(…, scorers => ARRAY['scorer_tf_idf($index)'], index_name => …)` 才有 TF-IDF。非 ASCII 文本按相邻两字切分（bigram），不是语义分词。
 - PDF 抽出的文字在词中间断行（"金\n融资产"），并夹有单独成行的页码；索引前去掉换行，页码行由拆分器删除（否则页码会粘进词中间）。
 - 45 份法规原文件都在 Storage 的 `document-files` 中（已核）。
-- 服务端多数数据库调用用的是 anon 密钥（`createServerSupabaseClient`），不是 service_role。自 2026-10-30 起，`public` 中新建的表不再自动授权给 Data API 角色：应用经 supabase-js 访问的新表，须在建表的同一迁移里显式 `grant`。本版唯一的新表 `structured_regulations_backup` 只经 SQL 访问，不授权。新函数仍默认可由 anon 执行；`replace_regulation_articles` 在迁移里收回了 anon / authenticated 的执行权，只给 service_role（重新拆分脚本用）。
+- 服务端多数数据库调用用的是 anon 密钥（`createServerSupabaseClient`），不是 service_role。自 2026-10-30 起，`public` 中新建的表不再自动授权给 Data API 角色：应用经 supabase-js 访问的新表，须在建表的同一迁移里显式 `grant`。本版唯一的新表是 `backup` schema 中的备份表，不经 Data API 访问。新函数仍默认可由 anon 执行；`replace_regulation_articles` 在迁移里收回了 anon / authenticated 的执行权，只给 service_role（重新拆分脚本用）。
 - 迁移历史与仓库文件不一致（TD-031）：不能用 `supabase db push`。
 - Supabase MCP 的 `apply_migration`，以及 `execute_sql` 中含 `drop`、`delete`、`revoke` 等的语句，都要求客户端确认；Claude Code 显示不了确认框，请求被自动取消。这类迁移由 Jason 在控制台的 SQL 编辑器执行，Claude 随后把同一版本号登记进 `supabase_migrations.schema_migrations`，使仓库文件与数据库记录一致。
 - 重新拆分与评测脚本的凭据放在本机 `.env.scripts`（`NEXT_PUBLIC_SUPABASE_URL`、`SUPABASE_SERVICE_ROLE_KEY`），只由脚本显式读取；本机 `.env` 不含生产凭据，`npm run dev` 连不到生产库。
