@@ -31,6 +31,8 @@
   - 2026-10-20 · 所有 AI 调用集中到 `src/lib/ai/` 的统一入口（4 个函数，系统提示词必填，SDK 只许在此导入） · Jason · 级联：DESIGN §2.1、§4、§7
   - 2026-10-20 · 中文检索用 PGroonga（TF-IDF 排序），关键词由 agent 给出 · Jason · 级联：DESIGN §4、§5、§8
   - 2026-10-20 · 检索上限 3 次由代码强制、提示词同时告知 · Jason · 级联：DESIGN §4
+  - 2026-10-20 · 重新拆分的异常清单（1 条）：《企业会计准则第 10 号——企业年金基金》第 5–6 页附录（两张报表格式）从检索中排除，不归入任何条款 · Jason · 级联：Phase 4 证据
+  - 2026-10-20 · 用重新拆分的结果替换生产的结构化条款；备份放在 `backup` schema（不经 Data API 暴露） · Jason · 级联：DESIGN §5
   - 2026-10-20 · Codex 设计评审 13 条全部采纳；出处改为编号引用、由程序生成（C1 方案 A），资料库外标注由程序按引用判定；C8 降为 SHOULD · Jason · 级联：REQ §5.1–§5.7、§6.1、§7，DESIGN 全篇
 
 ## 二、批次
@@ -39,11 +41,11 @@
 |------|------|-----------------|------|
 | B1 AI 统一入口 | 完成 | `src/lib/ai/` 4 个函数、成功判定、时限与重试、`AIUnavailableError`；15 个调用点迁入；去掉 `LLM_MODEL_*` / `OPENAI_*` 回退；CI 环境变量 · §relay-model、§relay-params、§system-prompt、§ai-outcome、§ai-timeout | — |
 | B2 失败不编造 | 完成 | 报告章节与摘要状态、三处渲染、对话失败文案、两个上传入口的提取失败与多期间一次写入、冒烟检查 · §report-section-failure、§report-summary-failure、§chat-failure、§extract-failure、§smoke-report | B1 |
-| B3 条款重新拆分 | 进行中（拆分器、管理员上传、替换函数与脚本完成；待跑 check、Jason 裁定异常、apply） | `regulation-splitter`（逐页、连续编号、无归属正文）、管理员上传改用并在存储失败时失败、`replace_regulation_articles`、`resplit-regulations` 脚本与异常清单（Jason 裁定后才替换）· §reg-split-rule、§reg-integrity、§reg-upload-dup、§reg-upload-storage | — |
+| B3 条款重新拆分 | 完成 | `regulation-splitter`（逐页、连续编号、无归属正文）、管理员上传改用并在存储失败时失败、`replace_regulation_articles`、`resplit-regulations` 脚本与异常清单（Jason 裁定后才替换）· §reg-split-rule、§reg-integrity、§reg-upload-dup、§reg-upload-storage | — |
 | B4 关键词检索与引用 | 未开始 | PGroonga 迁移（生成列、索引、3 个函数）、`src/lib/search/`、两个工具与证据编号、检索预算与 `forceAnswer`、`src/lib/citations/`、过程日志链接、系统提示词、上传去向量、数据库层测试 · §reg-search-citation、§search-rounds、§keyword-match、§citation-text、§citation-link、§out-of-library、§retrieval-error、§doc-search、§upload-no-embedding、§no-embedding-calls | B1、B3（替换完成） |
 | B5 评测 | 未开始 | 记忆存储注入、查询集（Claude 起草、Jason 审定）与 `eval-retrieval` 脚本 · §retrieval-quality，以及 §out-of-library 的评测部分 | B4 |
 
-Phase 6：§vector-removed（删除向量列、向量函数、`structured_regulations_backup`）。
+Phase 6：§vector-removed（删除向量列、向量函数、`backup` schema）。
 
 ## 三、门与发布
 
@@ -65,7 +67,9 @@ Phase 6：§vector-removed（删除向量列、向量函数、`structured_regula
 | C12 | SHOULD | SDK 默认超时 10 分钟 × 重试 2 次；relay 挂起时用户等不到失败提示 | 已采纳（时限初值 60/90/120s，重试 1 次）· 待 §ai-timeout 通过后关闭 |
 | C13 | SHOULD | 新检索函数须把"只搜资料库、只搜就绪文档"写死在数据库查询里 | 已采纳 · 待 §doc-search 通过后关闭 |
 
-**Phase 4 证据**：Phase 4。
+**Phase 4 证据**：
+
+- §reg-integrity（45 部真实法规，2026-10-20）：`scripts/resplit-regulations.ts check` 第一轮 1196 条、18 条异常，其中 17 条是拆分规则的问题（康熙部首、2007 版准则无空格、字间距排版、浏览器页眉页脚），修正规则后 1505 条、1 条异常，已由 Jason 裁定（见裁定）。`apply` 后脚本逐条读回比对通过；SQL 独立核对：45 份文档均有条款，重复 0，条款内容中的章节标题 0、页码行 0、康熙部首 0。条款数与原文一致可核的：企业所得税法 60、关税法 72、增值税法 38、基本准则 50。替换前整表 1559 行备份于 `backup.structured_regulations_v4_6`，与原表逐行一致。
 
 **Phase 6 boxes**：Phase 4 收尾时写入；已知必须包含：relay 用量上限已设（Jason）· VPS 上 staging、生产两份 `.env` 先后更新并备份，删除不再使用的 `OPENAI_API_KEY` · 生产验证后删除向量列、向量函数（REQ §5.8）· TD-021 改写为 relay 现状 · TD-024 重新测量
 
