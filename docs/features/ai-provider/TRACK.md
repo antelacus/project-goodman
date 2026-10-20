@@ -31,16 +31,17 @@
   - 2026-10-20 · 所有 AI 调用集中到 `src/lib/ai/` 的统一入口（4 个函数，系统提示词必填，SDK 只许在此导入） · Jason · 级联：DESIGN §2.1、§4、§7
   - 2026-10-20 · 中文检索用 PGroonga（TF-IDF 排序），关键词由 agent 给出 · Jason · 级联：DESIGN §4、§5、§8
   - 2026-10-20 · 检索上限 3 次由代码强制、提示词同时告知 · Jason · 级联：DESIGN §4
+  - 2026-10-20 · Codex 设计评审 13 条全部采纳；出处改为编号引用、由程序生成（C1 方案 A），资料库外标注由程序按引用判定；C8 降为 SHOULD · Jason · 级联：REQ §5.1–§5.7、§6.1、§7，DESIGN 全篇
 
 ## 二、批次
 
 | 批次 | 状态 | 范围（REQ §-id） | 依赖 |
 |------|------|-----------------|------|
-| B1 AI 统一入口 | 未开始 | `src/lib/ai/` 4 个函数与 `AIUnavailableError`；15 个调用点迁入；去掉 `LLM_MODEL_*` / `OPENAI_*` 回退；CI 环境变量 · §relay-model、§relay-params、§system-prompt | — |
-| B2 失败不编造 | 未开始 | 报告章节与摘要状态、三处渲染、对话失败文案、提取失败、冒烟检查 · §report-section-failure、§report-summary-failure、§chat-failure、§extract-failure、§smoke-report | B1 |
-| B3 条款重新拆分 | 未开始 | `regulation-splitter`、管理员上传改用、`resplit-regulations` 脚本与异常清单（Jason 裁定后才替换）· §reg-split-rule、§reg-integrity、§reg-upload-dup | — |
-| B4 关键词检索 | 未开始 | PGroonga 迁移（生成列、索引、2 个函数）、`src/lib/search/`、两个工具、检索预算、出处名称与过程日志链接、系统提示词、上传去向量 · §reg-search-citation、§search-rounds、§citation-link、§doc-search、§upload-no-embedding、§no-embedding-calls | B1、B3（替换完成） |
-| B5 评测 | 未开始 | 查询集（Claude 起草、Jason 审定）与 `eval-retrieval` 脚本 · §retrieval-quality、§citation-text、§out-of-library | B4 |
+| B1 AI 统一入口 | 未开始 | `src/lib/ai/` 4 个函数、成功判定、时限与重试、`AIUnavailableError`；15 个调用点迁入；去掉 `LLM_MODEL_*` / `OPENAI_*` 回退；CI 环境变量 · §relay-model、§relay-params、§system-prompt、§ai-outcome、§ai-timeout | — |
+| B2 失败不编造 | 未开始 | 报告章节与摘要状态、三处渲染、对话失败文案、两个上传入口的提取失败与多期间一次写入、冒烟检查 · §report-section-failure、§report-summary-failure、§chat-failure、§extract-failure、§smoke-report | B1 |
+| B3 条款重新拆分 | 未开始 | `regulation-splitter`（逐页、连续编号、无归属正文）、管理员上传改用并在存储失败时失败、`replace_regulation_articles`、`resplit-regulations` 脚本与异常清单（Jason 裁定后才替换）· §reg-split-rule、§reg-integrity、§reg-upload-dup、§reg-upload-storage | — |
+| B4 关键词检索与引用 | 未开始 | PGroonga 迁移（生成列、索引、3 个函数）、`src/lib/search/`、两个工具与证据编号、检索预算与 `forceAnswer`、`src/lib/citations/`、过程日志链接、系统提示词、上传去向量、数据库层测试 · §reg-search-citation、§search-rounds、§keyword-match、§citation-text、§citation-link、§out-of-library、§retrieval-error、§doc-search、§upload-no-embedding、§no-embedding-calls | B1、B3（替换完成） |
+| B5 评测 | 未开始 | 记忆存储注入、查询集（Claude 起草、Jason 审定）与 `eval-retrieval` 脚本 · §retrieval-quality，以及 §out-of-library 的评测部分 | B4 |
 
 Phase 6：§vector-removed（删除向量列、向量函数、`structured_regulations_backup`）。
 
@@ -50,19 +51,19 @@ Phase 6：§vector-removed（删除向量列、向量函数、`structured_regula
 
 | # | 级别 | 发现 | status |
 |---|------|------|--------|
-| C1 | MUST | §citation-text 只要求"含一条正确出处"，正确出处可掩盖编造的出处；没有引用校验环节 | 待裁定 |
-| C2 | MUST | 行首规则 + 递增不足以证明拆分正确；覆盖检查若只比对拆分器自己的输入，漏页也会 100% | 待裁定 |
-| C3 | MUST | 替换期间旧生产仍可用旧拆分器上传法规；替换缺原子性与中断恢复 | 待裁定 |
-| C4 | MUST | "空内容即失败"会误杀只含工具调用的回复；截断输出（`finish_reason: length`）会被当成功 | 待裁定 |
-| C5 | MUST | Responses API 的输出上限字段是 `max_output_tokens`，不是 `max_completion_tokens` | 待裁定 |
-| C6 | MUST | 资料库外作答只在"3 次都空"时触发；非空但无关、部分支持、检索报错都没有终态规则 | 待裁定 |
-| C7 | MUST | 评测跑完整 agent 会创建会话、写消息到共用的生产库 | 待裁定 |
-| C8 | MUST | 管理员上传在 Storage 失败时仍写入法规，`file_url` 为空，出处链接打不开（现有 45 份原件均在 Storage，已核） | 待裁定 |
-| C9 | SHOULD | 预算用尽返回 `empty: true` 与真实空结果混淆；模型不收尾时撞上最大迭代，会保存未配对的工具调用 | 待裁定 |
-| C10 | SHOULD | 关键词粒度、数量、组合方式未定义；"不相邻命中"要在数据库层用固定样例直接验证 | 待裁定 |
-| C11 | SHOULD | 管理员上传按期间逐条写 `financial_data`，第二期校验失败时第一期已落库 | 待裁定 |
-| C12 | SHOULD | SDK 默认超时 10 分钟 × 重试 2 次；relay 挂起时用户等不到失败提示 | 待裁定 |
-| C13 | SHOULD | 新检索函数须把"只搜资料库、只搜就绪文档"写死在数据库查询里 | 待裁定 |
+| C1 | MUST | §citation-text 只要求"含一条正确出处"，正确出处可掩盖编造的出处；没有引用校验环节 | 已采纳（方案 A：编号引用、程序生成出处）· 待 §citation-text 通过后关闭 |
+| C2 | MUST | 行首规则 + 递增不足以证明拆分正确；覆盖检查若只比对拆分器自己的输入，漏页也会 100% | 已采纳 · 待 §reg-integrity 通过后关闭 |
+| C3 | MUST | 替换期间旧生产仍可用旧拆分器上传法规；替换缺原子性与中断恢复 | 已采纳（逐文档事务替换；核对到上线期间不在生产上传法规）· 由 §reg-integrity 与替换后复核关闭 |
+| C4 | MUST | "空内容即失败"会误杀只含工具调用的回复；截断输出（`finish_reason: length`）会被当成功 | 已采纳 · 待 §ai-outcome 通过后关闭 |
+| C5 | MUST | Responses API 的输出上限字段是 `max_output_tokens`，不是 `max_completion_tokens` | 已采纳 · 待 §relay-params 通过后关闭 |
+| C6 | MUST | 资料库外作答只在"3 次都空"时触发；非空但无关、部分支持、检索报错都没有终态规则 | 已采纳（由引用后处理按编号判定标注）· 待 §out-of-library、§retrieval-error 通过后关闭 |
+| C7 | MUST | 评测跑完整 agent 会创建会话、写消息到共用的生产库 | 已采纳（内存记忆存储）· 由评测前后行数核对关闭 |
+| C8 | SHOULD（原 MUST） | 管理员上传在 Storage 失败时仍写入法规，`file_url` 为空，出处链接打不开（现有 45 份原件均在 Storage，已核） | 已采纳（Jason 同意按 SHOULD 处理）· 待 §reg-upload-storage 通过后关闭 |
+| C9 | SHOULD | 预算用尽返回 `empty: true` 与真实空结果混淆；模型不收尾时撞上最大迭代，会保存未配对的工具调用 | 已采纳 · 待 §search-rounds 通过后关闭 |
+| C10 | SHOULD | 关键词粒度、数量、组合方式未定义；"不相邻命中"要在数据库层用固定样例直接验证 | 已采纳 · 待 §keyword-match 通过后关闭 |
+| C11 | SHOULD | 管理员上传按期间逐条写 `financial_data`，第二期校验失败时第一期已落库 | 已采纳 · 待 §extract-failure 通过后关闭 |
+| C12 | SHOULD | SDK 默认超时 10 分钟 × 重试 2 次；relay 挂起时用户等不到失败提示 | 已采纳（时限初值 60/90/120s，重试 1 次）· 待 §ai-timeout 通过后关闭 |
+| C13 | SHOULD | 新检索函数须把"只搜资料库、只搜就绪文档"写死在数据库查询里 | 已采纳 · 待 §doc-search 通过后关闭 |
 
 **Phase 4 证据**：Phase 4。
 
