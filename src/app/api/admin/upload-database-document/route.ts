@@ -34,7 +34,6 @@ import {
   type DocumentType,
   type ExtractionResult,
   type FinancialExtractionResult,
-  type RegulationExtractionResult,
   type ColumnMapping,
   type ColumnExtractionOptions,
   type FinancialExtractionWithType,
@@ -50,6 +49,7 @@ import {
   type StandardCashFlow,
 } from "@/lib/financial";
 import { uploadFileToStorage } from "@/lib/documents/storage";
+import { splitRegulation, type SplitArticle, type SplitAnomaly } from "@/lib/extraction/regulation-splitter";
 
 
 
@@ -204,6 +204,27 @@ interface FinancialRows {
   validationReports: ValidationReport[];
 }
 
+function isRegulationType(documentType: string): boolean {
+  return documentType === "regulation" || documentType === "accounting_standard" || documentType === "policy";
+}
+
+/**
+ * The regulation's text page by page, and the page count from the PDF itself,
+ * which the splitter checks against (REQ §5.6). A text file is one page.
+ */
+async function regulationPages(
+  documentText: string,
+  fileName: string,
+  extractedText: string
+): Promise<{ pages: string[]; pageCount: number }> {
+  if (!fileName.toLowerCase().endsWith('.pdf')) {
+    return { pages: [extractedText], pageCount: 1 };
+  }
+  const { extractText } = await import('unpdf');
+  const { totalPages, text } = await extractText(new Uint8Array(Buffer.from(documentText, 'base64')));
+  return { pages: text, pageCount: totalPages };
+}
+
 function isFinancialStatementType(documentType: string): documentType is FinancialStatementType {
   return documentType === "balance_sheet" || documentType === "income_statement" || documentType === "cash_flow";
 }
@@ -312,6 +333,7 @@ interface UploadResponse {
       title: string;
       content: string;
     }>;
+    anomalies?: SplitAnomaly[];
   };
   processingTime?: number;
   error?: string;
@@ -490,6 +512,24 @@ export async function POST(request: NextRequest) {
       financialRows = result;
     }
 
+    // Step 1c: Regulations are split before anything is written, so a split the
+    // citations cannot trust never reaches the database (REQ §5.6).
+    let regulationSplit: { articles: SplitArticle[]; anomalies: SplitAnomaly[] } | null = null;
+    if (isRegulationType(documentType)) {
+      const { pages, pageCount } = await regulationPages(documentText, fileName, extractedText);
+      regulationSplit = splitRegulation(pages, pageCount);
+      const blocking = regulationSplit.anomalies.find(
+        a => a.kind === 'repeated_number' || a.kind === 'page_count_mismatch'
+      );
+      if (blocking) {
+        logWorkflowFailure('VALIDATION');
+        const message = blocking.kind === 'repeated_number'
+          ? `条款拆分异常：${blocking.articleNumber}重复`
+          : `条款拆分异常：抽取页数（${blocking.extracted}）与 PDF 页数（${blocking.expected}）不一致`;
+        return createJsonResponse({ success: false, message, error: 'regulation_split' } as UploadResponse, 400);
+      }
+    }
+
     // Step 2: Chunk the document for vector storage
     const chunks = chunkDocument(extractedText, 1000, 200);
     console.log(`[Admin Upload] Created ${chunks.length} chunks`);
@@ -522,7 +562,16 @@ export async function POST(request: NextRequest) {
         });
       }
     } catch (storageError) {
-      // Log but don't fail - file storage is optional
+      // A regulation's citations link to its original file, so without the file
+      // the upload fails; for other types the file is optional.
+      if (isRegulationType(documentType)) {
+        console.error(`[Admin Upload] Storage upload failed:`, storageError);
+        logWorkflowFailure('INTERNAL');
+        return createJsonResponse(
+          { success: false, message: "原文件存储失败，未写入任何数据", error: "storage_failed" } as UploadResponse,
+          502
+        );
+      }
       console.error(`[Admin Upload] Storage upload failed (non-fatal):`, storageError);
     }
 
@@ -615,26 +664,16 @@ export async function POST(request: NextRequest) {
         validationReports: financialRows.validationReports,
       });
     }
-    else if (documentType === "regulation" || documentType === "accounting_standard" || documentType === "policy") {
-      // Store regulation/standard/policy articles
-      const regulationResult = extractionResult as RegulationExtractionResult;
-
-      // Check if articles exist before processing
-      if (regulationResult.articles && regulationResult.articles.length > 0) {
-        const articlesCount = await storeRegulationArticles(
-          supabase,
-          documentId,
-          regulationResult,
-          fileName
-        );
-
-        console.log(`[Admin Upload] Stored ${articlesCount} regulation articles for type: ${documentType}`);
-
-        structuredDataSummary.articles = regulationResult.articles.map((a) => ({
+    else if (regulationSplit) {
+      if (regulationSplit.articles.length > 0) {
+        await storeRegulationArticles(supabase, documentId, regulationSplit.articles, fileName);
+        console.log(`[Admin Upload] Stored ${regulationSplit.articles.length} regulation articles for type: ${documentType}`);
+        structuredDataSummary.articles = regulationSplit.articles.map(a => ({
           number: a.articleNumber,
-          title: a.title || "",
+          title: "",
           content: a.content,
         }));
+        structuredDataSummary.anomalies = regulationSplit.anomalies;
       } else {
         console.log(`[Admin Upload] No articles extracted for ${documentType}, storing as vector-only`);
       }
@@ -734,22 +773,17 @@ async function generateEmbeddings(chunks: string[]): Promise<number[][]> {
 async function storeRegulationArticles(
   supabase: SupabaseClient<Database>,
   documentId: string,
-  result: RegulationExtractionResult,
-  regulationName: string
+  articles: SplitArticle[],
+  fileName: string
 ): Promise<number> {
-  const records: InsertTables<'structured_regulations'>[] = result.articles.map((article) => ({
+  const records: InsertTables<'structured_regulations'>[] = articles.map((article) => ({
     document_id: documentId,
-    regulation_name: regulationName.replace(".pdf", "").replace(".txt", ""),
+    regulation_name: fileName.replace(/\.(pdf|txt|md)$/i, ""),
     article_number: article.articleNumber,
-    sub_article: article.subArticle || null,
-    title: article.title || null,
     content: article.content,
-    keywords: article.keywords || [],
-    hierarchy: article.hierarchy || [],
-    metadata: {
-      effectiveDate: article.effectiveDate,
-      confidence: 0.8,
-    },
+    keywords: [],
+    hierarchy: article.hierarchy,
+    metadata: { firstPage: article.firstPage, lastPage: article.lastPage },
   }));
 
   const { error } = await supabase
@@ -758,6 +792,7 @@ async function storeRegulationArticles(
 
   if (error) {
     console.error("[Admin Upload] Regulations insert error:", error);
+    await supabase.from("documents").delete().eq("id", documentId);
     throw new Error(`Failed to insert regulation articles: ${error.message}`);
   }
 
