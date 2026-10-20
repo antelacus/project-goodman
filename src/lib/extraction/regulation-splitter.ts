@@ -195,9 +195,15 @@ function stripRunningLines(pages: string[][]): string[][] {
   );
 }
 
+// Where a PDF's radical stands for a different ideograph than its NFKC form:
+// the browser-printed laws print "口" as "⼜" (U+2F1C, the radical of 又); in
+// all 98 occurrences across the library it reads 出口, 进口 or 敞口. Keep in step
+// with public.search_normalize.
+const RADICAL_OVERRIDES: Record<string, string> = { '⼜': '口' };
+
 /** Kangxi radicals and CJK radicals supplement → the unified ideographs they render as. */
 export function normalizeIdeographs(text: string): string {
-  return text.replace(/[\u2E80-\u2FDF]/g, ch => ch.normalize('NFKC'));
+  return text.replace(/[\u2E80-\u2FDF]/g, ch => RADICAL_OVERRIDES[ch] ?? ch.normalize('NFKC'));
 }
 
 const HEADING_LEVEL: Record<string, number> = { 编: 0, 章: 1, 节: 2 };
