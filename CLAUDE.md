@@ -36,8 +36,8 @@
 | Category | Choice |
 |----------|--------|
 | Frontend | Next.js, React, Tailwind CSS (versions: `package.json`) |
-| Backend | Supabase (PostgreSQL + pgvector) |
-| AI | OpenAI GPT-4o |
+| Backend | Supabase (PostgreSQL + PGroonga keyword search) |
+| AI | OpenAI-compatible relay; model and limits in `src/lib/ai/config.ts`, all calls through `src/lib/ai/` |
 | Storage | Supabase Storage (`document-files` bucket) |
 | Cache/Sessions | Redis |
 | Libraries | Zod, bcryptjs, mathjs, exceljs |
@@ -72,13 +72,16 @@ src/app/                    # Next.js App Router
   └── api/                  # API routes (chat, admin, documents, quick-actions)
 
 src/lib/                    # Core business logic
+  ├── ai/                   # The only door to the AI SDK; prompts/ holds the .md prompt templates
+  ├── citations/            # Evidence ids → article references in answers
   ├── database/             # Supabase, Redis clients
-  ├── documents/            # Document processing (search, chunker, parser)
+  ├── documents/            # Document processing (chunker, parser, storage)
+  ├── extraction/           # Statement extraction, regulation splitter
   ├── financial/            # Financial domain (preset-functions, metrics)
+  ├── search/               # Keyword search (PGroonga) over regulations and the knowledge library
   ├── security/             # Auth, session, rate-limiter
   ├── tools/                # Agent tool definitions
-  ├── workflows/            # LangGraph workflows
-  └── prompts/              # Prompt templates (.txt files)
+  └── workflows/            # LangGraph workflows
 
 src/components/             # React components
   ├── chat/                 # Chat UI

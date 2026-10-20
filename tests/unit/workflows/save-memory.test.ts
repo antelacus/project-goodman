@@ -1,18 +1,17 @@
 /* @vitest-environment node */
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { SystemMessage, HumanMessage, AIMessage } from "@langchain/core/messages";
-import { saveMemoryNode } from "@/lib/workflows/core/nodes/save-memory";
-import { conversationMemory } from "@/lib/memory/conversation-memory";
+import { createSaveMemoryNode } from "@/lib/workflows/core/nodes/save-memory";
 import { generateSessionTitle } from "@/lib/memory/session-title";
-import type { BaseAgentState } from "@/lib/workflows/core/state/base-state";
+import { newQuestionState, type BaseAgentState } from "@/lib/workflows/core/state/base-state";
 
-vi.mock("@/lib/memory/conversation-memory", () => ({
-  conversationMemory: {
-    saveMessages: vi.fn(),
-    getSessionTitle: vi.fn(),
-    updateSessionTitle: vi.fn(),
-  },
-}));
+const conversationMemory = {
+  getOrCreateSession: vi.fn(),
+  saveMessages: vi.fn(),
+  getSessionTitle: vi.fn(),
+  updateSessionTitle: vi.fn(),
+};
+const saveMemoryNode = createSaveMemoryNode(conversationMemory);
 
 vi.mock("@/lib/memory/session-title", () => ({
   generateSessionTitle: vi.fn(),
@@ -35,6 +34,7 @@ function buildState(): BaseAgentState {
       initialMessageCount: 1,
       isComplete: true,
       pendingToolCalls: [],
+      ...newQuestionState(),
     },
     toolResults: [],
   };

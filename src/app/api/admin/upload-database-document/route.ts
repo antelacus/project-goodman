@@ -6,7 +6,7 @@
  * Features:
  * - Admin password authentication
  * - Type-specific structured extraction
- * - Dual storage: structured tables + vector embeddings
+ * - Dual storage: structured tables + text chunks for keyword search
  * - Support for financial statements and regulations
  */
 
@@ -19,8 +19,6 @@ import type { InsertTables, Database } from "@/lib/database";
 import { SupabaseClient } from "@supabase/supabase-js";
 import { logWorkflowEvent } from "@/lib/logging";
 import { readDocumentText, AIUnavailableError, AI_FAILURE_TEXT } from "@/lib/ai";
-import { getLLMClient } from "@/lib/ai/client";
-import { EMBEDDING_MODEL } from "@/lib/ai/config";
 import {
   verifyAdminPassword,
   generateRequestId,
@@ -530,13 +528,9 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Step 2: Chunk the document for vector storage
+    // Step 2: Chunk the document for keyword search
     const chunks = chunkDocument(extractedText, 1000, 200);
     console.log(`[Admin Upload] Created ${chunks.length} chunks`);
-
-    // Step 3: Generate embeddings for all chunks
-    console.log(`[Admin Upload] Generating embeddings...`);
-    const embeddings = await generateEmbeddings(chunks);
 
     // Step 4: Store document metadata
     // Generate UUID for document
@@ -611,13 +605,12 @@ export async function POST(request: NextRequest) {
 
     console.log(`[Admin Upload] Document created with ID: ${documentId}`);
 
-    // Step 5: Store vector chunks with proper typing
+    // Step 5: Store text chunks with proper typing
     const chunkRecords: InsertTables<'document_chunks'>[] = chunks.map((chunk, index) => ({
       id: crypto.randomUUID(),
       document_id: documentId,
       chunk_index: index,
       content: chunk,
-      embedding: JSON.stringify(embeddings[index]),
       chunk_type: "general",
     }));
 
@@ -632,7 +625,7 @@ export async function POST(request: NextRequest) {
       throw new Error(`Failed to insert chunks: ${chunksError.message}`);
     }
 
-    console.log(`[Admin Upload] Stored ${chunks.length} vector chunks`);
+    console.log(`[Admin Upload] Stored ${chunks.length} chunks`);
     logWorkflowEvent({
       ...workflowContext,
       step: 'store',
@@ -675,13 +668,13 @@ export async function POST(request: NextRequest) {
         }));
         structuredDataSummary.anomalies = regulationSplit.anomalies;
       } else {
-        console.log(`[Admin Upload] No articles extracted for ${documentType}, storing as vector-only`);
+        console.log(`[Admin Upload] No articles extracted for ${documentType}, storing chunks only`);
       }
     }
-    // Vector-only document types (no structured extraction needed)
+    // Chunk-only document types (no structured extraction needed)
     else if (documentType === "financial_report" || documentType === "business_info" || documentType === "general") {
-      console.log(`[Admin Upload] Vector-only storage for document type: ${documentType}`);
-      // No additional structured extraction - document is already chunked and embedded above
+      console.log(`[Admin Upload] Chunk-only storage for document type: ${documentType}`);
+      // No additional structured extraction - document is already chunked above
     }
 
     // Calculate processing time
@@ -743,28 +736,6 @@ function chunkDocument(
   }
 
   return chunks;
-}
-
-/**
- * Generate embeddings for text chunks
- */
-async function generateEmbeddings(chunks: string[]): Promise<number[][]> {
-  const embeddings: number[][] = [];
-
-  // Process in batches of 100 (OpenAI API limit)
-  const batchSize = 100;
-  for (let i = 0; i < chunks.length; i += batchSize) {
-    const batch = chunks.slice(i, i + batchSize);
-
-    const response = await getLLMClient().embeddings.create({
-      model: EMBEDDING_MODEL,
-      input: batch,
-    });
-
-    embeddings.push(...response.data.map((item) => item.embedding));
-  }
-
-  return embeddings;
 }
 
 /**

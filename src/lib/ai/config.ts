@@ -22,6 +22,3 @@ export const PURPOSES = {
 export type AIPurpose = keyof typeof PURPOSES;
 
 export const MAX_RETRIES = 1;
-
-// Stopgap until B4 removes the embedding calls (REQ §no-embedding-calls).
-export const EMBEDDING_MODEL = 'text-embedding-3-small';
