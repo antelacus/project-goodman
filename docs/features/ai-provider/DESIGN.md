@@ -187,7 +187,7 @@ Phase 6 删除：`match_documents`、`search_documents_hybrid`、`search_regulat
 - 服务端多数数据库调用用的是 anon 密钥（`createServerSupabaseClient`），不是 service_role。自 2026-10-30 起，`public` 中新建的表不再自动授权给 Data API 角色：应用经 supabase-js 访问的新表，须在建表的同一迁移里显式 `grant`。本版唯一的新表 `structured_regulations_backup` 只经 SQL 访问，不授权。新函数仍默认可由 anon 执行；`replace_regulation_articles` 在迁移里收回了 anon / authenticated 的执行权，只给 service_role（重新拆分脚本用）。
 - 迁移历史与仓库文件不一致（TD-031）：不能用 `supabase db push`。
 - Supabase MCP 的 `apply_migration`，以及 `execute_sql` 中含 `drop`、`delete`、`revoke` 等的语句，都要求客户端确认；Claude Code 显示不了确认框，请求被自动取消。这类迁移由 Jason 在控制台的 SQL 编辑器执行，Claude 随后把同一版本号登记进 `supabase_migrations.schema_migrations`，使仓库文件与数据库记录一致。
-- 重新拆分与评测脚本的凭据放在本机 `.env.scripts`（`SUPABASE_URL`、`SUPABASE_SERVICE_ROLE_KEY`），只由脚本显式读取；本机 `.env` 不含生产凭据，`npm run dev` 连不到生产库。
+- 重新拆分与评测脚本的凭据放在本机 `.env.scripts`（`NEXT_PUBLIC_SUPABASE_URL`、`SUPABASE_SERVICE_ROLE_KEY`），只由脚本显式读取；本机 `.env` 不含生产凭据，`npm run dev` 连不到生产库。
 
 ## 9 其他设计
 
