@@ -5,8 +5,8 @@
  * Standardized for use in Unified Agent.
  */
 
-import { BaseAgentState, DocumentLoadError } from "../state/base-state";
-import { conversationMemory } from "@/lib/memory/conversation-memory";
+import { BaseAgentState, DocumentLoadError, newQuestionState } from "../state/base-state";
+import type { AgentMemory } from "@/lib/memory/conversation-memory";
 import { SystemMessage, HumanMessage, AIMessage, ToolMessage, BaseMessage } from "@langchain/core/messages";
 import { createServerSupabaseClient } from "@/lib/database";
 
@@ -16,10 +16,9 @@ import { createServerSupabaseClient } from "@/lib/database";
  * @param state Current graph state (mostly empty at start)
  * @returns Partial state update
  */
-export async function loadMemoryNode(
+export const createLoadMemoryNode = (memory: AgentMemory) => async function loadMemoryNode(
     state: BaseAgentState
 ): Promise<Partial<BaseAgentState>> {
-    console.log("loadMemoryNode State:", JSON.stringify(state, null, 2));
     if (!state.input) {
         console.error("State.input is undefined!");
         // Fallback or throw
@@ -31,7 +30,7 @@ export async function loadMemoryNode(
     // Default to 'unified' if not specified
     const effectiveWorkflowType = workflowType || "unified";
 
-    const { sessionId: activeSessionId, messages: history } = await conversationMemory.getOrCreateSession(
+    const { sessionId: activeSessionId, messages: history } = await memory.getOrCreateSession(
         requestedSessionId,
         effectiveWorkflowType,
         ownerId,
@@ -134,10 +133,11 @@ export async function loadMemoryNode(
             initialMessageCount: messages.length,
             isComplete: false,
             pendingToolCalls: [],
+            ...newQuestionState(),
         },
         // Reset tool results for this turn
         toolResults: [],
         // Propagate any document loading errors for downstream handling
         documentLoadErrors: documentLoadErrors.length > 0 ? documentLoadErrors : undefined,
     };
-}
+};

@@ -36,6 +36,12 @@ export interface SessionListItem {
     updatedAt: string;
 }
 
+/** What the agent graph needs from a conversation store; see createUnifiedGraph. */
+export type AgentMemory = Pick<
+    ConversationMemory,
+    "getOrCreateSession" | "saveMessages" | "getSessionTitle" | "updateSessionTitle"
+>;
+
 /**
  * Service for managing conversation history and state persistence.
  */

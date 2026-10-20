@@ -8,82 +8,92 @@ import { StateGraph, START, END } from "@langchain/langgraph";
 import { UnifiedAgentState } from "./state";
 import {
     unifiedAgentLoop,
-    loadMemoryNode,
+    unifiedForceAnswer,
+    createLoadMemoryNode,
     toolExecutorNode,
-    saveMemoryNode
+    createSaveMemoryNode,
+    finalizeAnswerNode,
 } from "./nodes";
 import { generateResponseNode } from "../core/nodes/generate-response";
-import { shouldContinue } from "../core/edges/routing";
+import { afterAgentLoop, afterTools } from "../core/edges/routing";
+import { newQuestionState } from "../core/state/base-state";
+import { conversationMemory, type AgentMemory } from "@/lib/memory/conversation-memory";
 
-// Define the graph with relaxed typing for node names
-// LangGraph's strict typing conflicts with dynamic node addition
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-const workflow: any = new StateGraph<UnifiedAgentState>({
-    channels: {
-        input: {
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            value: (left?: any, right?: any) => right ? right : left,
-            default: () => ({ question: "" }),
+/**
+ * Builds the agent graph over a conversation store. Production passes the
+ * Supabase-backed memory; the retrieval eval passes an in-memory one, so a run
+ * of the full agent writes nothing to the shared database (DESIGN §9).
+ */
+export function createUnifiedGraph({ memory }: { memory: AgentMemory }) {
+    // Define the graph with relaxed typing for node names
+    // LangGraph's strict typing conflicts with dynamic node addition
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const workflow: any = new StateGraph<UnifiedAgentState>({
+        channels: {
+            input: {
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                value: (left?: any, right?: any) => right ? right : left,
+                default: () => ({ question: "" }),
+            },
+            agent: {
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                value: (left?: any, right?: any) => right ? right : left,
+                default: () => ({
+                    sessionId: "",
+                    messages: [],
+                    currentIteration: 0,
+                    maxIterations: 10,
+                    initialMessageCount: 0,
+                    isComplete: false,
+                    pendingToolCalls: [],
+                    ...newQuestionState(),
+                }),
+            },
+            toolResults: {
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                value: (left?: any[], right?: any[]) => right ? right : (left || []),
+                default: () => [],
+            },
+            output: {
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                value: (left?: any, right?: any) => right ? right : left,
+                default: () => undefined,
+            },
+            meta: {
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                value: (left?: any, right?: any) => right ? right : left,
+                default: () => undefined,
+            },
         },
-        agent: {
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            value: (left?: any, right?: any) => right ? right : left,
-            default: () => ({
-                sessionId: "",
-                messages: [],
-                currentIteration: 0,
-                maxIterations: 10,
-                initialMessageCount: 0,
-                isComplete: false,
-                pendingToolCalls: [],
-            }),
-        },
-        toolResults: {
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            value: (left?: any[], right?: any[]) => right ? right : (left || []),
-            default: () => [],
-        },
-        output: {
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            value: (left?: any, right?: any) => right ? right : left,
-            default: () => undefined,
-        },
-        meta: {
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            value: (left?: any, right?: any) => right ? right : left,
-            default: () => undefined,
-        },
-    },
-});
+    });
 
-// Add Nodes
-workflow.addNode("loadMemory", loadMemoryNode);
-workflow.addNode("agentLoop", unifiedAgentLoop);
-workflow.addNode("toolExecutor", toolExecutorNode);
-workflow.addNode("saveMemory", saveMemoryNode);
-workflow.addNode("generateResponse", generateResponseNode);
+    // Add Nodes
+    workflow.addNode("loadMemory", createLoadMemoryNode(memory));
+    workflow.addNode("agentLoop", unifiedAgentLoop);
+    workflow.addNode("toolExecutor", toolExecutorNode);
+    workflow.addNode("forceAnswer", unifiedForceAnswer);
+    workflow.addNode("finalizeAnswer", finalizeAnswerNode);
+    workflow.addNode("saveMemory", createSaveMemoryNode(memory));
+    workflow.addNode("generateResponse", generateResponseNode);
 
-// Add Edges
-workflow.addEdge(START, "loadMemory");
-workflow.addEdge("loadMemory", "agentLoop");
+    // loadMemory → agentLoop ⇄ toolExecutor → (forceAnswer) → finalizeAnswer → saveMemory → generateResponse
+    workflow.addEdge(START, "loadMemory");
+    workflow.addEdge("loadMemory", "agentLoop");
+    workflow.addConditionalEdges("agentLoop", afterAgentLoop, {
+        toolExecutor: "toolExecutor",
+        forceAnswer: "forceAnswer",
+        finalizeAnswer: "finalizeAnswer",
+    });
+    workflow.addConditionalEdges("toolExecutor", afterTools, {
+        agentLoop: "agentLoop",
+        forceAnswer: "forceAnswer",
+    });
+    workflow.addEdge("forceAnswer", "finalizeAnswer");
+    workflow.addEdge("finalizeAnswer", "saveMemory");
+    workflow.addEdge("saveMemory", "generateResponse");
+    workflow.addEdge("generateResponse", END);
 
-// Conditional Edge from Agent Loop
-workflow.addConditionalEdges(
-    "agentLoop",
-    shouldContinue,
-    {
-        toolNode: "toolExecutor",
-        generateResponse: "saveMemory", // If done, go to save -> generate -> end
-        end: "saveMemory"
-    }
-);
+    return workflow.compile();
+}
 
-// Tool execution goes back to agent loop
-workflow.addEdge("toolExecutor", "agentLoop");
-
-// Save memory -> Generate Response -> End
-workflow.addEdge("saveMemory", "generateResponse");
-workflow.addEdge("generateResponse", END);
-
-// Compile
-export const unifiedAgentGraph = workflow.compile();
+export const unifiedAgentGraph = createUnifiedGraph({ memory: conversationMemory });

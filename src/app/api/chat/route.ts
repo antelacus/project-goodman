@@ -1,3 +1,4 @@
+import { newQuestionState } from "@/lib/workflows/core/state/base-state";
 import { NextRequest, NextResponse } from "next/server";
 import { unifiedAgentGraph } from "@/lib/workflows/unified/graph";
 import { createServerSupabaseClient } from "@/lib/database";
@@ -49,6 +50,7 @@ export async function POST(req: NextRequest) {
                 initialMessageCount: 0,
                 isComplete: false,
                 pendingToolCalls: [],
+                ...newQuestionState(),
             },
             toolResults: [],
             // output is optional in UnifiedAgentState, will be populated by workflow

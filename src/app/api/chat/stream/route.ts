@@ -1,3 +1,4 @@
+import { newQuestionState } from "@/lib/workflows/core/state/base-state";
 import { NextRequest, NextResponse } from 'next/server';
 import { unifiedAgentGraph } from '@/lib/workflows/unified/graph';
 import { AIUnavailableError, AI_FAILURE_TEXT } from '@/lib/ai';
@@ -34,37 +35,57 @@ export const runtime = 'nodejs'; // Ensure Node.js runtime for LangGraph
 // ============================================================================
 
 /**
- * Extract source reference from tool output if available.
- * Source is constructed by tool code from database metadata, not LLM-generated.
+ * Extract source references from tool output if available.
+ * Sources are built by tool code from database metadata, never by the model: a
+ * search's hits each link to their original file (REQ §5.4), other tools carry
+ * one source.
  */
-function extractSourceReference(output: unknown): SourceReference | undefined {
+function extractSourceReferences(toolName: string, output: unknown): SourceReference[] | undefined {
     if (!output || typeof output !== 'object') return undefined;
 
     const data = output as Record<string, unknown>;
 
-    // Check for source field in output.data (standard tool output structure)
     if (data.data && typeof data.data === 'object') {
         const innerData = data.data as Record<string, unknown>;
+        if (Array.isArray(innerData.results) && (toolName === 'search_regulations' || toolName === 'search_documents')) {
+            const refs = (innerData.results as Array<Record<string, unknown>>)
+                .filter(r => r.documentId)
+                .map(r => toolName === 'search_regulations'
+                    ? {
+                        documentId: String(r.documentId),
+                        documentName: String(r.regulation),
+                        documentType: 'regulation',
+                        fileUrl: r.fileUrl ? String(r.fileUrl) : undefined,
+                        article: String(r.articleNumber),
+                    }
+                    : {
+                        documentId: String(r.documentId),
+                        documentName: String(r.document),
+                        documentType: String(r.docType || ''),
+                        year: r.year ? String(r.year) : undefined,
+                        fileUrl: r.fileUrl ? String(r.fileUrl) : undefined,
+                    });
+            return refs.length > 0 ? refs : undefined;
+        }
         if (innerData.source && typeof innerData.source === 'object') {
-            const source = innerData.source as Record<string, unknown>;
-            return buildSourceReference(source);
+            return [buildSourceReference(innerData.source as Record<string, unknown>)];
         }
         // Check for sourceDocuments array (preset tools format)
         if (innerData.sourceDocuments && Array.isArray(innerData.sourceDocuments)) {
             const docName = innerData.sourceDocuments[0];
             if (docName) {
-                return {
+                return [{
                     documentId: '',
                     documentName: String(docName),
                     documentType: '',
-                };
+                }];
             }
         }
     }
 
     // Direct source field (alternative structure)
     if (data.source && typeof data.source === 'object') {
-        return buildSourceReference(data.source as Record<string, unknown>);
+        return [buildSourceReference(data.source as Record<string, unknown>)];
     }
 
     return undefined;
@@ -88,7 +109,7 @@ function createProcessEvent(
     type: ProcessEvent['type'],
     content: string,
     details?: Record<string, unknown>,
-    sourceReference?: SourceReference
+    sourceReferences?: SourceReference[]
 ): ProcessEvent {
     return {
         id: uuidv4(),
@@ -96,7 +117,7 @@ function createProcessEvent(
         type,
         content,
         details,
-        sourceReference,
+        sourceReferences,
     };
 }
 
@@ -357,6 +378,7 @@ export async function POST(req: NextRequest) {
                     initialMessageCount: 0,
                     isComplete: false,
                     pendingToolCalls: [],
+                    ...newQuestionState(),
                 },
                 // Initialize other required fields as empty to satisfy graph structure
                 toolResults: [],
@@ -442,7 +464,7 @@ export async function POST(req: NextRequest) {
                                     event.name,
                                     event.data.output as Record<string, unknown>
                                 );
-                                const sourceRef = extractSourceReference(event.data.output);
+                                const sourceRef = extractSourceReferences(event.name, event.data.output);
                                 sendEvent('process', createProcessEvent(
                                     'tool_result',
                                     humanized,
@@ -505,7 +527,7 @@ export async function POST(req: NextRequest) {
                                                 resultEntry.toolName,
                                                 result
                                             );
-                                            const sourceRef = extractSourceReference(result);
+                                            const sourceRef = extractSourceReferences(resultEntry.toolName, result);
                                             sendEvent('process', createProcessEvent(
                                                 'tool_result',
                                                 humanized,

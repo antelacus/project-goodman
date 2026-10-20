@@ -21,49 +21,6 @@ export type DocCategory = 'knowledge' | 'business';
 // ============================================================
 
 /**
- * Result type for search_documents_hybrid RPC function
- */
-export type SearchDocumentsHybridResult = {
-  chunk_id: string;
-  content: string;
-  doc_type: string;
-  document_id: string;
-  document_name: string;
-  keyword_rank: number;
-  period: string;
-  rrf_score: number;
-  section_path: string[];
-  section_title: string;
-  vector_rank: number;
-  year: number;
-};
-
-/**
- * Result type for match_documents RPC function
- */
-export type MatchDocumentsResult = {
-  chunk_index: number;
-  content: string;
-  document_id: string;
-  id: string;
-  similarity: number;
-};
-
-/**
- * Result type for search_regulations_hybrid RPC function
- */
-export type SearchRegulationsHybridResult = {
-  article_number: string;
-  combined_score: number;
-  content: string;
-  keyword_match_score: number;
-  keywords: string[];
-  regulation_id: string;
-  regulation_name: string;
-  semantic_similarity: number;
-};
-
-/**
  * Result type for search_financial_data RPC function
  */
 export type SearchFinancialDataResult = {
@@ -74,33 +31,6 @@ export type SearchFinancialDataResult = {
   period: string;
   unit: string;
   year: string;
-};
-
-// ============================================================
-// RPC function argument types
-// ============================================================
-
-export type SearchDocumentsHybridArgs = {
-  query_embedding: string;
-  query_text: string;
-  match_count?: number;
-  section_filter?: string;
-  year_filter?: number;
-  doc_type_filter?: string;
-  vector_weight?: number;
-  keyword_weight?: number;
-};
-
-export type MatchDocumentsArgs = {
-  query_embedding: string;
-  match_count?: number;
-  filter_doc_ids?: string[];
-};
-
-export type SearchRegulationsHybridArgs = {
-  p_query_embedding: string;
-  p_keywords: string[];
-  p_limit?: number;
 };
 
 // ============================================================

@@ -33,9 +33,11 @@ const EVENT_ICONS: Record<string, string> = {
  * Source link component for data traceability
  */
 function SourceLink({ source }: { source: SourceReference }) {
-    const displayText = source.year
-        ? `${source.year}年${source.documentType || source.documentName}`
-        : source.documentName;
+    const displayText = source.article
+        ? `${source.documentName}${source.article}`
+        : source.year
+            ? `${source.year}年${source.documentType || source.documentName}`
+            : source.documentName;
 
     // v4.6: Build link via preview-url redirect to support non-PDF files
     const href = source.fileUrl
@@ -76,9 +78,9 @@ function ProcessEventItem({ event }: { event: ProcessEvent }) {
             <span className="flex-shrink-0 text-sm">{icon}</span>
             <div className="flex-1 text-sm">
                 <span>{event.content}</span>
-                {event.sourceReference && event.sourceReference.documentName && (
-                    <SourceLink source={event.sourceReference} />
-                )}
+                {event.sourceReferences
+                    ?.filter(source => source.documentName)
+                    .map((source, i) => <SourceLink key={`${source.documentId}-${source.article ?? i}`} source={source} />)}
             </div>
         </div>
     );
