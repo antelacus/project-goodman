@@ -133,7 +133,7 @@ N/A —— 不引入新的业务术语。
 - PGroonga 3.2.5（装在 `extensions` schema）：两字词可检索；空格为 AND、`OR` 为或；默认 `pgroonga_score` 只是词频，要用 `pgroonga_condition(…, scorers => ARRAY['scorer_tf_idf($index)'], index_name => …)` 才有 TF-IDF。
 - PDF 抽出的文字在词中间断行（"金\n融资产"），并夹有单独成行的页码；索引前去掉换行，页码行由拆分器删除（否则页码会粘进词中间）。
 - 迁移历史与仓库文件不一致（TD-031）：不能用 `supabase db push`。
-- MCP 执行破坏性语句（`drop`）可能要求确认。
+- Supabase MCP 遇到 `drop` 等破坏性语句要求客户端确认，Claude Code 显示不了确认框，请求被自动取消：删除语句由 Jason 在控制台的 SQL 编辑器执行。
 
 ## 9 其他设计
 
