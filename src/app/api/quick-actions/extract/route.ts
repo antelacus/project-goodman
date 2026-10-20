@@ -10,10 +10,10 @@
 export const runtime = "nodejs";
 import { NextRequest, NextResponse } from "next/server";
 import ExcelJS from "exceljs";
+import { z } from "zod";
 import { getPromptContent } from "@/lib/ai/prompts";
-import { getLLMClient } from "@/lib/ai/client";
+import { generateJSON } from "@/lib/ai";
 import { logWorkflowEvent } from "@/lib/logging";
-import { AI_CONFIG } from "@/lib/ai/config";
 import {
   generateRequestId,
   createErrorResponse,
@@ -28,7 +28,9 @@ import { withSentrySpan } from "@/lib/observability/error-tracking";
 import { isPerfTestRequest } from "@/lib/quality-gates/perf-test";
 import type { WorkflowErrorType } from "@/lib/errors";
 
-const openai = getLLMClient();
+// Field names depend on the document (invoice, contract, statement…), so the
+// shape is checked only as an object with Chinese keys.
+const ExtractedFieldsSchema = z.record(z.string(), z.unknown());
 
 // Supported file types
 const SUPPORTED_IMAGE_TYPES = [
@@ -253,59 +255,19 @@ export async function POST(req: NextRequest) {
         }, 400);
       }
 
-      const prompt = getPromptContent('data-extract.md');
+      const system = getPromptContent('data-extract.md');
 
-      let result: string | null = null;
+      let parsedResult: Record<string, unknown> | null = null;
 
       // Handle different file types
-      if (SUPPORTED_IMAGE_TYPES.includes(fileType)) {
-        // Image processing with Vision API
-        const response = await openai.chat.completions.create({
-          model: AI_CONFIG.models.extraction,
-          messages: [{
-            role: "user",
-            content: [
-              { type: "text", text: prompt },
-              {
-                type: "image_url",
-                image_url: {
-                  url: `data:${fileType};base64,${fileData}`,
-                  detail: "auto"
-                }
-              }
-            ]
-          }],
-          response_format: { type: "json_object" },
-          max_completion_tokens: 4096
+      if (SUPPORTED_IMAGE_TYPES.includes(fileType) || fileType === SUPPORTED_PDF_TYPE) {
+        parsedResult = await generateJSON({
+          purpose: 'extraction',
+          system,
+          prompt: '提取这份文档中的财务信息，以 JSON 对象返回。',
+          schema: ExtractedFieldsSchema,
+          attachment: { fileName: fileName || 'document', mimeType: fileType, base64: fileData },
         });
-
-        result = response.choices[0]?.message?.content;
-      } else if (fileType === SUPPORTED_PDF_TYPE) {
-        // PDF processing using Responses API with file input
-        // Chat completions API doesn't support PDF, must use responses API
-        const response = await openai.responses.create({
-          model: AI_CONFIG.models.extraction,
-          input: [
-            {
-              role: "user",
-              content: [
-                { type: "input_text", text: prompt },
-                {
-                  type: "input_file",
-                  filename: fileName || "document.pdf",
-                  file_data: `data:${fileType};base64,${fileData}`
-                }
-              ]
-            }
-          ],
-          text: {
-            format: {
-              type: "json_object"
-            }
-          }
-        });
-
-        result = response.output_text;
       } else if (fileType === SUPPORTED_EXCEL_TYPE) {
         // Excel processing - parse with exceljs library then send to LLM
         const buffer = Buffer.from(fileData, 'base64');
@@ -345,21 +307,15 @@ export async function POST(req: NextRequest) {
           .map(row => row.map(cell => cell ?? '').join('\t'))
           .join('\n');
 
-        // Send to LLM for structured extraction
-        const response = await openai.chat.completions.create({
-          model: AI_CONFIG.models.extraction,
-          messages: [{
-            role: "user",
-            content: `${prompt}\n\n以下是Excel表格内容（制表符分隔）：\n\n${textContent}`
-          }],
-          response_format: { type: "json_object" },
-          max_tokens: 4096
+        parsedResult = await generateJSON({
+          purpose: 'extraction',
+          system,
+          prompt: `以下是Excel表格内容（制表符分隔），提取其中的财务信息，以 JSON 对象返回：\n\n${textContent}`,
+          schema: ExtractedFieldsSchema,
         });
-
-        result = response.choices[0]?.message?.content;
       }
 
-      if (!result) {
+      if (!parsedResult) {
         throw new Error("AI extraction returned no result");
       }
 
@@ -367,9 +323,6 @@ export async function POST(req: NextRequest) {
       if (session.role === 'guest') {
         await incrementGuestRate(session.sessionId, 'extract');
       }
-
-      // Parse and return the result
-      const parsedResult = JSON.parse(result);
 
       const response = createJsonResponse({
         success: true,

@@ -10,7 +10,7 @@ import { Tool } from "../types";
 import { createServerSupabaseClient, matchDocuments } from "@/lib/database";
 import type { MatchDocumentsResult } from "@/lib/database";
 import { getLLMClient } from "@/lib/ai/client";
-import { AI_CONFIG } from "@/lib/ai/config";
+import { EMBEDDING_MODEL } from "@/lib/ai/config";
 import {
   RETRIEVAL_EMPTY_REGULATIONS_REASON,
 } from "@/lib/tools/retrieval";
@@ -64,7 +64,7 @@ export const searchRegulationsTool: Tool<SearchRegulationsInput, SearchRegulatio
 
       // 1. Generate embedding
       const embeddingResponse = await openai.embeddings.create({
-        model: AI_CONFIG.models.embedding,
+        model: EMBEDDING_MODEL,
         input: input.query,
       });
       const queryEmbedding = embeddingResponse.data[0].embedding;

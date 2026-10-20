@@ -8,14 +8,7 @@
 import { BaseAgentState } from "../state/base-state";
 import { BaseMessage, HumanMessage, AIMessage, ToolMessage } from "@langchain/core/messages";
 import { toolRegistry } from "@/lib/tools/registry";
-import OpenAI from "openai";
-import { getLLMClient } from "@/lib/ai/client";
-import { AI_CONFIG } from "@/lib/ai/config";
-
-const openai = getLLMClient();
-
-const { chat: CHAT_MODEL } = AI_CONFIG.models;
-const { chat: chatParams } = AI_CONFIG.params;
+import { chatWithTools, type ChatMessage } from "@/lib/ai";
 
 /**
  * Convert LangChain messages to OpenAI format
@@ -23,7 +16,7 @@ const { chat: chatParams } = AI_CONFIG.params;
  */
 function convertToOpenAIMessages(
     messages: BaseMessage[]
-): OpenAI.Chat.ChatCompletionMessageParam[] {
+): ChatMessage[] {
     return messages.map(msg => {
         const msgType = msg._getType();
 
@@ -39,7 +32,7 @@ function convertToOpenAIMessages(
             // Content can be empty string for tool-calling messages
             // Use null only when content is actually null/undefined, not for empty string
             const content = typeof aiMsg.content === "string" ? aiMsg.content : null;
-            const result: OpenAI.Chat.ChatCompletionAssistantMessageParam = {
+            const result: Extract<ChatMessage, { role: "assistant" }> = {
                 role: "assistant" as const,
                 content: content,
             };
@@ -79,35 +72,17 @@ function convertToOpenAIMessages(
 }
 
 /**
- * Safely parse tool arguments JSON with fallback
- */
-function parseToolArguments(argsString: string, toolName: string): Record<string, unknown> {
-    try {
-        return JSON.parse(argsString);
-    } catch (e) {
-        console.warn(`[agent-loop] Failed to parse arguments for tool "${toolName}": ${e}`);
-        return {};
-    }
-}
-
-/**
  * Executes one iteration of the agent loop
  */
 export async function agentLoopNode(
     state: BaseAgentState,
-    config?: { systemPrompt?: string }
+    config: { systemPrompt: string }
 ): Promise<Partial<BaseAgentState>> {
     const { agent, input } = state;
     const { messages, currentIteration } = agent;
 
-    // 1. Prepare messages for OpenAI
-    const systemPrompt = config?.systemPrompt || "You are a helpful assistant.";
-
     // Convert LangChain messages to OpenAI format (preserves tool_calls and tool_call_id)
-    const responseMessages: OpenAI.Chat.ChatCompletionMessageParam[] = [
-        { role: "system", content: systemPrompt },
-        ...convertToOpenAIMessages(messages),
-    ];
+    const responseMessages: ChatMessage[] = convertToOpenAIMessages(messages);
 
     // If this is the very first turn of this execution, add user input
     // We check currentIteration === 0 because messages might contain history from DB
@@ -115,33 +90,16 @@ export async function agentLoopNode(
         responseMessages.push({ role: "user", content: input.question });
     }
 
-    // 2. Call OpenAI
-    const tools = toolRegistry.toOpenAIFunctionDefs();
-
-    const completion = await openai.chat.completions.create({
-        model: CHAT_MODEL,
+    // 2. Call the model
+    const reply = await chatWithTools({
+        system: config.systemPrompt,
         messages: responseMessages,
-        tools: tools.length > 0 ? tools : undefined,
-        tool_choice: tools.length > 0 ? "auto" : undefined,
-        temperature: chatParams.temperature,
-        max_tokens: chatParams.maxTokens,
+        tools: toolRegistry.toOpenAIFunctionDefs(),
     });
+    const langchainToolCalls = reply.toolCalls;
 
-    const choice = completion.choices[0];
-    const message = choice.message;
-
-    // Convert OpenAI tool_calls format to LangChain format
-    // OpenAI: { id, type, function: { name, arguments } }
-    // LangChain: { id, name, args }
-    const langchainToolCalls = message.tool_calls?.map(tc => ({
-        id: tc.id,
-        name: tc.function.name,
-        args: parseToolArguments(tc.function.arguments, tc.function.name),
-    }));
-
-    // Create AIMessage with properly formatted tool_calls
     const aiMessage = new AIMessage({
-        content: message.content || "",
+        content: reply.text,
         tool_calls: langchainToolCalls,
     });
 
@@ -163,7 +121,7 @@ export async function agentLoopNode(
 
     // Convert langchainToolCalls to pendingToolCalls format
     // Reuse already-parsed data from langchainToolCalls
-    const pendingToolCalls = (langchainToolCalls || []).map(tc => ({
+    const pendingToolCalls = langchainToolCalls.map(tc => ({
         id: tc.id,
         name: tc.name,
         arguments: tc.args,

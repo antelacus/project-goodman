@@ -40,8 +40,9 @@ Add to your `.env.local` file:
 NEXT_PUBLIC_SUPABASE_URL=your_project_url_here
 NEXT_PUBLIC_SUPABASE_ANON_KEY=your_anon_key_here
 
-# Keep existing OpenAI key
-OPENAI_API_KEY=your_openai_key
+# AI relay
+LLM_API_KEY=your_relay_key
+LLM_BASE_URL=your_relay_base_url
 ```
 
 ### 5. Migrate Existing Data

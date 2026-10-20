@@ -14,8 +14,9 @@ export const runtime = "nodejs";
 
 import { NextRequest, NextResponse } from "next/server";
 import ExcelJS from "exceljs";
+import { readDocumentText } from "@/lib/ai";
 import { getLLMClient } from "@/lib/ai/client";
-import { AI_CONFIG } from "@/lib/ai/config";
+import { EMBEDDING_MODEL } from "@/lib/ai/config";
 import { createServerSupabaseClient } from "@/lib/database";
 import type { InsertTables } from "@/lib/database";
 import { logError, logWorkflowEvent } from "@/lib/logging";
@@ -39,7 +40,6 @@ import { withSentrySpan } from "@/lib/observability/error-tracking";
 import { isPerfTestRequest } from "@/lib/quality-gates/perf-test";
 import type { WorkflowErrorType } from "@/lib/errors";
 
-const openai = getLLMClient();
 
 // Supported file types
 const SUPPORTED_IMAGE_TYPES = ['image/png', 'image/jpeg', 'image/webp', 'image/gif'];
@@ -131,48 +131,16 @@ async function extractTextFromFile(
       return textContent;
     }
 
-    // Fallback to Vision API for scanned PDFs
-    console.log(`[upload-temp] PDF text too short, using Vision API...`);
-    const response = await openai.responses.create({
-      model: AI_CONFIG.models.extraction,
-      input: [{
-        role: "user",
-        content: [
-          { type: "input_text", text: "请完整提取这个PDF文档中的所有文本内容，保持原有的结构和格式。只返回文本内容，不要添加任何额外的解释。" },
-          {
-            type: "input_file",
-            filename: fileName,
-            file_data: `data:${fileType};base64,${fileData}`
-          }
-        ]
-      }]
-    });
-
-    return response.output_text || '';
+    console.log(`[upload-temp] PDF text too short, reading it as a scan...`);
+    return readDocumentText({ fileName, mimeType: SUPPORTED_PDF_TYPE, base64: fileData });
   }
 
   // Image files
   if (SUPPORTED_IMAGE_TYPES.includes(fileType) || ['png', 'jpg', 'jpeg', 'gif', 'webp'].includes(ext || '')) {
-    console.log(`[upload-temp] Using Vision API for image: ${fileName}`);
-    const response = await openai.chat.completions.create({
-      model: AI_CONFIG.models.extraction,
-      messages: [{
-        role: "user",
-        content: [
-          { type: "text", text: "请完整提取这张图片中的所有文本内容，保持原有的结构和格式。只返回文本内容，不要添加任何额外的解释。" },
-          {
-            type: "image_url",
-            image_url: {
-              url: `data:${fileType};base64,${fileData}`,
-              detail: "high"
-            }
-          }
-        ]
-      }],
-      max_completion_tokens: AI_CONFIG.params.extraction.maxTokens
-    });
-
-    return response.choices[0]?.message?.content || '';
+    const mimeType = SUPPORTED_IMAGE_TYPES.includes(fileType)
+      ? fileType
+      : ext === 'jpg' ? 'image/jpeg' : `image/${ext}`;
+    return readDocumentText({ fileName, mimeType, base64: fileData });
   }
 
   throw new Error(`不支持的文件类型: ${fileType}`);
@@ -340,8 +308,8 @@ export async function POST(req: NextRequest) {
       // Step 3: Generate embeddings
       const embeddings: number[][] = [];
       for (const chunk of chunks) {
-        const embeddingResponse = await openai.embeddings.create({
-          model: AI_CONFIG.models.embedding,
+        const embeddingResponse = await getLLMClient().embeddings.create({
+          model: EMBEDDING_MODEL,
           input: chunk.content,
           encoding_format: "float",
         });

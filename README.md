@@ -211,7 +211,7 @@ Receipts (收据):
 1. 安装依赖：`npm install`
 2. 复制环境变量：`cp .env.example .env.local`
 3. 必填配置：
-   - `OPENAI_API_KEY`
+   - `LLM_API_KEY` / `LLM_BASE_URL`（AI relay）
    - `NEXT_PUBLIC_SUPABASE_URL` / `NEXT_PUBLIC_SUPABASE_ANON_KEY`
    - `SUPABASE_SERVICE_ROLE_KEY`
    - `ADMIN_PASSWORD`

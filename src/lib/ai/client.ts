@@ -1,40 +1,21 @@
 import OpenAI from 'openai';
-
-/**
- * LLM Client Factory
- *
- * Centralized OpenAI client instantiation with provider flexibility.
- * Supports switching providers via environment variables.
- */
+import { MAX_RETRIES } from './config';
 
 let clientInstance: OpenAI | null = null;
 
-/**
- * Get or create the shared OpenAI client instance
- */
-export function getLLMClient(): OpenAI {
+export function getClient(): OpenAI {
   if (!clientInstance) {
     clientInstance = new OpenAI({
-      apiKey: process.env.LLM_API_KEY || process.env.OPENAI_API_KEY,
-      baseURL: process.env.LLM_BASE_URL || process.env.OPENAI_BASE_URL,
+      apiKey: process.env.LLM_API_KEY,
+      baseURL: process.env.LLM_BASE_URL,
+      maxRetries: MAX_RETRIES,
     });
   }
   return clientInstance;
 }
 
 /**
- * Create a new OpenAI client instance (for cases needing isolation)
+ * Stopgap for the embedding call sites until B4 removes them
+ * (REQ §no-embedding-calls). Everything else goes through `@/lib/ai`.
  */
-export function createLLMClient(): OpenAI {
-  return new OpenAI({
-    apiKey: process.env.LLM_API_KEY || process.env.OPENAI_API_KEY,
-    baseURL: process.env.LLM_BASE_URL || process.env.OPENAI_BASE_URL,
-  });
-}
-
-/**
- * Reset the shared client instance (useful for testing)
- */
-export function resetLLMClient(): void {
-  clientInstance = null;
-}
+export const getLLMClient = getClient;

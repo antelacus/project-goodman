@@ -5,14 +5,17 @@
  * v4.2: Combines all sections and generates executive summary.
  */
 
-import { getLLMClient } from '@/lib/ai/client';
-import { AI_CONFIG } from '@/lib/ai/config';
+import { z } from 'zod';
+import { generateJSON } from '@/lib/ai';
 import type { ReportWorkflowState } from '../state';
 import type { ReportContent, ReportSection, ReportSummary } from '@/types/report';
-import { buildSummaryPrompt } from '../prompts';
+import { buildSummaryPrompt, REPORT_ANALYST_SYSTEM } from '../prompts';
 
-// Get shared LLM client
-const openai = getLLMClient();
+const SummarySchema = z.object({
+  keyFindings: z.array(z.string()),
+  riskWarnings: z.array(z.string()),
+  recommendations: z.array(z.string()),
+});
 
 /**
  * Generate executive summary using LLM
@@ -29,24 +32,12 @@ async function generateSummary(
   );
 
   try {
-    const response = await openai.chat.completions.create({
-      model: AI_CONFIG.models.report,
-      messages: [{ role: 'user', content: prompt }],
-      temperature: AI_CONFIG.params.report.temperature,
-      max_tokens: AI_CONFIG.params.report.maxTokens,
-      response_format: { type: 'json_object' },
+    return await generateJSON({
+      purpose: 'reportSummary',
+      system: REPORT_ANALYST_SYSTEM,
+      prompt,
+      schema: SummarySchema,
     });
-
-    const content = response.choices[0]?.message?.content;
-
-    if (content) {
-      const parsed = JSON.parse(content) as ReportSummary;
-      return {
-        keyFindings: parsed.keyFindings || [],
-        riskWarnings: parsed.riskWarnings || [],
-        recommendations: parsed.recommendations || [],
-      };
-    }
   } catch (error) {
     console.error('Error generating summary:', error);
   }
