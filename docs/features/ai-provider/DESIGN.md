@@ -184,6 +184,7 @@ Phase 6 删除：`match_documents`、`search_documents_hybrid`、`search_regulat
 - PGroonga 3.2.5（装在 `extensions` schema）：两字词可检索；空格为 AND、`OR` 为或；默认 `pgroonga_score` 只是词频，要用 `pgroonga_condition(…, scorers => ARRAY['scorer_tf_idf($index)'], index_name => …)` 才有 TF-IDF。非 ASCII 文本按相邻两字切分（bigram），不是语义分词。
 - PDF 抽出的文字在词中间断行（"金\n融资产"），并夹有单独成行的页码；索引前去掉换行，页码行由拆分器删除（否则页码会粘进词中间）。
 - 45 份法规原文件都在 Storage 的 `document-files` 中（已核）。
+- 部分 PDF（尤其是浏览器打印的法律文本）用康熙部首代替形近的汉字（"⼈"代"人"），按 NFKC 即可还原；唯一例外是"⼜"（U+2F1C，"又"的部首）被用来印"口"，库内 98 处全是出口、进口、敞口，拆分器与 `search_normalize` 都把它映射为"口"。2007 版准则"第X条"后不带空格；部分行两端对齐、字间有空格。
 - 服务端多数数据库调用用的是 anon 密钥（`createServerSupabaseClient`），不是 service_role。自 2026-10-30 起，`public` 中新建的表不再自动授权给 Data API 角色：应用经 supabase-js 访问的新表，须在建表的同一迁移里显式 `grant`。本版唯一的新表是 `backup` schema 中的备份表，不经 Data API 访问。新函数仍默认可由 anon 执行；`replace_regulation_articles` 在迁移里收回了 anon / authenticated 的执行权，只给 service_role（重新拆分脚本用）。
 - 迁移历史与仓库文件不一致（TD-031）：不能用 `supabase db push`。
 - Supabase MCP 的 `apply_migration`，以及 `execute_sql` 中含 `drop`、`delete`、`revoke` 等的语句，都要求客户端确认；Claude Code 显示不了确认框，请求被自动取消。这类迁移由 Jason 在控制台的 SQL 编辑器执行，Claude 随后把同一版本号登记进 `supabase_migrations.schema_migrations`，使仓库文件与数据库记录一致。

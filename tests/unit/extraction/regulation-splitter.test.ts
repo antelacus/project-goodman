@@ -11,6 +11,7 @@ describe('regulation splitter', () => {
 
   it('reads Kangxi radicals as the ideographs they render as', () => {
     expect(normalizeIdeographs('第⼀条 纳税⼈')).toBe('第一条 纳税人');
+    expect(normalizeIdeographs('进出⼜货物')).toBe('进出口货物');
     expect(numbers(['第⼀条 甲。\n第⼆条 乙。'])).toEqual([1, 2]);
   });
 
