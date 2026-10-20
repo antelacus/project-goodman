@@ -3,7 +3,7 @@
  *
  * Temporary document upload for ordinary users.
  * - Extracts text from uploaded file (PDF, images, Excel, text)
- * - Vectorizes and stores temporarily in Supabase
+ * - Chunks and stores it in Supabase (not searched; read whole when selected)
  * - Does NOT store original file (privacy protection)
  * - V3.10: Supports guest sessions with rate limiting and document ownership
  *
@@ -15,8 +15,6 @@ export const runtime = "nodejs";
 import { NextRequest, NextResponse } from "next/server";
 import ExcelJS from "exceljs";
 import { readDocumentText, AIUnavailableError, AI_FAILURE_TEXT } from "@/lib/ai";
-import { getLLMClient } from "@/lib/ai/client";
-import { EMBEDDING_MODEL } from "@/lib/ai/config";
 import { createServerSupabaseClient } from "@/lib/database";
 import type { InsertTables } from "@/lib/database";
 import { logError, logWorkflowEvent } from "@/lib/logging";
@@ -305,17 +303,6 @@ export async function POST(req: NextRequest) {
 
       console.log(`[upload-temp] Created ${chunks.length} chunks`);
 
-      // Step 3: Generate embeddings
-      const embeddings: number[][] = [];
-      for (const chunk of chunks) {
-        const embeddingResponse = await getLLMClient().embeddings.create({
-          model: EMBEDDING_MODEL,
-          input: chunk.content,
-          encoding_format: "float",
-        });
-        embeddings.push(embeddingResponse.data[0].embedding);
-      }
-
       // Step 4: Store in database
       const supabase = createServerSupabaseClient();
       const documentId = crypto.randomUUID();
@@ -406,7 +393,6 @@ export async function POST(req: NextRequest) {
         document_id: documentId,
         chunk_index: index,
         content: chunk.content,
-        embedding: JSON.stringify(embeddings[index]),
         section_title: chunk.sectionTitle || null,
         section_level: chunk.sectionLevel || 0,
         section_path: chunk.sectionPath || null,

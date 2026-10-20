@@ -42,7 +42,7 @@
 | B1 AI 统一入口 | 完成 | `src/lib/ai/` 4 个函数、成功判定、时限与重试、`AIUnavailableError`；15 个调用点迁入；去掉 `LLM_MODEL_*` / `OPENAI_*` 回退；CI 环境变量 · §relay-model、§relay-params、§system-prompt、§ai-outcome、§ai-timeout | — |
 | B2 失败不编造 | 完成 | 报告章节与摘要状态、三处渲染、对话失败文案、两个上传入口的提取失败与多期间一次写入、冒烟检查 · §report-section-failure、§report-summary-failure、§chat-failure、§extract-failure、§smoke-report | B1 |
 | B3 条款重新拆分 | 完成 | `regulation-splitter`（逐页、连续编号、无归属正文）、管理员上传改用并在存储失败时失败、`replace_regulation_articles`、`resplit-regulations` 脚本与异常清单（Jason 裁定后才替换）· §reg-split-rule、§reg-integrity、§reg-upload-dup、§reg-upload-storage | — |
-| B4 关键词检索与引用 | 进行中 | PGroonga 迁移（生成列、索引、3 个函数）、`src/lib/search/`、两个工具与证据编号、检索预算与 `forceAnswer`、`src/lib/citations/`、过程日志链接、系统提示词、上传去向量、数据库层测试 · §reg-search-citation、§search-rounds、§keyword-match、§citation-text、§citation-link、§out-of-library、§retrieval-error、§doc-search、§upload-no-embedding、§no-embedding-calls | B1、B3（替换完成） |
+| B4 关键词检索与引用 | 完成 | PGroonga 迁移（生成列、索引、3 个函数）、`src/lib/search/`、两个工具与证据编号、检索预算与 `forceAnswer`、`src/lib/citations/`、过程日志链接、系统提示词、上传去向量、数据库层测试 · §reg-search-citation、§search-rounds、§keyword-match、§citation-text、§citation-link、§out-of-library、§retrieval-error、§doc-search、§upload-no-embedding、§no-embedding-calls | B1、B3（替换完成） |
 | B5 评测 | 未开始 | 记忆存储注入、查询集（Claude 起草、Jason 审定）与 `eval-retrieval` 脚本 · §retrieval-quality，以及 §out-of-library 的评测部分 | B4 |
 
 Phase 6：§vector-removed（删除向量列、向量函数、`backup` schema）。
@@ -74,14 +74,3 @@ Phase 6：§vector-removed（删除向量列、向量函数、`backup` schema）
 **Phase 6 boxes**：Phase 4 收尾时写入；已知必须包含：relay 用量上限已设（Jason）· VPS 上 staging、生产两份 `.env` 先后更新并备份，删除不再使用的 `OPENAI_API_KEY` · 生产验证后删除向量列、向量函数（REQ §5.8）· TD-021 改写为 relay 现状 · TD-024 重新测量
 
 ## 四、Session-end pickup
-
-（2026-10-20）B4 进行中，工作区为半成品提交（测试未全绿）：
-- 已完成：PGroonga 迁移三条（已执行、已入仓库）、`supabase/tests/keyword-search.sql`（通过）、`src/lib/search/`、`src/lib/citations/`、两个检索工具、执行器（预算与证据编号）、`forceAnswer` / `finalizeAnswer` 节点、`createUnifiedGraph({ memory })`、`src/lib/memory/in-memory.ts`、过程日志 `sourceReferences`。B4 验收 9 条中 6 条已通过。
-- 已删除：向量 RPC 包装（`helpers.ts`、`custom-types.ts`、两处导出）、`src/lib/documents/search.ts`。
-- 下一步（按序）：
-  1. `src/lib/ai/client.ts` 删 `getLLMClient`、`config.ts` 删 `EMBEDDING_MODEL`；`upload-temp` 与管理员上传去掉生成向量（切块不写 `embedding`，删 `generateEmbeddings`）。
-  2. 修测试：`tests/unit/database/helpers.test.ts` 删三个向量 RPC 用例；`tests/unit/tools/search-tools.test.ts` 改为 mock `@/lib/search`；`tests/unit/workflows/save-memory.test.ts` 改用 `createSaveMemoryNode(mockMemory)`；B3 验收文件去掉 `@/lib/ai/client` 的 mock；其余 mock `openai` 做 embedding 的测试改掉。
-  3. 更新 `src/lib/ai/prompts/chat-system.md`：关键词检索用法、每题最多 3 次、只写编号 `[Rn]` 不写条款号、资料库外可作答但不写条款号。
-  4. 跑全套 tsc / eslint / vitest，B4 验收 9 条全绿后提交；REQ §5.3 的"1559 条"改为 1505；DESIGN §5 函数签名改为关键词数组。
-  5. 然后进入 B5（评测脚本与查询集，查询集交 Jason 审定）。
-

@@ -30,11 +30,6 @@ vi.mock('@/lib/security', () => ({
 }));
 vi.mock('@/lib/database', () => ({ createServerSupabaseClient: vi.fn() }));
 vi.mock('@/lib/documents/storage', () => ({ uploadFileToStorage: vi.fn() }));
-vi.mock('@/lib/ai/client', () => ({
-  getLLMClient: () => ({
-    embeddings: { create: async ({ input }: { input: string[] }) => ({ data: input.map(() => ({ embedding: [0.1] })) }) },
-  }),
-}));
 
 // A synthetic standard, three pages. Article 2 quotes article 1 in-text; article 3
 // wraps a reference to article 4 onto the start of a line, which is the trap.

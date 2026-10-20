@@ -18,7 +18,7 @@ N/A —— 不引入新的业务术语。
 | 模块 / 文件 | 单一职责 | 测试层级 |
 |-------------|---------|---------|
 | `src/lib/ai/`（AI 入口） | 本项目唯一调用 AI SDK 的地方。对外 4 个函数：`generateText`、`generateJSON`、`chatWithTools`、`readDocumentText`。内部决定模型、参数、时限、系统提示词的放法，判定成功与失败，把一切失败统一成 `AIUnavailableError` | core |
-| `src/lib/search/`（检索） | 对外 2 个函数：`searchRegulations(keywords)` 返回带出处的条款，`searchKnowledge(keywords, filters)` 返回资料库切块。内部拼 PGroonga 查询、调数据库函数 | IO |
+| `src/lib/search/`（检索） | 对外 2 个函数：`searchRegulations(keywords)` 返回带出处的条款，`searchKnowledge(keywords, filters)` 返回资料库切块。调数据库函数；关键词的规整、转义与排序都在数据库函数里 | IO |
 | `src/lib/citations/`（引用，新） | 回答的后处理：把编号换成出处、删去未核实的条款号、按引用情况加标注。纯函数 | core |
 | `src/lib/tools/search/*` | agent 工具：校验关键词、调 `src/lib/search/`、给每条结果分配编号并登记为证据。不含检索逻辑 | IO |
 | `src/lib/workflows/core/`（agent 图） | 检索预算、强制作答、在保存前调用引用后处理；记忆存储作为参数注入 | core |
@@ -129,7 +129,7 @@ loadMemory → agentLoop ⇄ toolExecutor（检索 ≤ 3 次）
 
 新增数据库函数：
 
-- `search_regulation_articles(p_query, p_limit)`、`search_knowledge_chunks(p_query, p_limit, p_year, p_doc_type)`：`scorer_tf_idf` 排序；后者把资料库范围写死。
+- `search_regulation_articles(p_keywords text[], p_limit)`、`search_knowledge_chunks(p_keywords text[], p_limit, p_year, p_doc_types text[])`：关键词以数组传入，函数内逐个规整（康熙部首映射、去空白）与转义后以 OR 组合；先按命中的不同关键词个数、再按 `scorer_tf_idf` 排序（只用 TF-IDF 时，一条把同一个词重复多次的条款会排在两个词都含的条款前面）；后者把资料库范围写死。检索列 `search_text` 由 `search_normalize(content)` 生成。
 - `replace_regulation_articles(p_document_id, p_articles jsonb)`：一个函数调用即一个事务，删去该文档的旧条款、插入新条款；可重复执行。
 
 Phase 6 删除：`match_documents`、`search_documents_hybrid`、`search_regulations_hybrid`、`embedding` 列、`backup` schema（含备份表）、`vector` 扩展（若无他用）。删除语句由 Jason 在控制台执行（§8）。

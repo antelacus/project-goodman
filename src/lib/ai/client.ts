@@ -13,9 +13,3 @@ export function getClient(): OpenAI {
   }
   return clientInstance;
 }
-
-/**
- * Stopgap for the embedding call sites until B4 removes them
- * (REQ §no-embedding-calls). Everything else goes through `@/lib/ai`.
- */
-export const getLLMClient = getClient;
