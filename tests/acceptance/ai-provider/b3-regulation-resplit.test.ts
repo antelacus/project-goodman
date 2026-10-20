@@ -68,7 +68,7 @@ describe('B3 regulation re-split', () => {
     expect(assigned).toEqual(body);
 
     // The wrapped reference to the next number is reported, not silently kept.
-    expect(anomalies).toEqual([{ kind: 'heading_without_space', page: 2, line: '第四条规定的方法进行后续计量，' }]);
+    expect(anomalies).toEqual([{ kind: 'next_number_as_reference', page: 2, line: '第四条规定的方法进行后续计量，' }]);
 
     expect(splitRegulation(PAGES.slice(0, 2), 3)).toEqual({
       articles: [],

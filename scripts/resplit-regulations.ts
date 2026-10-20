@@ -12,7 +12,7 @@
  *     verifies it. Refuses to run if the document set or any file changed since
  *     `check`, or if any anomaly in report.json lacks a ruling. Re-runnable.
  *
- * Credentials come from .env.scripts (SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY),
+ * Credentials come from .env.scripts (NEXT_PUBLIC_SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY),
  * which Next.js does not load, so local dev never reaches production.
  */
 
@@ -45,9 +45,9 @@ interface Report {
 
 function connect(): SupabaseClient {
   dotenv.config({ path: '.env.scripts', quiet: true });
-  const url = process.env.SUPABASE_URL;
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
-  if (!url || !key) throw new Error('.env.scripts must set SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY');
+  if (!url || !key) throw new Error('.env.scripts must set NEXT_PUBLIC_SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY');
   return createClient(url, key, { auth: { persistSession: false } });
 }
 
@@ -108,7 +108,8 @@ function describe(a: SplitAnomaly): string {
     case 'no_articles': return '没有拆出任何条款';
     case 'skipped_number': return `第 ${a.page} 页跳号：应为第 ${a.expected} 条，出现第 ${a.found} 条 —— 「${a.line}」`;
     case 'repeated_number': return `第 ${a.page} 页重复或倒退的条款号 ${a.articleNumber}，未切分 —— 「${a.line}」`;
-    case 'heading_without_space': return `第 ${a.page} 页行首「第X条」后没有空格，按正文处理 —— 「${a.line}」`;
+    case 'next_number_as_reference': return `第 ${a.page} 页行首是下一条的号码，但读作引用，按正文处理 —— 「${a.line}」`;
+    case 'unspaced_skip': return `第 ${a.page} 页行首「第X条」无空格且跳号（应为第 ${a.expected} 条，出现第 ${a.found} 条），按正文处理 —— 「${a.line}」`;
     case 'appendix_after_articles': return `第 ${a.page} 页起为附录，不归入任何条款 —— 「${a.line}」`;
   }
 }

@@ -1,9 +1,12 @@
 /**
  * Regulation text (one string per PDF page) → articles + anomalies (REQ §5.6).
  *
- * An article starts only at a line that begins with "第X条" followed by
- * whitespace (or nothing). In-text references ("按照本准则第二十五条的规定") can
- * land at the start of a line after a wrap, but are not followed by a space.
+ * An article starts only at a line that begins with "第X条". In-text references
+ * ("按照本准则第二十五条的规定") can land at the start of a line after a wrap. A
+ * heading is told apart by a space after "第X条"; PDFs that print no space (the
+ * 2007 standards) need two other signals together: the previous line ended a
+ * sentence (a wrap leaves it mid-sentence: "……按照本准则"), and the word after
+ * "第X条" does not continue a reference (的、规定、所、第…款…).
  * Numbers must run one by one: a number that jumps ahead still starts an article
  * (the source may skip one; refusing it would fold every later article into the
  * previous one), a repeated or earlier number does not. Both are reported, as is
@@ -12,7 +15,11 @@
  *
  * Page-number lines and running headers/footers are dropped (once newlines are
  * removed for search, a page number would glue into a word); chapter and section
- * headings are not part of any article's content.
+ * headings are not part of any article's content. Kangxi radicals, which some
+ * PDFs print in place of look-alike ideographs ("⼀" for "一", "⼈" for "人"), are
+ * mapped to the ideographs, and a justified line printed with a space between
+ * every character ("第 十 条 职 工") is closed up; otherwise neither the article
+ * numbers nor a keyword search would match them.
  */
 
 export interface SplitArticle {
@@ -33,7 +40,8 @@ export type SplitAnomaly =
   | { kind: 'no_articles' }
   | { kind: 'skipped_number'; page: number; line: string; expected: number; found: number }
   | { kind: 'repeated_number'; page: number; line: string; articleNumber: string }
-  | { kind: 'heading_without_space'; page: number; line: string }
+  | { kind: 'next_number_as_reference'; page: number; line: string }
+  | { kind: 'unspaced_skip'; page: number; line: string; expected: number; found: number }
   | { kind: 'appendix_after_articles'; page: number; line: string };
 
 export interface SplitResult {
@@ -44,7 +52,11 @@ export interface SplitResult {
 const ARTICLE_LINE = /^第([零〇一二三四五六七八九十百千]+)条(.?)/;
 const HEADING_LINE = /^第[零〇一二三四五六七八九十百千]+[编章节](\s|$)/;
 const APPENDIX_LINE = /^(附录|附件|附表)/;
-const PAGE_NUMBER_LINE = /^[-—\s]*(第\s*)?\d+(\s*页)?[-—\s]*$/;
+// What follows "第X条" when it is a reference rather than a heading.
+const REFERENCE_CONTINUATION = /^[的规所中和或、，。；：至第款项（(之]/;
+// A line that leaves no sentence open, so a "第X条" on the next line is a fresh start.
+const SENTENCE_END = /[。：；:;」）)]$/;
+const PAGE_NUMBER_LINE = /^[-—\s]*((第\s*)?\d+(\s*页)?|\d+\s*\/\s*\d+)[-—\s]*$/;
 
 export function splitRegulation(pages: string[], expectedPageCount: number): SplitResult {
   const anomalies: SplitAnomaly[] = [];
@@ -73,17 +85,23 @@ export function splitRegulation(pages: string[], expectedPageCount: number): Spl
     }
   };
 
+  let previous = '';
   pageLines.forEach((lines, pageIndex) => {
     const page = pageIndex + 1;
     for (const line of lines) {
       if (inAppendix) continue;
+      const afterSentence = previous === '' || SENTENCE_END.test(previous) || HEADING_LINE.test(previous);
+      previous = line;
 
       const articleMatch = line.match(ARTICLE_LINE);
       if (articleMatch) {
         const found = chineseToNumber(articleMatch[1]);
         const expected = (current?.article.number ?? articles[articles.length - 1]?.number ?? 0) + 1;
         const spaced = articleMatch[2] === '' || /\s/.test(articleMatch[2]);
-        if (spaced && found >= expected) {
+        const unspacedHeading = !spaced && afterSentence && !REFERENCE_CONTINUATION.test(articleMatch[2]);
+
+        const startsArticle = (spaced || unspacedHeading) && found >= expected;
+        if (startsArticle) {
           if (found > expected) anomalies.push({ kind: 'skipped_number', page, line, expected, found });
           close();
           current = {
@@ -102,7 +120,9 @@ export function splitRegulation(pages: string[], expectedPageCount: number): Spl
         if (spaced) {
           anomalies.push({ kind: 'repeated_number', page, line, articleNumber: `第${articleMatch[1]}条` });
         } else if (found === expected) {
-          anomalies.push({ kind: 'heading_without_space', page, line });
+          anomalies.push({ kind: 'next_number_as_reference', page, line });
+        } else if (found > expected && afterSentence) {
+          anomalies.push({ kind: 'unspaced_skip', page, line, expected, found });
         }
         // Otherwise a wrapped in-text reference: ordinary content.
       }
@@ -132,27 +152,52 @@ export function splitRegulation(pages: string[], expectedPageCount: number): Spl
   return { articles, anomalies };
 }
 
+const SPACED_IDEOGRAPHS = /(?<=[\u4e00-\u9fff])[ \u3000]+(?=[\u4e00-\u9fff])/g;
+
+/** Closes up a letter-spaced line; one stray space between two characters is left alone. */
+function closeUpLetterSpacing(line: string): string {
+  return (line.match(SPACED_IDEOGRAPHS)?.length ?? 0) >= 3 ? line.replace(SPACED_IDEOGRAPHS, '') : line;
+}
+
 function toLines(page: string): string[] {
-  return page
+  return normalizeIdeographs(page)
     .split('\n')
-    .map(l => l.trim())
+    .map(l => closeUpLetterSpacing(l.trim()))
     .filter(l => l !== '' && !PAGE_NUMBER_LINE.test(l));
 }
 
 /**
- * Drops a line that opens or closes most pages (a running header or footer,
- * such as the document title printed on every page).
+ * Drops a running header or footer: a line that opens or closes most pages, or
+ * one that recurs anywhere on most pages (browser-printed PDFs put the print
+ * timestamp and a URL with "3/10" in varying places). Digits are ignored when
+ * comparing, since page counters change; the anywhere rule skips short lines
+ * ("（一）"), which recur in the body legitimately.
  */
 function stripRunningLines(pages: string[][]): string[][] {
   if (pages.length < 3) return pages;
-  const counts = new Map<string, number>();
+  const key = (line: string) => line.replace(/\d+/g, '#');
+  const edgeCounts = new Map<string, number>();
+  const anywhereCounts = new Map<string, number>();
+  const bump = (m: Map<string, number>, k: string) => m.set(k, (m.get(k) ?? 0) + 1);
   for (const lines of pages) {
-    for (const edge of new Set([lines[0], lines[lines.length - 1]])) {
-      if (edge !== undefined) counts.set(edge, (counts.get(edge) ?? 0) + 1);
-    }
+    for (const k of new Set([lines[0], lines[lines.length - 1]].filter(l => l !== undefined).map(key))) bump(edgeCounts, k);
+    for (const k of new Set(lines.filter(l => l.length >= 8).map(key))) bump(anywhereCounts, k);
   }
-  const running = new Set([...counts].filter(([, n]) => n > pages.length / 2).map(([line]) => line));
-  return pages.map(lines => lines.filter((l, i) => !((i === 0 || i === lines.length - 1) && running.has(l))));
+  const most = (m: Map<string, number>) => [...m].filter(([, n]) => n > pages.length / 2).map(([k]) => k);
+  const running = new Set([...most(edgeCounts), ...most(anywhereCounts)]);
+  return pages.map(lines =>
+    lines.filter((l, i) => {
+      const k = key(l);
+      if (!running.has(k)) return true;
+      const atEdge = i === 0 || i === lines.length - 1;
+      return !(atEdge || anywhereCounts.get(k)! > pages.length / 2);
+    })
+  );
+}
+
+/** Kangxi radicals and CJK radicals supplement → the unified ideographs they render as. */
+export function normalizeIdeographs(text: string): string {
+  return text.replace(/[\u2E80-\u2FDF]/g, ch => ch.normalize('NFKC'));
 }
 
 const HEADING_LEVEL: Record<string, number> = { 编: 0, 章: 1, 节: 2 };
