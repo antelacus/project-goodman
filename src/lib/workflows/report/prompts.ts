@@ -229,7 +229,4 @@ export const ERROR_MESSAGES = {
 
   METRIC_ERROR: (metricName: string, error: string) =>
     `计算${metricName}时出错：${error}`,
-
-  LLM_ERROR: (section: string) =>
-    `生成"${section}"分析时出错，将使用默认文字。`,
 };

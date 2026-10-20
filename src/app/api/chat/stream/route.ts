@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { unifiedAgentGraph } from '@/lib/workflows/unified/graph';
+import { AIUnavailableError, AI_FAILURE_TEXT } from '@/lib/ai';
 import {
     ensureSession,
     checkGuestRate,
@@ -598,7 +599,11 @@ export async function POST(req: NextRequest) {
 
                     } catch (err: unknown) {
                         logError('Chat stream processing error', err, requestId, { route: '/api/chat/stream' });
-                        const errorMessage = err instanceof Error ? err.message : 'An error occurred during streaming';
+                        // The answer is not streamed, so a failed AI turn leaves no partial answer;
+                        // the user gets the failure text, never the SDK's message (REQ §5.2).
+                        const errorMessage = err instanceof AIUnavailableError
+                            ? AI_FAILURE_TEXT.chat
+                            : err instanceof Error ? err.message : 'An error occurred during streaming';
                         sendEvent('error', { message: errorMessage });
                         logWorkflowFailure('INTERNAL');
 

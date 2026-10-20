@@ -51,9 +51,18 @@ const fileEnv = loadEnvFile(ENV_FILE);
 const adminPassword = process.env.ADMIN_PASSWORD || fileEnv.ADMIN_PASSWORD;
 const adminUsername = process.env.ADMIN_USERNAME || fileEnv.ADMIN_USERNAME || 'admin';
 
-if (!adminPassword) {
-  console.error('[smoke] Missing ADMIN_PASSWORD. Configure it in SMOKE_ENV_FILE or environment variables.');
-  process.exit(1);
+/**
+ * What a generated report says failed. A report that completes with a failed
+ * section or no summary is a failure for the smoke check, not a pass (REQ §5.2).
+ */
+function reportFailures(content) {
+  const failures = (content.sections || [])
+    .filter((section) => section.analysisStatus === 'failed')
+    .map((section) => `section ${section.id}: ${section.analysis}`);
+  if (content.summary && content.summary.status === 'not_generated') {
+    failures.push(`summary: ${content.summary.reason}`);
+  }
+  return failures;
 }
 
 function getSetCookieHeaders(response) {
@@ -293,7 +302,7 @@ async function run() {
   }
 
   logStep('Report generation');
-  await fetchReportStream(
+  const reportEvent = await fetchReportStream(
     `${BASE_URL}/api/reports/generate`,
     {
       method: 'POST',
@@ -307,10 +316,23 @@ async function run() {
     jar
   );
 
+  const failures = reportFailures(reportEvent.data.content);
+  if (failures.length > 0) {
+    throw new Error(`Report generated with failures: ${failures.join('; ')}`);
+  }
+
   logStep('Smoke test completed successfully');
 }
 
-run().catch((error) => {
-  console.error(`[smoke] Failed: ${error.message || error}`);
-  process.exit(1);
-});
+module.exports = { reportFailures };
+
+if (require.main === module) {
+  if (!adminPassword) {
+    console.error('[smoke] Missing ADMIN_PASSWORD. Configure it in SMOKE_ENV_FILE or environment variables.');
+    process.exit(1);
+  }
+  run().catch((error) => {
+    console.error(`[smoke] Failed: ${error.message || error}`);
+    process.exit(1);
+  });
+}

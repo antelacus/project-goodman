@@ -12,7 +12,7 @@ import { NextRequest, NextResponse } from "next/server";
 import ExcelJS from "exceljs";
 import { z } from "zod";
 import { getPromptContent } from "@/lib/ai/prompts";
-import { generateJSON } from "@/lib/ai";
+import { generateJSON, AIUnavailableError, AI_FAILURE_TEXT } from "@/lib/ai";
 import { logWorkflowEvent } from "@/lib/logging";
 import {
   generateRequestId,
@@ -346,6 +346,9 @@ export async function POST(req: NextRequest) {
     } catch (error: unknown) {
       console.error("Data Extract Tool API Error:", error);
       logWorkflowFailure('EXTRACTION_FAILED');
+      if (error instanceof AIUnavailableError) {
+        return createJsonResponse({ success: false, error: 'ai_unavailable', message: AI_FAILURE_TEXT.extraction }, 503);
+      }
       return createErrorResponse(error, requestId, 500, {
         errorType: 'EXTRACTION_FAILED',
         route: '/api/quick-actions/extract',

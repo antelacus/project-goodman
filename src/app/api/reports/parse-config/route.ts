@@ -11,7 +11,7 @@ import {
   ensureSession,
   createErrorResponse,
 } from '@/lib/security';
-import { generateJSON, AIUnavailableError } from '@/lib/ai';
+import { generateJSON, AIUnavailableError, AI_FAILURE_TEXT } from '@/lib/ai';
 import { loadPromptWithVariables } from '@/lib/ai/prompts';
 import {
   ReportConfigParseSchema,
@@ -124,7 +124,7 @@ export async function POST(req: NextRequest) {
     console.error('[parse-config] Error:', error);
 
     if (error instanceof AIUnavailableError) {
-      return createErrorResponse('AI 服务暂时不可用，请稍后再试', requestId, 503);
+      return createErrorResponse(AI_FAILURE_TEXT.chat, requestId, 503);
     }
 
     return createErrorResponse(error, requestId, 500);

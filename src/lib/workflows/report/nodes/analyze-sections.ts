@@ -5,7 +5,7 @@
  * v4.2: Calls LLM sequentially for each of 5 sections.
  */
 
-import { generateText } from '@/lib/ai';
+import { generateText, AIUnavailableError, AI_FAILURE_TEXT } from '@/lib/ai';
 import type { ReportWorkflowState, ReportSectionData, MetricResult } from '../state';
 import type { ReportSection, ReportMetric } from '@/types/report';
 import { REPORT_SECTIONS, calculateChange } from '../constants';
@@ -68,14 +68,17 @@ async function analyzeSection(
     companyContext
   );
 
-  // Call LLM
+  // Call LLM. A failed analysis is shown as failed; the metrics table below is
+  // computed without AI and stays (REQ §5.2).
   let analysis: string;
+  let analysisStatus: 'ok' | 'failed' = 'ok';
 
   try {
     analysis = await generateText({ purpose: 'reportSection', system: REPORT_ANALYST_SYSTEM, prompt });
   } catch (error) {
-    console.error(`Error analyzing section ${sectionConfig.id}:`, error);
-    analysis = `${sectionConfig.title}：基于当前数据，各项指标表现正常，详情请参考具体数值。`;
+    if (!(error instanceof AIUnavailableError)) throw error;
+    analysis = AI_FAILURE_TEXT.reportSection;
+    analysisStatus = 'failed';
   }
 
   // Build metrics array
@@ -107,6 +110,7 @@ async function analyzeSection(
     title: sectionConfig.title,
     metrics,
     analysis,
+    analysisStatus,
     sourceDocuments: [], // Will be populated in assemble step
   };
 }

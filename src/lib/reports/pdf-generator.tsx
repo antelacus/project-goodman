@@ -235,6 +235,15 @@ interface ReportDocumentProps {
 function ExecutiveSummary({ report }: { report: ReportContent }) {
   const { summary } = report;
 
+  if (summary.status === 'not_generated') {
+    return (
+      <View style={styles.summaryContainer}>
+        <Text style={styles.summaryTitle}>执行摘要</Text>
+        <Text style={styles.warningItem}>⚠ {summary.reason}</Text>
+      </View>
+    );
+  }
+
   return (
     <View style={styles.summaryContainer}>
       <Text style={styles.summaryTitle}>执行摘要</Text>

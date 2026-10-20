@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { ChevronDown, ChevronRight, FileText, TrendingUp, TrendingDown, Minus } from 'lucide-react';
+import { AlertTriangle, ChevronDown, ChevronRight, FileText, TrendingUp, TrendingDown, Minus } from 'lucide-react';
 import type { ReportSection as ReportSectionType, ReportMetric } from '@/types/report';
 import { formatMetricValue } from '@/lib/workflows/report/constants';
 
@@ -92,7 +92,12 @@ export const ReportSection: React.FC<ReportSectionProps> = ({
           </div>
 
           {/* Analysis Text */}
-          {section.analysis && (
+          {section.analysisStatus === 'failed' ? (
+            <div className="bg-yellow-50 rounded-lg p-4 border border-yellow-200 flex items-start gap-2">
+              <AlertTriangle size={18} className="text-yellow-700 mt-0.5" />
+              <p className="text-sm text-yellow-900">{section.analysis}</p>
+            </div>
+          ) : section.analysis && (
             <div className="bg-neutral-50 rounded-lg p-4">
               <h4 className="text-sm font-medium text-neutral-700 mb-2">分析</h4>
               <p className="text-sm text-neutral-600 leading-relaxed whitespace-pre-wrap">
