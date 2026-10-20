@@ -14,14 +14,7 @@
 - 明确不做：发布流水线（顺延，见 `docs/features/release-pipeline/TRACK.md`）；TD-024 的报告耗时优化（本版只在 Phase 4 重新测量）；其他新功能
 - 全局约束：
   - 版本地板：Node → `.nvmrc`；依赖 → `package.json`
-  - 外部约束（DESIGN 开写后迁入其外部约束一节；2026-10-19 用项目真实的提示词与工具定义、合成数据实测）：
-    - relay 提供 9 个模型（`gpt-5.6-*`、`gpt-6*`、`gpt-6.1-sol` 等），没有 `gpt-4o` / `gpt-4o-mini` / `gpt-5-mini`，不支持 `/embeddings`
-    - 请求不带系统提示词时，relay 注入约 4200 token 的 Codex 编程 agent 提示词（"OK" 计 4223 token，回复 "What would you like to work on?"）；带了系统提示词则不注入（同一句计 18 token，按我们的设定作答）
-    - `max_tokens` 不生效（设 5，输出 33）；对话、JSON 模式、工具调用、流式输出均可用
-    - Responses API 不带 `instructions` 时同样注入（计 4216 token）；视觉输入（`image_url`）、Responses API 的 PDF 文件输入、严格 `json_schema` 均可用，合成报表图片与扫描版 PDF 的数字识别正确
-    - `gpt-6.1-sol` 每个报告章节约 9s；`gpt-6-luna`、`gpt-5.6-luna` 18–28s
-    - 短输出（标题、报告配置解析）各测 3 次：`gpt-6-luna` 12–84s，`gpt-6.1-sol` 2–17s
-    - 按 token 计费，各模型价格不同；用量上限需在 relay 侧自行设置
+  - 外部约束：`DESIGN.md` §8
   - 现状：staging 与生产共用一个 Supabase 项目与 service_role 密钥（见 `docs/features/release-pipeline/TRACK.md` 外部约束）；本版不扩大 staging 对生产数据的写入
   - The Floor：生产库的文档都是公开数据，经 relay 传输可接受；测试与评测用合成数据或公开数据
 - 裁定：
@@ -35,10 +28,21 @@
   - 2026-10-20 · 资料库外的问题可凭模型知识作答，须标注"不是来自资料库"且不写条款号 · Jason · 级联：REQ §5.5
   - 2026-10-20 · 向量列、向量函数、Edge Function `embed` 在生产验证 v4.7.0 后于 Phase 6 删除（不可逆）；理由：回滚到 v4.6.4 无意义，保留向量只对回到 `text-embedding-3-small` 有用，不在计划内 · Jason · 级联：REQ §5.8
   - 2026-10-20 · 结构化条款在本版重新拆分（推翻 REQ 原先的"只核对、不重新拆分"）；理由：Phase 2 重复检查发现 170 个条款号重复、涉及 438 行（28%），拆分规则把正文里的交叉引用当成条款开头，直接用作出处会给出错误的条款号；v4.6.4 不读这张表，替换不影响运行中的生产 · Jason · 级联：REQ §1.2、§5.6、§6.1、§7，本 TRACK 范围 7
+  - 2026-10-20 · 所有 AI 调用集中到 `src/lib/ai/` 的统一入口（4 个函数，系统提示词必填，SDK 只许在此导入） · Jason · 级联：DESIGN §2.1、§4、§7
+  - 2026-10-20 · 中文检索用 PGroonga（TF-IDF 排序），关键词由 agent 给出 · Jason · 级联：DESIGN §4、§5、§8
+  - 2026-10-20 · 检索上限 3 次由代码强制、提示词同时告知 · Jason · 级联：DESIGN §4
 
 ## 二、批次
 
-Phase 2 切分。
+| 批次 | 状态 | 范围（REQ §-id） | 依赖 |
+|------|------|-----------------|------|
+| B1 AI 统一入口 | 未开始 | `src/lib/ai/` 4 个函数与 `AIUnavailableError`；15 个调用点迁入；去掉 `LLM_MODEL_*` / `OPENAI_*` 回退；CI 环境变量 · §relay-model、§relay-params、§system-prompt | — |
+| B2 失败不编造 | 未开始 | 报告章节与摘要状态、三处渲染、对话失败文案、提取失败、冒烟检查 · §report-section-failure、§report-summary-failure、§chat-failure、§extract-failure、§smoke-report | B1 |
+| B3 条款重新拆分 | 未开始 | `regulation-splitter`、管理员上传改用、`resplit-regulations` 脚本与异常清单（Jason 裁定后才替换）· §reg-split-rule、§reg-integrity、§reg-upload-dup | — |
+| B4 关键词检索 | 未开始 | PGroonga 迁移（生成列、索引、2 个函数）、`src/lib/search/`、两个工具、检索预算、出处名称与过程日志链接、系统提示词、上传去向量 · §reg-search-citation、§search-rounds、§citation-link、§doc-search、§upload-no-embedding、§no-embedding-calls | B1、B3（替换完成） |
+| B5 评测 | 未开始 | 查询集（Claude 起草、Jason 审定）与 `eval-retrieval` 脚本 · §retrieval-quality、§citation-text、§out-of-library | B4 |
+
+Phase 6：§vector-removed（删除向量列、向量函数、`structured_regulations_backup`）。
 
 ## 三、门与发布
 
