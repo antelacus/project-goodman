@@ -13,15 +13,14 @@
 export const runtime = "nodejs";
 
 import { NextRequest, NextResponse } from "next/server";
-import type OpenAI from "openai";
 import ExcelJS from "exceljs";
 import { createServerSupabaseClient } from "@/lib/database";
 import type { InsertTables, Database } from "@/lib/database";
 import { SupabaseClient } from "@supabase/supabase-js";
 import { logWorkflowEvent } from "@/lib/logging";
+import { readDocumentText } from "@/lib/ai";
 import { getLLMClient } from "@/lib/ai/client";
-import { AI_CONFIG } from "@/lib/ai/config";
-import { getPromptContent } from "@/lib/ai/prompts";
+import { EMBEDDING_MODEL } from "@/lib/ai/config";
 import {
   verifyAdminPassword,
   generateRequestId,
@@ -52,9 +51,7 @@ import {
 } from "@/lib/financial";
 import { uploadFileToStorage } from "@/lib/documents/storage";
 
-const openai = getLLMClient();
 
-const PDF_TEXT_EXTRACT_PROMPT = getPromptContent('pdf-extract.md');
 
 /**
  * Request body schema
@@ -86,8 +83,7 @@ function isFinancialExtractionResult(
  */
 async function extractTextFromFile(
   fileData: string,
-  fileName: string,
-  openaiClient: OpenAI
+  fileName: string
 ): Promise<string> {
   // Detect file type from extension
   const ext = fileName.toLowerCase().split('.').pop();
@@ -163,83 +159,27 @@ async function extractTextFromFile(
       throw new Error(`Excel parsing failed: ${err instanceof Error ? err.message : 'Unknown error'}`);
     }
   } else if (ext === 'pdf') {
-    // PDF file - use unpdf for direct text extraction (serverless-friendly, no worker needed)
+    // Direct text extraction first (unpdf, serverless-friendly); a scan with little
+    // or no text layer, or a file unpdf cannot parse, is read as a document image.
+    let textContent = '';
     try {
-      const buffer = Buffer.from(fileData, 'base64');
-      console.log(`[extractTextFromFile] PDF buffer created, size: ${buffer.length} bytes`);
-
-      // Use unpdf which is designed for serverless environments
       const { extractText } = await import('unpdf');
-      const result = await extractText(new Uint8Array(buffer));
+      const result = await extractText(new Uint8Array(Buffer.from(fileData, 'base64')));
       // unpdf returns text as array of strings (one per page), join them
-      const textContent = Array.isArray(result.text) ? result.text.join('\n\n') : result.text;
-
+      textContent = Array.isArray(result.text) ? result.text.join('\n\n') : result.text;
       console.log(`[extractTextFromFile] PDF text extracted directly, length: ${textContent.length} chars, pages: ${result.totalPages}`);
-
-      if (textContent.trim().length > 100) {
-        // Successfully extracted text directly
-        return textContent;
-      }
-
-      // If direct extraction yielded little text, it might be a scanned PDF
-      // Fall back to OpenAI Vision API
-      console.log(`[extractTextFromFile] PDF text too short, falling back to Vision API...`);
-      const response = await openaiClient.responses.create({
-        model: AI_CONFIG.models.extraction,
-        input: [{
-          role: "user",
-          content: [
-            { type: "input_text", text: PDF_TEXT_EXTRACT_PROMPT },
-            {
-              type: "input_file",
-              filename: fileName,
-              file_data: `data:application/pdf;base64,${fileData}`
-            }
-          ]
-        }]
-      });
-      return response.output_text || '';
     } catch (pdfError) {
       console.error(`[extractTextFromFile] PDF parse error:`, pdfError);
-      // Fall back to OpenAI if pdf-parse fails
-      console.log(`[extractTextFromFile] Falling back to Vision API due to error...`);
-      const response = await openaiClient.responses.create({
-        model: AI_CONFIG.models.extraction,
-        input: [{
-          role: "user",
-          content: [
-            { type: "input_text", text: PDF_TEXT_EXTRACT_PROMPT },
-            {
-              type: "input_file",
-              filename: fileName,
-              file_data: `data:application/pdf;base64,${fileData}`
-            }
-          ]
-        }]
-      });
-      return response.output_text || '';
     }
+
+    if (textContent.trim().length > 100) {
+      return textContent;
+    }
+    console.log(`[extractTextFromFile] Reading the PDF as a scan...`);
+    return readDocumentText({ fileName, mimeType: 'application/pdf', base64: fileData });
   } else if (['png', 'jpg', 'jpeg', 'webp', 'gif'].includes(ext || '')) {
-    // Image file - use Vision API
     const mimeType = ext === 'jpg' ? 'image/jpeg' : `image/${ext}`;
-    const response = await openaiClient.chat.completions.create({
-      model: AI_CONFIG.models.extraction,
-      messages: [{
-        role: "user",
-        content: [
-          { type: "text", text: PDF_TEXT_EXTRACT_PROMPT },
-          {
-            type: "image_url",
-            image_url: {
-              url: `data:${mimeType};base64,${fileData}`,
-              detail: "high"
-            }
-          }
-        ]
-      }],
-      max_completion_tokens: AI_CONFIG.params.extraction.maxTokens
-    });
-    return response.choices[0]?.message?.content || '';
+    return readDocumentText({ fileName, mimeType, base64: fileData });
   } else if (ext === 'txt' || ext === 'md') {
     // Plain text - decode from base64
     return Buffer.from(fileData, 'base64').toString('utf-8');
@@ -395,7 +335,7 @@ export async function POST(request: NextRequest) {
 
     // Step 0: Extract text from file if needed
     console.log(`[Admin Upload] Extracting text from: ${fileName}`);
-    const extractedText = await extractTextFromFile(documentText, fileName, openai);
+    const extractedText = await extractTextFromFile(documentText, fileName);
     logWorkflowEvent({
       ...workflowContext,
       step: 'extract',
@@ -566,7 +506,7 @@ export async function POST(request: NextRequest) {
       } else {
         console.log("[Admin Upload] Starting AI-driven extraction...");
         // Perform AI Extraction
-        aiResult = await performAIExtraction(extractedText, fileName, openai);
+        aiResult = await performAIExtraction(extractedText, fileName);
       }
 
       let totalMetricsStored = 0;
@@ -760,8 +700,8 @@ async function generateEmbeddings(chunks: string[]): Promise<number[][]> {
   for (let i = 0; i < chunks.length; i += batchSize) {
     const batch = chunks.slice(i, i + batchSize);
 
-    const response = await openai.embeddings.create({
-      model: AI_CONFIG.models.embedding,
+    const response = await getLLMClient().embeddings.create({
+      model: EMBEDDING_MODEL,
       input: batch,
     });
 

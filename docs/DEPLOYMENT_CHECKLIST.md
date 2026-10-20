@@ -215,7 +215,8 @@ Migrations are forward-only. For schema changes:
 
 | Variable | Required | Description |
 |----------|----------|-------------|
-| `OPENAI_API_KEY` | Yes | OpenAI API key |
+| `LLM_API_KEY` | Yes | AI relay API key |
+| `LLM_BASE_URL` | Yes | AI relay base URL |
 | `NEXT_PUBLIC_SUPABASE_URL` | Yes | Supabase project URL |
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Yes | Supabase anon key |
 | `SUPABASE_SERVICE_ROLE_KEY` | Yes | Supabase service role key |

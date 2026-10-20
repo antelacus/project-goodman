@@ -5,15 +5,11 @@
  * v4.2: Calls LLM sequentially for each of 5 sections.
  */
 
-import { getLLMClient } from '@/lib/ai/client';
-import { AI_CONFIG } from '@/lib/ai/config';
+import { generateText } from '@/lib/ai';
 import type { ReportWorkflowState, ReportSectionData, MetricResult } from '../state';
 import type { ReportSection, ReportMetric } from '@/types/report';
 import { REPORT_SECTIONS, calculateChange } from '../constants';
-import { buildSectionAnalysisPrompt } from '../prompts';
-
-// Get shared LLM client
-const openai = getLLMClient();
+import { buildSectionAnalysisPrompt, REPORT_ANALYST_SYSTEM } from '../prompts';
 
 /**
  * Convert MetricResult to ReportMetric format
@@ -76,14 +72,7 @@ async function analyzeSection(
   let analysis: string;
 
   try {
-    const response = await openai.chat.completions.create({
-      model: AI_CONFIG.models.report,
-      messages: [{ role: 'user', content: prompt }],
-      temperature: AI_CONFIG.params.report.temperature,
-      max_tokens: AI_CONFIG.params.report.maxTokens,
-    });
-
-    analysis = response.choices[0]?.message?.content || '分析生成失败';
+    analysis = await generateText({ purpose: 'reportSection', system: REPORT_ANALYST_SYSTEM, prompt });
   } catch (error) {
     console.error(`Error analyzing section ${sectionConfig.id}:`, error);
     analysis = `${sectionConfig.title}：基于当前数据，各项指标表现正常，详情请参考具体数值。`;

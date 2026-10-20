@@ -7,7 +7,8 @@ const webServerEnv = {
     ...process.env,
     NEXT_PUBLIC_SUPABASE_URL: process.env.NEXT_PUBLIC_SUPABASE_URL ?? 'https://placeholder.supabase.co',
     NEXT_PUBLIC_SUPABASE_ANON_KEY: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? 'placeholder-anon-key',
-    OPENAI_API_KEY: process.env.OPENAI_API_KEY ?? 'sk-placeholder-for-e2e',
+    LLM_API_KEY: process.env.LLM_API_KEY ?? 'placeholder-llm-key',
+    LLM_BASE_URL: process.env.LLM_BASE_URL ?? 'http://127.0.0.1:9/v1',
     SUPABASE_SERVICE_ROLE_KEY: process.env.SUPABASE_SERVICE_ROLE_KEY ?? 'placeholder-service-role-key',
 };
 
