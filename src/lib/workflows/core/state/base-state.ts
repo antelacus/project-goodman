@@ -7,6 +7,7 @@
 
 import { BaseMessage } from "@langchain/core/messages";
 import { ToolExecutionResult } from "@/lib/tools/types";
+import type { Evidence } from "@/lib/citations";
 
 // ============================================================================
 // Core State Interfaces
@@ -79,6 +80,26 @@ export interface AgentRuntimeState {
         name: string;
         arguments: Record<string, unknown>;
     }>;
+    /** Searches run for this question; the budget is SEARCH_BUDGET (REQ §5.3). */
+    search: SearchStats;
+    /** Regulation search results numbered R1…Rn across this question's rounds. */
+    evidence: Evidence[];
+    /** A search request went over budget: the next turn answers with no tools. */
+    mustAnswer: boolean;
+    /** Evidence the final answer cites, for the response's sources. */
+    cited: Evidence[];
+}
+
+export interface SearchStats {
+    /** Searches executed (requests over budget are not counted). */
+    used: number;
+    /** Executed searches that errored. */
+    failed: number;
+    regulationSearched: boolean;
+}
+
+export function newQuestionState(): Pick<AgentRuntimeState, "search" | "evidence" | "mustAnswer" | "cited"> {
+    return { search: { used: 0, failed: 0, regulationSearched: false }, evidence: [], mustAnswer: false, cited: [] };
 }
 
 /**

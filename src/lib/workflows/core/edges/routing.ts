@@ -1,36 +1,25 @@
 /**
  * Routing Edges
  *
- * Conditional edges for the Unified Agent Graph.
- * Decides whether to invoke tools or finish.
+ * Conditional edges for the Unified Agent Graph. Every path ends in an answer
+ * that has gone through citation post-processing: when the loop would stop
+ * with tool calls still pending (iteration limit) or a search went over
+ * budget, forceAnswer gets one turn with no tools (DESIGN §4).
  */
 
 import { BaseAgentState } from "../state/base-state";
 
-/**
- * Decides the next node after the Agent Loop
- *
- * @param state Current graph state
- * @returns 'toolNode' | 'generateResponse' | 'end'
- */
-export function shouldContinue(state: BaseAgentState): "toolNode" | "generateResponse" | "end" {
-    const { agent } = state;
-    const { currentIteration, maxIterations, pendingToolCalls } = agent;
-
-    // 1. Check for max iterations validation
+export function afterAgentLoop(state: BaseAgentState): "toolExecutor" | "forceAnswer" | "finalizeAnswer" {
+    const { currentIteration, maxIterations, pendingToolCalls } = state.agent;
+    if (pendingToolCalls.length === 0) return "finalizeAnswer";
     if (currentIteration >= maxIterations) {
         console.warn(`Agent reached max iterations (${maxIterations})`);
-        return "generateResponse"; // Force a response (Agent should have concluded or we force it)
+        return "forceAnswer";
     }
+    return "toolExecutor";
+}
 
-    // 2. If tools are requested, go to tool executor
-    if (pendingToolCalls && pendingToolCalls.length > 0) {
-        return "toolNode";
-    }
-
-    // 3. If explicit complete flag (or no tools and no complete flag, usually implies text response)
-    // In the loop node, we set isComplete = toolCalls.length === 0
-    // So if we are here, isComplete is true.
-
-    return "generateResponse";
+export function afterTools(state: BaseAgentState): "agentLoop" | "forceAnswer" {
+    const { mustAnswer, currentIteration, maxIterations } = state.agent;
+    return mustAnswer || currentIteration >= maxIterations ? "forceAnswer" : "agentLoop";
 }

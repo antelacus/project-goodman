@@ -14,7 +14,7 @@ import { chatWithTools, type ChatMessage } from "@/lib/ai";
  * Convert LangChain messages to OpenAI format
  * Properly handles AIMessage tool_calls and ToolMessage tool_call_id
  */
-function convertToOpenAIMessages(
+export function convertToOpenAIMessages(
     messages: BaseMessage[]
 ): ChatMessage[] {
     return messages.map(msg => {
