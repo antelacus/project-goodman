@@ -21,6 +21,10 @@ export interface ReportContent {
  * Executive summary with key findings
  */
 export interface ReportSummary {
+  /** Absent on reports saved before v4.7.0, which read as 'ok'. */
+  status?: 'ok' | 'not_generated';
+  /** Shown in place of the summary when not generated. */
+  reason?: string;
   keyFindings: string[];          // Key findings (3-5 items)
   riskWarnings: string[];         // Risk warnings (0-3 items)
   recommendations: string[];      // Improvement suggestions (3-5 items)
@@ -33,7 +37,9 @@ export interface ReportSection {
   id: ReportSectionId;              // 'liquidity', 'solvency', etc.
   title: string;                    // '流动性分析'
   metrics: ReportMetric[];          // Metrics for this section
-  analysis: string;                 // LLM-generated analysis text
+  analysis: string;                 // LLM-generated analysis text, or the failure text
+  /** Absent on reports saved before v4.7.0, which read as 'ok'. */
+  analysisStatus?: 'ok' | 'failed';
   sourceDocuments: ReportSourceReference[];
 }
 

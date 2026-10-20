@@ -14,7 +14,7 @@ export const runtime = "nodejs";
 
 import { NextRequest, NextResponse } from "next/server";
 import ExcelJS from "exceljs";
-import { readDocumentText } from "@/lib/ai";
+import { readDocumentText, AIUnavailableError, AI_FAILURE_TEXT } from "@/lib/ai";
 import { getLLMClient } from "@/lib/ai/client";
 import { EMBEDDING_MODEL } from "@/lib/ai/config";
 import { createServerSupabaseClient } from "@/lib/database";
@@ -471,6 +471,12 @@ export async function POST(req: NextRequest) {
         route: '/api/documents/upload-temp',
       });
       logWorkflowFailure('EXTRACTION_FAILED');
+      if (error instanceof AIUnavailableError) {
+        return NextResponse.json(
+          { success: false, error: 'ai_unavailable', message: AI_FAILURE_TEXT.extraction, requestId },
+          { status: 503, headers: { 'X-Request-ID': requestId } }
+        );
+      }
       return createErrorResponse(error, requestId, 500, {
         errorType: 'EXTRACTION_FAILED',
         route: '/api/documents/upload-temp',

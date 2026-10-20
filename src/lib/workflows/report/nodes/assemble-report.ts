@@ -6,7 +6,7 @@
  */
 
 import { z } from 'zod';
-import { generateJSON } from '@/lib/ai';
+import { generateJSON, AIUnavailableError, AI_FAILURE_TEXT } from '@/lib/ai';
 import type { ReportWorkflowState } from '../state';
 import type { ReportContent, ReportSection, ReportSummary } from '@/types/report';
 import { buildSummaryPrompt, REPORT_ANALYST_SYSTEM } from '../prompts';
@@ -17,14 +17,24 @@ const SummarySchema = z.object({
   recommendations: z.array(z.string()),
 });
 
+function notGenerated(reason: string): ReportSummary {
+  return { status: 'not_generated', reason, keyFindings: [], riskWarnings: [], recommendations: [] };
+}
+
 /**
- * Generate executive summary using LLM
+ * Generate executive summary using LLM. A summary drawn from a report with a
+ * failed section would state conclusions the report does not support, so it is
+ * not attempted (REQ §5.2).
  */
 async function generateSummary(
   sections: ReportSection[],
   year: string,
   comparisonYear?: string
 ): Promise<ReportSummary> {
+  if (sections.some(s => s.analysisStatus === 'failed')) {
+    return notGenerated(AI_FAILURE_TEXT.summarySectionsFailed);
+  }
+
   const prompt = buildSummaryPrompt(
     sections.map(s => ({ title: s.title, analysis: s.analysis })),
     year,
@@ -32,22 +42,17 @@ async function generateSummary(
   );
 
   try {
-    return await generateJSON({
+    const summary = await generateJSON({
       purpose: 'reportSummary',
       system: REPORT_ANALYST_SYSTEM,
       prompt,
       schema: SummarySchema,
     });
+    return { status: 'ok', ...summary };
   } catch (error) {
-    console.error('Error generating summary:', error);
+    if (!(error instanceof AIUnavailableError)) throw error;
+    return notGenerated(AI_FAILURE_TEXT.summaryUnavailable);
   }
-
-  // Fallback summary
-  return {
-    keyFindings: ['财务数据已汇总完成，详细分析请参阅各章节内容。'],
-    riskWarnings: [],
-    recommendations: ['建议结合行业数据进行深入分析。'],
-  };
 }
 
 /**
@@ -87,7 +92,8 @@ export async function assembleReportNode(
           id: sectionData.id as ReportSection['id'],
           title: sectionData.title,
           metrics: [],
-          analysis: sectionData.error || '该章节生成失败',
+          analysis: '该章节生成失败',
+          analysisStatus: 'failed',
           sourceDocuments: [],
         });
       }
@@ -135,11 +141,7 @@ export async function assembleReportNode(
         year,
         comparisonYear,
         sections: [],
-        summary: {
-          keyFindings: ['报告生成过程中出现错误'],
-          riskWarnings: [errorMessage],
-          recommendations: ['请稍后重试或联系管理员'],
-        },
+        summary: notGenerated('摘要未生成：报告生成出错'),
       },
       meta: {
         ...state.meta,

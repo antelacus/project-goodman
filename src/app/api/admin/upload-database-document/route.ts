@@ -18,7 +18,7 @@ import { createServerSupabaseClient } from "@/lib/database";
 import type { InsertTables, Database } from "@/lib/database";
 import { SupabaseClient } from "@supabase/supabase-js";
 import { logWorkflowEvent } from "@/lib/logging";
-import { readDocumentText } from "@/lib/ai";
+import { readDocumentText, AIUnavailableError, AI_FAILURE_TEXT } from "@/lib/ai";
 import { getLLMClient } from "@/lib/ai/client";
 import { EMBEDDING_MODEL } from "@/lib/ai/config";
 import {
@@ -187,6 +187,111 @@ async function extractTextFromFile(
 
   // If no extension match, assume it's already text
   return fileData;
+}
+
+type FinancialRow = Omit<InsertTables<'financial_data'>, 'document_id'>;
+
+interface ValidationReport {
+  year: string;
+  period: string;
+  isValid: boolean;
+  errors: string[];
+  warnings: string[];
+}
+
+interface FinancialRows {
+  rows: FinancialRow[];
+  validationReports: ValidationReport[];
+}
+
+function isFinancialStatementType(documentType: string): documentType is FinancialStatementType {
+  return documentType === "balance_sheet" || documentType === "income_statement" || documentType === "cash_flow";
+}
+
+/**
+ * Extracts every period of a financial statement and validates all of them.
+ * Returns the rows to insert only when every period is valid, so a failing
+ * period never leaves the others half-written (REQ §5.2).
+ */
+async function extractFinancialRows(req: {
+  documentType: FinancialStatementType;
+  extractedText: string;
+  fileName: string;
+  documentText: string;
+  columnMapping?: ColumnMapping;
+  year?: string;
+  period?: string;
+  startDate?: string;
+  endDate?: string;
+}): Promise<FinancialRows | { invalid: ValidationReport }> {
+  const { documentType, columnMapping } = req;
+  let aiResult: FinancialExtractionWithType;
+
+  if (columnMapping) {
+    console.log("[Admin Upload] Starting Column-based extraction...");
+    const extractionOptions: ColumnExtractionOptions = {
+      year: req.year,
+      period: req.period,
+      startDate: req.startDate,
+      endDate: req.endDate,
+    };
+    const columnResult = await performColumnBasedExtraction(
+      Buffer.from(req.documentText, 'base64'),
+      columnMapping,
+      req.startDate || '',
+      req.endDate || '',
+      documentType,
+      extractionOptions
+    );
+    aiResult = { type: documentType, data: columnResult.data };
+  } else {
+    console.log("[Admin Upload] Starting AI-driven extraction...");
+    aiResult = await performAIExtraction(req.extractedText, req.fileName);
+  }
+
+  const rows: FinancialRow[] = [];
+  const validationReports: ValidationReport[] = [];
+
+  for (const item of aiResult.data) {
+    // REASON: AI extraction returns content keyed by the standard Chinese metric
+    // names. Cast via `unknown` is safer than `any` for validation.
+    let validationResult;
+    if (aiResult.type === 'balance_sheet') {
+      validationResult = validateBalanceSheet(item.content as unknown as StandardBalanceSheet);
+    } else if (aiResult.type === 'income_statement') {
+      validationResult = validateIncomeStatement(item.content as unknown as StandardIncomeStatement);
+    } else {
+      validationResult = validateCashFlow(item.content as unknown as StandardCashFlow);
+    }
+
+    const report: ValidationReport = {
+      year: item.year,
+      period: item.period,
+      isValid: validationResult.isValid,
+      errors: validationResult.errors,
+      warnings: validationResult.warnings,
+    };
+    if (!report.isValid) return { invalid: report };
+    validationReports.push(report);
+
+    for (const [name, value] of Object.entries(item.content)) {
+      if (value === null || value === undefined) continue;
+      rows.push({
+        data_type: documentType,
+        year: item.year,
+        period: item.period,
+        metric_name: name,
+        metric_value: value,
+        unit: '元',
+        metadata: {
+          confidence: columnMapping ? 1.0 : 0.9,
+          validation_errors: validationResult.errors,
+        },
+      });
+    }
+  }
+
+  return { rows, validationReports };
 }
 
 /**
@@ -365,6 +470,26 @@ export async function POST(request: NextRequest) {
       documentType
     );
 
+    // Step 1b: Financial statements are extracted and every period validated
+    // before anything is written, so a failure leaves the database untouched.
+    let financialRows: FinancialRows | null = null;
+    if (isFinancialStatementType(documentType)) {
+      const result = await extractFinancialRows({
+        documentType, extractedText, fileName, documentText, columnMapping, year, period, startDate, endDate,
+      });
+      if ('invalid' in result) {
+        const { year: badYear, period: badPeriod, errors } = result.invalid;
+        console.warn(`[Admin Upload] Validation failed for ${badYear}:`, errors);
+        return createErrorResponse(
+          new Error(`Validation failed for ${badYear} (${badPeriod}): ${errors.join('；')}`),
+          requestId,
+          400,
+          { errorType: 'VALIDATION', route: '/api/admin/upload-database-document' }
+        );
+      }
+      financialRows = result;
+    }
+
     // Step 2: Chunk the document for vector storage
     const chunks = chunkDocument(extractedText, 1000, 200);
     console.log(`[Admin Upload] Created ${chunks.length} chunks`);
@@ -469,140 +594,25 @@ export async function POST(request: NextRequest) {
     // Step 6: Store structured data based on document type
     const structuredDataSummary: UploadResponse["structuredData"] = {};
 
-    // --- AI-Driven Extraction & Validation ---
-    if (
-      documentType === "balance_sheet" ||
-      documentType === "income_statement" ||
-      documentType === "cash_flow"
-    ) {
-      let aiResult: FinancialExtractionWithType;
-
-      if (columnMapping) {
-        console.log("[Admin Upload] Starting Column-based extraction...");
-        // Convert base64 to buffer for column extraction
-        const fileBuffer = Buffer.from(documentText, 'base64');
-
-        // Pass year/period from form to column extraction
-        const extractionOptions: ColumnExtractionOptions = {
-          year: year,
-          period: period,
-          startDate: startDate,
-          endDate: endDate
-        };
-
-        const columnResult = await performColumnBasedExtraction(
-          fileBuffer,
-          columnMapping,
-          startDate || '',
-          endDate || '',
-          documentType,
-          extractionOptions
-        );
-        // Add type to column extraction result
-        aiResult = {
-          type: documentType as FinancialStatementType,
-          data: columnResult.data
-        };
-      } else {
-        console.log("[Admin Upload] Starting AI-driven extraction...");
-        // Perform AI Extraction
-        aiResult = await performAIExtraction(extractedText, fileName);
-      }
-
-      let totalMetricsStored = 0;
-      const validationReports: Array<{
-        year: string;
-        period: string;
-        isValid: boolean;
-        errors: string[];
-        warnings: string[];
-      }> = [];
-
-      // 2. Process each extracted period (e.g., 2021, 2020)
-      for (const item of aiResult.data) {
-        console.log(`[Admin Upload] Processing data for ${item.year} (${item.period})...`);
-
-        // 3. Validate Data based on document type
-        // REASON: AI extraction returns FinancialStatementContent with Chinese keys matching
-        // Standard schema structure. Cast via `unknown` is safer than `any` for validation.
-        let validationResult;
-        if (aiResult.type === 'balance_sheet') {
-          validationResult = validateBalanceSheet(item.content as unknown as StandardBalanceSheet);
-        } else if (aiResult.type === 'income_statement') {
-          validationResult = validateIncomeStatement(item.content as unknown as StandardIncomeStatement);
-        } else {
-          validationResult = validateCashFlow(item.content as unknown as StandardCashFlow);
-        }
-
-        validationReports.push({
-          year: item.year,
-          period: item.period,
-          isValid: validationResult.isValid,
-          errors: validationResult.errors,
-          warnings: validationResult.warnings
-        });
-
-        if (!validationResult.isValid) {
-          console.warn(`[Admin Upload] Validation failed for ${item.year}:`, validationResult.errors);
-          return createErrorResponse(
-            new Error(
-              `Validation failed for ${item.year} (${item.period}): ${validationResult.errors.join('；')}`
-            ),
-            requestId,
-            400,
-            {
-              errorType: 'VALIDATION',
-              route: '/api/admin/upload-database-document',
-            }
-          );
-        }
-
-        // 4. Transform to standard metrics format for DB storage
-        // We need to flatten the object { "货币资金": 100 } -> [{ name: '货币资金', value: 100 }]
-        // Note: We filter out null values below, so the array only contains valid numbers
-        const metrics: Array<{ name: string; value: number; unit: string }> = [];
-
-        for (const [key, value] of Object.entries(item.content)) {
-          if (value !== null && value !== undefined) {
-            // The key is already the Chinese name (from the updated schema)
-            metrics.push({
-              name: key,
-              value: value,
-              unit: '元'
-            });
-          }
-        }
-
-        // 5. Store in Database with proper typing
-        const records: InsertTables<'financial_data'>[] = metrics.map((metric) => ({
-          document_id: documentId,
-          data_type: documentType,
-          year: item.year,
-          period: item.period,
-          metric_name: metric.name,
-          metric_value: metric.value,
-          unit: metric.unit,
-          metadata: {
-            confidence: columnMapping ? 1.0 : 0.9,
-            validation_errors: validationResult.errors
-          },
-        }));
-
-        if (records.length > 0) {
-          const { error } = await supabase.from("financial_data").insert(records);
-          if (error) throw error;
-          totalMetricsStored += records.length;
+    if (financialRows) {
+      // All periods passed validation above; one insert writes them together.
+      const records = financialRows.rows.map(row => ({ ...row, document_id: documentId }));
+      if (records.length > 0) {
+        const { error } = await supabase.from("financial_data").insert(records);
+        if (error) {
+          await supabase.from("documents").delete().eq("id", documentId);
+          throw error;
         }
       }
 
-      console.log(`[Admin Upload] Extraction complete. Stored ${totalMetricsStored} metrics.`);
+      console.log(`[Admin Upload] Extraction complete. Stored ${records.length} metrics.`);
 
       logWorkflowSuccess();
       return createJsonResponse({
         success: true,
         documentId,
         message: columnMapping ? "Document processed successfully with Column-based extraction" : "Document processed successfully with AI extraction",
-        validationReports // Return validation results to frontend
+        validationReports: financialRows.validationReports,
       });
     }
     else if (documentType === "regulation" || documentType === "accounting_standard" || documentType === "policy") {
@@ -661,6 +671,13 @@ export async function POST(request: NextRequest) {
 
   } catch (error: unknown) {
     console.error("[Admin Upload] Error:", error);
+    if (error instanceof AIUnavailableError) {
+      logWorkflowFailure('EXTRACTION_FAILED');
+      return createJsonResponse(
+        { success: false, message: AI_FAILURE_TEXT.extraction, error: 'ai_unavailable' } as UploadResponse,
+        503
+      );
+    }
     logWorkflowFailure('INTERNAL');
     return createErrorResponse(error, requestId, 500, {
       errorType: 'INTERNAL',

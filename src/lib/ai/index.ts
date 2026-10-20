@@ -16,6 +16,7 @@ import { MODEL, PURPOSES, type AIPurpose } from './config';
 import { getPromptContent } from './prompts';
 
 export type { AIPurpose } from './config';
+export { AI_FAILURE_TEXT } from './failure-text';
 export type ChatMessage = OpenAI.Chat.ChatCompletionMessageParam;
 export type ToolDefinition = OpenAI.Chat.ChatCompletionTool;
 

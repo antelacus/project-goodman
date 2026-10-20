@@ -133,6 +133,11 @@ function buildSummarySection(report: ReportContent): Paragraph[] {
 
   summaryParagraphs.push(buildHeading('执行摘要', HeadingLevel.HEADING_1));
 
+  if (report.summary.status === 'not_generated') {
+    summaryParagraphs.push(buildTextParagraph(report.summary.reason ?? ''));
+    return summaryParagraphs;
+  }
+
   if (report.summary.keyFindings.length > 0) {
     summaryParagraphs.push(buildHeading('关键发现', HeadingLevel.HEADING_2));
     summaryParagraphs.push(...buildBulletList(report.summary.keyFindings));
