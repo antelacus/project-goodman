@@ -37,6 +37,9 @@
   - 2026-10-21 · 文档检索排除法规与会计准则（推翻 REQ §5.7 原先的"范围不变"）；理由：评测第一轮口语法规题经文档检索读到准则原文作答，没有证据编号，也不触发资料库外标注，绕开了出处保证 · Jason · 级联：REQ §5.7（新增 §doc-search-no-regulation）、DESIGN §5
   - 2026-10-21 · 检索评测查询集（20 条）审定 · Jason · 级联：`scripts/eval-retrieval-queries.json`
   - 2026-10-21 · doc-5 未命中（表格被切块切开）本版接受，登记 TD-033 · Jason · 级联：`docs/TECHNICAL_DEBT.md`
+  - 2026-10-21 · 检索分流按问题性质：问规则本身（准则、税法怎么规定）必须查法规检索，以原文为准；问公司自己的做法查文档；两者都涉及时都查、分开说明。推翻原先的"未明确要求查准则时先查公司文档"；理由：评测第三轮 7 道法规题都以年报转述的会计政策作答，没有查准则 · Jason · 级联：`chat-system.md` v1.5
+  - 2026-10-21 · 文档检索每份文档最多返回 2 块；理由：年报 135 块占满前 5 条，公司制度排到 20 名之外 · Jason · 级联：DESIGN §5
+  - 2026-10-21 · §retrieval-quality 以连续两轮评测都达标为准；理由：模型每轮选的关键词不同，单轮波动大 · Jason · 级联：REQ §5.3
 
 ## 二、批次
 
@@ -46,7 +49,7 @@
 | B2 失败不编造 | 完成 | 报告章节与摘要状态、三处渲染、对话失败文案、两个上传入口的提取失败与多期间一次写入、冒烟检查 · §report-section-failure、§report-summary-failure、§chat-failure、§extract-failure、§smoke-report | B1 |
 | B3 条款重新拆分 | 完成 | `regulation-splitter`（逐页、连续编号、无归属正文）、管理员上传改用并在存储失败时失败、`replace_regulation_articles`、`resplit-regulations` 脚本与异常清单（Jason 裁定后才替换）· §reg-split-rule、§reg-integrity、§reg-upload-dup、§reg-upload-storage | — |
 | B4 关键词检索与引用 | 完成 | PGroonga 迁移（生成列、索引、3 个函数）、`src/lib/search/`、两个工具与证据编号、检索预算与 `forceAnswer`、`src/lib/citations/`、过程日志链接、系统提示词、上传去向量、数据库层测试 · §reg-search-citation、§search-rounds、§keyword-match、§citation-text、§citation-link、§out-of-library、§retrieval-error、§doc-search、§upload-no-embedding、§no-embedding-calls | B1、B3（替换完成） |
-| B5 评测 | 进行中（脚本完成；查询集待 Jason 审定；第一轮发现检索范围问题待裁定） | 记忆存储注入、查询集（Claude 起草、Jason 审定）与 `eval-retrieval` 脚本 · §retrieval-quality，以及 §out-of-library 的评测部分 | B4 |
+| B5 评测 | 进行中（查询集已审定；检索范围、分流、每文档上限已按裁定修改；待两轮正式评测） | 记忆存储注入、查询集（Claude 起草、Jason 审定）与 `eval-retrieval` 脚本 · §retrieval-quality，以及 §out-of-library 的评测部分 | B4 |
 
 Phase 6：§vector-removed（删除向量列、向量函数、`backup` schema）。
 
