@@ -129,7 +129,7 @@ loadMemory → agentLoop ⇄ toolExecutor（检索 ≤ 3 次）
 
 新增数据库函数：
 
-- `search_regulation_articles(p_keywords text[], p_limit)`、`search_knowledge_chunks(p_keywords text[], p_limit, p_year, p_doc_types text[])`：关键词以数组传入，函数内逐个规整（康熙部首映射、去空白）与转义后以 OR 组合；先按命中的不同关键词个数、再按 `scorer_tf_idf` 排序（只用 TF-IDF 时，一条把同一个词重复多次的条款会排在两个词都含的条款前面）；后者把资料库范围写死（就绪的知识文档，排除 `regulation`、`accounting_standard`）。检索列 `search_text` 由 `search_normalize(content)` 生成。
+- `search_regulation_articles(p_keywords text[], p_limit)`、`search_knowledge_chunks(p_keywords text[], p_limit, p_year, p_doc_types text[])`：关键词以数组传入，函数内逐个规整（康熙部首映射、去空白）与转义后以 OR 组合；先按命中的不同关键词个数、再按 `scorer_tf_idf` 排序（只用 TF-IDF 时，一条把同一个词重复多次的条款会排在两个词都含的条款前面）；后者把资料库范围写死（就绪的知识文档，排除 `regulation`、`accounting_standard`），且每份文档最多返回 2 块：年报的切块数是其他文档的十倍，其附注表格又含同样的会计术语，不加限制时会占满前几条，把公司制度挤出去。检索列 `search_text` 由 `search_normalize(content)` 生成。
 - `replace_regulation_articles(p_document_id, p_articles jsonb)`：一个函数调用即一个事务，删去该文档的旧条款、插入新条款；可重复执行。
 
 Phase 6 删除：`match_documents`、`search_documents_hybrid`、`search_regulations_hybrid`、`embedding` 列、`backup` schema（含备份表）、`vector` 扩展（若无他用）。删除语句由 Jason 在控制台执行（§8）。
