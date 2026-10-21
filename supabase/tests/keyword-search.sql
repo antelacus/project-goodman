@@ -1,4 +1,4 @@
--- §keyword-match and §doc-search (REQ §5.3, §5.7), against the real search
+-- §keyword-match, §doc-search and §doc-search-no-regulation (REQ §5.3, §5.7), against the real search
 -- functions. Synthetic rows only, inside one transaction that is rolled back:
 -- run through the Supabase MCP (execute_sql); a failed assertion raises.
 begin;
@@ -18,7 +18,8 @@ insert into structured_regulations (document_id, regulation_name, article_number
 insert into document_chunks (id, document_id, chunk_index, content) values
   ('test-kw-c1', 'test-kw-knowledge', 0, E'合成差旅报销标准：\n高铁二等座。'),
   ('test-kw-c2', 'test-kw-business', 0, '合成差旅报销标准：用户自己的文档。'),
-  ('test-kw-c3', 'test-kw-pending', 0, '合成差旅报销标准：尚未就绪的文档。');
+  ('test-kw-c3', 'test-kw-pending', 0, '合成差旅报销标准：尚未就绪的文档。'),
+  ('test-kw-c4', 'test-kw-regulation', 0, '合成差旅报销标准：准则原文的切块。');
 
 do $$
 declare
@@ -37,12 +38,18 @@ begin
     raise exception '§keyword-match failed: Kangxi keyword did not match';
   end if;
 
-  -- §doc-search: only the ready knowledge document is returned.
+  -- §doc-search: only the ready knowledge document is returned; regulation text
+  -- is not, even when the regulation's type is asked for (§doc-search-no-regulation).
   select array_agg(document_id) into hits
   from search_knowledge_chunks(array['合成差旅'], 10)
   where document_id like 'test-kw-%';
   if hits is distinct from array['test-kw-knowledge'] then
     raise exception '§doc-search failed: %', hits;
+  end if;
+
+  if exists (select 1 from search_knowledge_chunks(array['合成差旅'], 10, null, array['accounting_standard', 'regulation'])
+             where document_id like 'test-kw-%') then
+    raise exception '§doc-search-no-regulation failed: regulation chunks returned';
   end if;
 
   raise notice 'keyword-search: all assertions passed';
