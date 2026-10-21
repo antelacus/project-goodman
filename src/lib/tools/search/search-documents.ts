@@ -2,7 +2,8 @@
  * Search Documents Tool
  *
  * Keyword search over the company's knowledge library (ready knowledge
- * documents only; the scope is fixed in the database).
+ * documents only, regulations and standards excluded; the scope is fixed in
+ * the database).
  */
 
 import { z } from "zod";
@@ -44,7 +45,7 @@ export const searchDocumentsTool: Tool<SearchDocumentsInput, SearchDocumentsData
   displayName: "搜索文档",
   displayNameEn: "Search Documents",
   description:
-    "按关键词检索公司资料库中的文档（公司档案、财务管理制度、财务报告等）。当需要查找公司的具体规定、经营情况或管理层讨论时使用。",
+    "按关键词检索公司资料库中的文档（公司档案、财务管理制度、财务报告等）。当需要查找公司的具体规定、经营情况或管理层讨论时使用。不含法规和会计准则原文，查法规准则用 search_regulations。",
   category: "search",
   inputSchema: SearchDocumentsInputSchema as z.ZodSchema<SearchDocumentsInput>,
   outputSchema: z.any(),
