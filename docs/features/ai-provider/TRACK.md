@@ -119,8 +119,25 @@ Phase 6：§vector-removed（删除向量列、向量函数、`backup` schema）
 - staging（v4.7.0 `8688445`，`.env.staging` 已加 `LLM_API_KEY`、`LLM_BASE_URL`，改前备份 `.env.staging.bak-20261022023844`，值经哈希核对一致）：部署后冒烟通过，含一次真实报告生成（约 98s，无失败章节）。
 - 未见过的真实输入（Claude 选题，经 staging 的对话接口，均不在查询集中）：① 生产设备由直线法改加速折旧，属政策变更还是估计变更 → 判为会计估计变更、未来适用法，引用 CAS4 第十四、十七、十九条与 CAS28 第九、十六条，5 条逐一对原文核对均支持所述内容，98s；② 增值税专用发票丢失怎么处理 → 开头标注"不是来自资料库"，无条款号，31s；③ 质保金按营收计提比例 → 引《财务管理制度》产品保修准备金（成熟产品 0.5–1.0%、新产品 1.5–2.0%），与原文一致，19s。
 - 未见过的真实上传（Jason 同意，数据目录中的一份真实银行借款合同 PDF，经 staging 的 `upload-temp`）：上传 2s 成功，14 个切块、无 embedding；选中该文档提问金额、利率、期限、还款方式与提前还款 → 20s 作答，各项逐一对原文核对一致，含原文未填写的利率基点与未约定的借款人提前还款。上传与测试后 VPS 上的临时文件已删除。
+- B6 之后的 staging 复演（`6467624`，含 B6 与 vite 7.3.7）：部署冒烟与 CI 均通过。上面三个未见过的问题重问一遍：① 判为会计估计变更，引用 CAS4 第十七、十九条与 CAS28 第九、十六条，4 条逐一对原文核对均支持，没有句子被删，102s（两轮法规检索）；② 标注"不是来自资料库"，无条款号，67s；③ 与《财务管理制度》原文一致，26s。借款合同（临时文档已过期，按同一用途重新上传）：14 个切块，29s 作答，与前一次结论一致；按"1.2 款"编号的条款没有被删。测试后 VPS 临时文件已删除。
 - 延迟观察：同一查询集各轮 P50 从 20.7s 到 54s 不等，relay 慢时单次调用常撞 60s 时限，用户看到"AI 服务暂时不可用"；一个问题含多次调用，最长约 121s 才看到失败提示。
 
-**Phase 6 boxes**：Phase 4 收尾时写入；已知必须包含：relay 用量上限已设（Jason）· VPS 上 staging、生产两份 `.env` 先后更新并备份，删除不再使用的 `OPENAI_API_KEY` · 生产验证后删除向量列、向量函数（REQ §5.8）· §vector-removed：删除后以 SQL 核对 `embedding` 列与向量检索函数均已不存在（P25）· TD-021 改写为 relay 现状 · TD-024 改写为本版测量值（P50 94.1s、P95 124.2s）与处理办法（章节并行调用，先测并行下 relay 的 529 率）
+**Phase 6 boxes**：
+
+- [ ] relay 用量上限已设（Jason）
+- [ ] 生产 `.env` 加 `LLM_API_KEY`、`LLM_BASE_URL`（改前备份，值经哈希核对）；staging、生产两份 `.env` 删除不再使用的 `OPENAI_API_KEY`
+- [ ] tag `v4.7.0` · [ ] 生产部署 + 核对 served SHA · [ ] 生产验证：冒烟、一个法规问题、一份报告
+- [ ] 生产验证后删除向量列、向量函数、Edge Function `embed`、`backup` schema（REQ §5.8；不可逆，Jason 在 Dashboard 执行）
+- [ ] §vector-removed：删除后以 SQL 核对 `embedding` 列与向量检索函数均已不存在（P25）
+- [ ] CHANGELOG
+- [ ] TECHNICAL_DEBT finalize：TD-021 改写为 relay 现状；TD-024 改写为本版测量值（P50 94.1s、P95 124.2s）与处理办法（章节并行调用，先测并行下 relay 的 529 率）；TD-031 处理版本裁定
+- [ ] user docs（帮助页：出处、资料库外标注） · [ ] README 仍然属实，只指路不复述
+- [ ] living-docs sweep（REQ / DESIGN / `ARCHITECTURE.md` 与上线版本一致）
+- [ ] old-value sweep：`text-embedding-3-small`、`OPENAI_API_KEY`、embedding / 向量检索（`.claude/agents/db-migration.md` 等）
+- [ ] announce · [ ] FEEDBACK sweep · [ ] roadmap 更新（`v4_DEVELOPMENT_PLAN.md` §3.11、§3.12）
+- [ ] gate readout：每道门 runs / 改变了输出的 catches
+- [ ] doc budgets green · [ ] memory prune
+- [ ] acceptance trigger 登记
+- [ ] **TRACK close（最后一项）**：未结事项转入 TECHNICAL_DEBT / FEEDBACK / REQ / DESIGN，然后 `git mv TRACK.md TRACK_v4.7.0.md`
 
 ## 四、Session-end pickup
