@@ -47,6 +47,7 @@
   - 2026-10-22 · 出处检查会删去回答中引用用户自己文档条款（"合同第五条"）的句子，本版接受，登记 TD-034 · Jason · 级联：`docs/TECHNICAL_DEBT.md`
   - 2026-10-22 · 相邻的引用（"[R1][R3]"）合并为一串显示，同一法规只写一次名称，在 Phase 5 修；理由：staging 复演中两条出处首尾相接、难读 · Jason · 级联：`src/lib/citations/`
   - 2026-10-22 · `/code-review` 10 条按 Claude 建议处理：V1–V4、V6–V8 修复；V5 以提示词缓解、TD-034 扩写并升为高；V9 不改；V10 加注释 · Jason · 级联：REQ §5.5、DESIGN §4、`chat-system.md` v1.6、`docs/TECHNICAL_DEBT.md`
+  - 2026-10-22 · relay 不提供用量上限；本版只靠现有的用户用量限制（访客按会话每小时 20 条消息、1 份报告，AI 接口按 IP 每分钟 20 次），按 token 设限留到后续版本 · Jason · 级联：TD-021（Phase 6 改写）
 
 ## 二、批次
 
@@ -142,13 +143,14 @@ Phase 6：§vector-removed（删除向量列、向量函数、`backup` schema）
 
 **Phase 6 boxes**：
 
-- [ ] relay 用量上限已设（Jason）
-- [ ] 生产 `.env` 加 `LLM_API_KEY`、`LLM_BASE_URL`（改前备份，值经哈希核对）；staging、生产两份 `.env` 删除不再使用的 `OPENAI_API_KEY`
+- [x] relay 用量上限：relay 不提供，按裁定改由现有用户用量限制承担（见裁定）
+- [x] 生产 `.env` 加 `LLM_API_KEY`、`LLM_BASE_URL`：改前备份 `.env.bak-20261022072513`，两值与本地、staging 哈希一致，其余行不变
+- [ ] 生产验证后：staging、生产两份 `.env` 删除不再使用的 `OPENAI_API_KEY`；VPS 上仓库外的 `/home/deploy/goodman/docker-compose.yml` 仍把 `OPENAI_API_KEY` 作为构建参数，与仓库的 `docker-compose.yml` 同步
 - [ ] tag `v4.7.0` · [ ] 生产部署 + 核对 served SHA · [ ] 生产验证：冒烟、一个法规问题、一份报告
 - [ ] 生产验证后删除向量列、向量函数、Edge Function `embed`、`backup` schema（REQ §5.8；不可逆，Jason 在 Dashboard 执行）
 - [ ] §vector-removed：删除后以 SQL 核对 `embedding` 列与向量检索函数均已不存在（P25）
 - [ ] CHANGELOG
-- [ ] TECHNICAL_DEBT finalize：TD-021 改写为 relay 现状；TD-024 改写为本版测量值（P50 94.1s、P95 124.2s）与处理办法（章节并行调用，先测并行下 relay 的 529 率）；TD-031 处理版本裁定
+- [ ] TECHNICAL_DEBT finalize：TD-021 改写为 relay 现状（无总量上限，只有用户用量限制；按 token 设限的版本）；TD-024 改写为本版测量值（P50 94.1s、P95 124.2s）与处理办法（章节并行调用，先测并行下 relay 的 529 率）；TD-031 处理版本裁定
 - [ ] user docs（帮助页：出处、资料库外标注） · [ ] README 仍然属实，只指路不复述
 - [ ] living-docs sweep（REQ / DESIGN / `ARCHITECTURE.md` 与上线版本一致）
 - [ ] old-value sweep：`text-embedding-3-small`、`OPENAI_API_KEY`、embedding / 向量检索（`.claude/agents/db-migration.md` 等）
