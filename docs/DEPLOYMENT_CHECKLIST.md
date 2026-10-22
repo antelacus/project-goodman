@@ -256,7 +256,7 @@ Same variables, but pointing to staging Supabase project.
 
 | Service | Dashboard |
 |---------|-----------|
-| OpenAI | platform.openai.com/usage |
+| AI relay | Provider console (prepaid balance) |
 | Supabase | Dashboard → Usage |
 | Sentry | sentry.io |
 | UptimeRobot | uptime.com |

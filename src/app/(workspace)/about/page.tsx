@@ -35,15 +35,15 @@ export default function AboutPage() {
         <div className="rounded-xl border border-neutral-200 bg-white p-6 shadow-sm">
           <h2 className="mb-4 text-xl font-semibold text-neutral-900">技术架构</h2>
           <p className="leading-relaxed text-neutral-600 mb-4">
-            基于现代 Web 技术栈与 LangGraph 框架构建，采用结构化数据与向量检索相结合的混合存储方案。
+            基于现代 Web 技术栈与 LangGraph 框架构建，财务数据结构化存储，法规与文档以中文关键词检索。
           </p>
           <div className="flex flex-wrap gap-2">
             <span className="px-2 py-1 bg-neutral-100 text-neutral-700 text-xs rounded-md">Next.js</span>
             <span className="px-2 py-1 bg-neutral-100 text-neutral-700 text-xs rounded-md">React</span>
             <span className="px-2 py-1 bg-neutral-100 text-neutral-700 text-xs rounded-md">LangGraph</span>
             <span className="px-2 py-1 bg-neutral-100 text-neutral-700 text-xs rounded-md">Supabase</span>
-            <span className="px-2 py-1 bg-neutral-100 text-neutral-700 text-xs rounded-md">PostgreSQL + pgvector</span>
-            <span className="px-2 py-1 bg-neutral-100 text-neutral-700 text-xs rounded-md">OpenAI API</span>
+            <span className="px-2 py-1 bg-neutral-100 text-neutral-700 text-xs rounded-md">PostgreSQL + PGroonga</span>
+            <span className="px-2 py-1 bg-neutral-100 text-neutral-700 text-xs rounded-md">OpenAI 兼容 API</span>
             <span className="px-2 py-1 bg-neutral-100 text-neutral-700 text-xs rounded-md">Redis</span>
             <span className="px-2 py-1 bg-neutral-100 text-neutral-700 text-xs rounded-md">Docker</span>
           </div>
@@ -58,8 +58,8 @@ export default function AboutPage() {
             <div className="mb-4 rounded-full bg-yellow-50 p-4 text-yellow-600">
               <Database size={32} />
             </div>
-            <h3 className="mb-2 font-semibold text-neutral-900">混合检索</h3>
-            <p className="text-sm text-neutral-500">向量语义搜索 + 关键词匹配，RRF 融合排序</p>
+            <h3 className="mb-2 font-semibold text-neutral-900">可核验的检索</h3>
+            <p className="text-sm text-neutral-500">中文关键词检索，法规出处由程序生成并链接原文</p>
           </div>
           <div className="flex flex-col items-center text-center rounded-xl border border-neutral-200 bg-white p-6 shadow-sm">
             <div className="mb-4 rounded-full bg-yellow-50 p-4 text-yellow-600">
@@ -125,7 +125,7 @@ export default function AboutPage() {
                     <span className="inline-flex items-center gap-1"><FileSpreadsheet size={14} /> 现金流量表</span>
                   </div>
                 </td>
-                <td className="px-6 py-4">指标提取 + 向量化</td>
+                <td className="px-6 py-4">指标提取 + 关键词索引</td>
                 <td className="px-6 py-4">需指定年份和期间，数据将存入结构化数据库</td>
               </tr>
               <tr className="hover:bg-neutral-50 transition-colors">
@@ -136,7 +136,7 @@ export default function AboutPage() {
                     <span className="inline-flex items-center gap-1"><BookOpen size={14} /> 会计准则</span>
                   </div>
                 </td>
-                <td className="px-6 py-4">条款结构化 + 向量化</td>
+                <td className="px-6 py-4">条款结构化 + 关键词索引</td>
                 <td className="px-6 py-4">要求文档遵循标准的&ldquo;第X条&rdquo;格式以便提取</td>
               </tr>
               <tr className="hover:bg-neutral-50 transition-colors">
@@ -148,8 +148,8 @@ export default function AboutPage() {
                     <span>规章制度</span>
                   </div>
                 </td>
-                <td className="px-6 py-4">仅向量化</td>
-                <td className="px-6 py-4">用于语义搜索，增强 AI 上下文理解</td>
+                <td className="px-6 py-4">仅关键词索引</td>
+                <td className="px-6 py-4">供 AI 检索公司自己的做法与资料</td>
               </tr>
             </tbody>
           </table>

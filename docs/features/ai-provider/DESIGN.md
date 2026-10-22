@@ -63,7 +63,7 @@ loadMemory → agentLoop ⇄ toolExecutor（检索 ≤ 3 次）
 | 财务人员 | `/api/chat/stream` | 检索改为 PGroonga；编号引用；AI 失败文案 |
 | 财务人员 | `/api/reports/generate`、`/api/reports/parse-config` | 失败状态；改走统一入口 |
 | 财务人员 | `/api/documents/upload-temp`、`/api/quick-actions/extract` | 不再生成向量；文字识别与提取走统一入口 |
-| 管理员 | `/api/admin/upload-database-document` | 不再生成向量；新拆分器；存储失败即失败；财务数据一次写入 |
+| 管理员 | `/api/admin/upload-database-document` | 不再生成向量；新拆分器（只有 `REGULATION_TYPES` 拆分条款，公司制度不拆）；PDF 只解析一次，分页结果供拆分；法规 PDF 没有文字层、拆出 0 条、条款号重复、页数不符或存储失败都使上传失败；财务数据一次写入 |
 | Claude（一次性） | `scripts/resplit-regulations.ts` | 新增 |
 | Claude（Phase 4） | `scripts/eval-retrieval.ts`、`supabase/tests/*.sql` | 新增 |
 | 部署 | `scripts/smoke-test-staging.js` | 检查报告失败状态 |
@@ -125,7 +125,7 @@ loadMemory → agentLoop ⇄ toolExecutor（检索 ≤ 3 次）
 |----|------|---------|
 | `structured_regulations` | 一行 = 一部法规的一条条款 | 数据整体替换（REQ §5.6）；新增生成列 `search_text`（去掉换行的正文）及其 PGroonga 索引 |
 | `backup.structured_regulations_v4_6` | 替换前的整表副本（`backup` schema 不经 Data API 暴露，无需授权） | 新增；Phase 6 删除 |
-| `document_chunks` | 一行 = 一个文档切块 | 新增生成列 `search_text` 及 PGroonga 索引；`embedding` 列 Phase 6 删除 |
+| `document_chunks` | 一行 = 一个文档切块 | 新增生成列 `search_text` 及 PGroonga 索引；`embedding` 列已删除（`20261022073400_remove_vector_search`） |
 | `documents` | 一行 = 一份文档 | 不变 |
 
 新增数据库函数：
@@ -133,7 +133,7 @@ loadMemory → agentLoop ⇄ toolExecutor（检索 ≤ 3 次）
 - `search_regulation_articles(p_keywords text[], p_limit)`、`search_knowledge_chunks(p_keywords text[], p_limit, p_year, p_doc_types text[])`：关键词以数组传入，函数内逐个规整（康熙部首映射、去空白）与转义后以 OR 组合；先按命中的不同关键词个数、再按 `scorer_tf_idf` 排序（只用 TF-IDF 时，一条把同一个词重复多次的条款会排在两个词都含的条款前面）；后者把资料库范围写死（就绪的知识文档，排除 `regulation`、`accounting_standard`），且每份文档最多返回 2 块：年报的切块数是其他文档的十倍，其附注表格又含同样的会计术语，不加限制时会占满前几条，把公司制度挤出去。检索列 `search_text` 由 `search_normalize(content)` 生成。
 - `replace_regulation_articles(p_document_id, p_articles jsonb)`：一个函数调用即一个事务，删去该文档的旧条款、插入新条款；可重复执行。
 
-Phase 6 删除：`match_documents`、`search_documents_hybrid`、`search_regulations_hybrid`、`embedding` 列、`backup` schema（含备份表）、`vector` 扩展（若无他用）。删除语句由 Jason 在控制台执行（§8）。
+已删除（`20261022073400_remove_vector_search`、`20261022074600_drop_vector_extension`）：`match_documents`、`search_documents_hybrid`、`search_regulations_hybrid`、`embedding` 列、`backup` schema（含备份表）、`vector` 扩展。删除语句由 Jason 在控制台执行，同一事务写入迁移记录（§8）。
 
 迁移规则：本版迁移只增不删，直到 Phase 6（REQ §6.1）。每个迁移经 Supabase MCP 执行后，以数据库登记的编号同时提交到 `supabase/migrations/`（TD-031）。逐列定义见 `src/lib/database/types.ts`，迁移后重新生成。
 

@@ -201,7 +201,7 @@ Receipts (收据):
 
 - Next.js / React / TypeScript
 - Supabase (Postgres) + Redis
-- LangGraph + OpenAI
+- LangGraph + OpenAI 兼容的 AI relay
 - Tailwind CSS
 - Vitest + Playwright + Lighthouse CI + axe + autocannon
 - Sentry + UptimeRobot

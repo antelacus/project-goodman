@@ -10,7 +10,6 @@ export type DocumentSummary = {
 export type DocumentChunk = {
   id: string;
   text: string;
-  embedding: number[];
   chunkIndex: number;
 };
 
