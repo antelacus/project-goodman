@@ -63,7 +63,7 @@ loadMemory → agentLoop ⇄ toolExecutor（检索 ≤ 3 次）
 | 财务人员 | `/api/chat/stream` | 检索改为 PGroonga；编号引用；AI 失败文案 |
 | 财务人员 | `/api/reports/generate`、`/api/reports/parse-config` | 失败状态；改走统一入口 |
 | 财务人员 | `/api/documents/upload-temp`、`/api/quick-actions/extract` | 不再生成向量；文字识别与提取走统一入口 |
-| 管理员 | `/api/admin/upload-database-document` | 不再生成向量；新拆分器；存储失败即失败；财务数据一次写入 |
+| 管理员 | `/api/admin/upload-database-document` | 不再生成向量；新拆分器（只有 `REGULATION_TYPES` 拆分条款，公司制度不拆）；PDF 只解析一次，分页结果供拆分；法规 PDF 没有文字层、拆出 0 条、条款号重复、页数不符或存储失败都使上传失败；财务数据一次写入 |
 | Claude（一次性） | `scripts/resplit-regulations.ts` | 新增 |
 | Claude（Phase 4） | `scripts/eval-retrieval.ts`、`supabase/tests/*.sql` | 新增 |
 | 部署 | `scripts/smoke-test-staging.js` | 检查报告失败状态 |
@@ -125,7 +125,7 @@ loadMemory → agentLoop ⇄ toolExecutor（检索 ≤ 3 次）
 |----|------|---------|
 | `structured_regulations` | 一行 = 一部法规的一条条款 | 数据整体替换（REQ §5.6）；新增生成列 `search_text`（去掉换行的正文）及其 PGroonga 索引 |
 | `backup.structured_regulations_v4_6` | 替换前的整表副本（`backup` schema 不经 Data API 暴露，无需授权） | 新增；Phase 6 删除 |
-| `document_chunks` | 一行 = 一个文档切块 | 新增生成列 `search_text` 及 PGroonga 索引；`embedding` 列 Phase 6 删除 |
+| `document_chunks` | 一行 = 一个文档切块 | 新增生成列 `search_text` 及 PGroonga 索引；`embedding` 列已删除（`20261022073400_remove_vector_search`） |
 | `documents` | 一行 = 一份文档 | 不变 |
 
 新增数据库函数：

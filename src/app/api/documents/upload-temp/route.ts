@@ -409,7 +409,7 @@ export async function POST(req: NextRequest) {
         if (chunksError) {
           // Rollback document
           await supabase.from('documents').delete().eq('id', documentId);
-          throw new Error(`向量存储失败: ${chunksError.message}`);
+          throw new Error(`切块存储失败: ${chunksError.message}`);
         }
       }
 

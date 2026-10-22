@@ -80,9 +80,10 @@
 ### 3.2 对话与报告生成
 
 1. 用户输入 → `/api/chat/stream`
-2. LangGraph 选择工具（结构化数据/文档检索/计算）
+2. LangGraph 选择工具（结构化数据/法规检索/文档检索/计算）
 3. 过程日志事件写入 SSE 流
-4. 输出最终答案或报告
+4. 最终答案经出处核对（`src/lib/citations/`）：证据编号换成法规条款，自写的条款号删去，资料库外的回答加标注
+5. 输出最终答案或报告
 
 ### 3.3 健康检查
 
@@ -102,8 +103,8 @@
 
 ## 5. 依赖与外部服务
 
-- **OpenAI API**：LLM 推理与生成
-- **Supabase**：数据库与存储
+- **AI relay**（OpenAI 兼容）：LLM 推理与生成；预付费，模型与时限见 `src/lib/ai/config.ts`，外部约束见 `docs/features/ai-provider/DESIGN.md` §8
+- **Supabase**：数据库（PGroonga 关键词检索）与存储
 - **可观测性**：Sentry + UptimeRobot（SaaS）
 
 ---

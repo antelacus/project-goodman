@@ -89,7 +89,7 @@ export default function HomePage() {
                                 <FileText size={32} />
                             </div>
                             <h3 className="text-xl font-bold text-gray-900 mb-3">数据信息检索</h3>
-                            <p className="text-gray-500 text-base mb-6 text-center leading-relaxed">agent 自动检索数据库中的财务数据，并支持文档内容的语义搜索。</p>
+                            <p className="text-gray-500 text-base mb-6 text-center leading-relaxed">agent 自动检索数据库中的财务数据，并按关键词检索法规原文与公司文档。</p>
                         </div>
 
                         {/* 参数指标分析 */}

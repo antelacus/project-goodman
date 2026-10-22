@@ -26,7 +26,7 @@ export default function HelpPage() {
             </div>
             <h3 className="mb-2 text-lg font-semibold text-neutral-900">数据信息检索</h3>
             <p className="text-sm text-neutral-600">
-              智能检索财务数据与文档内容，支持语义搜索。
+              智能检索财务数据、法规原文与公司文档，法规引用可点开原文核对。
             </p>
           </div>
         </div>
