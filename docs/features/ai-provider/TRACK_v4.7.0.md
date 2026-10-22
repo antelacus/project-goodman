@@ -61,7 +61,7 @@
 | B3 条款重新拆分 | 完成 | `regulation-splitter`（逐页、连续编号、无归属正文）、管理员上传改用并在存储失败时失败、`replace_regulation_articles`、`resplit-regulations` 脚本与异常清单（Jason 裁定后才替换）· §reg-split-rule、§reg-integrity、§reg-upload-dup、§reg-upload-storage | — |
 | B4 关键词检索与引用 | 完成 | PGroonga 迁移（生成列、索引、3 个函数）、`src/lib/search/`、两个工具与证据编号、检索预算与 `forceAnswer`、`src/lib/citations/`、过程日志链接、系统提示词、上传去向量、数据库层测试 · §reg-search-citation、§search-rounds、§keyword-match、§citation-text、§citation-link、§out-of-library、§retrieval-error、§doc-search、§upload-no-embedding、§no-embedding-calls | B1、B3（替换完成） |
 | B5 评测 | 完成 | 记忆存储注入、查询集（Claude 起草、Jason 审定）与 `eval-retrieval` 脚本 · §retrieval-quality，以及 §out-of-library 的评测部分 | B4 |
-| B6 上线前修复 | 完成，待 staging 重演 | Codex 上线前审查的 P1–P6、P9–P15、P18–P24：出处检查按显示文本判断、整句分句、编号后自写款项；预算拒绝的法规检索也加标注；历史只恢复问答；AI 入口的时限、截断与异常回复；报告指标失败不算同比；测试与评测脚本的缺口 · §citation-text、§out-of-library、§search-rounds、§ai-outcome、§ai-timeout、§report-section-failure、§system-prompt、§doc-search-no-regulation、§upload-no-embedding、§citation-link | B5 |
+| B6 上线前修复 | 完成（staging 已重演） | Codex 上线前审查的 P1–P6、P9–P15、P18–P24：出处检查按显示文本判断、整句分句、编号后自写款项；预算拒绝的法规检索也加标注；历史只恢复问答；AI 入口的时限、截断与异常回复；报告指标失败不算同比；测试与评测脚本的缺口 · §citation-text、§out-of-library、§search-rounds、§ai-outcome、§ai-timeout、§report-section-failure、§system-prompt、§doc-search-no-regulation、§upload-no-embedding、§citation-link | B5 |
 
 Phase 6：§vector-removed（删除向量列、向量函数、`backup` schema）。
 
@@ -71,19 +71,19 @@ Phase 6：§vector-removed（删除向量列、向量函数、`backup` schema）
 
 | # | 级别 | 发现 | status |
 |---|------|------|--------|
-| C1 | MUST | §citation-text 只要求"含一条正确出处"，正确出处可掩盖编造的出处；没有引用校验环节 | 已采纳（方案 A：编号引用、程序生成出处）· 待 §citation-text 通过后关闭 |
-| C2 | MUST | 行首规则 + 递增不足以证明拆分正确；覆盖检查若只比对拆分器自己的输入，漏页也会 100% | 已采纳 · 待 §reg-integrity 通过后关闭 |
-| C3 | MUST | 替换期间旧生产仍可用旧拆分器上传法规；替换缺原子性与中断恢复 | 已采纳（逐文档事务替换；核对到上线期间不在生产上传法规）· 待 §reg-integrity 与替换后复核通过后关闭 |
-| C4 | MUST | "空内容即失败"会误杀只含工具调用的回复；截断输出（`finish_reason: length`）会被当成功 | 已采纳 · 待 §ai-outcome 通过后关闭 |
-| C5 | MUST | Responses API 的输出上限字段是 `max_output_tokens`，不是 `max_completion_tokens` | 已采纳 · 待 §relay-params 通过后关闭 |
-| C6 | MUST | 资料库外作答只在"3 次都空"时触发；非空但无关、部分支持、检索报错都没有终态规则 | 已采纳（由引用后处理按编号判定标注）· 待 §out-of-library、§retrieval-error 通过后关闭 |
+| C1 | MUST | §citation-text 只要求"含一条正确出处"，正确出处可掩盖编造的出处；没有引用校验环节 | 已采纳（方案 A：编号引用、程序生成出处）· 已关闭（§citation-text 通过） |
+| C2 | MUST | 行首规则 + 递增不足以证明拆分正确；覆盖检查若只比对拆分器自己的输入，漏页也会 100% | 已采纳 · 已关闭（§reg-integrity 通过） |
+| C3 | MUST | 替换期间旧生产仍可用旧拆分器上传法规；替换缺原子性与中断恢复 | 已采纳（逐文档事务替换；核对到上线期间不在生产上传法规）· 已关闭（§reg-integrity 与替换后复核通过；替换到上线期间生产未上传法规） |
+| C4 | MUST | "空内容即失败"会误杀只含工具调用的回复；截断输出（`finish_reason: length`）会被当成功 | 已采纳 · 已关闭（§ai-outcome 通过） |
+| C5 | MUST | Responses API 的输出上限字段是 `max_output_tokens`，不是 `max_completion_tokens` | 已采纳 · 已关闭（§relay-params 通过） |
+| C6 | MUST | 资料库外作答只在"3 次都空"时触发；非空但无关、部分支持、检索报错都没有终态规则 | 已采纳（由引用后处理按编号判定标注）· 已关闭（§out-of-library、§retrieval-error 通过） |
 | C7 | MUST | 评测跑完整 agent 会创建会话、写消息到共用的生产库 | 已关闭：五轮评测前后会话、消息行数均不变 |
-| C8 | SHOULD（原 MUST） | 管理员上传在 Storage 失败时仍写入法规，`file_url` 为空，出处链接打不开（现有 45 份原件均在 Storage，已核） | 已采纳（Jason 同意按 SHOULD 处理）· 待 §reg-upload-storage 通过后关闭 |
-| C9 | SHOULD | 预算用尽返回 `empty: true` 与真实空结果混淆；模型不收尾时撞上最大迭代，会保存未配对的工具调用 | 已采纳 · 待 §search-rounds 通过后关闭 |
-| C10 | SHOULD | 关键词粒度、数量、组合方式未定义；"不相邻命中"要在数据库层用固定样例直接验证 | 已采纳 · 待 §keyword-match 通过后关闭 |
-| C11 | SHOULD | 管理员上传按期间逐条写 `financial_data`，第二期校验失败时第一期已落库 | 已采纳 · 待 §extract-failure 通过后关闭 |
-| C12 | SHOULD | SDK 默认超时 10 分钟 × 重试 2 次；relay 挂起时用户等不到失败提示 | 已采纳（时限初值 60/90/120s，重试 1 次）· 待 §ai-timeout 通过后关闭 |
-| C13 | SHOULD | 新检索函数须把"只搜资料库、只搜就绪文档"写死在数据库查询里 | 已采纳 · 待 §doc-search 通过后关闭 |
+| C8 | SHOULD（原 MUST） | 管理员上传在 Storage 失败时仍写入法规，`file_url` 为空，出处链接打不开（现有 45 份原件均在 Storage，已核） | 已采纳（Jason 同意按 SHOULD 处理）· 已关闭（§reg-upload-storage 通过） |
+| C9 | SHOULD | 预算用尽返回 `empty: true` 与真实空结果混淆；模型不收尾时撞上最大迭代，会保存未配对的工具调用 | 已采纳 · 已关闭（§search-rounds 通过） |
+| C10 | SHOULD | 关键词粒度、数量、组合方式未定义；"不相邻命中"要在数据库层用固定样例直接验证 | 已采纳 · 已关闭（§keyword-match 通过） |
+| C11 | SHOULD | 管理员上传按期间逐条写 `financial_data`，第二期校验失败时第一期已落库 | 已采纳 · 已关闭（§extract-failure 通过） |
+| C12 | SHOULD | SDK 默认超时 10 分钟 × 重试 2 次；relay 挂起时用户等不到失败提示 | 已采纳（时限初值 60/90/120s，重试 1 次）· 已关闭（§ai-timeout 通过） |
+| C13 | SHOULD | 新检索函数须把"只搜资料库、只搜就绪文档"写死在数据库查询里 | 已采纳 · 已关闭（§doc-search 通过） |
 
 **评审发现登记**（Codex 上线前审查，3 个只读任务、各 2 个文件；引文均已对源码逐行核实；"已复现"为 Claude 另行复现）：
 
@@ -155,7 +155,7 @@ Phase 6：§vector-removed（删除向量列、向量函数、`backup` schema）
 - [x] CHANGELOG：`[4.7.0] - 2026-10-22`
 - [x] TECHNICAL_DEBT finalize：TD-021 改写（预付余额为总花费兜底，用户用量限制限不住总量）；TD-024 改写为本版测量值与处理办法；TD-034 扩写并升为高 · [x] TD-031：发布流水线版本（见裁定）
 - [x] user docs：帮助页、关于页、落地页去掉向量 / 语义搜索的说法，改为关键词检索与可核验出处 · [x] README：技术栈一行改为 AI relay，其余仍属实
-- [x] living-docs sweep：DESIGN（`embedding` 列已删、管理员上传的失败条件）、`ARCHITECTURE.md`（外部服务、对话流程中的出处核对）、`DEPLOYMENT_CHECKLIST.md`（监控入口）· [ ] DESIGN 中"`vector` 扩展（若无他用）"一并删除：已核无列使用该类型，待 Jason 定
+- [x] living-docs sweep：DESIGN（`embedding` 列已删、管理员上传的失败条件）、`ARCHITECTURE.md`（外部服务、对话流程中的出处核对）、`DEPLOYMENT_CHECKLIST.md`（监控入口）· [x] `vector` 扩展已删除（Jason，`20261022074600`，迁移记录已登记）；删除后两种检索在生产库照常命中
 - [x] old-value sweep：`src/`、README 与在用文档中已无 `text-embedding-3-small`、`OPENAI_API_KEY`、向量检索；`.claude/agents/db-migration.md` 改为关键词检索；上传的切块存储报错文案改为"切块存储失败"；无调用方的 `SearchResultChunk` 等文档选择类型已删。历史文档（`docs/versions/`、已冻结的 TRACK）不改
 - [x] announce：无外部用户，不适用 · [x] FEEDBACK sweep：登记表为空 · [x] roadmap：`v4_DEVELOPMENT_PLAN.md` v4.7 标为已发布，§3.12 指向 `TRACK_v4.7.0.md`
 - [x] gate readout（runs / 改变了输出的 catches）：
@@ -170,6 +170,8 @@ Phase 6：§vector-removed（删除向量列、向量函数、`backup` schema）
   - 生产冒烟：1 / 0；发现生产 `.env` 没有 `ADMIN_USERNAME`，冒烟要借用 staging 的凭据文件
 - [x] doc budgets：本项目还没有预算检查工具（发布流水线范围 6 引入），不适用 · [x] memory prune：项目记忆中与通用记忆重复的"在 VPS 复演"一条已删；P17 的教训（描述发现前先在代码路径上核实）提升为通用记忆
 - [x] acceptance trigger：非首次发布；生产验证已跑真实输入，此后 Jason 使用中的问题按 `docs/FEEDBACK.md` 登记
-- [ ] **TRACK close（最后一项）**：未结事项转入 TECHNICAL_DEBT / FEEDBACK / REQ / DESIGN，然后 `git mv TRACK.md TRACK_v4.7.0.md`
+- [x] **TRACK close（最后一项）**：未结事项转入 TECHNICAL_DEBT / FEEDBACK / REQ / DESIGN，然后 `git mv TRACK.md TRACK_v4.7.0.md`
 
 ## 四、Session-end pickup
+
+版本已关闭，没有待续的工作。下一个版本为发布流水线（`docs/features/release-pipeline/TRACK.md`）。
