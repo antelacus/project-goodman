@@ -146,9 +146,9 @@ Phase 6：§vector-removed（删除向量列、向量函数、`backup` schema）
 - [x] relay 用量上限：relay 不提供，按裁定改由现有用户用量限制承担（见裁定）
 - [x] 生产 `.env` 加 `LLM_API_KEY`、`LLM_BASE_URL`：改前备份 `.env.bak-20261022072513`，两值与本地、staging 哈希一致，其余行不变
 - [ ] 生产验证后：staging、生产两份 `.env` 删除不再使用的 `OPENAI_API_KEY`；VPS 上仓库外的 `/home/deploy/goodman/docker-compose.yml` 仍把 `OPENAI_API_KEY` 作为构建参数，与仓库的 `docker-compose.yml` 同步
-- [ ] tag `v4.7.0` · [ ] 生产部署 + 核对 served SHA · [ ] 生产验证：冒烟、一个法规问题、一份报告
-- [ ] 生产验证后删除向量列、向量函数、Edge Function `embed`、`backup` schema（REQ §5.8；不可逆，Jason 在 Dashboard 执行）
-- [ ] §vector-removed：删除后以 SQL 核对 `embedding` 列与向量检索函数均已不存在（P25）
+- [x] tag `v4.7.0`（`29d8850`）· [x] 生产部署 + 核对 served SHA：部署日志 `healthy after 6s`；VPS 仓库检出 `29d8850`，容器在部署时重建；`https://goodman.antelacus.com/api/health` 返回 `healthy`、`version` 4.7.0 · [x] 生产验证：冒烟通过（健康、管理员登录、会话、报告生成且无失败章节；生产 `.env` 没有 `ADMIN_USERNAME`，冒烟用 staging 的凭据文件，两者共用一个用户表）；法规问题"增值税纳税义务发生时间"引《增值税法》第二十八条，对原文核对一致，47s
+- [ ] 删除向量列、向量函数、`backup` schema（REQ §5.8；不可逆，Jason 在 Dashboard 执行 `20261022073400_remove_vector_search`，同一事务登记迁移记录）；Edge Function `embed` 在 Supabase 上不存在（已核），无需删除
+- [ ] §vector-removed：删除后以 SQL 核对 `embedding` 列与向量检索函数均已不存在（P25）；重新生成 `database.types.ts`
 - [ ] CHANGELOG
 - [ ] TECHNICAL_DEBT finalize：TD-021 改写为 relay 现状（无总量上限，只有用户用量限制；按 token 设限的版本）；TD-024 改写为本版测量值（P50 94.1s、P95 124.2s）与处理办法（章节并行调用，先测并行下 relay 的 529 率）；TD-031 处理版本裁定
 - [ ] user docs（帮助页：出处、资料库外标注） · [ ] README 仍然属实，只指路不复述
