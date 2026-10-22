@@ -74,7 +74,7 @@ loadMemory → agentLoop ⇄ toolExecutor（检索 ≤ 3 次）
 
 - 4 个函数都要求非空的 `system`；`readDocumentText` 的系统提示词固定在入口内部（Responses API 放进 `instructions`）。
 - 模型是代码中的常量 `gpt-6.1-sol`，不再从 `LLM_MODEL_*` / `OPENAI_*` 环境变量读取。凭据只读 `LLM_API_KEY`、`LLM_BASE_URL`。
-- 每种用途在配置里有一个输出预算和一个时限。输出预算在 Chat Completions 映射为 `max_completion_tokens`，在 Responses API 映射为 `max_output_tokens`（新模型的推理 token 计入其中，预算按此留足）。时限初值：对话每轮 60s、报告每章 90s、文字识别 120s、其余 60s；SDK 重试 1 次。不传 `temperature`。
+- 每种用途在配置里有一个输出预算和一个时限。输出预算在 Chat Completions 映射为 `max_completion_tokens`，在 Responses API 映射为 `max_output_tokens`（新模型的推理 token 计入其中，预算按此留足）。时限：对话每轮 90s、报告每章 90s、文字识别 120s、其余 60s；SDK 重试 1 次。对话不用 60s：relay 正常时约 700 token 的长回答就要 25–77s（§8）。不传 `temperature`。
 - 成功的判定按函数各自定义，不满足即抛 `AIUnavailableError`：
 
 | 函数 | 成功 |

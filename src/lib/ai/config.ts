@@ -10,7 +10,7 @@
 export const MODEL = 'gpt-6.1-sol';
 
 export const PURPOSES = {
-  chat: { outputBudget: 8000, timeoutMs: 60_000 },
+  chat: { outputBudget: 8000, timeoutMs: 90_000 },
   title: { outputBudget: 1000, timeoutMs: 60_000 },
   reportSection: { outputBudget: 4000, timeoutMs: 90_000 },
   reportSummary: { outputBudget: 4000, timeoutMs: 60_000 },
