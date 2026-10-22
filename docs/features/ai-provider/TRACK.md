@@ -110,6 +110,21 @@ Phase 6：§vector-removed（删除向量列、向量函数、`backup` schema）
 | P24 | MUST（工具类，默认 SHOULD） | 评测把"检索失败"标注也算作资料库外通过（`eval-retrieval.ts:109`）；两轮证据中的 8 个通过都是资料库外标注，不受影响 | 已修 |
 | P25 | SHOULD | §vector-removed 只有注释，没有可执行的检查（Phase 6 才删向量） | 转入 Phase 6：删除向量后以 SQL 核对 |
 
+**评审发现登记**（`/code-review` Phase 5，`main...feat/ai-provider` 全部改动；每条已对源码核实）：
+
+| # | 级别 | 发现 | status |
+|---|------|------|--------|
+| V1 | MUST | 管理员上传法规时拆出 0 条也算成功（`no_articles` 不阻断）；文档检索又排除法规，这份法规两种检索都查不到（`upload-database-document/route.ts:520`） | 待裁定 · 建议：`no_articles` 阻断上传 |
+| V2 | MUST | 条款中间一行以"附表/附件/附录"开头（折行）就进入附录，之后所有条款静默丢弃，只记一条不阻断的异常（`regulation-splitter.ts:140`）；生产 45 部法规的异常清单只有 1 条且已裁定，现有数据不受影响 | 待裁定 · 建议：只有在句末之后的"附表/附件/附录"行才算进入附录，重跑 `check` 核对条款数不变 |
+| V3 | MUST | 管理员上传把 `policy` 也当法规拆分（`route.ts:205`），新上传的公司制度会以 R 编号的条款出现在法规检索中，重复编号还会阻断上传；脚本与文档检索只把 `regulation`、`accounting_standard` 当法规；生产现有 1 份制度 0 条款，不受影响 | 待裁定 · 建议：法规类型只定义一处；删去 `documents/constants.ts` 中无调用方的 `isRegulation` |
+| V4 | MUST | "检索全部出错"把文档检索也算在内：法规检索出错、文档检索成功时，回答标"不是来自资料库"，而实际是检索失败（`finalize-answer.ts:23`）；代码与 REQ §5.5 字面一致，REQ 字面本身有歧义 | 待裁定 · 建议：改 REQ 为"法规检索全部出错"，代码按法规检索单独计数 |
+| V5 | MUST | 出处检查把"第一条，加强应收账款催收"这类序号也当条款号整句删去，任何回答都会发生，不限于法规问题（`citations/index.ts:106`）；与 TD-034 同源 | 待裁定 · 建议：提示词要求列举用"1. 2."而不用"第一条"；TD-034 扩写为两种情形并升为高 |
+| V6 | SHOULD | 检索参数校验失败（如关键词超过 10 字）既计入预算也计为出错，三次都这样会得到"检索暂时失败"的标注（`tool-executor.ts:53`） | 待裁定 · 建议：计入预算，不计为出错 |
+| V7 | SHOULD | 法规 PDF 被解析两次，第二次不在 try 中：第一次解析失败转 OCR 后，第二次仍抛错、返回 500（`route.ts:221`） | 待裁定 · 建议：复用第一次的分页结果 |
+| V8 | SHOULD | 过程日志没跟上新的检索参数与节点：检索显示"正在执行 搜索文档..."不带关键词、完成时没有命中数，预算用尽也显示"完成"，`forceAnswer`、`finalizeAnswer` 显示为"处理中 (finalizeAnswer)..."（`format-event.ts:132`） | 待裁定 · 建议：修 |
+| V9 | NICE | 报告配置解析的回复不符合 schema 时，不再退回"没有理解您的意思"，而是 503（`parse-config/route.ts:71`） | 待裁定 · 建议：不改，REQ §ai-outcome 规定 schema 不符按失败处理 |
+| V10 | NICE | 用户上传的 AI 失败路径用 `NextResponse.json`，不用 `createErrorResponse()`（`upload-temp/route.ts:461`）；`createErrorResponse` 在生产只返回通用文案，会盖掉 REQ §5.2 规定的失败提示 | 待裁定 · 建议：代码不改，加一行注释写明原因 |
+
 **Phase 4 证据**：
 
 - §reg-integrity（45 部真实法规，2026-10-20）：`scripts/resplit-regulations.ts check` 第一轮 1196 条、18 条异常，其中 17 条是拆分规则的问题（康熙部首、2007 版准则无空格、字间距排版、浏览器页眉页脚），修正规则后 1505 条、1 条异常，已由 Jason 裁定（见裁定）。`apply` 后脚本逐条读回比对通过；SQL 独立核对：45 份文档均有条款，重复 0，条款内容中的章节标题 0、页码行 0、康熙部首 0。条款数与原文一致可核的：企业所得税法 60、关税法 72、增值税法 38、基本准则 50。替换前整表 1559 行备份于 `backup.structured_regulations_v4_6`，与原表逐行一致。B5 起草查询集时发现"⼜"被用来印"口"（关税法、保险合同共 40 条写成"出又""敞又"），修正映射后重新 `check`（条款数与异常清单不变）并 `apply`，核对通过。
