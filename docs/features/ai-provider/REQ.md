@@ -29,7 +29,7 @@ goodman 的 AI 调用全部走 OpenAI 官方 API，该账号额度已用尽，�
 
 ### 1.3 参考
 
-- relay 的外部约束与实测数据：`TRACK.md` 第一区（DESIGN 开写后迁入其外部约束一节）
+- relay 的外部约束与实测数据：`DESIGN.md` §8
 - 报告章节与指标：`docs/versions/v4/v4_DEVELOPMENT_PLAN.md`
 - 技术债：`docs/TECHNICAL_DEBT.md` TD-030（编造结论）、TD-024（报告耗时）、TD-021（LLM 用量）
 
