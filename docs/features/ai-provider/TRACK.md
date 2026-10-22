@@ -43,6 +43,8 @@
   - 2026-10-22 · 对话单次调用时限由 60s 放宽到 90s；理由：relay 正常时长回答就要 25–77s，60s 会把正常回答判为失败 · Jason · 级联：`src/lib/ai/config.ts`、DESIGN §4
   - 2026-10-22 · 维持"报告耗时本版只测量、不优化"：报告 P50 94s（V4.6 为 57s）；章节并行调用留给 TD-024，并行请求下 relay 的 529 率未测 · Jason · 级联：TD-024（Phase 6 改写）
   - 2026-10-22 · Codex 上线前审查：A 组（出处）、B 组（AI 失败处理）按 Claude 建议修复；资料库外标注以做过或请求过法规检索为前提，改 REQ 措辞而不改代码（P16）；P7 不修、不登记 · Jason · 级联：REQ §5.5、DESIGN §4、本 TRACK 批次 B6
+  - 2026-10-22 · P17 改 REQ 措辞：多期间校验只属管理员上传（推翻原先"修代码"，那条裁定依据的描述有误：用户提取接口不分期间、不写财务数据） · Jason · 级联：REQ §5.2
+  - 2026-10-22 · 出处检查会删去回答中引用用户自己文档条款（"合同第五条"）的句子，本版接受，登记 TD-034 · Jason · 级联：`docs/TECHNICAL_DEBT.md`
 
 ## 二、批次
 
@@ -97,7 +99,7 @@ Phase 6：§vector-removed（删除向量列、向量函数、`backup` schema）
 | P14 | MUST | 时限不打断 SDK 重试前的等待：带 `Retry-After` 时失败提示晚于时限（`ai/index.ts:196`） | 已修 |
 | P15 | SHOULD | HTTP 200 但响应体残缺时抛出原始错误，不转为 `AIUnavailableError`；报告章节丢掉已算好的指标（`ai/index.ts:201`、`:213`） | 已修 |
 | P16 | MUST | 测试认可"未做法规检索的回答不加标注"，REQ §5.5 的字面没有这一例外（`b4-search-citations.test.ts:231`） | Jason 裁定：改 REQ 措辞（§5.5 写明以做过或请求过法规检索为前提），代码不变 |
-| P17 | MUST | 第二期校验失败只测了管理员上传，用户提取接口未测（`b2-failures-shown.test.ts:212`、`extract/route.ts:33`） | 待重新裁定：用户提取接口不分期间、不写财务数据，"第二期校验失败"在该接口不存在 |
+| P17 | MUST | 第二期校验失败只测了管理员上传，用户提取接口未测（`b2-failures-shown.test.ts:212`、`extract/route.ts:33`） | Jason 裁定：改 REQ 措辞（§5.2 与 §extract-failure 写明多期间校验只属管理员上传；用户提取接口不分期间、不写财务数据），代码不变 |
 | P18 | MUST（工具类，默认 SHOULD） | 重新拆分脚本接受空裁定，跳过的文档也计入"verified"（`resplit-regulations.ts:121`、`:157`） | 已修（空裁定不算裁定；跳过的文档单独列出） |
 | P19 | MUST | 超时测试的假 relay 无法产生重试等待，P14 的路径测不到（`b1-ai-entry.test.ts:111`） | 已修（随 P14 的测试） |
 | P20 | MUST | `String(undefined)` 使"系统提示词非空"的断言对缺失也通过（`b1-ai-entry.test.ts:72`） | 已修 |
