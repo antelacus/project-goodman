@@ -173,7 +173,7 @@ Phase 6 删除：`match_documents`、`search_documents_hybrid`、`search_regulat
 - 模型：`gpt-5.6-*`、`gpt-6*`、`gpt-6.1-sol` 等 9 个；没有 `gpt-4o` 系列，不支持 `/embeddings`。
 - 不带系统提示词（Chat Completions）或 `instructions`（Responses API）时，注入约 4200 token 的 Codex 编程 agent 提示词。
 - 输出上限都不生效：`max_tokens`、`max_completion_tokens`、`max_output_tokens` 设为 64 时仍返回约 700 token，状态照常为完成。对话、JSON 模式、严格 `json_schema`、工具调用、视觉输入，以及 Responses API 的 PDF 与图片输入均可用。
-- `gpt-6.1-sol`：报告章节约 9s，短输出 2–19s；约 700 token 的长输出 25–77s；`gpt-6-luna` 短输出 12–84s。高峰时返回 529（服务暂时不可用）。
+- `gpt-6.1-sol`：报告章节约 9s，短输出 2–19s；约 700 token 的长输出 25–77s；`gpt-6-luna` 短输出 12–84s。高峰时返回 529（服务暂时不可用）；服务商升级系统期间连续数十分钟 529，升级刚完成时模型列表里有 `gpt-6.1-sol` 但请求返回 404 `model_not_found`。同一检索评测（20 个完整对话）在不同时段的 P50 为 20.7–54s。
 - 严格 `json_schema` 的每个字段都会被输出：一个字段对应一个指标的提取 schema（约 200 个字段）单期就要约 4600 token、68s；改为只列出现的指标（指标名用枚举约束）后约 15s。
 - 按 token 计费，用量上限在 relay 侧设置。
 - OpenAI SDK 默认时限 10 分钟、重试 2 次（`node_modules/openai/src/client.ts`）：必须由 AI 入口显式覆盖。

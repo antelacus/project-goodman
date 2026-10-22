@@ -1,7 +1,10 @@
 /**
  * Retrieval eval (REQ §retrieval-quality, the eval half of §out-of-library).
  *
- *   npx tsx scripts/eval-retrieval.ts <out-dir>
+ *   npx tsx scripts/eval-retrieval.ts <out-dir> [id,id,...]
+ *
+ * With ids, only those queries run: for rerunning the ones a relay timeout
+ * interrupted, whose verdicts then replace the interrupted ones.
  *
  * Runs every question in scripts/eval-retrieval-queries.json through the full
  * agent (real search, real relay) with an in-memory conversation store, so the
@@ -49,13 +52,16 @@ interface ToolResultLike {
 const TOP = 5;
 const ARTICLE_NUMBER = /第\s*[零〇一二三四五六七八九十百千\d]+\s*条/;
 
-async function main(outDir: string) {
+async function main(outDir: string, only?: string[]) {
   const { createUnifiedGraph } = await import('@/lib/workflows/unified/graph');
   const { createInMemoryMemory } = await import('@/lib/memory/in-memory');
   const { OUT_OF_LIBRARY_LABEL, RETRIEVAL_FAILED_LABEL } = await import('@/lib/citations');
   const { createServerSupabaseClient } = await import('@/lib/database');
 
-  const { queries } = JSON.parse(fs.readFileSync(path.join('scripts', 'eval-retrieval-queries.json'), 'utf8')) as { queries: Query[] };
+  const all = (JSON.parse(fs.readFileSync(path.join('scripts', 'eval-retrieval-queries.json'), 'utf8')) as { queries: Query[] }).queries;
+  const unknown = (only ?? []).filter(id => !all.some(q => q.id === id));
+  if (unknown.length) throw new Error(`unknown query ids: ${unknown.join(', ')}`);
+  const queries = only ? all.filter(q => only.includes(q.id)) : all;
   const db = createServerSupabaseClient();
   const countRows = async () => {
     const [s, m] = await Promise.all([
@@ -130,10 +136,10 @@ async function main(outDir: string) {
 
 const outDir = process.argv[2];
 if (!outDir) {
-  console.error('usage: eval-retrieval.ts <out-dir>');
+  console.error('usage: eval-retrieval.ts <out-dir> [id,id,...]');
   process.exit(1);
 }
-main(outDir).catch(e => {
+main(outDir, process.argv[3]?.split(',')).catch(e => {
   console.error(e instanceof Error ? e.message : e);
   process.exit(1);
 });
