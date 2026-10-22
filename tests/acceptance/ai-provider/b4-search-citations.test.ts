@@ -237,6 +237,18 @@ describe('B4 keyword search and citations', () => {
     }
   });
 
+  it('§citation-text citations written side by side read as one list, naming each regulation once', () => {
+    const evidence = [...EVIDENCE, { ...EVIDENCE[0], id: 'R3', articleNumber: '第三条' }];
+    const ctx = { evidence, regulationSearched: true, allSearchesFailed: false };
+    for (const written of ['[R1][R3]', '[R1] [R3]', '[R1]、[R3]', '[R1, R3]']) {
+      expect(finalizeAnswer(`依据${written}，应当计提。`, ctx).text, written).toBe('依据《企业会计准则第99号——示例业务》第一条、第三条，应当计提。');
+    }
+    expect(finalizeAnswer('依据[R1][R2][R3]，应当计提。', ctx).text).toBe(
+      '依据《企业会计准则第99号——示例业务》第一条、《中华人民共和国示例法》第十二条、《企业会计准则第99号——示例业务》第三条，应当计提。'
+    );
+    expect(finalizeAnswer('依据[R1][R1]，应当计提。', ctx).text).toBe('依据《企业会计准则第99号——示例业务》第一条，应当计提。');
+  });
+
   it('§citation-text a sentence broken across lines is judged whole; separate list items stay separate', () => {
     const ctx = { evidence: EVIDENCE, regulationSearched: true, allSearchesFailed: false };
     const conditional = finalizeAnswer('第十九条所述情形才适用以下结论，\n企业无需计提减值。', ctx);

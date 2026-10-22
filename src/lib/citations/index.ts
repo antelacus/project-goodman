@@ -23,6 +23,8 @@ export const RETRIEVAL_FAILED_LABEL = '法规检索暂时失败，以下内容�
 const NUMERAL = '[零〇一二三四五六七八九十百千两壹贰叁肆伍陆柒捌玖拾佰仟\\d]';
 // [R3], [R 3], ［R3］, [R1, R2]; ids are compared without spaces or full-width forms.
 const CITATION = /[[【［]\s*([RＲ]\s*[\d０-９]+(?:\s*[,，、]\s*[RＲ]\s*[\d０-９]+)*)\s*[\]】］]/g;
+// Citations side by side ("[R1][R3]", "[R1]、[R3]") are shown as one list.
+const CITATION_RUN = new RegExp(`${CITATION.source}(?:[ \\t]*、?[ \\t]*${CITATION.source})*`, 'g');
 const ARTICLE_NUMBER = new RegExp(`第\\s*${NUMERAL}+\\s*条`);
 // A paragraph, item or sub-article tacked onto a cited article is not part of the evidence.
 const AFTER_CITATION = new RegExp(`^\\s*(第\\s*${NUMERAL}+\\s*[款项目]|之\\s*${NUMERAL})`);
@@ -109,15 +111,21 @@ export function finalizeAnswer(
       removed += 1;
       return '';
     }
-    return sentence.replace(CITATION, (_, list: string) =>
-      idsIn(list)
+    return sentence.replace(CITATION_RUN, run => {
+      let previous: string | undefined;
+      return [...run.matchAll(CITATION)]
+        .flatMap(m => idsIn(m[1]))
+        .filter((id, i, all) => all.indexOf(id) === i)
         .map(id => {
           const e = byId.get(id)!;
           cited.set(id, e);
-          return `${citationName(e.regulationName)}${e.articleNumber}`;
+          // Within one list, an article of the same regulation as the one before drops the name.
+          const shown = e.regulationName === previous ? e.articleNumber : `${citationName(e.regulationName)}${e.articleNumber}`;
+          previous = e.regulationName;
+          return shown;
         })
-        .join('、')
-    );
+        .join('、');
+    });
   };
 
   const kept = units(answer).map(unit => (unit.match(SENTENCE) ?? []).map(check).join(''));
