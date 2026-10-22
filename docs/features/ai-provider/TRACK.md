@@ -48,6 +48,9 @@
   - 2026-10-22 · 相邻的引用（"[R1][R3]"）合并为一串显示，同一法规只写一次名称，在 Phase 5 修；理由：staging 复演中两条出处首尾相接、难读 · Jason · 级联：`src/lib/citations/`
   - 2026-10-22 · `/code-review` 10 条按 Claude 建议处理：V1–V4、V6–V8 修复；V5 以提示词缓解、TD-034 扩写并升为高；V9 不改；V10 加注释 · Jason · 级联：REQ §5.5、DESIGN §4、`chat-system.md` v1.6、`docs/TECHNICAL_DEBT.md`
   - 2026-10-22 · relay 不提供用量上限；本版只靠现有的用户用量限制（访客按会话每小时 20 条消息、1 份报告，AI 接口按 IP 每分钟 20 次），按 token 设限留到后续版本 · Jason · 级联：TD-021（Phase 6 改写）
+  - 2026-10-22 · TD-031 在发布流水线版本处理，迁移进入流水线之前完成 · Jason · 级联：`docs/TECHNICAL_DEBT.md`
+  - 2026-10-22 · `vector` 扩展一并删除（已核无列使用该类型；可由 `create extension vector` 重建） · Jason · 级联：DESIGN §5
+  - 2026-10-22 · Phase 6 中改动 `src/` 的收尾（页面文案、无调用方的类型与字段）作为 v4.7.1 补丁发布，`v4.7.0` tag 不动；理由：已推送的 tag 不移动，合并后生产运行的版本须有自己的 tag · Jason · 级联：`CHANGELOG.md`、`package.json`
 
 ## 二、批次
 
@@ -150,7 +153,7 @@ Phase 6：§vector-removed（删除向量列、向量函数、`backup` schema）
 - [x] 删除向量列、向量函数、`backup` schema（REQ §5.8；不可逆，Jason 在 Dashboard 执行 `20261022073400_remove_vector_search`，同一事务登记迁移记录）；Edge Function `embed` 在 Supabase 上不存在（已核），无需删除
 - [x] §vector-removed：SQL 核对向量列、`embedding` 列、向量函数、`backup` schema 均为 0，迁移记录 `remove_vector_search` 已登记，切块 545、条款 1505 不变（P25）；`database.types.ts` 按数据库现状更新，函数清单与生成结果一致；类型检查顺带找出 `local-documents` 路由与前端类型中无人读取的 `embedding` 字段，已删
 - [x] CHANGELOG：`[4.7.0] - 2026-10-22`
-- [x] TECHNICAL_DEBT finalize：TD-021 改写（预付余额为总花费兜底，用户用量限制限不住总量）；TD-024 改写为本版测量值与处理办法；TD-034 扩写并升为高 · [ ] TD-031 处理版本裁定（Jason）
+- [x] TECHNICAL_DEBT finalize：TD-021 改写（预付余额为总花费兜底，用户用量限制限不住总量）；TD-024 改写为本版测量值与处理办法；TD-034 扩写并升为高 · [x] TD-031：发布流水线版本（见裁定）
 - [x] user docs：帮助页、关于页、落地页去掉向量 / 语义搜索的说法，改为关键词检索与可核验出处 · [x] README：技术栈一行改为 AI relay，其余仍属实
 - [x] living-docs sweep：DESIGN（`embedding` 列已删、管理员上传的失败条件）、`ARCHITECTURE.md`（外部服务、对话流程中的出处核对）、`DEPLOYMENT_CHECKLIST.md`（监控入口）· [ ] DESIGN 中"`vector` 扩展（若无他用）"一并删除：已核无列使用该类型，待 Jason 定
 - [x] old-value sweep：`src/`、README 与在用文档中已无 `text-embedding-3-small`、`OPENAI_API_KEY`、向量检索；`.claude/agents/db-migration.md` 改为关键词检索；上传的切块存储报错文案改为"切块存储失败"；无调用方的 `SearchResultChunk` 等文档选择类型已删。历史文档（`docs/versions/`、已冻结的 TRACK）不改
