@@ -54,20 +54,6 @@ export interface FinancialMetric {
 }
 
 /**
- * Regulation article extracted from a regulation document
- */
-export interface RegulationArticle {
-  articleNumber: string;           // Article number (e.g., "第一条", "第十三条")
-  subArticle?: string;             // Sub-article (e.g., "（一）", "（二）")
-  title?: string;                  // Article title (if any)
-  content: string;                 // Full article content
-  keywords: string[];              // Extracted keywords
-  hierarchy?: string[];            // Nested structure (e.g., ["第十三条", "（一）", "1."])
-  effectiveDate?: string;          // Effective date (ISO format)
-  expiryDate?: string;             // Expiry date (if any)
-}
-
-/**
  * Contract clause extracted from a contract
  */
 export interface ContractClause {
@@ -102,8 +88,7 @@ export interface FinancialExtractionResult {
  */
 export interface RegulationExtractionResult {
   documentType: 'regulation';
-  regulationName: string;          // Regulation name
-  articles: RegulationArticle[];   // Extracted articles
+  regulationName: string;          // Regulation name; articles come from regulation-splitter
   summary: string;                 // Document summary
   confidence: number;              // Overall confidence score
   metadata: {
@@ -168,21 +153,6 @@ export const FinancialMetricSchema = z.object({
   section: z.string().optional(),
   previousValue: z.number().optional(),
   confidence: z.number().min(0).max(1),
-});
-
-/**
- * Zod schema for regulation article validation
- * Exported for use in validation utilities
- */
-export const RegulationArticleSchema = z.object({
-  articleNumber: z.string().min(1),
-  subArticle: z.string().optional(),
-  title: z.string().optional(),
-  content: z.string().min(1),
-  keywords: z.array(z.string()),
-  hierarchy: z.array(z.string()).optional(),
-  effectiveDate: z.string().optional(),
-  expiryDate: z.string().optional(),
 });
 
 // ============================================================================
@@ -453,97 +423,6 @@ export function extractYearAndPeriod(
 // Regulation Document Extraction
 // ============================================================================
 
-/**
- * Extract articles from regulation document
- *
- * Parses regulation documents to extract individual articles with
- * hierarchical structure, keywords, and metadata.
- *
- * @param text - Regulation document text
- * @returns Array of extracted articles
- */
-export function extractRegulationArticles(text: string): RegulationArticle[] {
-  const articles: RegulationArticle[] = [];
-
-  // Pattern for matching article headers: "第X条", "第X款", etc.
-  const articlePattern = /第[一二三四五六七八九十百千零0-9]+条/g;
-  const matches = text.matchAll(articlePattern);
-
-  const articlePositions: Array<{ number: string; index: number }> = [];
-
-  for (const match of matches) {
-    if (match.index !== undefined) {
-      articlePositions.push({
-        number: match[0],
-        index: match.index,
-      });
-    }
-  }
-
-  // Extract content for each article
-  for (let i = 0; i < articlePositions.length; i++) {
-    const current = articlePositions[i];
-    const next = articlePositions[i + 1];
-
-    // Extract content from current article to next article (or end of text)
-    const endIndex = next ? next.index : text.length;
-    const articleText = text.substring(current.index, endIndex).trim();
-
-    // Try to extract title (text between article number and content)
-    const titleMatch = articleText.match(/^第[一二三四五六七八九十百千零0-9]+条\s*([^\n]*)/);
-    const title = titleMatch ? titleMatch[1].trim() : undefined;
-
-    // Extract keywords (simple approach: extract nouns and key terms)
-    const keywords = extractKeywords(articleText);
-
-    articles.push({
-      articleNumber: current.number,
-      title,
-      content: articleText,
-      keywords,
-    });
-  }
-
-  return articles;
-}
-
-/**
- * Extract keywords from text
- *
- * Simple keyword extraction using common Chinese financial and legal terms.
- *
- * @param text - Text to extract keywords from
- * @returns Array of keywords
- */
-export function extractKeywords(text: string): string[] {
-  // Common keywords to look for
-  const commonKeywords = [
-    // Tax-related
-    '增值税', '税率', '税额', '纳税', '征税', '免税', '退税', '抵扣',
-    // Accounting-related
-    '会计', '准则', '计量', '确认', '披露', '报表',
-    // Financial terms
-    '资产', '负债', '收入', '费用', '利润', '成本',
-    // Legal terms
-    '规定', '应当', '可以', '禁止', '必须', '违反',
-    // Time-related
-    '之日起', '有效期', '施行', '废止',
-    // Percentage and numbers
-    '13%', '9%', '6%', '3%', '0%',
-  ];
-
-  const keywords: string[] = [];
-
-  for (const keyword of commonKeywords) {
-    if (text.includes(keyword)) {
-      keywords.push(keyword);
-    }
-  }
-
-  // Remove duplicates
-  return [...new Set(keywords)];
-}
-
 // ============================================================================
 // High-Level Extraction Functions
 // ============================================================================
@@ -635,20 +514,17 @@ function extractRegulationDocument(
   text: string,
   fileName?: string
 ): RegulationExtractionResult {
-  const articles = extractRegulationArticles(text);
-
   // Try to extract regulation name from beginning of text
   const lines = text.split('\n').filter(line => line.trim());
   const regulationName = fileName || (lines.length > 0 ? lines[0].trim() : '未命名法规');
 
-  const summary = `提取了 ${articles.length} 个条款`;
+  const summary = regulationName;
 
   const avgConfidence = 0.85;
 
   return {
     documentType: 'regulation',
     regulationName,
-    articles,
     summary,
     confidence: avgConfidence,
     metadata: {},
@@ -782,12 +658,6 @@ export function validateExtractionResult(result: ExtractionResult): {
     result.documentType === 'cash_flow') {
     if (result.metrics.length === 0) {
       errors.push('No metrics extracted from financial document');
-    }
-  }
-
-  if (result.documentType === 'regulation') {
-    if (result.articles.length === 0) {
-      errors.push('No articles extracted from regulation document');
     }
   }
 

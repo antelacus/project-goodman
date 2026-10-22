@@ -5,16 +5,19 @@
  */
 
 import { BaseAgentState } from "../state/base-state";
-import { conversationMemory, ConversationMessage } from "@/lib/memory/conversation-memory";
+import type { AgentMemory, ConversationMessage } from "@/lib/memory/conversation-memory";
 import { generateSessionTitle } from "@/lib/memory/session-title";
 import { AIMessage, ToolMessage } from "@langchain/core/messages";
 import type { DbToolCall, MessageRole } from "@/lib/database/types";
 import { convertToolCallsToDb } from "@/lib/database/helpers";
+import { dropUnpairedToolCalls } from "./history";
 
 /**
- * Saves new messages to the database
+ * Saves new messages to the conversation store. Tool calls without results are
+ * not saved: the next question would send them back and the model API rejects
+ * an unpaired call.
  */
-export async function saveMemoryNode(
+export const createSaveMemoryNode = (memory: AgentMemory) => async function saveMemoryNode(
     state: BaseAgentState
 ): Promise<Partial<BaseAgentState>> {
     const { agent } = state;
@@ -27,7 +30,7 @@ export async function saveMemoryNode(
     if (totalMessages <= initialMessageCount) return {};
 
     // Slice out the new messages
-    const newMessages = messages.slice(initialMessageCount);
+    const newMessages = dropUnpairedToolCalls(messages.slice(initialMessageCount));
 
     // Convert LangChain messages to ConversationMessage format
     const dbMessages: ConversationMessage[] = newMessages.map(msg => {
@@ -62,12 +65,12 @@ export async function saveMemoryNode(
 
     // Save to DB
     console.log(`Saving ${dbMessages.length} new messages to session ${sessionId}`);
-    await conversationMemory.saveMessages(sessionId, dbMessages);
+    await memory.saveMessages(sessionId, dbMessages);
 
     // Generate session title if none exists yet.
     // Avoid relying on initialMessageCount because system/context messages can preload history.
     try {
-        const existingTitle = await conversationMemory.getSessionTitle(sessionId);
+        const existingTitle = await memory.getSessionTitle(sessionId);
         if (!existingTitle) {
             const firstUserMessage = messages.find(msg => msg._getType() === "human");
             if (firstUserMessage) {
@@ -76,7 +79,7 @@ export async function saveMemoryNode(
                     : JSON.stringify(firstUserMessage.content);
                 if (content.trim().length > 0) {
                     const title = await generateSessionTitle(content);
-                    await conversationMemory.updateSessionTitle(sessionId, title);
+                    await memory.updateSessionTitle(sessionId, title);
                     console.log(`Generated session title: ${title}`);
                 }
             }
@@ -94,4 +97,4 @@ export async function saveMemoryNode(
             initialMessageCount: totalMessages,
         }
     };
-}
+};

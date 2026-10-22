@@ -278,6 +278,7 @@ export class ToolRegistry {
         return {
           success: false,
           error: `Input validation failed: ${validationResult.error.message}`,
+          invalidInput: true,
         };
       }
 

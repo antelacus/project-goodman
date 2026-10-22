@@ -4,11 +4,8 @@
  * Generates concise Chinese titles for conversation sessions based on the first user message.
  */
 
-import { getLLMClient } from "@/lib/ai/client";
-import { AI_CONFIG } from "@/lib/ai/config";
+import { generateText } from "@/lib/ai";
 import { getPromptContent } from "@/lib/ai/prompts";
-
-const openai = getLLMClient();
 
 const SESSION_TITLE_PROMPT = getPromptContent('session-title.md');
 
@@ -24,28 +21,11 @@ export async function generateSessionTitle(firstMessage: string): Promise<string
     }
 
     try {
-        const completion = await openai.chat.completions.create({
-            model: AI_CONFIG.models.title,
-            messages: [
-                {
-                    role: "system",
-                    content: SESSION_TITLE_PROMPT
-                },
-                {
-                    role: "user",
-                    content: firstMessage
-                }
-            ],
-            temperature: AI_CONFIG.params.title.temperature,
-            max_tokens: AI_CONFIG.params.title.maxTokens,
-        });
-
-        const title = completion.choices[0]?.message?.content?.trim();
-
-        if (title && title.length > 0) {
-            // Ensure title isn't too long (truncate if necessary)
-            return title.length > 20 ? title.substring(0, 20) : title;
-        }
+        const title = (
+            await generateText({ purpose: "title", system: SESSION_TITLE_PROMPT, prompt: firstMessage })
+        ).trim();
+        // Ensure title isn't too long (truncate if necessary)
+        return title.length > 20 ? title.substring(0, 20) : title;
     } catch (error) {
         console.error("Error generating session title:", error);
     }

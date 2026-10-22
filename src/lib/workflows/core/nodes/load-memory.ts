@@ -5,9 +5,9 @@
  * Standardized for use in Unified Agent.
  */
 
-import { BaseAgentState, DocumentLoadError } from "../state/base-state";
-import { conversationMemory } from "@/lib/memory/conversation-memory";
-import { SystemMessage, HumanMessage, AIMessage, ToolMessage, BaseMessage } from "@langchain/core/messages";
+import { BaseAgentState, DocumentLoadError, newQuestionState } from "../state/base-state";
+import type { AgentMemory } from "@/lib/memory/conversation-memory";
+import { SystemMessage, HumanMessage, AIMessage, BaseMessage } from "@langchain/core/messages";
 import { createServerSupabaseClient } from "@/lib/database";
 
 /**
@@ -16,10 +16,9 @@ import { createServerSupabaseClient } from "@/lib/database";
  * @param state Current graph state (mostly empty at start)
  * @returns Partial state update
  */
-export async function loadMemoryNode(
+export const createLoadMemoryNode = (memory: AgentMemory) => async function loadMemoryNode(
     state: BaseAgentState
 ): Promise<Partial<BaseAgentState>> {
-    console.log("loadMemoryNode State:", JSON.stringify(state, null, 2));
     if (!state.input) {
         console.error("State.input is undefined!");
         // Fallback or throw
@@ -31,7 +30,7 @@ export async function loadMemoryNode(
     // Default to 'unified' if not specified
     const effectiveWorkflowType = workflowType || "unified";
 
-    const { sessionId: activeSessionId, messages: history } = await conversationMemory.getOrCreateSession(
+    const { sessionId: activeSessionId, messages: history } = await memory.getOrCreateSession(
         requestedSessionId,
         effectiveWorkflowType,
         ownerId,
@@ -90,34 +89,15 @@ export async function loadMemoryNode(
         }
     }
 
-    // 3. Convert DB messages to LangChain BaseMessage[]
-    const messages: BaseMessage[] = history.map((msg) => {
-        if (msg.role === "user") {
-            return new HumanMessage(msg.content || "");
-        } else if (msg.role === "assistant") {
-            // Restore tool_calls if present in DB
-            // DB format: { id, type, function: { name, arguments } }
-            // LangChain format: { id, name, args }
-            const toolCalls = msg.tool_calls?.map(tc => ({
-                id: tc.id,
-                name: tc.function.name,
-                args: typeof tc.function.arguments === "string"
-                    ? JSON.parse(tc.function.arguments)
-                    : tc.function.arguments,
-            }));
-            return new AIMessage({
-                content: msg.content || "",
-                tool_calls: toolCalls,
-            });
-        } else if (msg.role === "tool") {
-            return new ToolMessage({
-                content: msg.content || "",
-                tool_call_id: msg.tool_call_id || "",
-            });
-        } else {
-            return new SystemMessage(msg.content || "");
-        }
-    });
+    // 3. Convert DB messages to LangChain BaseMessage[]. Earlier questions come back
+    // as their questions and final answers only: their tool results carry evidence
+    // ids (R1…) that this question numbers afresh, so an old [R1] would cite a new article.
+    const conversation = history.filter(msg =>
+        msg.role === "user" || (msg.role === "assistant" && !(msg.tool_calls?.length))
+    );
+    const messages: BaseMessage[] = conversation.map(msg =>
+        msg.role === "user" ? new HumanMessage(msg.content || "") : new AIMessage(msg.content || "")
+    );
 
     // Append context message if it exists
     if (contextMessage) {
@@ -134,10 +114,11 @@ export async function loadMemoryNode(
             initialMessageCount: messages.length,
             isComplete: false,
             pendingToolCalls: [],
+            ...newQuestionState(),
         },
         // Reset tool results for this turn
         toolResults: [],
         // Propagate any document loading errors for downstream handling
         documentLoadErrors: documentLoadErrors.length > 0 ? documentLoadErrors : undefined,
     };
-}
+};

@@ -48,7 +48,7 @@ jobs:
           NODE_ENV=development PERF_TEST_MODE=true REDIS_DISABLED=true \
           NEXT_PUBLIC_SUPABASE_URL=${{ secrets.NEXT_PUBLIC_SUPABASE_URL || 'https://placeholder.supabase.co' }} \
           NEXT_PUBLIC_SUPABASE_ANON_KEY=${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'placeholder-anon-key' }} \
-          OPENAI_API_KEY=${{ secrets.OPENAI_API_KEY || 'sk-placeholder-for-ci-build' }} \
+          LLM_API_KEY=placeholder-llm-key LLM_BASE_URL=http://127.0.0.1:9/v1 \
           SUPABASE_SERVICE_ROLE_KEY=${{ secrets.SUPABASE_SERVICE_ROLE_KEY || 'placeholder-service-role-key' }} \
           npm run dev -- --hostname 127.0.0.1 --port 3100 > /tmp/next-dev.log 2>&1 &
           echo $! > /tmp/next-dev.pid
@@ -95,7 +95,8 @@ jobs:
         env:
           NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL || 'https://placeholder.supabase.co' }}
           NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'placeholder-anon-key' }}
-          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY || 'sk-placeholder-for-ci-build' }}
+          LLM_API_KEY: placeholder-llm-key
+          LLM_BASE_URL: http://127.0.0.1:9/v1
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY || 'placeholder-service-role-key' }}
 
       - name: Security audit
@@ -107,5 +108,4 @@ jobs:
           # Provide required env vars for build (non-sensitive placeholders)
           NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL || 'https://placeholder.supabase.co' }}
           NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'placeholder-anon-key' }}
-          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY || 'sk-placeholder-for-ci-build' }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY || 'placeholder-service-role-key' }}

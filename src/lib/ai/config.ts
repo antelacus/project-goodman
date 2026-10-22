@@ -1,40 +1,24 @@
 /**
- * AI Configuration
+ * AI configuration: the one model, and per purpose an output budget and a time limit.
  *
- * Centralized configuration for all LLM-related settings.
- * Models, parameters, and provider settings.
- *
- * Prompts are stored in src/lib/ai/prompts/*.md
+ * The model is a constant, not an env var: REQ §5.1 fixes every purpose to it.
+ * The relay ignores output limits today (DESIGN §8); budgets are sent anyway and
+ * leave room for reasoning tokens, which count against them on official models.
+ * Time limits bound the whole call including the one retry (REQ §5.2).
  */
 
-export const AI_CONFIG = {
-  models: {
-    chat: process.env.LLM_MODEL_CHAT || process.env.OPENAI_MODEL || 'gpt-4o',
-    extraction: process.env.LLM_MODEL_EXTRACTION || process.env.OPENAI_EXTRACTION_MODEL || 'gpt-5-mini',
-    embedding: process.env.LLM_MODEL_EMBEDDING || process.env.OPENAI_EMBEDDING_MODEL || 'text-embedding-3-small',
-    title: process.env.LLM_MODEL_TITLE || process.env.OPENAI_TITLE_MODEL || 'gpt-4o-mini',
-    report: process.env.LLM_MODEL_REPORT || 'gpt-4o',
-  },
-  params: {
-    chat: {
-      temperature: 0.2,
-      maxTokens: 800,
-    },
-    extraction: {
-      temperature: 0.1,
-      maxTokens: 4000,
-    },
-    title: {
-      temperature: 0.3,
-      maxTokens: 50,
-    },
-    report: {
-      temperature: 0.3,
-      maxTokens: 800,
-    },
-  },
+export const MODEL = 'gpt-6.1-sol';
+
+export const PURPOSES = {
+  chat: { outputBudget: 8000, timeoutMs: 90_000 },
+  title: { outputBudget: 1000, timeoutMs: 60_000 },
+  reportSection: { outputBudget: 4000, timeoutMs: 90_000 },
+  reportSummary: { outputBudget: 4000, timeoutMs: 60_000 },
+  reportConfig: { outputBudget: 2000, timeoutMs: 60_000 },
+  extraction: { outputBudget: 16000, timeoutMs: 60_000 },
+  ocr: { outputBudget: 16000, timeoutMs: 120_000 },
 } as const;
 
-// Type exports for consumers
-export type ModelType = keyof typeof AI_CONFIG.models;
-export type ParamsType = keyof typeof AI_CONFIG.params;
+export type AIPurpose = keyof typeof PURPOSES;
+
+export const MAX_RETRIES = 1;

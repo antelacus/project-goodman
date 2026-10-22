@@ -1,0 +1,46 @@
+{
+  "note": "REQ §retrieval-quality query set. Drafted by Claude, approved by Jason; the expected articles and documents are Jason's call. The bar must hold on two consecutive runs. An in-library query passes when any expected item is in the top 5 of any search round; an out-of-library query passes when the final answer opens with the out-of-library label (or the retrieval-failure label when every search errored) and holds no article number.",
+  "queries": [
+    { "id": "reg-term-1", "kind": "regulation", "style": "term", "question": "小规模纳税人的认定标准是什么？",
+      "expected": [{ "regulation": "中华人民共和国增值税法-2024", "article": "第九条" }] },
+    { "id": "reg-term-2", "kind": "regulation", "style": "term", "question": "企业所得税的基本税率是多少？",
+      "expected": [{ "regulation": "中华人民共和国企业所得税法-2018", "article": "第四条" }] },
+    { "id": "reg-term-3", "kind": "regulation", "style": "term", "question": "资产负债表日后调整事项通常包括哪些？",
+      "expected": [{ "regulation": "企业会计准则第29号-资产负债表日后事项-2007", "article": "第五条" }] },
+    { "id": "reg-term-4", "kind": "regulation", "style": "term", "question": "借款费用开始资本化需要同时满足哪些条件？",
+      "expected": [{ "regulation": "企业会计准则第17号-借款费用-2007", "article": "第五条" }] },
+    { "id": "reg-term-5", "kind": "regulation", "style": "term", "question": "金融资产的预期信用损失应当如何计量？",
+      "expected": [
+        { "regulation": "企业会计准则第22号-金融工具的确认和计量-2018", "article": "第五十八条" },
+        { "regulation": "企业会计准则第22号-金融工具的确认和计量-2018", "article": "第五十九条" }
+      ] },
+    { "id": "reg-colloquial-1", "kind": "regulation", "style": "colloquial", "question": "东西卖不出去、价格也跌了，库存要不要减值？",
+      "expected": [{ "regulation": "企业会计准则第1号-存货-2007", "article": "第十五条" }] },
+    { "id": "reg-colloquial-2", "kind": "regulation", "style": "colloquial", "question": "公司裁员给员工的补偿，什么时候入账？",
+      "expected": [{ "regulation": "企业会计准则第9号-职工薪酬-2014", "article": "第二十条" }] },
+    { "id": "reg-colloquial-3", "kind": "regulation", "style": "colloquial", "question": "政府给钱让我们买设备，这笔钱怎么记账？",
+      "expected": [{ "regulation": "企业会计准则第16号-政府补助-2017", "article": "第八条" }] },
+    { "id": "reg-colloquial-4", "kind": "regulation", "style": "colloquial", "question": "从国外进货，关税由谁来交？",
+      "expected": [{ "regulation": "中华人民共和国关税法-2024", "article": "第三条" }] },
+    { "id": "reg-colloquial-5", "kind": "regulation", "style": "colloquial", "question": "租了一间办公室，要不要在账上记成资产？",
+      "expected": [{ "regulation": "企业会计准则第21号-租赁-2019", "article": "第十四条" }] },
+
+    { "id": "doc-1", "kind": "company", "question": "我们公司的存货跌价准备按库龄怎么计提？",
+      "expected": [{ "document": "财务管理制度.md" }] },
+    { "id": "doc-2", "kind": "company", "question": "账龄 6 到 12 个月的应收账款按多少比例计提坏账？",
+      "expected": [{ "document": "财务管理制度.md" }] },
+    { "id": "doc-3", "kind": "company", "question": "公司的生产设备用什么方法折旧？",
+      "expected": [{ "document": "财务管理制度.md" }] },
+    { "id": "doc-4", "kind": "company", "question": "公司做外汇套期保值允许用哪些工具？",
+      "expected": [{ "document": "财务管理制度.md" }] },
+    { "id": "doc-5", "kind": "company", "question": "我们主要客户的付款账期一般是多久？",
+      "expected": [{ "document": "公司详细档案.md" }] },
+    { "id": "doc-6", "kind": "company", "question": "公司的综合毛利率通常在什么区间？",
+      "expected": [{ "document": "公司详细档案.md" }] },
+
+    { "id": "out-1", "kind": "out_of_library", "question": "个人所得税的专项附加扣除有哪些？" },
+    { "id": "out-2", "kind": "out_of_library", "question": "公司法规定有限责任公司最多可以有多少个股东？" },
+    { "id": "out-3", "kind": "out_of_library", "question": "签订购销合同要交印花税吗，税率是多少？" },
+    { "id": "out-4", "kind": "out_of_library", "question": "买公司用车要交车辆购置税吗，怎么计算？" }
+  ]
+}

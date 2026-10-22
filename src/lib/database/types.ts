@@ -20,14 +20,7 @@ export type {
   MessageRole,
   DocCategory,
   // RPC result types
-  SearchDocumentsHybridResult,
-  MatchDocumentsResult,
-  SearchRegulationsHybridResult,
   SearchFinancialDataResult,
-  // RPC argument types
-  SearchDocumentsHybridArgs,
-  MatchDocumentsArgs,
-  SearchRegulationsHybridArgs,
   // Common query types
   DocumentWithOwner,
   DocumentListItem,
@@ -40,9 +33,6 @@ export type {
 // Re-export helper functions
 // ============================================================
 export {
-  searchDocumentsHybrid,
-  matchDocuments,
-  searchRegulationsHybrid,
   isValidMessageRole,
   convertToolCallsToDb,
   parseDbToolCalls,

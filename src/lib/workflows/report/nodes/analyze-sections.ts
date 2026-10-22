@@ -5,15 +5,11 @@
  * v4.2: Calls LLM sequentially for each of 5 sections.
  */
 
-import { getLLMClient } from '@/lib/ai/client';
-import { AI_CONFIG } from '@/lib/ai/config';
+import { generateText, AIUnavailableError, AI_FAILURE_TEXT } from '@/lib/ai';
 import type { ReportWorkflowState, ReportSectionData, MetricResult } from '../state';
 import type { ReportSection, ReportMetric } from '@/types/report';
 import { REPORT_SECTIONS, calculateChange } from '../constants';
-import { buildSectionAnalysisPrompt } from '../prompts';
-
-// Get shared LLM client
-const openai = getLLMClient();
+import { buildSectionAnalysisPrompt, REPORT_ANALYST_SYSTEM } from '../prompts';
 
 /**
  * Convert MetricResult to ReportMetric format
@@ -22,13 +18,15 @@ function toReportMetric(
   metric: MetricResult,
   comparisonMetric?: MetricResult
 ): ReportMetric {
+  // A metric that failed to calculate carries a placeholder 0, not a value.
+  const previous = comparisonMetric && !comparisonMetric.error ? comparisonMetric.value : undefined;
   return {
     name: metric.displayName,
     toolName: metric.toolName,
     value: metric.value,
     formatted: metric.formatted,
-    previousValue: comparisonMetric?.value,
-    change: calculateChange(metric.value, comparisonMetric?.value),
+    previousValue: previous,
+    change: metric.error ? undefined : calculateChange(metric.value, previous),
     interpretation: metric.interpretation,
     warnings: metric.warnings,
     sourceDocumentIds: [
@@ -72,21 +70,17 @@ async function analyzeSection(
     companyContext
   );
 
-  // Call LLM
+  // Call LLM. A failed analysis is shown as failed; the metrics table below is
+  // computed without AI and stays (REQ §5.2).
   let analysis: string;
+  let analysisStatus: 'ok' | 'failed' = 'ok';
 
   try {
-    const response = await openai.chat.completions.create({
-      model: AI_CONFIG.models.report,
-      messages: [{ role: 'user', content: prompt }],
-      temperature: AI_CONFIG.params.report.temperature,
-      max_tokens: AI_CONFIG.params.report.maxTokens,
-    });
-
-    analysis = response.choices[0]?.message?.content || '分析生成失败';
+    analysis = await generateText({ purpose: 'reportSection', system: REPORT_ANALYST_SYSTEM, prompt });
   } catch (error) {
-    console.error(`Error analyzing section ${sectionConfig.id}:`, error);
-    analysis = `${sectionConfig.title}：基于当前数据，各项指标表现正常，详情请参考具体数值。`;
+    if (!(error instanceof AIUnavailableError)) throw error;
+    analysis = AI_FAILURE_TEXT.reportSection;
+    analysisStatus = 'failed';
   }
 
   // Build metrics array
@@ -118,6 +112,7 @@ async function analyzeSection(
     title: sectionConfig.title,
     metrics,
     analysis,
+    analysisStatus,
     sourceDocuments: [], // Will be populated in assemble step
   };
 }

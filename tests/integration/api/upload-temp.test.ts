@@ -21,27 +21,6 @@ vi.mock('@/lib/logging', () => ({
   logWorkflowEvent: vi.fn(),
 }));
 
-vi.mock('openai', () => {
-  return {
-    default: class OpenAI {
-      embeddings = {
-        create: vi.fn().mockResolvedValue({
-          data: [{ embedding: [0.1, 0.2, 0.3] }],
-        }),
-      };
-      chat = {
-        completions: {
-          create: vi.fn(),
-        },
-      };
-      responses = {
-        create: vi.fn(),
-      };
-      constructor() {}
-    },
-  };
-});
-
 vi.mock('@/lib/database', () => ({
   createServerSupabaseClient: vi.fn(),
 }));

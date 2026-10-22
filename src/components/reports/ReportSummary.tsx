@@ -14,6 +14,15 @@ interface ReportSummaryProps {
 export const ReportSummary: React.FC<ReportSummaryProps> = ({ summary }) => {
   const { keyFindings, riskWarnings, recommendations } = summary;
 
+  if (summary.status === 'not_generated') {
+    return (
+      <div className="bg-yellow-50 rounded-lg p-4 border border-yellow-200 flex items-start gap-2">
+        <AlertTriangle size={18} className="text-yellow-700 mt-0.5" />
+        <p className="text-sm text-yellow-900">{summary.reason}</p>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-4">
       {/* Key Findings */}

@@ -22,23 +22,9 @@ vi.mock('@/lib/prompts', () => ({
   getDataExtractPrompt: () => 'PROMPT',
 }));
 
-vi.mock('openai', () => {
-  return {
-    default: class OpenAI {
-      chat = {
-        completions: {
-          create: vi.fn().mockResolvedValue({
-            choices: [{ message: { content: '{"foo":"bar"}' } }],
-          }),
-        },
-      };
-      responses = {
-        create: vi.fn(),
-      };
-      constructor() {}
-    },
-  };
-});
+vi.mock('@/lib/ai', () => ({
+  generateJSON: vi.fn().mockResolvedValue({ foo: 'bar' }),
+}));
 
 vi.mock('@/lib/security', () => ({
   ensureSession: vi.fn(),

@@ -8,7 +8,7 @@
  */
 
 import { z } from "zod";
-import type OpenAI from "openai";
+import type { ToolDefinition } from "@/lib/ai";
 
 // ============================================================================
 // Core Types
@@ -59,6 +59,8 @@ export interface ToolExecutionResult<T = unknown> {
   data?: T;
   error?: string;
   warnings?: string[];
+  /** The input failed the tool's schema, so the tool never ran. */
+  invalidInput?: boolean;
 }
 
 // ============================================================================
@@ -269,10 +271,4 @@ export function isTool(obj: unknown): obj is Tool {
   );
 }
 
-// ============================================================================
-// Re-export OpenAI types for convenience
-// ============================================================================
-
-export type ChatCompletionTool = OpenAI.Chat.ChatCompletionTool;
-export type ChatCompletionToolChoiceOption =
-  OpenAI.Chat.ChatCompletionToolChoiceOption;
+export type ChatCompletionTool = ToolDefinition;

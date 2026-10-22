@@ -45,7 +45,7 @@ Fix: Check Redis/Supabase connectivity, verify env vars
 
 ### Missing Environment Variable
 ```
-Error: OPENAI_API_KEY is not defined
+Error: AI call for chat failed: error  (401 — check LLM_API_KEY / LLM_BASE_URL)
 Fix: Verify .env.local has all required variables
 ```
 

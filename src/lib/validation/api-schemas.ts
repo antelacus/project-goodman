@@ -246,6 +246,8 @@ export const ReportSaveSchema = z.object({
         comparisonYear: z.string().optional(),
         sections: z.array(z.any()),
         summary: z.object({
+            status: z.enum(['ok', 'not_generated']).optional(),
+            reason: z.string().optional(),
             keyFindings: z.array(z.string()),
             riskWarnings: z.array(z.string()),
             recommendations: z.array(z.string()),

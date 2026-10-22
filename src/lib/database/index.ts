@@ -47,14 +47,7 @@ export type {
   MessageRole,
   DocCategory,
   // RPC result types
-  SearchDocumentsHybridResult,
-  MatchDocumentsResult,
-  SearchRegulationsHybridResult,
   SearchFinancialDataResult,
-  // RPC argument types
-  SearchDocumentsHybridArgs,
-  MatchDocumentsArgs,
-  SearchRegulationsHybridArgs,
   // Common query types
   DocumentWithOwner,
   DocumentListItem,
@@ -65,9 +58,6 @@ export type {
 
 // Helper functions
 export {
-  searchDocumentsHybrid,
-  matchDocuments,
-  searchRegulationsHybrid,
   isValidMessageRole,
   convertToolCallsToDb,
   parseDbToolCalls,

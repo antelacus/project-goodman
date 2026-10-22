@@ -6,22 +6,19 @@
  * Features:
  * - Admin password authentication
  * - Type-specific structured extraction
- * - Dual storage: structured tables + vector embeddings
+ * - Dual storage: structured tables + text chunks for keyword search
  * - Support for financial statements and regulations
  */
 
 export const runtime = "nodejs";
 
 import { NextRequest, NextResponse } from "next/server";
-import type OpenAI from "openai";
 import ExcelJS from "exceljs";
 import { createServerSupabaseClient } from "@/lib/database";
 import type { InsertTables, Database } from "@/lib/database";
 import { SupabaseClient } from "@supabase/supabase-js";
 import { logWorkflowEvent } from "@/lib/logging";
-import { getLLMClient } from "@/lib/ai/client";
-import { AI_CONFIG } from "@/lib/ai/config";
-import { getPromptContent } from "@/lib/ai/prompts";
+import { readDocumentText, AIUnavailableError, AI_FAILURE_TEXT } from "@/lib/ai";
 import {
   verifyAdminPassword,
   generateRequestId,
@@ -35,7 +32,6 @@ import {
   type DocumentType,
   type ExtractionResult,
   type FinancialExtractionResult,
-  type RegulationExtractionResult,
   type ColumnMapping,
   type ColumnExtractionOptions,
   type FinancialExtractionWithType,
@@ -51,10 +47,10 @@ import {
   type StandardCashFlow,
 } from "@/lib/financial";
 import { uploadFileToStorage } from "@/lib/documents/storage";
+import { isRegulation } from "@/lib/documents/constants";
+import { splitRegulation, type SplitArticle, type SplitAnomaly } from "@/lib/extraction/regulation-splitter";
 
-const openai = getLLMClient();
 
-const PDF_TEXT_EXTRACT_PROMPT = getPromptContent('pdf-extract.md');
 
 /**
  * Request body schema
@@ -82,13 +78,21 @@ function isFinancialExtractionResult(
 }
 
 /**
- * Extract text from file based on type
+ * The file's text, and its pages for the regulation splitter (REQ §5.6): a PDF's
+ * text layer page by page with the PDF's own page count, which the splitter
+ * checks against; any other text is one page. `pages` is null for a PDF read as
+ * a scan, which has no pages to split by.
  */
+interface ExtractedFile {
+  text: string;
+  pages: { pages: string[]; pageCount: number } | null;
+}
+
 async function extractTextFromFile(
   fileData: string,
-  fileName: string,
-  openaiClient: OpenAI
-): Promise<string> {
+  fileName: string
+): Promise<ExtractedFile> {
+  const onePage = (text: string): ExtractedFile => ({ text, pages: { pages: [text], pageCount: 1 } });
   // Detect file type from extension
   const ext = fileName.toLowerCase().split('.').pop();
   console.log(`[extractTextFromFile] Processing file: ${fileName}, extension: ${ext}, data length: ${fileData.length}`);
@@ -157,96 +161,148 @@ async function extractTextFromFile(
         .join('\n');
 
       console.log(`[extractTextFromFile] Text extracted, length: ${text.length}`);
-      return text;
+      return onePage(text);
     } catch (err) {
       console.error(`[extractTextFromFile] Excel parsing error:`, err);
       throw new Error(`Excel parsing failed: ${err instanceof Error ? err.message : 'Unknown error'}`);
     }
   } else if (ext === 'pdf') {
-    // PDF file - use unpdf for direct text extraction (serverless-friendly, no worker needed)
+    // Direct text extraction first (unpdf, serverless-friendly); a scan with little
+    // or no text layer, or a file unpdf cannot parse, is read as a document image.
+    let textContent = '';
+    let pages: string[] = [];
+    let pageCount = 0;
     try {
-      const buffer = Buffer.from(fileData, 'base64');
-      console.log(`[extractTextFromFile] PDF buffer created, size: ${buffer.length} bytes`);
-
-      // Use unpdf which is designed for serverless environments
       const { extractText } = await import('unpdf');
-      const result = await extractText(new Uint8Array(buffer));
-      // unpdf returns text as array of strings (one per page), join them
-      const textContent = Array.isArray(result.text) ? result.text.join('\n\n') : result.text;
-
-      console.log(`[extractTextFromFile] PDF text extracted directly, length: ${textContent.length} chars, pages: ${result.totalPages}`);
-
-      if (textContent.trim().length > 100) {
-        // Successfully extracted text directly
-        return textContent;
-      }
-
-      // If direct extraction yielded little text, it might be a scanned PDF
-      // Fall back to OpenAI Vision API
-      console.log(`[extractTextFromFile] PDF text too short, falling back to Vision API...`);
-      const response = await openaiClient.responses.create({
-        model: AI_CONFIG.models.extraction,
-        input: [{
-          role: "user",
-          content: [
-            { type: "input_text", text: PDF_TEXT_EXTRACT_PROMPT },
-            {
-              type: "input_file",
-              filename: fileName,
-              file_data: `data:application/pdf;base64,${fileData}`
-            }
-          ]
-        }]
-      });
-      return response.output_text || '';
+      const result = await extractText(new Uint8Array(Buffer.from(fileData, 'base64')));
+      pages = result.text;
+      pageCount = result.totalPages;
+      textContent = pages.join('\n\n');
+      console.log(`[extractTextFromFile] PDF text extracted directly, length: ${textContent.length} chars, pages: ${pageCount}`);
     } catch (pdfError) {
       console.error(`[extractTextFromFile] PDF parse error:`, pdfError);
-      // Fall back to OpenAI if pdf-parse fails
-      console.log(`[extractTextFromFile] Falling back to Vision API due to error...`);
-      const response = await openaiClient.responses.create({
-        model: AI_CONFIG.models.extraction,
-        input: [{
-          role: "user",
-          content: [
-            { type: "input_text", text: PDF_TEXT_EXTRACT_PROMPT },
-            {
-              type: "input_file",
-              filename: fileName,
-              file_data: `data:application/pdf;base64,${fileData}`
-            }
-          ]
-        }]
-      });
-      return response.output_text || '';
     }
+
+    if (textContent.trim().length > 100) {
+      return { text: textContent, pages: { pages, pageCount } };
+    }
+    console.log(`[extractTextFromFile] Reading the PDF as a scan...`);
+    return { text: await readDocumentText({ fileName, mimeType: 'application/pdf', base64: fileData }), pages: null };
   } else if (['png', 'jpg', 'jpeg', 'webp', 'gif'].includes(ext || '')) {
-    // Image file - use Vision API
     const mimeType = ext === 'jpg' ? 'image/jpeg' : `image/${ext}`;
-    const response = await openaiClient.chat.completions.create({
-      model: AI_CONFIG.models.extraction,
-      messages: [{
-        role: "user",
-        content: [
-          { type: "text", text: PDF_TEXT_EXTRACT_PROMPT },
-          {
-            type: "image_url",
-            image_url: {
-              url: `data:${mimeType};base64,${fileData}`,
-              detail: "high"
-            }
-          }
-        ]
-      }],
-      max_completion_tokens: AI_CONFIG.params.extraction.maxTokens
-    });
-    return response.choices[0]?.message?.content || '';
+    return onePage(await readDocumentText({ fileName, mimeType, base64: fileData }));
   } else if (ext === 'txt' || ext === 'md') {
     // Plain text - decode from base64
-    return Buffer.from(fileData, 'base64').toString('utf-8');
+    return onePage(Buffer.from(fileData, 'base64').toString('utf-8'));
   }
 
   // If no extension match, assume it's already text
-  return fileData;
+  return onePage(fileData);
+}
+
+type FinancialRow = Omit<InsertTables<'financial_data'>, 'document_id'>;
+
+interface ValidationReport {
+  year: string;
+  period: string;
+  isValid: boolean;
+  errors: string[];
+  warnings: string[];
+}
+
+interface FinancialRows {
+  rows: FinancialRow[];
+  validationReports: ValidationReport[];
+}
+
+function isFinancialStatementType(documentType: string): documentType is FinancialStatementType {
+  return documentType === "balance_sheet" || documentType === "income_statement" || documentType === "cash_flow";
+}
+
+/**
+ * Extracts every period of a financial statement and validates all of them.
+ * Returns the rows to insert only when every period is valid, so a failing
+ * period never leaves the others half-written (REQ §5.2).
+ */
+async function extractFinancialRows(req: {
+  documentType: FinancialStatementType;
+  extractedText: string;
+  fileName: string;
+  documentText: string;
+  columnMapping?: ColumnMapping;
+  year?: string;
+  period?: string;
+  startDate?: string;
+  endDate?: string;
+}): Promise<FinancialRows | { invalid: ValidationReport }> {
+  const { documentType, columnMapping } = req;
+  let aiResult: FinancialExtractionWithType;
+
+  if (columnMapping) {
+    console.log("[Admin Upload] Starting Column-based extraction...");
+    const extractionOptions: ColumnExtractionOptions = {
+      year: req.year,
+      period: req.period,
+      startDate: req.startDate,
+      endDate: req.endDate,
+    };
+    const columnResult = await performColumnBasedExtraction(
+      Buffer.from(req.documentText, 'base64'),
+      columnMapping,
+      req.startDate || '',
+      req.endDate || '',
+      documentType,
+      extractionOptions
+    );
+    aiResult = { type: documentType, data: columnResult.data };
+  } else {
+    console.log("[Admin Upload] Starting AI-driven extraction...");
+    aiResult = await performAIExtraction(req.extractedText, req.fileName);
+  }
+
+  const rows: FinancialRow[] = [];
+  const validationReports: ValidationReport[] = [];
+
+  for (const item of aiResult.data) {
+    // REASON: AI extraction returns content keyed by the standard Chinese metric
+    // names. Cast via `unknown` is safer than `any` for validation.
+    let validationResult;
+    if (aiResult.type === 'balance_sheet') {
+      validationResult = validateBalanceSheet(item.content as unknown as StandardBalanceSheet);
+    } else if (aiResult.type === 'income_statement') {
+      validationResult = validateIncomeStatement(item.content as unknown as StandardIncomeStatement);
+    } else {
+      validationResult = validateCashFlow(item.content as unknown as StandardCashFlow);
+    }
+
+    const report: ValidationReport = {
+      year: item.year,
+      period: item.period,
+      isValid: validationResult.isValid,
+      errors: validationResult.errors,
+      warnings: validationResult.warnings,
+    };
+    if (!report.isValid) return { invalid: report };
+    validationReports.push(report);
+
+    for (const [name, value] of Object.entries(item.content)) {
+      if (value === null || value === undefined) continue;
+      rows.push({
+        data_type: documentType,
+        year: item.year,
+        period: item.period,
+        metric_name: name,
+        metric_value: value,
+        unit: '元',
+        metadata: {
+          confidence: columnMapping ? 1.0 : 0.9,
+          validation_errors: validationResult.errors,
+        },
+      });
+    }
+  }
+
+  return { rows, validationReports };
 }
 
 /**
@@ -267,6 +323,7 @@ interface UploadResponse {
       title: string;
       content: string;
     }>;
+    anomalies?: SplitAnomaly[];
   };
   processingTime?: number;
   error?: string;
@@ -395,7 +452,7 @@ export async function POST(request: NextRequest) {
 
     // Step 0: Extract text from file if needed
     console.log(`[Admin Upload] Extracting text from: ${fileName}`);
-    const extractedText = await extractTextFromFile(documentText, fileName, openai);
+    const { text: extractedText, pages: filePages } = await extractTextFromFile(documentText, fileName);
     logWorkflowEvent({
       ...workflowContext,
       step: 'extract',
@@ -425,13 +482,55 @@ export async function POST(request: NextRequest) {
       documentType
     );
 
-    // Step 2: Chunk the document for vector storage
+    // Step 1b: Financial statements are extracted and every period validated
+    // before anything is written, so a failure leaves the database untouched.
+    let financialRows: FinancialRows | null = null;
+    if (isFinancialStatementType(documentType)) {
+      const result = await extractFinancialRows({
+        documentType, extractedText, fileName, documentText, columnMapping, year, period, startDate, endDate,
+      });
+      if ('invalid' in result) {
+        const { year: badYear, period: badPeriod, errors } = result.invalid;
+        console.warn(`[Admin Upload] Validation failed for ${badYear}:`, errors);
+        return createErrorResponse(
+          new Error(`Validation failed for ${badYear} (${badPeriod}): ${errors.join('；')}`),
+          requestId,
+          400,
+          { errorType: 'VALIDATION', route: '/api/admin/upload-database-document' }
+        );
+      }
+      financialRows = result;
+    }
+
+    // Step 1c: Regulations are split before anything is written, so a split the
+    // citations cannot trust never reaches the database (REQ §5.6).
+    let regulationSplit: { articles: SplitArticle[]; anomalies: SplitAnomaly[] } | null = null;
+    if (isRegulation(documentType)) {
+      if (!filePages) {
+        logWorkflowFailure('VALIDATION');
+        return createJsonResponse(
+          { success: false, message: '条款拆分异常：PDF 没有可提取的文字层，无法按页拆分', error: 'regulation_split' } as UploadResponse,
+          400
+        );
+      }
+      regulationSplit = splitRegulation(filePages.pages, filePages.pageCount);
+      const blocking = regulationSplit.anomalies.find(
+        a => a.kind === 'repeated_number' || a.kind === 'page_count_mismatch' || a.kind === 'no_articles'
+      );
+      if (blocking) {
+        logWorkflowFailure('VALIDATION');
+        const message =
+          blocking.kind === 'repeated_number' ? `条款拆分异常：${blocking.articleNumber}重复`
+          : blocking.kind === 'page_count_mismatch' ? `条款拆分异常：抽取页数（${blocking.extracted}）与 PDF 页数（${blocking.expected}）不一致`
+          // Document search excludes regulations, so with no articles neither search could reach it.
+          : '条款拆分异常：未拆出任何条款';
+        return createJsonResponse({ success: false, message, error: 'regulation_split' } as UploadResponse, 400);
+      }
+    }
+
+    // Step 2: Chunk the document for keyword search
     const chunks = chunkDocument(extractedText, 1000, 200);
     console.log(`[Admin Upload] Created ${chunks.length} chunks`);
-
-    // Step 3: Generate embeddings for all chunks
-    console.log(`[Admin Upload] Generating embeddings...`);
-    const embeddings = await generateEmbeddings(chunks);
 
     // Step 4: Store document metadata
     // Generate UUID for document
@@ -457,7 +556,16 @@ export async function POST(request: NextRequest) {
         });
       }
     } catch (storageError) {
-      // Log but don't fail - file storage is optional
+      // A regulation's citations link to its original file, so without the file
+      // the upload fails; for other types the file is optional.
+      if (isRegulation(documentType)) {
+        console.error(`[Admin Upload] Storage upload failed:`, storageError);
+        logWorkflowFailure('INTERNAL');
+        return createJsonResponse(
+          { success: false, message: "原文件存储失败，未写入任何数据", error: "storage_failed" } as UploadResponse,
+          502
+        );
+      }
       console.error(`[Admin Upload] Storage upload failed (non-fatal):`, storageError);
     }
 
@@ -497,13 +605,12 @@ export async function POST(request: NextRequest) {
 
     console.log(`[Admin Upload] Document created with ID: ${documentId}`);
 
-    // Step 5: Store vector chunks with proper typing
+    // Step 5: Store text chunks with proper typing
     const chunkRecords: InsertTables<'document_chunks'>[] = chunks.map((chunk, index) => ({
       id: crypto.randomUUID(),
       document_id: documentId,
       chunk_index: index,
       content: chunk,
-      embedding: JSON.stringify(embeddings[index]),
       chunk_type: "general",
     }));
 
@@ -518,7 +625,7 @@ export async function POST(request: NextRequest) {
       throw new Error(`Failed to insert chunks: ${chunksError.message}`);
     }
 
-    console.log(`[Admin Upload] Stored ${chunks.length} vector chunks`);
+    console.log(`[Admin Upload] Stored ${chunks.length} chunks`);
     logWorkflowEvent({
       ...workflowContext,
       step: 'store',
@@ -529,170 +636,45 @@ export async function POST(request: NextRequest) {
     // Step 6: Store structured data based on document type
     const structuredDataSummary: UploadResponse["structuredData"] = {};
 
-    // --- AI-Driven Extraction & Validation ---
-    if (
-      documentType === "balance_sheet" ||
-      documentType === "income_statement" ||
-      documentType === "cash_flow"
-    ) {
-      let aiResult: FinancialExtractionWithType;
-
-      if (columnMapping) {
-        console.log("[Admin Upload] Starting Column-based extraction...");
-        // Convert base64 to buffer for column extraction
-        const fileBuffer = Buffer.from(documentText, 'base64');
-
-        // Pass year/period from form to column extraction
-        const extractionOptions: ColumnExtractionOptions = {
-          year: year,
-          period: period,
-          startDate: startDate,
-          endDate: endDate
-        };
-
-        const columnResult = await performColumnBasedExtraction(
-          fileBuffer,
-          columnMapping,
-          startDate || '',
-          endDate || '',
-          documentType,
-          extractionOptions
-        );
-        // Add type to column extraction result
-        aiResult = {
-          type: documentType as FinancialStatementType,
-          data: columnResult.data
-        };
-      } else {
-        console.log("[Admin Upload] Starting AI-driven extraction...");
-        // Perform AI Extraction
-        aiResult = await performAIExtraction(extractedText, fileName, openai);
-      }
-
-      let totalMetricsStored = 0;
-      const validationReports: Array<{
-        year: string;
-        period: string;
-        isValid: boolean;
-        errors: string[];
-        warnings: string[];
-      }> = [];
-
-      // 2. Process each extracted period (e.g., 2021, 2020)
-      for (const item of aiResult.data) {
-        console.log(`[Admin Upload] Processing data for ${item.year} (${item.period})...`);
-
-        // 3. Validate Data based on document type
-        // REASON: AI extraction returns FinancialStatementContent with Chinese keys matching
-        // Standard schema structure. Cast via `unknown` is safer than `any` for validation.
-        let validationResult;
-        if (aiResult.type === 'balance_sheet') {
-          validationResult = validateBalanceSheet(item.content as unknown as StandardBalanceSheet);
-        } else if (aiResult.type === 'income_statement') {
-          validationResult = validateIncomeStatement(item.content as unknown as StandardIncomeStatement);
-        } else {
-          validationResult = validateCashFlow(item.content as unknown as StandardCashFlow);
-        }
-
-        validationReports.push({
-          year: item.year,
-          period: item.period,
-          isValid: validationResult.isValid,
-          errors: validationResult.errors,
-          warnings: validationResult.warnings
-        });
-
-        if (!validationResult.isValid) {
-          console.warn(`[Admin Upload] Validation failed for ${item.year}:`, validationResult.errors);
-          return createErrorResponse(
-            new Error(
-              `Validation failed for ${item.year} (${item.period}): ${validationResult.errors.join('；')}`
-            ),
-            requestId,
-            400,
-            {
-              errorType: 'VALIDATION',
-              route: '/api/admin/upload-database-document',
-            }
-          );
-        }
-
-        // 4. Transform to standard metrics format for DB storage
-        // We need to flatten the object { "货币资金": 100 } -> [{ name: '货币资金', value: 100 }]
-        // Note: We filter out null values below, so the array only contains valid numbers
-        const metrics: Array<{ name: string; value: number; unit: string }> = [];
-
-        for (const [key, value] of Object.entries(item.content)) {
-          if (value !== null && value !== undefined) {
-            // The key is already the Chinese name (from the updated schema)
-            metrics.push({
-              name: key,
-              value: value,
-              unit: '元'
-            });
-          }
-        }
-
-        // 5. Store in Database with proper typing
-        const records: InsertTables<'financial_data'>[] = metrics.map((metric) => ({
-          document_id: documentId,
-          data_type: documentType,
-          year: item.year,
-          period: item.period,
-          metric_name: metric.name,
-          metric_value: metric.value,
-          unit: metric.unit,
-          metadata: {
-            confidence: columnMapping ? 1.0 : 0.9,
-            validation_errors: validationResult.errors
-          },
-        }));
-
-        if (records.length > 0) {
-          const { error } = await supabase.from("financial_data").insert(records);
-          if (error) throw error;
-          totalMetricsStored += records.length;
+    if (financialRows) {
+      // All periods passed validation above; one insert writes them together.
+      const records = financialRows.rows.map(row => ({ ...row, document_id: documentId }));
+      if (records.length > 0) {
+        const { error } = await supabase.from("financial_data").insert(records);
+        if (error) {
+          await supabase.from("documents").delete().eq("id", documentId);
+          throw error;
         }
       }
 
-      console.log(`[Admin Upload] Extraction complete. Stored ${totalMetricsStored} metrics.`);
+      console.log(`[Admin Upload] Extraction complete. Stored ${records.length} metrics.`);
 
       logWorkflowSuccess();
       return createJsonResponse({
         success: true,
         documentId,
         message: columnMapping ? "Document processed successfully with Column-based extraction" : "Document processed successfully with AI extraction",
-        validationReports // Return validation results to frontend
+        validationReports: financialRows.validationReports,
       });
     }
-    else if (documentType === "regulation" || documentType === "accounting_standard" || documentType === "policy") {
-      // Store regulation/standard/policy articles
-      const regulationResult = extractionResult as RegulationExtractionResult;
-
-      // Check if articles exist before processing
-      if (regulationResult.articles && regulationResult.articles.length > 0) {
-        const articlesCount = await storeRegulationArticles(
-          supabase,
-          documentId,
-          regulationResult,
-          fileName
-        );
-
-        console.log(`[Admin Upload] Stored ${articlesCount} regulation articles for type: ${documentType}`);
-
-        structuredDataSummary.articles = regulationResult.articles.map((a) => ({
+    else if (regulationSplit) {
+      if (regulationSplit.articles.length > 0) {
+        await storeRegulationArticles(supabase, documentId, regulationSplit.articles, fileName);
+        console.log(`[Admin Upload] Stored ${regulationSplit.articles.length} regulation articles for type: ${documentType}`);
+        structuredDataSummary.articles = regulationSplit.articles.map(a => ({
           number: a.articleNumber,
-          title: a.title || "",
+          title: "",
           content: a.content,
         }));
+        structuredDataSummary.anomalies = regulationSplit.anomalies;
       } else {
-        console.log(`[Admin Upload] No articles extracted for ${documentType}, storing as vector-only`);
+        console.log(`[Admin Upload] No articles extracted for ${documentType}, storing chunks only`);
       }
     }
-    // Vector-only document types (no structured extraction needed)
+    // Chunk-only document types (no structured extraction needed)
     else if (documentType === "financial_report" || documentType === "business_info" || documentType === "general") {
-      console.log(`[Admin Upload] Vector-only storage for document type: ${documentType}`);
-      // No additional structured extraction - document is already chunked and embedded above
+      console.log(`[Admin Upload] Chunk-only storage for document type: ${documentType}`);
+      // No additional structured extraction - document is already chunked above
     }
 
     // Calculate processing time
@@ -721,6 +703,13 @@ export async function POST(request: NextRequest) {
 
   } catch (error: unknown) {
     console.error("[Admin Upload] Error:", error);
+    if (error instanceof AIUnavailableError) {
+      logWorkflowFailure('EXTRACTION_FAILED');
+      return createJsonResponse(
+        { success: false, message: AI_FAILURE_TEXT.extraction, error: 'ai_unavailable' } as UploadResponse,
+        503
+      );
+    }
     logWorkflowFailure('INTERNAL');
     return createErrorResponse(error, requestId, 500, {
       errorType: 'INTERNAL',
@@ -750,49 +739,22 @@ function chunkDocument(
 }
 
 /**
- * Generate embeddings for text chunks
- */
-async function generateEmbeddings(chunks: string[]): Promise<number[][]> {
-  const embeddings: number[][] = [];
-
-  // Process in batches of 100 (OpenAI API limit)
-  const batchSize = 100;
-  for (let i = 0; i < chunks.length; i += batchSize) {
-    const batch = chunks.slice(i, i + batchSize);
-
-    const response = await openai.embeddings.create({
-      model: AI_CONFIG.models.embedding,
-      input: batch,
-    });
-
-    embeddings.push(...response.data.map((item) => item.embedding));
-  }
-
-  return embeddings;
-}
-
-/**
  * Store regulation articles in structured table
  */
 async function storeRegulationArticles(
   supabase: SupabaseClient<Database>,
   documentId: string,
-  result: RegulationExtractionResult,
-  regulationName: string
+  articles: SplitArticle[],
+  fileName: string
 ): Promise<number> {
-  const records: InsertTables<'structured_regulations'>[] = result.articles.map((article) => ({
+  const records: InsertTables<'structured_regulations'>[] = articles.map((article) => ({
     document_id: documentId,
-    regulation_name: regulationName.replace(".pdf", "").replace(".txt", ""),
+    regulation_name: fileName.replace(/\.(pdf|txt|md)$/i, ""),
     article_number: article.articleNumber,
-    sub_article: article.subArticle || null,
-    title: article.title || null,
     content: article.content,
-    keywords: article.keywords || [],
-    hierarchy: article.hierarchy || [],
-    metadata: {
-      effectiveDate: article.effectiveDate,
-      confidence: 0.8,
-    },
+    keywords: [],
+    hierarchy: article.hierarchy,
+    metadata: { firstPage: article.firstPage, lastPage: article.lastPage },
   }));
 
   const { error } = await supabase
@@ -801,6 +763,7 @@ async function storeRegulationArticles(
 
   if (error) {
     console.error("[Admin Upload] Regulations insert error:", error);
+    await supabase.from("documents").delete().eq("id", documentId);
     throw new Error(`Failed to insert regulation articles: ${error.message}`);
   }
 
