@@ -458,6 +458,8 @@ export async function POST(req: NextRequest) {
       });
       logWorkflowFailure('EXTRACTION_FAILED');
       if (error instanceof AIUnavailableError) {
+        // Not createErrorResponse: in production it replaces the message with a generic
+        // one, and REQ §5.2 requires this failure text to reach the user.
         return NextResponse.json(
           { success: false, error: 'ai_unavailable', message: AI_FAILURE_TEXT.extraction, requestId },
           { status: 503, headers: { 'X-Request-ID': requestId } }

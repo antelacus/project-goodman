@@ -48,6 +48,8 @@ const NODE_LABELS: Record<string, string> = {
   loadMemory: '加载对话历史',
   agentLoop: '分析问题',
   toolExecutor: '执行工具',
+  forceAnswer: '生成回答',
+  finalizeAnswer: '核对出处',
   saveMemory: '保存对话',
   generateResponse: '生成回复',
   __start__: '初始化',
@@ -66,6 +68,10 @@ export function formatToolCallEvent(toolName: string, input: Record<string, unkn
 
   // Extract year/period for context
   const year = input?.year;
+  if (Array.isArray(input?.keywords)) {
+    const verb = toolName === 'search_regulations' ? '正在查询法规' : '正在搜索文档';
+    return `${verb}：${input.keywords.join('、')}${year ? ` (${year}年)` : ''}...`;
+  }
   const period = input?.period;
   const metricName = input?.metric_name;
   const query = input?.query;
@@ -129,8 +135,11 @@ export function formatToolResultEvent(
   }
 
   // For search results
-  if (data && 'total' in data) {
-    return `${label} 完成，找到 ${data.total} 条结果`;
+  if (data?.status === 'budget_exhausted') {
+    return `${label} 未执行：本问题的检索次数已用完`;
+  }
+  if (data && Array.isArray(data.results) && (toolName === 'search_regulations' || toolName === 'search_documents')) {
+    return data.results.length > 0 ? `${label} 完成，找到 ${data.results.length} 条结果` : `${label} 完成，没有找到结果`;
   }
 
   // For query results

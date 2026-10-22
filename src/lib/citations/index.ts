@@ -92,7 +92,7 @@ export function citationName(regulationName: string): string {
 
 export function finalizeAnswer(
   answer: string,
-  context: { evidence: Evidence[]; regulationSearched: boolean; allSearchesFailed: boolean }
+  context: { evidence: Evidence[]; regulationSearched: boolean; allRegulationSearchesFailed: boolean }
 ): { text: string; cited: Evidence[]; removed: number } {
   const byId = new Map(context.evidence.map(e => [e.id, e]));
   const cited = new Map<string, Evidence>();
@@ -132,7 +132,7 @@ export function finalizeAnswer(
   let text = kept.join('\n').replace(/\n{3,}/g, '\n\n').trim();
 
   if (context.regulationSearched && cited.size === 0) {
-    const label = context.allSearchesFailed ? RETRIEVAL_FAILED_LABEL : OUT_OF_LIBRARY_LABEL;
+    const label = context.allRegulationSearchesFailed ? RETRIEVAL_FAILED_LABEL : OUT_OF_LIBRARY_LABEL;
     const written = leadingLabelEnd(text);
     if (written >= 0) text = text.slice(written);
     text = `${label}\n\n${text.replace(/^[\s：:，,。]+/, '')}`.trim();

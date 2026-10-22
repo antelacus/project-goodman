@@ -164,9 +164,12 @@ export function isUploadable(docType: string | null | undefined): boolean {
 export const PDF_ONLY_TYPES = ['financial_report'];
 
 /**
- * Check if a document type is a regulation/policy
+ * Types whose text is split into articles and searched as regulations (REQ §5.6).
+ * A company policy is not one: it is searched as a document and never cited by article.
+ * The SQL search functions repeat this list (migration 20261021002917).
  */
+export const REGULATION_TYPES = ['regulation', 'accounting_standard'];
+
 export function isRegulation(docType: string | null | undefined): boolean {
-  if (!docType) return false;
-  return ['regulation', 'accounting_standard', 'policy'].includes(docType);
+  return !!docType && REGULATION_TYPES.includes(docType);
 }

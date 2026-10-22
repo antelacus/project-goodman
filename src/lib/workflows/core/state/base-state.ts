@@ -93,13 +93,15 @@ export interface AgentRuntimeState {
 export interface SearchStats {
     /** Searches executed (requests over budget are not counted). */
     used: number;
-    /** Executed searches that errored. */
-    failed: number;
+    /** A regulation search was run or asked for: the answer is checked for the out-of-library label. */
     regulationSearched: boolean;
+    /** Regulation searches that reached the database, and those that errored there. */
+    regulationRuns: number;
+    regulationFailed: number;
 }
 
 export function newQuestionState(): Pick<AgentRuntimeState, "search" | "evidence" | "mustAnswer" | "cited"> {
-    return { search: { used: 0, failed: 0, regulationSearched: false }, evidence: [], mustAnswer: false, cited: [] };
+    return { search: { used: 0, regulationSearched: false, regulationRuns: 0, regulationFailed: 0 }, evidence: [], mustAnswer: false, cited: [] };
 }
 
 /**

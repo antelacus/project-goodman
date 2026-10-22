@@ -46,6 +46,7 @@
   - 2026-10-22 · P17 改 REQ 措辞：多期间校验只属管理员上传（推翻原先"修代码"，那条裁定依据的描述有误：用户提取接口不分期间、不写财务数据） · Jason · 级联：REQ §5.2
   - 2026-10-22 · 出处检查会删去回答中引用用户自己文档条款（"合同第五条"）的句子，本版接受，登记 TD-034 · Jason · 级联：`docs/TECHNICAL_DEBT.md`
   - 2026-10-22 · 相邻的引用（"[R1][R3]"）合并为一串显示，同一法规只写一次名称，在 Phase 5 修；理由：staging 复演中两条出处首尾相接、难读 · Jason · 级联：`src/lib/citations/`
+  - 2026-10-22 · `/code-review` 10 条按 Claude 建议处理：V1–V4、V6–V8 修复；V5 以提示词缓解、TD-034 扩写并升为高；V9 不改；V10 加注释 · Jason · 级联：REQ §5.5、DESIGN §4、`chat-system.md` v1.6、`docs/TECHNICAL_DEBT.md`
 
 ## 二、批次
 
@@ -114,16 +115,16 @@ Phase 6：§vector-removed（删除向量列、向量函数、`backup` schema）
 
 | # | 级别 | 发现 | status |
 |---|------|------|--------|
-| V1 | MUST | 管理员上传法规时拆出 0 条也算成功（`no_articles` 不阻断）；文档检索又排除法规，这份法规两种检索都查不到（`upload-database-document/route.ts:520`） | 待裁定 · 建议：`no_articles` 阻断上传 |
-| V2 | MUST | 条款中间一行以"附表/附件/附录"开头（折行）就进入附录，之后所有条款静默丢弃，只记一条不阻断的异常（`regulation-splitter.ts:140`）；生产 45 部法规的异常清单只有 1 条且已裁定，现有数据不受影响 | 待裁定 · 建议：只有在句末之后的"附表/附件/附录"行才算进入附录，重跑 `check` 核对条款数不变 |
-| V3 | MUST | 管理员上传把 `policy` 也当法规拆分（`route.ts:205`），新上传的公司制度会以 R 编号的条款出现在法规检索中，重复编号还会阻断上传；脚本与文档检索只把 `regulation`、`accounting_standard` 当法规；生产现有 1 份制度 0 条款，不受影响 | 待裁定 · 建议：法规类型只定义一处；删去 `documents/constants.ts` 中无调用方的 `isRegulation` |
-| V4 | MUST | "检索全部出错"把文档检索也算在内：法规检索出错、文档检索成功时，回答标"不是来自资料库"，而实际是检索失败（`finalize-answer.ts:23`）；代码与 REQ §5.5 字面一致，REQ 字面本身有歧义 | 待裁定 · 建议：改 REQ 为"法规检索全部出错"，代码按法规检索单独计数 |
-| V5 | MUST | 出处检查把"第一条，加强应收账款催收"这类序号也当条款号整句删去，任何回答都会发生，不限于法规问题（`citations/index.ts:106`）；与 TD-034 同源 | 待裁定 · 建议：提示词要求列举用"1. 2."而不用"第一条"；TD-034 扩写为两种情形并升为高 |
-| V6 | SHOULD | 检索参数校验失败（如关键词超过 10 字）既计入预算也计为出错，三次都这样会得到"检索暂时失败"的标注（`tool-executor.ts:53`） | 待裁定 · 建议：计入预算，不计为出错 |
-| V7 | SHOULD | 法规 PDF 被解析两次，第二次不在 try 中：第一次解析失败转 OCR 后，第二次仍抛错、返回 500（`route.ts:221`） | 待裁定 · 建议：复用第一次的分页结果 |
-| V8 | SHOULD | 过程日志没跟上新的检索参数与节点：检索显示"正在执行 搜索文档..."不带关键词、完成时没有命中数，预算用尽也显示"完成"，`forceAnswer`、`finalizeAnswer` 显示为"处理中 (finalizeAnswer)..."（`format-event.ts:132`） | 待裁定 · 建议：修 |
-| V9 | NICE | 报告配置解析的回复不符合 schema 时，不再退回"没有理解您的意思"，而是 503（`parse-config/route.ts:71`） | 待裁定 · 建议：不改，REQ §ai-outcome 规定 schema 不符按失败处理 |
-| V10 | NICE | 用户上传的 AI 失败路径用 `NextResponse.json`，不用 `createErrorResponse()`（`upload-temp/route.ts:461`）；`createErrorResponse` 在生产只返回通用文案，会盖掉 REQ §5.2 规定的失败提示 | 待裁定 · 建议：代码不改，加一行注释写明原因 |
+| V1 | MUST | 管理员上传法规时拆出 0 条也算成功（`no_articles` 不阻断）；文档检索又排除法规，这份法规两种检索都查不到（`upload-database-document/route.ts:520`） | 已修（`no_articles` 阻断上传） |
+| V2 | MUST | 条款中间一行以"附表/附件/附录"开头（折行）就进入附录，之后所有条款静默丢弃，只记一条不阻断的异常（`regulation-splitter.ts:140`）；生产 45 部法规的异常清单只有 1 条且已裁定，现有数据不受影响 | 已修（只有句末之后的"附表/附件/附录"行才进入附录）；45 部法规重跑 `check`：1505 条、1 条异常，逐份条款内容与上次一致 |
+| V3 | MUST | 管理员上传把 `policy` 也当法规拆分（`route.ts:205`），新上传的公司制度会以 R 编号的条款出现在法规检索中，重复编号还会阻断上传；脚本与文档检索只把 `regulation`、`accounting_standard` 当法规；生产现有 1 份制度 0 条款，不受影响 | 已修（`REGULATION_TYPES` 只在 `documents/constants.ts` 定义一处，路由与脚本共用） |
+| V4 | MUST | "检索全部出错"把文档检索也算在内：法规检索出错、文档检索成功时，回答标"不是来自资料库"，而实际是检索失败（`finalize-answer.ts:23`）；代码与 REQ §5.5 字面一致，REQ 字面本身有歧义 | 已修（REQ §5.5、DESIGN §4 改为"法规检索全部出错"；按法规检索单独计数） |
+| V5 | MUST | 出处检查把"第一条，加强应收账款催收"这类序号也当条款号整句删去，任何回答都会发生，不限于法规问题（`citations/index.ts:106`）；与 TD-034 同源 | 已缓解（`chat-system.md` v1.6：列举用"1. 2."）；TD-034 扩写为两种情形并升为高 |
+| V6 | SHOULD | 检索参数校验失败（如关键词超过 10 字）既计入预算也计为出错，三次都这样会得到"检索暂时失败"的标注（`tool-executor.ts:53`） | 已修（注册表标出 `invalidInput`；计入预算，不计为出错） |
+| V7 | SHOULD | 法规 PDF 被解析两次，第二次不在 try 中：第一次解析失败转 OCR 后，第二次仍抛错、返回 500（`route.ts:221`） | 已修（PDF 只解析一次，分页结果供拆分；按扫描件读取的法规 PDF 以明确原因失败） |
+| V8 | SHOULD | 过程日志没跟上新的检索参数与节点：检索显示"正在执行 搜索文档..."不带关键词、完成时没有命中数，预算用尽也显示"完成"，`forceAnswer`、`finalizeAnswer` 显示为"处理中 (finalizeAnswer)..."（`format-event.ts:132`） | 已修 |
+| V9 | NICE | 报告配置解析的回复不符合 schema 时，不再退回"没有理解您的意思"，而是 503（`parse-config/route.ts:71`） | 不改：REQ §ai-outcome 规定 schema 不符按失败处理 |
+| V10 | NICE | 用户上传的 AI 失败路径用 `NextResponse.json`，不用 `createErrorResponse()`（`upload-temp/route.ts:461`）；`createErrorResponse` 在生产只返回通用文案，会盖掉 REQ §5.2 规定的失败提示 | 不改代码，已加注释写明原因 |
 
 **Phase 4 证据**：
 

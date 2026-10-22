@@ -22,9 +22,7 @@ import path from 'path';
 import dotenv from 'dotenv';
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 import { splitRegulation, type SplitAnomaly, type SplitArticle } from '@/lib/extraction/regulation-splitter';
-
-// The 45 laws and standards (REQ §5.6); the one company policy document holds no articles.
-const REGULATION_TYPES = ['regulation', 'accounting_standard'];
+import { REGULATION_TYPES } from '@/lib/documents/constants';
 
 interface DocumentReport {
   id: string;

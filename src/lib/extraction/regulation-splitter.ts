@@ -137,7 +137,8 @@ export function splitRegulation(pages: string[], expectedPageCount: number): Spl
         hierarchy = nextHierarchy(hierarchy, line);
         continue;
       }
-      if (APPENDIX_LINE.test(line)) {
+      // A wrapped line can start with 附表 mid-sentence; an appendix starts only after one ends.
+      if (APPENDIX_LINE.test(line) && afterSentence) {
         anomalies.push({ kind: 'appendix_after_articles', page, line });
         inAppendix = true;
         continue;

@@ -20,7 +20,7 @@ export async function finalizeAnswerNode(
     const { text, cited } = finalizeAnswer(last.content, {
         evidence,
         regulationSearched: search.regulationSearched,
-        allSearchesFailed: search.used > 0 && search.failed === search.used,
+        allRegulationSearchesFailed: search.regulationRuns > 0 && search.regulationFailed === search.regulationRuns,
     });
 
     return {
