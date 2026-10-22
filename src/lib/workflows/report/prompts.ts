@@ -146,7 +146,8 @@ function formatMetricsForPrompt(
     const comparison = comparisonMap.get(metric.toolName);
 
     if (comparisonYear && comparison) {
-      const change = calculateChangeForPrompt(metric.value, comparison.value);
+      // A metric that failed to calculate carries a placeholder 0, not a value.
+      const change = metric.error || comparison.error ? '-' : calculateChangeForPrompt(metric.value, comparison.value);
       lines.push(`| ${metric.displayName} | ${metric.formatted} | ${comparison.formatted} | ${change} |`);
     } else if (comparisonYear) {
       lines.push(`| ${metric.displayName} | ${metric.formatted} | N/A | - |`);

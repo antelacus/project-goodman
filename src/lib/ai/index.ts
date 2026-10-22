@@ -57,9 +57,8 @@ export async function generateText(req: {
   system: string;
   prompt: string;
 }): Promise<string> {
-  const completion = await send(req.purpose, opts =>
-    getClient().chat.completions.create(chatBody(req.purpose, req.system, [{ role: 'user', content: req.prompt }]), opts)
-  );
+  const body = chatBody(req.purpose, req.system, [{ role: 'user', content: req.prompt }]);
+  const completion = await send(req.purpose, opts => getClient().chat.completions.create(body, opts));
   return chatOutcome(req.purpose, completion, false).text;
 }
 
@@ -81,26 +80,18 @@ export async function generateJSON<T>(req: {
   let raw: string;
 
   if (attachment) {
-    const response = await send(purpose, opts =>
-      getClient().responses.create(
-        {
-          ...responsesBody(purpose, system, prompt, attachment),
-          text: { format: strict ? zodTextFormat(schema, purpose) : { type: 'json_object' } },
-        },
-        opts
-      )
-    );
+    const body = {
+      ...responsesBody(purpose, system, prompt, attachment),
+      text: { format: strict ? zodTextFormat(schema, purpose) : { type: 'json_object' as const } },
+    };
+    const response = await send(purpose, opts => getClient().responses.create(body, opts));
     raw = responsesOutcome(purpose, response);
   } else {
-    const completion = await send(purpose, opts =>
-      getClient().chat.completions.create(
-        {
-          ...chatBody(purpose, system, [{ role: 'user', content: prompt }]),
-          response_format: strict ? zodResponseFormat(schema, purpose) : { type: 'json_object' },
-        },
-        opts
-      )
-    );
+    const body = {
+      ...chatBody(purpose, system, [{ role: 'user', content: prompt }]),
+      response_format: strict ? zodResponseFormat(schema, purpose) : { type: 'json_object' as const },
+    };
+    const completion = await send(purpose, opts => getClient().chat.completions.create(body, opts));
     raw = chatOutcome(purpose, completion, false).text;
   }
 
@@ -121,24 +112,18 @@ export async function chatWithTools(req: {
   messages: ChatMessage[];
   tools: ToolDefinition[];
 }): Promise<{ text: string; toolCalls: ToolCall[] }> {
-  const body = chatBody('chat', req.system, req.messages);
-  const completion = await send('chat', opts =>
-    getClient().chat.completions.create(
-      req.tools.length > 0 ? { ...body, tools: req.tools, tool_choice: 'auto' } : body,
-      opts
-    )
-  );
-  return chatOutcome('chat', completion, true);
+  const offered = req.tools.length > 0;
+  const base = chatBody('chat', req.system, req.messages);
+  const body = offered ? { ...base, tools: req.tools, tool_choice: 'auto' as const } : base;
+  const completion = await send('chat', opts => getClient().chat.completions.create(body, opts));
+  // With no tools offered a tool call is not an answer.
+  return chatOutcome('chat', completion, offered);
 }
 
 /** Text of a scanned PDF or an image. */
 export async function readDocumentText(file: FileInput): Promise<string> {
-  const response = await send('ocr', opts =>
-    getClient().responses.create(
-      responsesBody('ocr', getPromptContent('pdf-extract.md'), '提取这份文档中的全部文字。', file),
-      opts
-    )
-  );
+  const body = responsesBody('ocr', getPromptContent('pdf-extract.md'), '提取这份文档中的全部文字。', file);
+  const response = await send('ocr', opts => getClient().responses.create(body, opts));
   return responsesOutcome('ocr', response);
 }
 
@@ -184,8 +169,10 @@ function fileContent(file: FileInput): OpenAI.Responses.ResponseInputContent {
 
 /**
  * Runs one SDK call under the purpose's time limit. The limit covers the retry
- * too: the SDK's own timeout is per attempt, so the abort signal is what keeps
- * a hanging relay from holding the user past the limit.
+ * too: the SDK's own timeout is per attempt and its wait before a retry ignores
+ * the abort signal, so the call races the limit rather than relying on the SDK
+ * to notice. Anything the call throws is the relay's doing (the request body is
+ * built before it), including a 200 whose body is cut off.
  */
 async function send<T>(
   purpose: AIPurpose,
@@ -193,13 +180,18 @@ async function send<T>(
 ): Promise<T> {
   const { timeoutMs } = PURPOSES[purpose];
   const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  const limit = new Promise<never>((_, reject) => {
+    timer = setTimeout(() => {
+      controller.abort();
+      reject(fail(purpose, 'timeout'));
+    }, timeoutMs);
+  });
   try {
-    return await call({ timeout: timeoutMs, signal: controller.signal });
+    return await Promise.race([call({ timeout: timeoutMs, signal: controller.signal }), limit]);
   } catch (e) {
-    if (controller.signal.aborted) throw fail(purpose, 'timeout', e);
-    if (e instanceof OpenAI.APIError) throw fail(purpose, 'error', e);
-    throw e;
+    if (e instanceof AIUnavailableError) throw e;
+    throw fail(purpose, controller.signal.aborted ? 'timeout' : 'error', e);
   } finally {
     clearTimeout(timer);
   }
@@ -210,8 +202,8 @@ function chatOutcome(
   completion: OpenAI.Chat.ChatCompletion,
   allowToolCalls: boolean
 ): { text: string; toolCalls: ToolCall[] } {
-  const choice = completion.choices[0];
-  if (!choice) throw fail(purpose, 'blank');
+  const choice = completion?.choices?.[0];
+  if (!choice?.message) throw fail(purpose, 'blank');
   const { message, finish_reason: finish } = choice;
 
   if (message.refusal) throw fail(purpose, 'refused');
@@ -237,7 +229,7 @@ function chatOutcome(
 function parseToolArgs(purpose: AIPurpose, raw: string): Record<string, unknown> {
   let args: unknown;
   try {
-    args = JSON.parse(raw || '{}');
+    args = JSON.parse(raw);
   } catch (e) {
     throw fail(purpose, 'invalid_output', e);
   }
@@ -252,10 +244,10 @@ function responsesOutcome(purpose: AIPurpose, response: OpenAI.Responses.Respons
     const reason = response.incomplete_details?.reason;
     throw fail(purpose, reason === 'content_filter' ? 'filtered' : reason ? 'truncated' : 'error');
   }
-  const refused = response.output.some(
-    item => item.type === 'message' && item.content.some(c => c.type === 'refusal')
-  );
-  if (refused) throw fail(purpose, 'refused');
+  const messages = (response.output ?? []).filter(item => item.type === 'message');
+  if (messages.some(m => m.content.some(c => c.type === 'refusal'))) throw fail(purpose, 'refused');
+  // A message can be cut off inside a response that reports itself completed.
+  if (messages.some(m => m.status === 'incomplete' || m.status === 'in_progress')) throw fail(purpose, 'truncated');
   const text = response.output_text ?? '';
   if (!text.trim()) throw fail(purpose, 'blank');
   return text;

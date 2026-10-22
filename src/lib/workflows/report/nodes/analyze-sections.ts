@@ -18,13 +18,15 @@ function toReportMetric(
   metric: MetricResult,
   comparisonMetric?: MetricResult
 ): ReportMetric {
+  // A metric that failed to calculate carries a placeholder 0, not a value.
+  const previous = comparisonMetric && !comparisonMetric.error ? comparisonMetric.value : undefined;
   return {
     name: metric.displayName,
     toolName: metric.toolName,
     value: metric.value,
     formatted: metric.formatted,
-    previousValue: comparisonMetric?.value,
-    change: calculateChange(metric.value, comparisonMetric?.value),
+    previousValue: previous,
+    change: metric.error ? undefined : calculateChange(metric.value, previous),
     interpretation: metric.interpretation,
     warnings: metric.warnings,
     sourceDocumentIds: [

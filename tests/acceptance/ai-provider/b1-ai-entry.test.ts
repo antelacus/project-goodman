@@ -69,12 +69,13 @@ describe('B1 AI entry point', () => {
       expect(first.content.trim()).not.toBe('');
     }
     for (const body of responsesBodies()) {
-      expect(String(body.instructions).trim()).not.toBe('');
+      expect(typeof body.instructions).toBe('string');
+      expect((body.instructions as string).trim()).not.toBe('');
     }
     await expect(ai.generateText({ purpose: 'title', system: '  ', prompt: '问题' })).rejects.toThrow();
   });
 
-  it('§ai-outcome length, refusal, content_filter, blank text and schema-invalid JSON fail; a tool-calls-only reply succeeds', async () => {
+  it('§ai-outcome length, refusal, content_filter, blank text, schema-invalid JSON and malformed replies fail; a tool-calls-only reply succeeds only when tools were offered', async () => {
     const text = () => ai.generateText({ purpose: 'reportSection', system: '系统', prompt: '问题' });
     const failing = [
       chatReply('半截', { finish: 'length' }),
@@ -94,15 +95,31 @@ describe('B1 AI entry point', () => {
 
     relay.reply(() => ({ body: responsesReply('半截', { status: 'incomplete', incompleteReason: 'max_output_tokens' }) }));
     await expect(ai.readDocumentText(file)).rejects.toBeInstanceOf(ai.AIUnavailableError);
+    // The response says completed, but its message did not finish.
+    relay.reply(() => ({ body: responsesReply('半截', { messageStatus: 'incomplete' }) }));
+    await expect(ai.readDocumentText(file)).rejects.toBeInstanceOf(ai.AIUnavailableError);
 
-    const chat = () => ai.chatWithTools({ system: '系统', messages: [{ role: 'user', content: '问题' }], tools: [] });
-    relay.reply(() => ({ body: chatReply(null, { toolCalls: [{ id: 'c1', name: 'search', arguments: '{"keywords":["金融资产"]}' }] }) }));
+    const tool: ai.ToolDefinition = { type: 'function', function: { name: 'search', parameters: { type: 'object' } } };
+    const chat = (tools: ai.ToolDefinition[] = [tool]) =>
+      ai.chatWithTools({ system: '系统', messages: [{ role: 'user', content: '问题' }], tools });
+    const searchCall = (args: string) => ({ body: chatReply(null, { toolCalls: [{ id: 'c1', name: 'search', arguments: args }] }) });
+    relay.reply(() => searchCall('{"keywords":["金融资产"]}'));
     await expect(chat()).resolves.toEqual({
       text: '',
       toolCalls: [{ id: 'c1', name: 'search', args: { keywords: ['金融资产'] } }],
     });
-    relay.reply(() => ({ body: chatReply(null, { toolCalls: [{ id: 'c1', name: 'search', arguments: '{"keywords":' }] }) }));
-    await expect(chat()).rejects.toBeInstanceOf(ai.AIUnavailableError);
+    // Asked for a final answer, the relay calls a tool anyway.
+    await expect(chat([])).rejects.toBeInstanceOf(ai.AIUnavailableError);
+    for (const args of ['{"keywords":', '']) {
+      relay.reply(() => searchCall(args));
+      await expect(chat()).rejects.toBeInstanceOf(ai.AIUnavailableError);
+    }
+
+    // HTTP 200 with a body that is cut off, or with no choices at all.
+    for (const reply of [{ raw: '{"choices":' }, { body: {} }]) {
+      relay.reply(() => reply);
+      await expect(text()).rejects.toBeInstanceOf(ai.AIUnavailableError);
+    }
   });
 
   it('§ai-timeout a relay that never answers fails within the purpose time limit', async () => {
@@ -112,6 +129,26 @@ describe('B1 AI entry point', () => {
       const call = ai.chatWithTools({ system: '系统', messages: [{ role: 'user', content: '问题' }], tools: [] });
       const settled = expect(call).rejects.toBeInstanceOf(ai.AIUnavailableError);
       await vi.advanceTimersByTimeAsync(PURPOSES.chat.timeoutMs + 1);
+      await settled;
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('§ai-timeout the time limit holds while the SDK waits to retry', async () => {
+    vi.useFakeTimers();
+    try {
+      // A 503 arrives late and asks for a retry that would start after the limit.
+      const limit = PURPOSES.chat.timeoutMs;
+      relay.reply(() => ({ status: 503, body: { error: { message: '忙' } }, headers: { 'retry-after': '50' }, delayMs: limit - 10_000 }));
+      let settledAt: number | undefined;
+      const started = Date.now();
+      const call = ai.chatWithTools({ system: '系统', messages: [{ role: 'user', content: '问题' }], tools: [] });
+      const settled = expect(call.finally(() => { settledAt = Date.now() - started; })).rejects.toBeInstanceOf(ai.AIUnavailableError);
+      await vi.advanceTimersByTimeAsync(limit + 1);
+      expect(settledAt).toBeDefined();
+      expect(settledAt!).toBeLessThanOrEqual(limit + 1);
+      await vi.advanceTimersByTimeAsync(60_000);
       await settled;
     } finally {
       vi.useRealTimers();
