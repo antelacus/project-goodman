@@ -58,7 +58,6 @@ export async function GET(req: NextRequest) {
     type ChunkSummary = {
       id: string;
       text: string;
-      embedding: string | null;
       chunkIndex: number;
     };
     const chunksByDocId = new Map<string, ChunkSummary[]>();
@@ -69,7 +68,6 @@ export async function GET(req: NextRequest) {
       chunksByDocId.get(chunk.document_id)!.push({
         id: chunk.id,
         text: chunk.content,
-        embedding: chunk.embedding,
         chunkIndex: chunk.chunk_index,
       });
     });

@@ -104,44 +104,6 @@ export interface CalculationResult {
 }
 
 // ============================================================================
-// Document Selection Types
-// ============================================================================
-
-export interface SearchResultChunk {
-  chunkId: string;
-  content: string;
-  sectionTitle?: string;
-  sectionPath?: string[];
-  similarity: number;
-  sourceType: 'vector' | 'keyword' | 'hybrid';
-}
-
-export interface SearchResultDocument {
-  documentId: string;
-  documentName: string;
-  docType: string;
-  year?: number;
-  period?: string;
-  relevanceScore: number;
-  matchedChunks: SearchResultChunk[];
-}
-
-export interface DocumentSelectionResult {
-  selectedDocuments: SearchResultDocument[];
-  intent: {
-    query: string;
-    keywords: string[];
-    year?: number;
-  };
-  meta: {
-    totalFound: number;
-    autoSelectedCount: number;
-  };
-  mode?: 'auto' | 'manual';
-  selectionReason?: string;
-}
-
-// ============================================================================
 // Tool Call Types
 // ============================================================================
 
