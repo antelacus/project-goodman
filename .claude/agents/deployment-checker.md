@@ -55,7 +55,8 @@ Verify `.env.local` has all required variables:
 
 ```bash
 # Required variables (check existence, not values)
-OPENAI_API_KEY=
+LLM_API_KEY=
+LLM_BASE_URL=
 NEXT_PUBLIC_SUPABASE_URL=
 NEXT_PUBLIC_SUPABASE_ANON_KEY=
 SUPABASE_SERVICE_ROLE_KEY=

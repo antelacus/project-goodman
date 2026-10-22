@@ -27,6 +27,8 @@ export interface SourceReference {
   year?: string;
   period?: string;
   fileUrl?: string;
+  /** Article number, for a regulation search result, e.g. "第十二条". */
+  article?: string;
 }
 
 /**
@@ -38,7 +40,7 @@ export interface ProcessEvent {
   type: ProcessEventType;
   content: string;                    // Human-friendly description (Chinese)
   details?: Record<string, unknown>;  // Raw technical info (for advanced users)
-  sourceReference?: SourceReference;  // Data source (if applicable)
+  sourceReferences?: SourceReference[];  // Data sources (if applicable)
 }
 
 /**

@@ -46,7 +46,7 @@ npm outdated | grep -E "sentry|bcrypt|zod|next"
 
 ```bash
 # Search for potential secret leaks in code
-grep -r "OPENAI_API_KEY\|SERVICE_ROLE\|PASSWORD" --include="*.ts" --include="*.tsx" src/ | grep -v "process.env"
+grep -r "LLM_API_KEY\|SERVICE_ROLE\|PASSWORD" --include="*.ts" --include="*.tsx" src/ | grep -v "process.env"
 ```
 
 ### 4. Attack Surface Mapping

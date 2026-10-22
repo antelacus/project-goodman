@@ -13,6 +13,9 @@ type CompanyContext = {
   financialPolicy?: string;
 };
 
+export const REPORT_ANALYST_SYSTEM =
+  '你是一位专业的财务分析师，为企业财务人员撰写财务分析报告。只依据给出的数据与公司信息作分析。';
+
 // ============================================================================
 // Section Analysis Prompts
 // ============================================================================
@@ -143,7 +146,8 @@ function formatMetricsForPrompt(
     const comparison = comparisonMap.get(metric.toolName);
 
     if (comparisonYear && comparison) {
-      const change = calculateChangeForPrompt(metric.value, comparison.value);
+      // A metric that failed to calculate carries a placeholder 0, not a value.
+      const change = metric.error || comparison.error ? '-' : calculateChangeForPrompt(metric.value, comparison.value);
       lines.push(`| ${metric.displayName} | ${metric.formatted} | ${comparison.formatted} | ${change} |`);
     } else if (comparisonYear) {
       lines.push(`| ${metric.displayName} | ${metric.formatted} | N/A | - |`);
@@ -226,7 +230,4 @@ export const ERROR_MESSAGES = {
 
   METRIC_ERROR: (metricName: string, error: string) =>
     `计算${metricName}时出错：${error}`,
-
-  LLM_ERROR: (section: string) =>
-    `生成"${section}"分析时出错，将使用默认文字。`,
 };

@@ -6,7 +6,7 @@
 
 ## File Organization
 
-- Prompt templates stored in `src/lib/prompts/*.txt`, loaded via `src/lib/prompts/index.ts`
+- Prompt templates stored in `src/lib/ai/prompts/*.md`, loaded via `src/lib/ai/prompts/index.ts`
 - Financial metric names defined as constants in `src/lib/financial/metric-names.ts`
 - Document types and periods use mapping constants in `src/lib/documents/constants.ts`
 - Database clients in `src/lib/database/` (Supabase for data, Redis for sessions/cache)
@@ -99,7 +99,7 @@ For now, our single-admin + guest model doesn't require row-level user isolation
 
 - LangGraph state interfaces must have explicit types, never `any`
 - Tool registrations should happen once at module load, not per-request
-- Document search uses hybrid retrieval (vector + keyword) with RRF fusion scoring
+- Search is keyword-only (PGroonga, `src/lib/search/`); regulation answers cite evidence ids that `src/lib/citations/` turns into article references
 
 ## ESLint & TypeScript Workarounds
 

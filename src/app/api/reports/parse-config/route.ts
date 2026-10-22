@@ -11,8 +11,7 @@ import {
   ensureSession,
   createErrorResponse,
 } from '@/lib/security';
-import { AI_CONFIG } from '@/lib/ai/config';
-import { getLLMClient } from '@/lib/ai/client';
+import { generateJSON, AIUnavailableError, AI_FAILURE_TEXT } from '@/lib/ai';
 import { loadPromptWithVariables } from '@/lib/ai/prompts';
 import {
   ReportConfigParseSchema,
@@ -22,9 +21,6 @@ import {
 } from '@/lib/validation/api-schemas';
 
 export const runtime = 'nodejs';
-
-// Initialize OpenAI client
-const openai = getLLMClient();
 
 // ============================================================================
 // POST Handler
@@ -72,73 +68,12 @@ export async function POST(req: NextRequest) {
     });
 
     // 4. Call LLM to parse intent
-    const completion = await openai.chat.completions.create({
-      model: AI_CONFIG.models.title, // Fast and cheap for simple intent parsing
-      messages: [
-        {
-          role: 'system',
-          content: prompt,
-        },
-        {
-          role: 'user',
-          content: userMessage,
-        },
-      ],
-      temperature: AI_CONFIG.params.title.temperature,
-      max_tokens: AI_CONFIG.params.title.maxTokens,
-      response_format: { type: 'json_object' },
+    let parsedIntent: ReportConfigIntent = await generateJSON({
+      purpose: 'reportConfig',
+      system: prompt,
+      prompt: userMessage,
+      schema: ReportConfigIntentSchema,
     });
-
-    const responseContent = completion.choices[0]?.message?.content?.trim();
-
-    if (!responseContent) {
-      // Fallback: treat as unclear
-      return NextResponse.json({
-        success: true,
-        data: {
-          intent: 'unclear',
-          year: null,
-          comparisonYear: null,
-          sections: null,
-          clarificationNeeded: '抱歉，我没有理解您的意思，请重新描述。',
-        } satisfies ReportConfigIntent,
-      });
-    }
-
-    // 5. Parse LLM response
-    let parsedIntent: ReportConfigIntent;
-    try {
-      const rawParsed = JSON.parse(responseContent);
-
-      // Validate the parsed response
-      const intentValidation = ReportConfigIntentSchema.safeParse(rawParsed);
-
-      if (!intentValidation.success) {
-        // If LLM response doesn't match schema, treat as unclear
-        console.warn(
-          '[parse-config] LLM response validation failed:',
-          intentValidation.error.issues
-        );
-        parsedIntent = {
-          intent: 'unclear',
-          year: null,
-          comparisonYear: null,
-          sections: null,
-          clarificationNeeded: '抱歉，我没有理解您的意思，请重新描述。',
-        };
-      } else {
-        parsedIntent = intentValidation.data;
-      }
-    } catch (parseError) {
-      console.error('[parse-config] Failed to parse LLM JSON response:', parseError);
-      parsedIntent = {
-        intent: 'unclear',
-        year: null,
-        comparisonYear: null,
-        sections: null,
-        clarificationNeeded: '抱歉，我没有理解您的意思，请重新描述。',
-      };
-    }
 
     // 6. Validate year against available years if intent involves year change
     if (parsedIntent.intent === 'change_year' && parsedIntent.year) {
@@ -188,8 +123,8 @@ export async function POST(req: NextRequest) {
   } catch (error) {
     console.error('[parse-config] Error:', error);
 
-    if (error instanceof Error && error.message.includes('API key')) {
-      return createErrorResponse('AI 服务配置错误', requestId, 500);
+    if (error instanceof AIUnavailableError) {
+      return createErrorResponse(AI_FAILURE_TEXT.chat, requestId, 503);
     }
 
     return createErrorResponse(error, requestId, 500);

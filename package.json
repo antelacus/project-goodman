@@ -1,8 +1,8 @@
 {
   "name": "project-goodman",
-  "version": "4.6.4",
+  "version": "4.7.0",
   "private": true,
-  "license": "AGPL-3.0",
+  "license": "UNLICENSED",
   "scripts": {
     "dev": "next dev --turbopack",
     "build": "next build",

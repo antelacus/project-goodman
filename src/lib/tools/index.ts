@@ -36,7 +36,6 @@ export type {
   ToOpenAIOptions,
   OpenAIParameterSchema,
   ChatCompletionTool,
-  ChatCompletionToolChoiceOption,
 } from "./types";
 
 export {

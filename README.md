@@ -2,7 +2,7 @@
 
 > 让财务工作更智能、更透明
 
-[在线体验](https://goodman.antelacus.com) · [License: AGPL-3.0](https://www.gnu.org/licenses/agpl-3.0.html)
+[在线体验](https://goodman.antelacus.com)
 
 ---
 
@@ -211,7 +211,7 @@ Receipts (收据):
 1. 安装依赖：`npm install`
 2. 复制环境变量：`cp .env.example .env.local`
 3. 必填配置：
-   - `OPENAI_API_KEY`
+   - `LLM_API_KEY` / `LLM_BASE_URL`（AI relay）
    - `NEXT_PUBLIC_SUPABASE_URL` / `NEXT_PUBLIC_SUPABASE_ANON_KEY`
    - `SUPABASE_SERVICE_ROLE_KEY`
    - `ADMIN_PASSWORD`
@@ -230,6 +230,6 @@ Receipts (收据):
 
 ---
 
-## License
+## 版权
 
-[AGPL-3.0](https://www.gnu.org/licenses/agpl-3.0.html)
+保留所有权利。本仓库公开仅供查看，未授予使用、复制、修改或分发代码的许可。

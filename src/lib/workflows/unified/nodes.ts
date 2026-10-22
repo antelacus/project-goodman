@@ -5,13 +5,15 @@
  */
 
 import { agentLoopNode as coreAgentLoop } from "../core/nodes/agent-loop";
+import { forceAnswerNode as coreForceAnswer } from "../core/nodes/force-answer";
 import { registerUnifiedTools } from "@/lib/tools";
 import { UnifiedAgentState } from "./state";
 import { getUnifiedAgentSystemPrompt } from "./prompts";
 
-export { loadMemoryNode } from "../core/nodes/load-memory";
+export { createLoadMemoryNode } from "../core/nodes/load-memory";
 export { toolExecutorNode } from "../core/nodes/tool-executor";
-export { saveMemoryNode } from "../core/nodes/save-memory";
+export { createSaveMemoryNode } from "../core/nodes/save-memory";
+export { finalizeAnswerNode } from "../core/nodes/finalize-answer";
 
 // Module-level tool registration (runs once when module is first imported)
 let toolsRegistered = false;
@@ -34,4 +36,9 @@ export async function unifiedAgentLoop(state: UnifiedAgentState) {
     return coreAgentLoop(state, {
         systemPrompt: getUnifiedAgentSystemPrompt()
     });
+}
+
+export async function unifiedForceAnswer(state: UnifiedAgentState) {
+    ensureToolsRegistered();
+    return coreForceAnswer(state, { systemPrompt: getUnifiedAgentSystemPrompt() });
 }
