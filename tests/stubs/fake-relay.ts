@@ -2,7 +2,11 @@
 // see the exact request bodies and the SDK's own error classes. Install it before
 // `@/lib/ai` first creates its client (the SDK captures fetch at construction).
 
-type Reply = { status?: number; body: unknown } | 'hang';
+// `raw` sends a body that is not valid JSON; `delayMs` answers late (under fake
+// timers too), honouring the abort signal like a real connection.
+type Reply =
+  | { status?: number; body?: unknown; raw?: string; headers?: Record<string, string>; delayMs?: number }
+  | 'hang';
 
 export interface RelayRequest {
   path: string;
@@ -27,9 +31,18 @@ export function installFakeRelay() {
         );
       });
     }
-    return new Response(JSON.stringify(r.body), {
+    if (r.delayMs) {
+      await new Promise<void>((resolve, reject) => {
+        const timer = setTimeout(resolve, r.delayMs);
+        init?.signal?.addEventListener('abort', () => {
+          clearTimeout(timer);
+          reject(new DOMException('aborted', 'AbortError'));
+        });
+      });
+    }
+    return new Response(r.raw ?? JSON.stringify(r.body), {
       status: r.status ?? 200,
-      headers: { 'content-type': 'application/json' },
+      headers: { 'content-type': 'application/json', ...r.headers },
     });
   };
 
@@ -84,7 +97,7 @@ export function chatReply(
 
 export function responsesReply(
   text: string,
-  opts: { status?: string; incompleteReason?: string; refusal?: string } = {}
+  opts: { status?: string; incompleteReason?: string; refusal?: string; messageStatus?: string } = {}
 ) {
   return {
     id: 'resp-test',
@@ -98,7 +111,7 @@ export function responsesReply(
         type: 'message',
         id: 'msg-test',
         role: 'assistant',
-        status: 'completed',
+        status: opts.messageStatus ?? 'completed',
         content: opts.refusal
           ? [{ type: 'refusal', refusal: opts.refusal }]
           : [{ type: 'output_text', text, annotations: [] }],

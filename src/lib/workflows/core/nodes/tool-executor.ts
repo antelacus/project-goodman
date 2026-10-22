@@ -43,6 +43,8 @@ export async function toolExecutorNode(
         if (SEARCH_TOOLS.has(call.name) && search.used >= SEARCH_BUDGET) {
             result = { success: true, data: { status: "budget_exhausted" } };
             mustAnswer = true;
+            // Asked for, it is a regulation question: the answer gets its label.
+            if (call.name === "search_regulations") search.regulationSearched = true;
         } else {
             result = await toolRegistry.execute(call.name, call.arguments);
             if (SEARCH_TOOLS.has(call.name)) {

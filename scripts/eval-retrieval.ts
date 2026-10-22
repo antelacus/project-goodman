@@ -106,7 +106,10 @@ async function main(outDir: string, only?: string[]) {
     const seconds = Math.round((Date.now() - started) / 100) / 10;
     let pass: boolean;
     if (q.kind === 'out_of_library') {
-      pass = !error && (answer.startsWith(OUT_OF_LIBRARY_LABEL) || answer.startsWith(RETRIEVAL_FAILED_LABEL)) && !ARTICLE_NUMBER.test(answer);
+      // The retrieval-failure label is right only when every search did fail.
+      const allFailed = rounds.length > 0 && rounds.every(r => r.status === 'error');
+      const labelled = answer.startsWith(OUT_OF_LIBRARY_LABEL) || (allFailed && answer.startsWith(RETRIEVAL_FAILED_LABEL));
+      pass = !error && labelled && !ARTICLE_NUMBER.test(answer);
     } else {
       const wanted = (q.expected ?? []).map(e => ('document' in e ? e.document : `${e.regulation} ${e.article}`));
       pass = !error && rounds.some(r => r.top.some(t => wanted.includes(t)));

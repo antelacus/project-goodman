@@ -118,7 +118,10 @@ async function apply(outDir: string) {
   const db = connect();
   const report: Report = JSON.parse(fs.readFileSync(path.join(outDir, 'report.json'), 'utf8'));
 
-  const unruled = report.documents.filter(d => d.anomalies.length > 0 && d.rulings?.length !== d.anomalies.length);
+  // A blank ruling is no ruling.
+  const unruled = report.documents.filter(
+    d => d.anomalies.length > 0 && (d.rulings ?? []).filter(r => r.trim()).length !== d.anomalies.length
+  );
   if (unruled.length > 0) {
     throw new Error(`anomalies without a ruling: ${unruled.map(d => d.name).join('、')}`);
   }
@@ -154,7 +157,8 @@ async function apply(outDir: string) {
 /** Re-reads the table: each document holds exactly the checked articles, in order. */
 async function verify(db: SupabaseClient, report: Report) {
   const problems: string[] = [];
-  for (const doc of report.documents.filter(d => d.articles.length > 0)) {
+  const checked = report.documents.filter(d => d.articles.length > 0);
+  for (const doc of checked) {
     const { data, error } = await db
       .from('structured_regulations')
       .select('article_number, content')
@@ -168,7 +172,8 @@ async function verify(db: SupabaseClient, report: Report) {
     }
   }
   if (problems.length > 0) throw new Error(`verification failed:\n${problems.join('\n')}`);
-  console.log(`verified ${report.documents.length} documents`);
+  const skipped = report.documents.filter(d => d.articles.length === 0);
+  console.log(`verified ${checked.length} documents` + (skipped.length ? `; ${skipped.length} without articles, not replaced: ${skipped.map(d => d.name).join('、')}` : ''));
 }
 
 const [mode, outDir] = process.argv.slice(2);

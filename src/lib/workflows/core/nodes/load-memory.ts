@@ -7,7 +7,7 @@
 
 import { BaseAgentState, DocumentLoadError, newQuestionState } from "../state/base-state";
 import type { AgentMemory } from "@/lib/memory/conversation-memory";
-import { SystemMessage, HumanMessage, AIMessage, ToolMessage, BaseMessage } from "@langchain/core/messages";
+import { SystemMessage, HumanMessage, AIMessage, BaseMessage } from "@langchain/core/messages";
 import { createServerSupabaseClient } from "@/lib/database";
 
 /**
@@ -89,34 +89,15 @@ export const createLoadMemoryNode = (memory: AgentMemory) => async function load
         }
     }
 
-    // 3. Convert DB messages to LangChain BaseMessage[]
-    const messages: BaseMessage[] = history.map((msg) => {
-        if (msg.role === "user") {
-            return new HumanMessage(msg.content || "");
-        } else if (msg.role === "assistant") {
-            // Restore tool_calls if present in DB
-            // DB format: { id, type, function: { name, arguments } }
-            // LangChain format: { id, name, args }
-            const toolCalls = msg.tool_calls?.map(tc => ({
-                id: tc.id,
-                name: tc.function.name,
-                args: typeof tc.function.arguments === "string"
-                    ? JSON.parse(tc.function.arguments)
-                    : tc.function.arguments,
-            }));
-            return new AIMessage({
-                content: msg.content || "",
-                tool_calls: toolCalls,
-            });
-        } else if (msg.role === "tool") {
-            return new ToolMessage({
-                content: msg.content || "",
-                tool_call_id: msg.tool_call_id || "",
-            });
-        } else {
-            return new SystemMessage(msg.content || "");
-        }
-    });
+    // 3. Convert DB messages to LangChain BaseMessage[]. Earlier questions come back
+    // as their questions and final answers only: their tool results carry evidence
+    // ids (R1…) that this question numbers afresh, so an old [R1] would cite a new article.
+    const conversation = history.filter(msg =>
+        msg.role === "user" || (msg.role === "assistant" && !(msg.tool_calls?.length))
+    );
+    const messages: BaseMessage[] = conversation.map(msg =>
+        msg.role === "user" ? new HumanMessage(msg.content || "") : new AIMessage(msg.content || "")
+    );
 
     // Append context message if it exists
     if (contextMessage) {

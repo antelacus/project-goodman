@@ -9,6 +9,7 @@ insert into documents (id, name, doc_category, doc_type, status, size) values
   ('test-kw-business', '合成用户上传.pdf', 'business', 'general', 'ready', 1),
   ('test-kw-pending', '合成未就绪文档.pdf', 'knowledge', 'policy', 'processing', 1),
   ('test-kw-regulation', '合成准则.pdf', 'knowledge', 'accounting_standard', 'ready', 1),
+  ('test-kw-law', '合成法律.pdf', 'knowledge', 'regulation', 'ready', 1),
   ('test-kw-report', '合成年报.pdf', 'knowledge', 'financial_report', 'ready', 1),
   ('test-kw-policy', '合成制度.md', 'knowledge', 'policy', 'ready', 1);
 
@@ -23,6 +24,7 @@ insert into document_chunks (id, document_id, chunk_index, content) values
   ('test-kw-c2', 'test-kw-business', 0, '合成差旅报销标准：用户自己的文档。'),
   ('test-kw-c3', 'test-kw-pending', 0, '合成差旅报销标准：尚未就绪的文档。'),
   ('test-kw-c4', 'test-kw-regulation', 0, '合成差旅报销标准：准则原文的切块。'),
+  ('test-kw-c5', 'test-kw-law', 0, '合成差旅报销标准：法律原文的切块。'),
   -- The report's chunks repeat the word, so by score alone all three outrank the policy.
   ('test-kw-r1', 'test-kw-report', 0, '合成坏账 合成坏账 合成坏账 附注表格一'),
   ('test-kw-r2', 'test-kw-report', 1, '合成坏账 合成坏账 合成坏账 附注表格二'),

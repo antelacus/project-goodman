@@ -1,5 +1,5 @@
 {
-  "note": "REQ §retrieval-quality query set. Drafted by Claude, approved by Jason; the expected articles and documents are Jason's call. The bar must hold on two consecutive runs. An in-library query passes when any expected item is in the top 5 of any search round; an out-of-library query passes when the final answer opens with the out-of-library (or retrieval-failure) label and holds no article number.",
+  "note": "REQ §retrieval-quality query set. Drafted by Claude, approved by Jason; the expected articles and documents are Jason's call. The bar must hold on two consecutive runs. An in-library query passes when any expected item is in the top 5 of any search round; an out-of-library query passes when the final answer opens with the out-of-library label (or the retrieval-failure label when every search errored) and holds no article number.",
   "queries": [
     { "id": "reg-term-1", "kind": "regulation", "style": "term", "question": "小规模纳税人的认定标准是什么？",
       "expected": [{ "regulation": "中华人民共和国增值税法-2024", "article": "第九条" }] },

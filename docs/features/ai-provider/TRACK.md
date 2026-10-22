@@ -42,6 +42,7 @@
   - 2026-10-21 · §retrieval-quality 以连续两轮评测都达标为准；理由：模型每轮选的关键词不同，单轮波动大 · Jason · 级联：REQ §5.3
   - 2026-10-22 · 对话单次调用时限由 60s 放宽到 90s；理由：relay 正常时长回答就要 25–77s，60s 会把正常回答判为失败 · Jason · 级联：`src/lib/ai/config.ts`、DESIGN §4
   - 2026-10-22 · 维持"报告耗时本版只测量、不优化"：报告 P50 94s（V4.6 为 57s）；章节并行调用留给 TD-024，并行请求下 relay 的 529 率未测 · Jason · 级联：TD-024（Phase 6 改写）
+  - 2026-10-22 · Codex 上线前审查：A 组（出处）、B 组（AI 失败处理）按 Claude 建议修复；资料库外标注以做过或请求过法规检索为前提，改 REQ 措辞而不改代码（P16）；P7 不修、不登记 · Jason · 级联：REQ §5.5、DESIGN §4、本 TRACK 批次 B6
 
 ## 二、批次
 
@@ -52,6 +53,7 @@
 | B3 条款重新拆分 | 完成 | `regulation-splitter`（逐页、连续编号、无归属正文）、管理员上传改用并在存储失败时失败、`replace_regulation_articles`、`resplit-regulations` 脚本与异常清单（Jason 裁定后才替换）· §reg-split-rule、§reg-integrity、§reg-upload-dup、§reg-upload-storage | — |
 | B4 关键词检索与引用 | 完成 | PGroonga 迁移（生成列、索引、3 个函数）、`src/lib/search/`、两个工具与证据编号、检索预算与 `forceAnswer`、`src/lib/citations/`、过程日志链接、系统提示词、上传去向量、数据库层测试 · §reg-search-citation、§search-rounds、§keyword-match、§citation-text、§citation-link、§out-of-library、§retrieval-error、§doc-search、§upload-no-embedding、§no-embedding-calls | B1、B3（替换完成） |
 | B5 评测 | 完成 | 记忆存储注入、查询集（Claude 起草、Jason 审定）与 `eval-retrieval` 脚本 · §retrieval-quality，以及 §out-of-library 的评测部分 | B4 |
+| B6 上线前修复 | 完成，待 staging 重演 | Codex 上线前审查的 P1–P6、P9–P15、P18–P24：出处检查按显示文本判断、整句分句、编号后自写款项；预算拒绝的法规检索也加标注；历史只恢复问答；AI 入口的时限、截断与异常回复；报告指标失败不算同比；测试与评测脚本的缺口 · §citation-text、§out-of-library、§search-rounds、§ai-outcome、§ai-timeout、§report-section-failure、§system-prompt、§doc-search-no-regulation、§upload-no-embedding、§citation-link | B5 |
 
 Phase 6：§vector-removed（删除向量列、向量函数、`backup` schema）。
 
@@ -79,31 +81,31 @@ Phase 6：§vector-removed（删除向量列、向量函数、`backup` schema）
 
 | # | 级别 | 发现 | status |
 |---|------|------|--------|
-| P1 | MUST | `[R1]` 后自写的"第二款""之二"拼进出处，生成未经检索的款号（`citations/index.ts:44`）· 已复现 | 待裁定 |
-| P2 | MUST | 记忆恢复的旧工具结果带旧编号，与本问题新编号同名，旧引用被换成新出处（`tool-executor.ts:88`、`load-memory.ts:111`） | 待裁定 |
-| P3 | MUST | 条款号检查漏掉 `第**十九**条`、全角数字、大写数字、`3条`；加粗写法渲染后显示为"第十九条"（`citations/index.ts:24`）· 已复现 | 待裁定 |
-| P4 | MUST | 编号写成 `[R 1]`、`［R1］`、`R1`、`[R1-R3]` 时不识别也不删除（`citations/index.ts:23`）· 已复现 | 待裁定 |
-| P5 | MUST | 按换行切句：删去含条款号的条件行，留下失去条件的结论（`citations/index.ts:26`）· 已复现 | 待裁定 |
-| P6 | MUST | 3 次文档检索后再请求法规检索被预算拒绝，`regulationSearched` 为假，回答不加任何标注（`tool-executor.ts:43`） | 待裁定 |
-| P7 | MUST | 不显示的 Markdown 链接定义里的 `[R1]` 也算有效引用，关闭资料库外标注（`citations/index.ts:53`） | 待裁定 |
-| P8 | MUST | 先删正文中的标注文字再校验，可拼出 `第3条` 或无效编号（`citations/index.ts:64`） | 待裁定 |
-| P9 | SHOULD | 模型写的加粗标注不被识别，标注显示两次（`citations/index.ts:64`） | 待裁定 |
-| P10 | MUST | 指标计算失败的占位值 0 参与同比，显示"-100.00%"或"0.00%"（`analyze-sections.ts:26`；自 `dfc9072` 起即如此，现有报告未出现过） | 待裁定 |
-| P11 | MUST | Responses API 顶层完成、但单条消息未完成时，截断文字被当作成功（`ai/index.ts:251`） | 待裁定 |
-| P12 | MUST | 强制作答（不给工具）时 relay 仍返回工具调用，被当作成功，用户只看到一句标注（`ai/index.ts:131`） | 待裁定 |
-| P13 | MUST | 工具参数为空字符串时补成 `{}`，不按无法解析判失败（`ai/index.ts:240`） | 待裁定 |
-| P14 | MUST | 时限不打断 SDK 重试前的等待：带 `Retry-After` 时失败提示晚于时限（`ai/index.ts:196`） | 待裁定 |
-| P15 | SHOULD | HTTP 200 但响应体残缺时抛出原始错误，不转为 `AIUnavailableError`；报告章节丢掉已算好的指标（`ai/index.ts:201`、`:213`） | 待裁定 |
-| P16 | MUST | 测试认可"未做法规检索的回答不加标注"，REQ §5.5 的字面没有这一例外（`b4-search-citations.test.ts:231`） | 待裁定 |
-| P17 | MUST | 第二期校验失败只测了管理员上传，用户提取接口未测（`b2-failures-shown.test.ts:212`、`extract/route.ts:33`） | 待裁定 |
-| P18 | MUST（工具类，默认 SHOULD） | 重新拆分脚本接受空裁定，跳过的文档也计入"verified"（`resplit-regulations.ts:121`、`:157`） | 待裁定 |
-| P19 | MUST | 超时测试的假 relay 无法产生重试等待，P14 的路径测不到（`b1-ai-entry.test.ts:111`） | 待裁定 |
-| P20 | MUST | `String(undefined)` 使"系统提示词非空"的断言对缺失也通过（`b1-ai-entry.test.ts:72`） | 待裁定 |
-| P21 | MUST | 排除法规的 SQL 测试只有 `accounting_standard` 样例，删掉 `regulation` 的排除条件测试仍通过（`keyword-search.sql:11`） | 待裁定 |
-| P22 | MUST | 上传后读取的测试用不按文档过滤的假库，测不出读错文档（`b4-search-citations.test.ts:44`）；staging 真实上传已通过 | 待裁定 |
-| P23 | MUST | §citation-link 只测到事件数据，未测链接打开的是哪份原文（`b4-search-citations.test.ts:212`） | 待裁定 |
-| P24 | MUST（工具类，默认 SHOULD） | 评测把"检索失败"标注也算作资料库外通过（`eval-retrieval.ts:109`）；两轮证据中的 8 个通过都是资料库外标注，不受影响 | 待裁定 |
-| P25 | SHOULD | §vector-removed 只有注释，没有可执行的检查（Phase 6 才删向量） | 待裁定 |
+| P1 | MUST | `[R1]` 后自写的"第二款""之二"拼进出处，生成未经检索的款号（`citations/index.ts:44`）· 已复现 | 已修 |
+| P2 | MUST | 记忆恢复的旧工具结果带旧编号，与本问题新编号同名，旧引用被换成新出处（`tool-executor.ts:88`、`load-memory.ts:111`） | 已修 |
+| P3 | MUST | 条款号检查漏掉 `第**十九**条`、全角数字、大写数字、`3条`；加粗写法渲染后显示为"第十九条"（`citations/index.ts:24`）· 已复现 | 已修 |
+| P4 | MUST | 编号写成 `[R 1]`、`［R1］`、`R1`、`[R1-R3]` 时不识别也不删除（`citations/index.ts:23`）· 已复现 | 已修 |
+| P5 | MUST | 按换行切句：删去含条款号的条件行，留下失去条件的结论（`citations/index.ts:26`）· 已复现 | 已修 |
+| P6 | MUST | 3 次文档检索后再请求法规检索被预算拒绝，`regulationSearched` 为假，回答不加任何标注（`tool-executor.ts:43`） | 已修 |
+| P7 | MUST | 不显示的 Markdown 链接定义里的 `[R1]` 也算有效引用，关闭资料库外标注（`citations/index.ts:53`） | Jason 裁定：降级，不修、不登记技术债；理由：模型不会写不显示的 Markdown 链接定义 |
+| P8 | MUST | 先删正文中的标注文字再校验，可拼出 `第3条` 或无效编号（`citations/index.ts:64`） | 已修（随 P9：只识别开头的标注，正文中引用的标注文字不动） |
+| P9 | SHOULD | 模型写的加粗标注不被识别，标注显示两次（`citations/index.ts:64`） | 已修 |
+| P10 | MUST | 指标计算失败的占位值 0 参与同比，显示"-100.00%"或"0.00%"（`analyze-sections.ts:26`；自 `dfc9072` 起即如此，现有报告未出现过） | 已修（报告表格与分析提示词两处） |
+| P11 | MUST | Responses API 顶层完成、但单条消息未完成时，截断文字被当作成功（`ai/index.ts:251`） | 已修 |
+| P12 | MUST | 强制作答（不给工具）时 relay 仍返回工具调用，被当作成功，用户只看到一句标注（`ai/index.ts:131`） | 已修 |
+| P13 | MUST | 工具参数为空字符串时补成 `{}`，不按无法解析判失败（`ai/index.ts:240`） | 已修 |
+| P14 | MUST | 时限不打断 SDK 重试前的等待：带 `Retry-After` 时失败提示晚于时限（`ai/index.ts:196`） | 已修 |
+| P15 | SHOULD | HTTP 200 但响应体残缺时抛出原始错误，不转为 `AIUnavailableError`；报告章节丢掉已算好的指标（`ai/index.ts:201`、`:213`） | 已修 |
+| P16 | MUST | 测试认可"未做法规检索的回答不加标注"，REQ §5.5 的字面没有这一例外（`b4-search-citations.test.ts:231`） | Jason 裁定：改 REQ 措辞（§5.5 写明以做过或请求过法规检索为前提），代码不变 |
+| P17 | MUST | 第二期校验失败只测了管理员上传，用户提取接口未测（`b2-failures-shown.test.ts:212`、`extract/route.ts:33`） | 待重新裁定：用户提取接口不分期间、不写财务数据，"第二期校验失败"在该接口不存在 |
+| P18 | MUST（工具类，默认 SHOULD） | 重新拆分脚本接受空裁定，跳过的文档也计入"verified"（`resplit-regulations.ts:121`、`:157`） | 已修（空裁定不算裁定；跳过的文档单独列出） |
+| P19 | MUST | 超时测试的假 relay 无法产生重试等待，P14 的路径测不到（`b1-ai-entry.test.ts:111`） | 已修（随 P14 的测试） |
+| P20 | MUST | `String(undefined)` 使"系统提示词非空"的断言对缺失也通过（`b1-ai-entry.test.ts:72`） | 已修 |
+| P21 | MUST | 排除法规的 SQL 测试只有 `accounting_standard` 样例，删掉 `regulation` 的排除条件测试仍通过（`keyword-search.sql:11`） | 已修；在事务内换上去掉该条件的函数，测试失败，已证明非空转 |
+| P22 | MUST | 上传后读取的测试用不按文档过滤的假库，测不出读错文档（`b4-search-citations.test.ts:44`）；staging 真实上传已通过 | 已修 |
+| P23 | MUST | §citation-link 只测到事件数据，未测链接打开的是哪份原文（`b4-search-citations.test.ts:212`） | 已修（渲染链接并经预览接口打开） |
+| P24 | MUST（工具类，默认 SHOULD） | 评测把"检索失败"标注也算作资料库外通过（`eval-retrieval.ts:109`）；两轮证据中的 8 个通过都是资料库外标注，不受影响 | 已修 |
+| P25 | SHOULD | §vector-removed 只有注释，没有可执行的检查（Phase 6 才删向量） | 转入 Phase 6：删除向量后以 SQL 核对 |
 
 **Phase 4 证据**：
 
@@ -117,6 +119,6 @@ Phase 6：§vector-removed（删除向量列、向量函数、`backup` schema）
 - 未见过的真实上传（Jason 同意，数据目录中的一份真实银行借款合同 PDF，经 staging 的 `upload-temp`）：上传 2s 成功，14 个切块、无 embedding；选中该文档提问金额、利率、期限、还款方式与提前还款 → 20s 作答，各项逐一对原文核对一致，含原文未填写的利率基点与未约定的借款人提前还款。上传与测试后 VPS 上的临时文件已删除。
 - 延迟观察：同一查询集各轮 P50 从 20.7s 到 54s 不等，relay 慢时单次调用常撞 60s 时限，用户看到"AI 服务暂时不可用"；一个问题含多次调用，最长约 121s 才看到失败提示。
 
-**Phase 6 boxes**：Phase 4 收尾时写入；已知必须包含：relay 用量上限已设（Jason）· VPS 上 staging、生产两份 `.env` 先后更新并备份，删除不再使用的 `OPENAI_API_KEY` · 生产验证后删除向量列、向量函数（REQ §5.8）· TD-021 改写为 relay 现状 · TD-024 改写为本版测量值（P50 94.1s、P95 124.2s）与处理办法（章节并行调用，先测并行下 relay 的 529 率）
+**Phase 6 boxes**：Phase 4 收尾时写入；已知必须包含：relay 用量上限已设（Jason）· VPS 上 staging、生产两份 `.env` 先后更新并备份，删除不再使用的 `OPENAI_API_KEY` · 生产验证后删除向量列、向量函数（REQ §5.8）· §vector-removed：删除后以 SQL 核对 `embedding` 列与向量检索函数均已不存在（P25）· TD-021 改写为 relay 现状 · TD-024 改写为本版测量值（P50 94.1s、P95 124.2s）与处理办法（章节并行调用，先测并行下 relay 的 529 率）
 
 ## 四、Session-end pickup

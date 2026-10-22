@@ -109,6 +109,39 @@ describe('B2 failures are shown, never fabricated', () => {
     expect(everything).not.toContain('财务数据已汇总完成');
   });
 
+  it('§report-section-failure a metric that could not be calculated shows no comparison, never a change against a placeholder', async () => {
+    relay.reply(() => ({ body: chatReply('分析文字') }));
+    const state = reportState();
+    const [failedNow, failedBefore] = REPORT_SECTIONS[1].metrics;
+    const failed = (toolName: string): MetricResult => ({ toolName, displayName: toolName, value: 0, formatted: 'N/A', unit: '', error: '计算失败', sourceDocumentIds: [] });
+    const ok = (toolName: string): MetricResult => ({ toolName, displayName: toolName, value: 1.5, formatted: '1.50', unit: '', sourceDocumentIds: [] });
+    state.metricResults.primary[failedNow] = failed(failedNow);
+    state.input.comparisonYear = '2023';
+    state.dataAvailability.comparisonYearAvailable = true;
+    state.metricResults.comparison = { [failedNow]: ok(failedNow), [failedBefore]: failed(failedBefore) };
+    Object.assign(state, await analyzeSectionsNode(state));
+    const metrics = (await assembleReportNode(state)).report!.sections.find(s => s.id === 'solvency')!.metrics;
+
+    const now = metrics.find(m => m.toolName === failedNow)!;
+    expect(now.formatted).toBe('N/A');
+    expect(now.change).toBeUndefined();
+    const before = metrics.find(m => m.toolName === failedBefore)!;
+    expect(before.previousValue).toBeUndefined();
+    expect(before.change).toBeUndefined();
+
+    // Nor is the model told about a change that never happened.
+    const prompt = userText(relay.requests.find(r => userText(r).includes('偿债能力分析'))!);
+    expect(prompt).toContain('| 2023年 |');
+    expect(prompt).not.toMatch(/-100(\.0+)?%/);
+  });
+
+  it('§report-section-failure a malformed relay reply fails the section like any AI failure and keeps its metrics', async () => {
+    relay.reply(req => (userText(req).includes('偿债能力分析') ? { raw: '{"choices":' } : { body: chatReply('分析文字') }));
+    const solvency = (await generateReport()).sections.find(s => s.id === 'solvency')!;
+    expect(solvency.analysisStatus).toBe('failed');
+    expect(solvency.metrics.length).toBe(REPORT_SECTIONS[1].metrics.length);
+  });
+
   it('§report-summary-failure a failed section or a failed summary call yields "摘要未生成" with empty key findings', async () => {
     relay.reply(req => (userText(req).includes('偿债能力分析') ? aiDown : { body: chatReply('分析文字') }));
     const partial = await generateReport();
