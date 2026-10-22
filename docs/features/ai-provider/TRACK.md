@@ -149,15 +149,24 @@ Phase 6：§vector-removed（删除向量列、向量函数、`backup` schema）
 - [x] tag `v4.7.0`（`29d8850`）· [x] 生产部署 + 核对 served SHA：部署日志 `healthy after 6s`；VPS 仓库检出 `29d8850`，容器在部署时重建；`https://goodman.antelacus.com/api/health` 返回 `healthy`、`version` 4.7.0 · [x] 生产验证：冒烟通过（健康、管理员登录、会话、报告生成且无失败章节；生产 `.env` 没有 `ADMIN_USERNAME`，冒烟用 staging 的凭据文件，两者共用一个用户表）；法规问题"增值税纳税义务发生时间"引《增值税法》第二十八条，对原文核对一致，47s
 - [x] 删除向量列、向量函数、`backup` schema（REQ §5.8；不可逆，Jason 在 Dashboard 执行 `20261022073400_remove_vector_search`，同一事务登记迁移记录）；Edge Function `embed` 在 Supabase 上不存在（已核），无需删除
 - [x] §vector-removed：SQL 核对向量列、`embedding` 列、向量函数、`backup` schema 均为 0，迁移记录 `remove_vector_search` 已登记，切块 545、条款 1505 不变（P25）；`database.types.ts` 按数据库现状更新，函数清单与生成结果一致；类型检查顺带找出 `local-documents` 路由与前端类型中无人读取的 `embedding` 字段，已删
-- [ ] CHANGELOG
-- [ ] TECHNICAL_DEBT finalize：TD-021 改写为 relay 现状（无总量上限，只有用户用量限制；按 token 设限的版本）；TD-024 改写为本版测量值（P50 94.1s、P95 124.2s）与处理办法（章节并行调用，先测并行下 relay 的 529 率）；TD-031 处理版本裁定
-- [ ] user docs（帮助页：出处、资料库外标注） · [ ] README 仍然属实，只指路不复述
-- [ ] living-docs sweep（REQ / DESIGN / `ARCHITECTURE.md` 与上线版本一致）
-- [ ] old-value sweep：`text-embedding-3-small`、`OPENAI_API_KEY`、embedding / 向量检索（`.claude/agents/db-migration.md` 等）
-- [ ] announce · [ ] FEEDBACK sweep · [ ] roadmap 更新（`v4_DEVELOPMENT_PLAN.md` §3.11、§3.12）
-- [ ] gate readout：每道门 runs / 改变了输出的 catches
-- [ ] doc budgets green · [ ] memory prune
-- [ ] acceptance trigger 登记
+- [x] CHANGELOG：`[4.7.0] - 2026-10-22`
+- [x] TECHNICAL_DEBT finalize：TD-021 改写（预付余额为总花费兜底，用户用量限制限不住总量）；TD-024 改写为本版测量值与处理办法；TD-034 扩写并升为高 · [ ] TD-031 处理版本裁定（Jason）
+- [x] user docs：帮助页、关于页、落地页去掉向量 / 语义搜索的说法，改为关键词检索与可核验出处 · [x] README：技术栈一行改为 AI relay，其余仍属实
+- [x] living-docs sweep：DESIGN（`embedding` 列已删、管理员上传的失败条件）、`ARCHITECTURE.md`（外部服务、对话流程中的出处核对）、`DEPLOYMENT_CHECKLIST.md`（监控入口）· [ ] DESIGN 中"`vector` 扩展（若无他用）"一并删除：已核无列使用该类型，待 Jason 定
+- [x] old-value sweep：`src/`、README 与在用文档中已无 `text-embedding-3-small`、`OPENAI_API_KEY`、向量检索；`.claude/agents/db-migration.md` 改为关键词检索；上传的切块存储报错文案改为"切块存储失败"；无调用方的 `SearchResultChunk` 等文档选择类型已删。历史文档（`docs/versions/`、已冻结的 TRACK）不改
+- [x] announce：无外部用户，不适用 · [x] FEEDBACK sweep：登记表为空 · [x] roadmap：`v4_DEVELOPMENT_PLAN.md` v4.7 标为已发布，§3.12 指向 `TRACK_v4.7.0.md`
+- [x] gate readout（runs / 改变了输出的 catches）：
+  - 验收测试与全套测试：每批与每次提交钩子都跑，未单独计数；本版每个修复都以先红的测试守住
+  - Codex 设计评审：1 / 13（全部采纳；C1 把出处改为编号引用、程序生成）
+  - Codex 上线前审查：1（3 个作业）/ 14（P1–P6、P8–P15 改了输出；P16、P17 改 REQ；P18–P24 补测试与工具；P25 转 Phase 6；P7 降级）
+  - `/code-review`：1 / 8（V1–V8；V9 不改，V10 只加注释）
+  - 检索评测：5 轮 + 1 次补跑 / 3（第一轮：文档检索排除法规；第三轮：按问题性质分流、每文档最多 2 块）
+  - CI 安全审计门：6 / 1（vite 5 条高危）；另 2 次为 npm 审计端点超时，报告无效导致失败，非真实发现
+  - staging 部署冒烟：3 / 0。退役触发：发布流水线改为推广同一镜像后重新评估，若该版仍为 0 则只保留健康检查与报告生成
+  - staging 手工复演（未见过的真实输入）：3 / 2（相邻出处拼接；对话 60s 时限过紧，放宽到 90s）
+  - 生产冒烟：1 / 0；发现生产 `.env` 没有 `ADMIN_USERNAME`，冒烟要借用 staging 的凭据文件
+- [x] doc budgets：本项目还没有预算检查工具（发布流水线范围 6 引入），不适用 · [x] memory prune：项目记忆中与通用记忆重复的"在 VPS 复演"一条已删；P17 的教训（描述发现前先在代码路径上核实）提升为通用记忆
+- [x] acceptance trigger：非首次发布；生产验证已跑真实输入，此后 Jason 使用中的问题按 `docs/FEEDBACK.md` 登记
 - [ ] **TRACK close（最后一项）**：未结事项转入 TECHNICAL_DEBT / FEEDBACK / REQ / DESIGN，然后 `git mv TRACK.md TRACK_v4.7.0.md`
 
 ## 四、Session-end pickup

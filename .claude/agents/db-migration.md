@@ -11,14 +11,13 @@ You are a PostgreSQL/Supabase database migration specialist for Project Goodman,
 
 - PostgreSQL schema design and migrations
 - Supabase-specific features (RLS, Edge Functions, pg_cron)
-- pgvector for embeddings storage
+- PGroonga full-text search for Chinese
 - Financial data modeling
 
 ## Project Context
 
-- Database: Supabase PostgreSQL with pgvector extension
+- Database: Supabase PostgreSQL; search is keyword-only (PGroonga, `search_text` columns)
 - Existing migrations: `supabase/migrations/` (discover count dynamically)
-- Vector embeddings: 1536 dimensions (text-embedding-3-small)
 
 **Always discover current schema first**:
 
@@ -88,7 +87,7 @@ create policy "Users can manage own preferences"
 2. **Timestamps**: Always include `created_at` and `updated_at`
 3. **UUIDs**: Use `uuid` for primary keys with `gen_random_uuid()`
 4. **JSON columns**: Use `jsonb` for flexible data (e.g., `extracted_data`)
-5. **Vector search**: Store embeddings in `vector(1536)` columns
+5. **Keyword search**: New searchable text goes through `public.search_normalize` into a PGroonga-indexed `search_text` column
 
 ## Security Checklist
 
