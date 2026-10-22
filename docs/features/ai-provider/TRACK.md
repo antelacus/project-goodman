@@ -49,7 +49,7 @@
 | B2 失败不编造 | 完成 | 报告章节与摘要状态、三处渲染、对话失败文案、两个上传入口的提取失败与多期间一次写入、冒烟检查 · §report-section-failure、§report-summary-failure、§chat-failure、§extract-failure、§smoke-report | B1 |
 | B3 条款重新拆分 | 完成 | `regulation-splitter`（逐页、连续编号、无归属正文）、管理员上传改用并在存储失败时失败、`replace_regulation_articles`、`resplit-regulations` 脚本与异常清单（Jason 裁定后才替换）· §reg-split-rule、§reg-integrity、§reg-upload-dup、§reg-upload-storage | — |
 | B4 关键词检索与引用 | 完成 | PGroonga 迁移（生成列、索引、3 个函数）、`src/lib/search/`、两个工具与证据编号、检索预算与 `forceAnswer`、`src/lib/citations/`、过程日志链接、系统提示词、上传去向量、数据库层测试 · §reg-search-citation、§search-rounds、§keyword-match、§citation-text、§citation-link、§out-of-library、§retrieval-error、§doc-search、§upload-no-embedding、§no-embedding-calls | B1、B3（替换完成） |
-| B5 评测 | 进行中（查询集已审定；检索范围、分流、每文档上限已按裁定修改；待两轮正式评测） | 记忆存储注入、查询集（Claude 起草、Jason 审定）与 `eval-retrieval` 脚本 · §retrieval-quality，以及 §out-of-library 的评测部分 | B4 |
+| B5 评测 | 完成 | 记忆存储注入、查询集（Claude 起草、Jason 审定）与 `eval-retrieval` 脚本 · §retrieval-quality，以及 §out-of-library 的评测部分 | B4 |
 
 Phase 6：§vector-removed（删除向量列、向量函数、`backup` schema）。
 
@@ -65,7 +65,7 @@ Phase 6：§vector-removed（删除向量列、向量函数、`backup` schema）
 | C4 | MUST | "空内容即失败"会误杀只含工具调用的回复；截断输出（`finish_reason: length`）会被当成功 | 已采纳 · 待 §ai-outcome 通过后关闭 |
 | C5 | MUST | Responses API 的输出上限字段是 `max_output_tokens`，不是 `max_completion_tokens` | 已采纳 · 待 §relay-params 通过后关闭 |
 | C6 | MUST | 资料库外作答只在"3 次都空"时触发；非空但无关、部分支持、检索报错都没有终态规则 | 已采纳（由引用后处理按编号判定标注）· 待 §out-of-library、§retrieval-error 通过后关闭 |
-| C7 | MUST | 评测跑完整 agent 会创建会话、写消息到共用的生产库 | 已采纳（内存记忆存储）· 由评测前后行数核对关闭 |
+| C7 | MUST | 评测跑完整 agent 会创建会话、写消息到共用的生产库 | 已关闭：五轮评测前后会话、消息行数均不变 |
 | C8 | SHOULD（原 MUST） | 管理员上传在 Storage 失败时仍写入法规，`file_url` 为空，出处链接打不开（现有 45 份原件均在 Storage，已核） | 已采纳（Jason 同意按 SHOULD 处理）· 待 §reg-upload-storage 通过后关闭 |
 | C9 | SHOULD | 预算用尽返回 `empty: true` 与真实空结果混淆；模型不收尾时撞上最大迭代，会保存未配对的工具调用 | 已采纳 · 待 §search-rounds 通过后关闭 |
 | C10 | SHOULD | 关键词粒度、数量、组合方式未定义；"不相邻命中"要在数据库层用固定样例直接验证 | 已采纳 · 待 §keyword-match 通过后关闭 |
@@ -76,6 +76,9 @@ Phase 6：§vector-removed（删除向量列、向量函数、`backup` schema）
 **Phase 4 证据**：
 
 - §reg-integrity（45 部真实法规，2026-10-20）：`scripts/resplit-regulations.ts check` 第一轮 1196 条、18 条异常，其中 17 条是拆分规则的问题（康熙部首、2007 版准则无空格、字间距排版、浏览器页眉页脚），修正规则后 1505 条、1 条异常，已由 Jason 裁定（见裁定）。`apply` 后脚本逐条读回比对通过；SQL 独立核对：45 份文档均有条款，重复 0，条款内容中的章节标题 0、页码行 0、康熙部首 0。条款数与原文一致可核的：企业所得税法 60、关税法 72、增值税法 38、基本准则 50。替换前整表 1559 行备份于 `backup.structured_regulations_v4_6`，与原表逐行一致。B5 起草查询集时发现"⼜"被用来印"口"（关税法、保险合同共 40 条写成"出又""敞又"），修正映射后重新 `check`（条款数与异常清单不变）并 `apply`，核对通过。
+
+- §retrieval-quality（审定的 20 条查询集，真实资料库，经 relay，`chat-system` v1.5）：第四轮资料库内 16/16、资料库外 4/4，P50 23s、P95 49.6s。第五轮资料库内 15/16、资料库外 4/4；未命中的 doc-6 是模型没有检索、直接反问年份。第五轮有 6 题撞上 60s 调用时限，按 Jason 裁定只补跑这 6 题（`eval-retrieval.ts <out-dir> <ids>`），补跑全部通过；其余 14 题为原跑结果。两轮前后会话、消息行数不变。此前三轮（11/16、两轮 relay 故障作废、6/16）的发现已转为裁定：文档检索排除法规准则、检索按问题性质分流、每文档最多 2 块。
+- 延迟观察（转入 Phase 4 延迟测量）：同一查询集各轮 P50 从 20.7s 到 54s 不等，relay 慢时单次调用常撞 60s 时限，用户看到"AI 服务暂时不可用"；一个问题含多次调用，最长约 121s 才看到失败提示。
 
 **Phase 6 boxes**：Phase 4 收尾时写入；已知必须包含：relay 用量上限已设（Jason）· VPS 上 staging、生产两份 `.env` 先后更新并备份，删除不再使用的 `OPENAI_API_KEY` · 生产验证后删除向量列、向量函数（REQ §5.8）· TD-021 改写为 relay 现状 · TD-024 重新测量
 
