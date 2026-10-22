@@ -28,6 +28,7 @@ const db = vi.hoisted(() => ({
   chunks: [] as Array<{ document_id: string; content: string }>,
   rpcCalls: [] as Array<{ fn: string; args: Record<string, unknown> }>,
   failRpc: false,
+  failFn: null as string | null,
   inserts: {} as Record<string, unknown[]>,
 }));
 
@@ -36,7 +37,7 @@ vi.mock('@/lib/database', async importOriginal => ({
   createServerSupabaseClient: () => ({
     rpc: async (fn: string, args: Record<string, unknown>) => {
       db.rpcCalls.push({ fn, args });
-      if (db.failRpc) return { data: null, error: { message: 'database down' } };
+      if (db.failRpc || db.failFn === fn) return { data: null, error: { message: 'database down' } };
       return { data: fn === 'search_regulation_articles' ? db.regulationRows : [], error: null };
     },
     from: (table: string) => ({
@@ -108,6 +109,7 @@ beforeEach(() => {
   db.chunks = [];
   db.rpcCalls = [];
   db.failRpc = false;
+  db.failFn = null;
   db.inserts = {};
   vi.mocked(security.ensureSession).mockResolvedValue(guest);
   vi.mocked(security.checkGuestRate).mockResolvedValue({ allowed: true, remaining: 4, total: 5, resetsAt: Date.now() + 3600_000 });
@@ -200,7 +202,7 @@ describe('B4 keyword search and citations', () => {
 
   it('§citation-text every article number sent to the user comes from this question\'s evidence; self-written numbers and unknown ids are removed with a notice', () => {
     const answer = '根据[R1]，应当计提减值准备。另外第五条也有规定。[R9]也提到了这一点。\n按照[R2]，纳税人应当申报。';
-    const { text, cited, removed } = finalizeAnswer(answer, { evidence: EVIDENCE, regulationSearched: true, allSearchesFailed: false });
+    const { text, cited, removed } = finalizeAnswer(answer, { evidence: EVIDENCE, regulationSearched: true, allRegulationSearchesFailed: false });
     expect(text).toBe(
       '根据《企业会计准则第99号——示例业务》第一条，应当计提减值准备。\n按照《中华人民共和国示例法》第十二条，纳税人应当申报。\n\n（已删去 2 处未经资料库核实的条款引用）'
     );
@@ -210,7 +212,7 @@ describe('B4 keyword search and citations', () => {
 
   it('§citation-text a valid id cannot carry a paragraph, item or sub-article the model added', () => {
     for (const tail of ['第二款', '第 3 项', '之二']) {
-      const { text, removed } = finalizeAnswer(`依据[R1]${tail}，应当复核。按照[R2]，纳税人应当申报。`, { evidence: EVIDENCE, regulationSearched: true, allSearchesFailed: false });
+      const { text, removed } = finalizeAnswer(`依据[R1]${tail}，应当复核。按照[R2]，纳税人应当申报。`, { evidence: EVIDENCE, regulationSearched: true, allRegulationSearchesFailed: false });
       expect(removed).toBe(1);
       expect(text).not.toContain(tail);
       expect(text).toContain('《中华人民共和国示例法》第十二条');
@@ -219,14 +221,14 @@ describe('B4 keyword search and citations', () => {
 
   it('§citation-text article numbers are caught whatever the numerals or formatting, since the page renders them alike', () => {
     for (const written of ['第**十九**条', '**第十九条**', '第３条', '第叁条', '第&#51;条', '第`3`条']) {
-      const { text, removed } = finalizeAnswer(`依据${written}，企业可以免税。`, { evidence: EVIDENCE, regulationSearched: true, allSearchesFailed: false });
+      const { text, removed } = finalizeAnswer(`依据${written}，企业可以免税。`, { evidence: EVIDENCE, regulationSearched: true, allRegulationSearchesFailed: false });
       expect(removed, written).toBe(1);
       expect(text, written).not.toContain('免税');
     }
   });
 
   it('§citation-text an id is either a well-formed citation of this question\'s evidence or the sentence is removed', () => {
-    const ctx = { evidence: EVIDENCE, regulationSearched: true, allSearchesFailed: false };
+    const ctx = { evidence: EVIDENCE, regulationSearched: true, allRegulationSearchesFailed: false };
     // Spacing and full-width brackets are still the same id.
     expect(finalizeAnswer('依据[R 1]，应当计提。', ctx).text).toBe('依据《企业会计准则第99号——示例业务》第一条，应当计提。');
     expect(finalizeAnswer('依据［R1］，应当计提。', ctx).text).toBe('依据《企业会计准则第99号——示例业务》第一条，应当计提。');
@@ -239,7 +241,7 @@ describe('B4 keyword search and citations', () => {
 
   it('§citation-text citations written side by side read as one list, naming each regulation once', () => {
     const evidence = [...EVIDENCE, { ...EVIDENCE[0], id: 'R3', articleNumber: '第三条' }];
-    const ctx = { evidence, regulationSearched: true, allSearchesFailed: false };
+    const ctx = { evidence, regulationSearched: true, allRegulationSearchesFailed: false };
     for (const written of ['[R1][R3]', '[R1] [R3]', '[R1]、[R3]', '[R1, R3]']) {
       expect(finalizeAnswer(`依据${written}，应当计提。`, ctx).text, written).toBe('依据《企业会计准则第99号——示例业务》第一条、第三条，应当计提。');
     }
@@ -250,7 +252,7 @@ describe('B4 keyword search and citations', () => {
   });
 
   it('§citation-text a sentence broken across lines is judged whole; separate list items stay separate', () => {
-    const ctx = { evidence: EVIDENCE, regulationSearched: true, allSearchesFailed: false };
+    const ctx = { evidence: EVIDENCE, regulationSearched: true, allRegulationSearchesFailed: false };
     const conditional = finalizeAnswer('第十九条所述情形才适用以下结论，\n企业无需计提减值。', ctx);
     expect(conditional.text).not.toContain('无需计提减值');
     expect(finalizeAnswer('依据第\n3条可以免税。', ctx).removed).toBe(1);
@@ -318,25 +320,25 @@ describe('B4 keyword search and citations', () => {
 
   it('§out-of-library an answer without a valid evidence id after a regulation search starts with the out-of-library label and has no article numbers', () => {
     const { text } = finalizeAnswer('一般来说，第三条要求企业计提减值。这是常见做法。', {
-      evidence: EVIDENCE, regulationSearched: true, allSearchesFailed: false,
+      evidence: EVIDENCE, regulationSearched: true, allRegulationSearchesFailed: false,
     });
     expect(text.startsWith('以下内容不是来自资料库，未经条款核对')).toBe(true);
     expect(text).not.toMatch(/第[零〇一二三四五六七八九十百千\d]+条/);
 
     // Not repeated when the model already wrote it; absent when no regulation search ran.
     for (const written of ['以下内容不是来自资料库，未经条款核对\n\n这是常见做法。', '**以下内容不是来自资料库，未经条款核对**\n\n这是常见做法。', '以下内容**不是来自资料库**，未经条款核对：这是常见做法。']) {
-      const once = finalizeAnswer(written, { evidence: [], regulationSearched: true, allSearchesFailed: false });
+      const once = finalizeAnswer(written, { evidence: [], regulationSearched: true, allRegulationSearchesFailed: false });
       expect(once.text.replace(/\*/g, '').split('以下内容不是来自资料库').length, written).toBe(2);
       expect(once.text, written).toContain('这是常见做法。');
     }
     // The label's words quoted inside the answer are left alone.
-    const quoted = finalizeAnswer('回答开头若有“以下内容不是来自资料库，未经条款核对”，说明没有出处。', { evidence: [], regulationSearched: true, allSearchesFailed: false });
+    const quoted = finalizeAnswer('回答开头若有“以下内容不是来自资料库，未经条款核对”，说明没有出处。', { evidence: [], regulationSearched: true, allRegulationSearchesFailed: false });
     expect(quoted.text).toContain('回答开头若有“以下内容不是来自资料库，未经条款核对”，说明没有出处。');
-    expect(finalizeAnswer('流动比率是 1.5。', { evidence: [], regulationSearched: false, allSearchesFailed: false }).text).toBe('流动比率是 1.5。');
+    expect(finalizeAnswer('流动比率是 1.5。', { evidence: [], regulationSearched: false, allRegulationSearchesFailed: false }).text).toBe('流动比率是 1.5。');
   });
 
   it('§retrieval-error when every search of the question errored, the label is the retrieval-failure one', async () => {
-    const { text } = finalizeAnswer('这是常见做法。', { evidence: [], regulationSearched: true, allSearchesFailed: true });
+    const { text } = finalizeAnswer('这是常见做法。', { evidence: [], regulationSearched: true, allRegulationSearchesFailed: true });
     expect(text.startsWith('法规检索暂时失败，以下内容未经资料库核对')).toBe(true);
     expect(text).not.toContain('以下内容不是来自资料库');
 
@@ -346,6 +348,30 @@ describe('B4 keyword search and citations', () => {
     relay.reply(() => ({ body: ++turn === 1 ? searchCall('call-1') : chatReply('一般来说应当计提减值。') }));
     const state = await createUnifiedGraph({ memory: createInMemoryMemory() }).invoke({ input: { question: '合成资产减值？' } });
     expect(state.output.answer.startsWith('法规检索暂时失败，以下内容未经资料库核对')).toBe(true);
+  });
+
+  it('§retrieval-error a failed regulation search is a retrieval failure even when a document search of the same question succeeded', async () => {
+    db.failFn = 'search_regulation_articles';
+    let turn = 0;
+    relay.reply(() => ({
+      body: ++turn === 1
+        ? chatReply(null, { toolCalls: [
+            { id: 'call-1', name: 'search_regulations', arguments: JSON.stringify({ keywords: ['合成金融资产'] }) },
+            { id: 'call-2', name: 'search_documents', arguments: JSON.stringify({ keywords: ['合成金融资产'] }) },
+          ] })
+        : chatReply('一般来说应当计提减值。'),
+    }));
+    const state = await createUnifiedGraph({ memory: createInMemoryMemory() }).invoke({ input: { question: '合成资产减值？' } });
+    expect(state.output.answer.startsWith('法规检索暂时失败，以下内容未经资料库核对')).toBe(true);
+  });
+
+  it('§retrieval-error a search the model worded invalidly uses budget but is not a retrieval failure', async () => {
+    let turn = 0;
+    relay.reply(() => ({ body: ++turn === 1 ? searchCall('call-1', ['增值税暂行条例实施细则']) : chatReply('一般来说应当计提减值。') }));
+    const state = await createUnifiedGraph({ memory: createInMemoryMemory() }).invoke({ input: { question: '合成资产减值？' } });
+    expect(state.agent.search.used).toBe(1);
+    expect(state.output.answer).not.toContain('法规检索暂时失败');
+    expect(state.output.answer.startsWith('以下内容不是来自资料库')).toBe(true);
   });
 
   it('§upload-no-embedding a user upload succeeds, writes chunks, makes no embedding call, and its content reaches the model when selected', async () => {

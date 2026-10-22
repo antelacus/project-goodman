@@ -47,6 +47,7 @@ import {
   type StandardCashFlow,
 } from "@/lib/financial";
 import { uploadFileToStorage } from "@/lib/documents/storage";
+import { isRegulation } from "@/lib/documents/constants";
 import { splitRegulation, type SplitArticle, type SplitAnomaly } from "@/lib/extraction/regulation-splitter";
 
 
@@ -77,12 +78,21 @@ function isFinancialExtractionResult(
 }
 
 /**
- * Extract text from file based on type
+ * The file's text, and its pages for the regulation splitter (REQ §5.6): a PDF's
+ * text layer page by page with the PDF's own page count, which the splitter
+ * checks against; any other text is one page. `pages` is null for a PDF read as
+ * a scan, which has no pages to split by.
  */
+interface ExtractedFile {
+  text: string;
+  pages: { pages: string[]; pageCount: number } | null;
+}
+
 async function extractTextFromFile(
   fileData: string,
   fileName: string
-): Promise<string> {
+): Promise<ExtractedFile> {
+  const onePage = (text: string): ExtractedFile => ({ text, pages: { pages: [text], pageCount: 1 } });
   // Detect file type from extension
   const ext = fileName.toLowerCase().split('.').pop();
   console.log(`[extractTextFromFile] Processing file: ${fileName}, extension: ${ext}, data length: ${fileData.length}`);
@@ -151,7 +161,7 @@ async function extractTextFromFile(
         .join('\n');
 
       console.log(`[extractTextFromFile] Text extracted, length: ${text.length}`);
-      return text;
+      return onePage(text);
     } catch (err) {
       console.error(`[extractTextFromFile] Excel parsing error:`, err);
       throw new Error(`Excel parsing failed: ${err instanceof Error ? err.message : 'Unknown error'}`);
@@ -160,31 +170,34 @@ async function extractTextFromFile(
     // Direct text extraction first (unpdf, serverless-friendly); a scan with little
     // or no text layer, or a file unpdf cannot parse, is read as a document image.
     let textContent = '';
+    let pages: string[] = [];
+    let pageCount = 0;
     try {
       const { extractText } = await import('unpdf');
       const result = await extractText(new Uint8Array(Buffer.from(fileData, 'base64')));
-      // unpdf returns text as array of strings (one per page), join them
-      textContent = Array.isArray(result.text) ? result.text.join('\n\n') : result.text;
-      console.log(`[extractTextFromFile] PDF text extracted directly, length: ${textContent.length} chars, pages: ${result.totalPages}`);
+      pages = result.text;
+      pageCount = result.totalPages;
+      textContent = pages.join('\n\n');
+      console.log(`[extractTextFromFile] PDF text extracted directly, length: ${textContent.length} chars, pages: ${pageCount}`);
     } catch (pdfError) {
       console.error(`[extractTextFromFile] PDF parse error:`, pdfError);
     }
 
     if (textContent.trim().length > 100) {
-      return textContent;
+      return { text: textContent, pages: { pages, pageCount } };
     }
     console.log(`[extractTextFromFile] Reading the PDF as a scan...`);
-    return readDocumentText({ fileName, mimeType: 'application/pdf', base64: fileData });
+    return { text: await readDocumentText({ fileName, mimeType: 'application/pdf', base64: fileData }), pages: null };
   } else if (['png', 'jpg', 'jpeg', 'webp', 'gif'].includes(ext || '')) {
     const mimeType = ext === 'jpg' ? 'image/jpeg' : `image/${ext}`;
-    return readDocumentText({ fileName, mimeType, base64: fileData });
+    return onePage(await readDocumentText({ fileName, mimeType, base64: fileData }));
   } else if (ext === 'txt' || ext === 'md') {
     // Plain text - decode from base64
-    return Buffer.from(fileData, 'base64').toString('utf-8');
+    return onePage(Buffer.from(fileData, 'base64').toString('utf-8'));
   }
 
   // If no extension match, assume it's already text
-  return fileData;
+  return onePage(fileData);
 }
 
 type FinancialRow = Omit<InsertTables<'financial_data'>, 'document_id'>;
@@ -200,27 +213,6 @@ interface ValidationReport {
 interface FinancialRows {
   rows: FinancialRow[];
   validationReports: ValidationReport[];
-}
-
-function isRegulationType(documentType: string): boolean {
-  return documentType === "regulation" || documentType === "accounting_standard" || documentType === "policy";
-}
-
-/**
- * The regulation's text page by page, and the page count from the PDF itself,
- * which the splitter checks against (REQ §5.6). A text file is one page.
- */
-async function regulationPages(
-  documentText: string,
-  fileName: string,
-  extractedText: string
-): Promise<{ pages: string[]; pageCount: number }> {
-  if (!fileName.toLowerCase().endsWith('.pdf')) {
-    return { pages: [extractedText], pageCount: 1 };
-  }
-  const { extractText } = await import('unpdf');
-  const { totalPages, text } = await extractText(new Uint8Array(Buffer.from(documentText, 'base64')));
-  return { pages: text, pageCount: totalPages };
 }
 
 function isFinancialStatementType(documentType: string): documentType is FinancialStatementType {
@@ -460,7 +452,7 @@ export async function POST(request: NextRequest) {
 
     // Step 0: Extract text from file if needed
     console.log(`[Admin Upload] Extracting text from: ${fileName}`);
-    const extractedText = await extractTextFromFile(documentText, fileName);
+    const { text: extractedText, pages: filePages } = await extractTextFromFile(documentText, fileName);
     logWorkflowEvent({
       ...workflowContext,
       step: 'extract',
@@ -513,17 +505,25 @@ export async function POST(request: NextRequest) {
     // Step 1c: Regulations are split before anything is written, so a split the
     // citations cannot trust never reaches the database (REQ §5.6).
     let regulationSplit: { articles: SplitArticle[]; anomalies: SplitAnomaly[] } | null = null;
-    if (isRegulationType(documentType)) {
-      const { pages, pageCount } = await regulationPages(documentText, fileName, extractedText);
-      regulationSplit = splitRegulation(pages, pageCount);
+    if (isRegulation(documentType)) {
+      if (!filePages) {
+        logWorkflowFailure('VALIDATION');
+        return createJsonResponse(
+          { success: false, message: '条款拆分异常：PDF 没有可提取的文字层，无法按页拆分', error: 'regulation_split' } as UploadResponse,
+          400
+        );
+      }
+      regulationSplit = splitRegulation(filePages.pages, filePages.pageCount);
       const blocking = regulationSplit.anomalies.find(
-        a => a.kind === 'repeated_number' || a.kind === 'page_count_mismatch'
+        a => a.kind === 'repeated_number' || a.kind === 'page_count_mismatch' || a.kind === 'no_articles'
       );
       if (blocking) {
         logWorkflowFailure('VALIDATION');
-        const message = blocking.kind === 'repeated_number'
-          ? `条款拆分异常：${blocking.articleNumber}重复`
-          : `条款拆分异常：抽取页数（${blocking.extracted}）与 PDF 页数（${blocking.expected}）不一致`;
+        const message =
+          blocking.kind === 'repeated_number' ? `条款拆分异常：${blocking.articleNumber}重复`
+          : blocking.kind === 'page_count_mismatch' ? `条款拆分异常：抽取页数（${blocking.extracted}）与 PDF 页数（${blocking.expected}）不一致`
+          // Document search excludes regulations, so with no articles neither search could reach it.
+          : '条款拆分异常：未拆出任何条款';
         return createJsonResponse({ success: false, message, error: 'regulation_split' } as UploadResponse, 400);
       }
     }
@@ -558,7 +558,7 @@ export async function POST(request: NextRequest) {
     } catch (storageError) {
       // A regulation's citations link to its original file, so without the file
       // the upload fails; for other types the file is optional.
-      if (isRegulationType(documentType)) {
+      if (isRegulation(documentType)) {
         console.error(`[Admin Upload] Storage upload failed:`, storageError);
         logWorkflowFailure('INTERNAL');
         return createJsonResponse(

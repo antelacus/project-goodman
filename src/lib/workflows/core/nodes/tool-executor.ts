@@ -47,10 +47,14 @@ export async function toolExecutorNode(
             if (call.name === "search_regulations") search.regulationSearched = true;
         } else {
             result = await toolRegistry.execute(call.name, call.arguments);
-            if (SEARCH_TOOLS.has(call.name)) {
-                search.used += 1;
-                if (call.name === "search_regulations") search.regulationSearched = true;
-                if (!result.success) search.failed += 1;
+            if (SEARCH_TOOLS.has(call.name)) search.used += 1;
+            if (call.name === "search_regulations") {
+                search.regulationSearched = true;
+                // Badly worded input never reached the database, so it is not a retrieval failure.
+                if (!result.invalidInput) {
+                    search.regulationRuns += 1;
+                    if (!result.success) search.regulationFailed += 1;
+                }
             }
             if (call.name === "search_regulations" && result.success) {
                 result = { ...result, data: numberResults(result.data as SearchRegulationsData, evidence) };

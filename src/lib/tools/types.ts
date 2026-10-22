@@ -59,6 +59,8 @@ export interface ToolExecutionResult<T = unknown> {
   data?: T;
   error?: string;
   warnings?: string[];
+  /** The input failed the tool's schema, so the tool never ran. */
+  invalidInput?: boolean;
 }
 
 // ============================================================================
