@@ -52,6 +52,7 @@ const ENDPOINT_CATEGORIES: Record<string, string> = {
     '/api/quick-actions/extract': 'ai',
     '/api/reports/generate': 'ai',
     '/api/reports/parse-config': 'ai',
+    '/api/documents/upload-temp': 'ai', // OCR for scanned PDFs and images
 
     // Authentication endpoints (strict limits)
     '/api/admin/verify-password': 'auth',
