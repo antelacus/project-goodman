@@ -27,10 +27,10 @@
 
 **Phase 6 boxes**：
 - [x] CHANGELOG 条目
-- [ ] TECHNICAL_DEBT 定稿
+- [x] TECHNICAL_DEBT 定稿：TD-035（zod 4 迁移，含必须同时升级的 openai SDK 5 → ≥6）；TD-036（报告接口是否先验证身份，待 v4.7.3 Phase 0 核实）
 - [x] 旧值扫尾：`16.4.0` 在 CHANGELOG 与冻结文档之外无出处
 - [x] staging：`development` 快进到本分支，部署冒烟（含一次真实报告生成）与 CI 通过；冒烟已覆盖关键业务路径，不另发对话，免得多写生产库
-- [ ] 生产部署 + 核对 served 版本；容器内 `next` 16.4.3
-- [ ] tag `v4.7.2`
-- [ ] 各门读数：运行次数 / 改变了输出的拦截次数
-- [ ] **关版（最后一项）**：未了事项各归其位 → `git mv TRACK.md TRACK_v4.7.2.md`
+- [x] 生产部署 + 核对 served 版本：Deploy 40809055232（`40529ea`）通过；`/api/health` 报 4.7.2；容器内 next 16.4.3、Node v26.13.0
+- [x] tag `v4.7.2`（附注 tag，指向 `40529ea`）
+- [x] 各门读数（运行 / 改变了输出的拦截）：本地 `test:audit` 2 / 1（zod 等三项 → 方案 A 的允许项）；CI `quality` 2 / 0（`development` 40808380920；PR 40808983756 在合并之后才跑完，结果通过——仓库私有，无分支保护，合并不等 CI）；Deploy Staging 冒烟 1 / 0；生产 Deploy 1 / 0
+- [x] **关版（最后一项）**：未了事项已归位（TD-035、TD-036；Trivy 在 release-pipeline TRACK 范围 3）→ `git mv TRACK.md TRACK_v4.7.2.md`
