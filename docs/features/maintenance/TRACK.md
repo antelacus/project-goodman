@@ -32,18 +32,20 @@
 
 **评审发现登记**：
 - Codex 上线前审查（`registry.ts`、`src/lib/ai/index.ts`，xhigh，只读，`9211b4c`）：无 MUST / SHOULD / NICE。待核两项：① relay 是否接受联合类型数组（`type: ["number","string"]`）与 `propertyNames`——每次带工具的对话都会发送全部工具定义，staging 上一次智能体提问即可核实；② 未对照 openai 5.6.0 源码（本地已无）
-  - status: 待核 ① 由 staging 智能体提问关闭；② 不另行处理，SDK 7 的行为由 fake relay 验收测试覆盖
+  - status: ① 已关闭——staging 智能体提问中 relay 接受全部工具定义，模型按新 schema 以数值对象传入 `evaluate_expression.variables`；② 不另行处理，SDK 7 的行为由 fake relay 验收测试覆盖
 - `/code-review`（版本 PR）：未开始
 
 **Phase 4 证据**：
 - 本地（`9211b4c`）：vitest 70 个文件、318 个测试全过；`tsc` 通过；lint 0 错误、16 条警告（与 v4.7.2 相同）；`npm run test:audit` 通过
 - 变异检查：去掉 `$schema` 删除、或把 `io` 改为 `output`，`registry.test.ts` 各变红一例
+- staging（`0c3a091`，`development` 快进）：Deploy Staging 40813140750 与 CI 40813140781 均通过；健康检查报 4.7.3，冒烟含一次真实报告生成（经 relay）
+- staging 智能体提问（访客会话，"2024 年资产负债率及较 2023 年变化"）：两轮共 3 次工具调用（`debt_to_asset_ratio` ×2、`evaluate_expression`），无失败事件，回答完成。同时发现过程日志重复显示前几轮的工具结果，登记为 TD-037（本版未改动相关代码）
 
 **Phase 6 boxes**：
 - [ ] CHANGELOG 条目
 - [ ] TECHNICAL_DEBT 定稿：删除 TD-035
 - [ ] 旧值扫尾：`zod ^3`、`openai ^5`
-- [ ] staging：部署冒烟 + 一次用到智能体工具的真实提问（核对工具参数到达模型）
+- [x] staging：部署冒烟 + 一次用到智能体工具的真实提问（核对工具参数到达模型）
 - [ ] 生产部署 + 核对 served 版本
 - [ ] tag `v4.7.3`
 - [ ] 各门读数（运行 / 改变了输出的拦截）
