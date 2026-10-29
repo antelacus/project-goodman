@@ -34,7 +34,6 @@ export type {
   FinancialToolMetadata,
   ToolExecutionResult,
   ToOpenAIOptions,
-  OpenAIParameterSchema,
   ChatCompletionTool,
 } from "./types";
 

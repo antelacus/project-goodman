@@ -2,8 +2,7 @@ import { z } from "zod";
 
 /**
  * The agent's search keywords (DESIGN §4): 1–8 words of 2–10 characters each,
- * in the standards' own terms. The function schema sent to the model cannot
- * carry these limits, so the description states them.
+ * in the standards' own terms.
  */
 export const KeywordsSchema = z
   .array(z.string().trim().min(2).max(10))

@@ -116,19 +116,6 @@ export class ToolRegistry {
     tool: Tool,
     options?: ToOpenAIOptions
   ): ChatCompletionTool {
-    // Check for parameter overrides
-    if (options?.parameterOverrides?.[tool.name]) {
-      return {
-        type: "function",
-        function: {
-          name: tool.name,
-          description: this.buildDescription(tool, options),
-          parameters: options.parameterOverrides[tool.name],
-        },
-      };
-    }
-
-    // Build parameters from Zod schema
     const parameters = this.zodSchemaToOpenAI(tool.inputSchema);
 
     return {

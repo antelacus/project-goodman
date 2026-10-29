@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { z } from 'zod';
 import { ToolRegistry } from '@/lib/tools/registry';
+import { toolRegistry, registerUnifiedTools } from '@/lib/tools';
 import type { Tool } from '@/lib/tools/types';
 
 type SampleInput = { year: string; tags?: string[] };
@@ -89,7 +90,19 @@ describe('ToolRegistry', () => {
     expect(parameters.required).toEqual(['year', 'keywords']);
   });
 
-  it('uses parameter overrides and financial metadata in detailed mode', () => {
+  // Runs on every agent turn: one schema toJSONSchema cannot represent would fail every chat.
+  it('converts every registered tool to a definition with parameters', () => {
+    registerUnifiedTools();
+
+    const defs = toolRegistry.toOpenAIFunctionDefs();
+
+    expect(defs).toHaveLength(toolRegistry.size);
+    for (const def of defs) {
+      expect(Object.keys(def.function.parameters?.properties ?? {}), def.function.name).not.toHaveLength(0);
+    }
+  });
+
+  it('adds financial metadata to the description in detailed mode', () => {
     const registry = new ToolRegistry();
     registry.register(buildTool({
       name: 'ratio',
@@ -104,19 +117,7 @@ describe('ToolRegistry', () => {
       },
     }));
 
-    const override = {
-      type: 'object',
-      properties: { foo: { type: 'string' } },
-      required: ['foo'],
-    };
-
-    const defs = registry.toOpenAIFunctionDefs({
-      detailed: true,
-      parameterOverrides: { ratio: override },
-    });
-
-    const def = defs[0];
-    expect(def.function.parameters).toEqual(override);
+    const def = registry.toOpenAIFunctionDefs({ detailed: true })[0];
     expect(def.function.description).toContain('需要的数据');
     expect(def.function.description).toContain('asset / liability');
   });
