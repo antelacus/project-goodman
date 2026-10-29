@@ -23,12 +23,13 @@
 
 **Phase 4 证据**：
 - 本地：`npm run test:audit` 通过（新增 3 条允许项）；lint 0 错误、16 条警告（与 `main` 上次 CI 相同，TD-028 等既有项）；`tsc` 通过；vitest 69 个文件、314 个测试全过
+- staging（`4c4a187`，`development` 快进）：Deploy Staging 40808380958 与 CI 40808380920 均通过；部署冒烟含健康检查（报 4.7.2）、管理员登录、会话接口与一次真实报告生成（81s，经 relay），即关键业务路径。容器内 next 16.4.3、Node v26.13.0
 
 **Phase 6 boxes**：
 - [x] CHANGELOG 条目
 - [ ] TECHNICAL_DEBT 定稿
 - [x] 旧值扫尾：`16.4.0` 在 CHANGELOG 与冻结文档之外无出处
-- [ ] staging：`development` 快进到本分支，部署冒烟与 CI 通过；一次真实问题经 staging 对话接口
+- [x] staging：`development` 快进到本分支，部署冒烟（含一次真实报告生成）与 CI 通过；冒烟已覆盖关键业务路径，不另发对话，免得多写生产库
 - [ ] 生产部署 + 核对 served 版本；容器内 `next` 16.4.3
 - [ ] tag `v4.7.2`
 - [ ] 各门读数：运行次数 / 改变了输出的拦截次数
