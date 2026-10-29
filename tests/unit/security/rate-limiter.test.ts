@@ -3,7 +3,7 @@ import { describe, it, expect } from 'vitest';
 import { checkRateLimit, RATE_LIMITS } from '@/lib/security/rate-limiter';
 
 describe('checkRateLimit', () => {
-  it.each(['/api/reports/generate', '/api/reports/parse-config'])(
+  it.each(['/api/reports/generate', '/api/reports/parse-config', '/api/documents/upload-temp'])(
     'limits %s as an AI endpoint',
     async (pathname) => {
       const result = await checkRateLimit(`ai-${pathname}`, pathname);

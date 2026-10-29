@@ -122,25 +122,6 @@ export interface Tool<TInput = unknown, TOutput = unknown> {
 // ============================================================================
 
 /**
- * OpenAI function parameter schema
- * Includes index signature for compatibility with OpenAI's FunctionParameters
- */
-export interface OpenAIParameterSchema {
-  type: "object";
-  properties: Record<
-    string,
-    {
-      type: string;
-      description?: string;
-      enum?: string[];
-      items?: { type: string };
-    }
-  >;
-  required?: string[];
-  [key: string]: unknown;
-}
-
-/**
  * Options for converting tools to OpenAI format
  */
 export interface ToOpenAIOptions {
@@ -148,8 +129,6 @@ export interface ToOpenAIOptions {
   detailed?: boolean;
   /** Filter by category */
   category?: ToolCategory;
-  /** Custom parameter overrides */
-  parameterOverrides?: Record<string, OpenAIParameterSchema>;
 }
 
 // ============================================================================

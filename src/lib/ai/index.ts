@@ -213,7 +213,8 @@ function chatOutcome(
   const rawCalls = message.tool_calls ?? [];
   if (allowToolCalls && rawCalls.length > 0 && (finish === 'tool_calls' || finish === 'stop')) {
     const toolCalls = rawCalls.map(tc => {
-      if (tc.type !== 'function') throw fail(purpose, 'invalid_output');
+      // Only reject what no request offers; some relays drop the optional `type` on function calls.
+      if (tc.type === 'custom') throw fail(purpose, 'invalid_output');
       return { id: tc.id, name: tc.function.name, args: parseToolArgs(purpose, tc.function.arguments) };
     });
     return { text: message.content ?? '', toolCalls };
