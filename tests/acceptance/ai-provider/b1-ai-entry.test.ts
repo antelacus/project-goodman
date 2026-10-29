@@ -121,6 +121,13 @@ describe('B1 AI entry point', () => {
       return { body: reply };
     });
     await expect(chat()).rejects.toBeInstanceOf(ai.AIUnavailableError);
+    // A relay that drops the optional `type` field still delivers a function call.
+    relay.reply(() => {
+      const reply = chatReply(null, { toolCalls: [{ id: 'c1', name: 'search', arguments: '{}' }] });
+      delete (reply.choices[0].message.tool_calls![0] as { type?: string }).type;
+      return { body: reply };
+    });
+    await expect(chat()).resolves.toEqual({ text: '', toolCalls: [{ id: 'c1', name: 'search', args: {} }] });
 
     // HTTP 200 with a body that is cut off, or with no choices at all.
     for (const reply of [{ raw: '{"choices":' }, { body: {} }]) {
