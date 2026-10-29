@@ -6,7 +6,7 @@
 - 范围：
   1. 公开就绪与公开：全部提交与 Actions 日志 / 产物的泄密审计；处理公开前须裁定的技术债（见 Phase 0 裁定；含 TD-032）；fork PR 的工作流须经批准；然后把仓库改为公开
   2. 分支：只留 `main` + `feat/*` / `hotfix/*`，删除 `development`；main 保护（必需检查、分支须同步、管理员同样受限、禁止强推与删除）
-  3. 部署底线：CI 拦截部署；镜像在 CI 构建一次，经 SSH 送到 VPS，staging 与生产用同一镜像，VPS 不再构建；核对 served SHA；检查失败自动回滚；部署成功自动打 tag
+  3. 部署底线：CI 拦截部署；镜像在 CI 构建一次，经 SSH 送到 VPS，staging 与生产用同一镜像，VPS 不再构建；核对 served SHA；检查失败自动回滚；部署成功自动打 tag；构建后用 Trivy 扫描镜像（钉版本与 sha256 下载二进制，不用 trivy-action；做法同 antelacus `branch.yml` 的 `image` 任务），有修复版本的高危及以上漏洞拦截发布
   4. 密钥移出构建产物：`Dockerfile` 的构建参数只有 `NEXT_PUBLIC_*`，以 `docker build --check` 与镜像检查强制
   5. 漂移：开启 Dependabot 安全提醒（不开自动 PR）；CI 检查 `.nvmrc` 与镜像的 Node 版本一致、且未过 EOL
   6. 文档与工具：`docs/architecture/DECISIONS.md`（分支模式、无技术债政策、Dependabot 只开提醒、公开仓库）；文档预算检查与 post-merge 钩子；`DEPLOYMENT_CHECKLIST.md`、`CLAUDE.md` 的部署一节与新流程对齐；`docs/FEEDBACK.md`
@@ -19,6 +19,7 @@
   - 生产的 `docker-compose.yml` 在仓库外（`$GOODMAN_PROD_DIR/`）、属 root，deploy 用户改不了；构建参数仍含 `SUPABASE_SERVICE_ROLE_KEY` 与已删掉值的 `OPENAI_API_KEY`（构建时只报变量未设的警告）。范围 3、4 接手构建后随之退役（2026-10-22 核实）
   - The Floor：审计只数命中、看前缀，不读出密钥的值；不用历史里的凭据去验证它是否有效
 - 裁定：
+  - 2026-10-29 · Trivy 镜像扫描放进本版：v4.7.2 时镜像仍在 VPS 上构建，CI 扫不到上线的那一份 · Jason · 级联：本 TRACK 范围 3
   - 2026-10-19 · goodman 改为公开仓库，作为分支保护的前提；公开在审计通过之后执行 · Jason · 级联：本 TRACK 范围 1、DESIGN（待开）
   - 2026-10-19 · 历史中 2025-07 的 service_role 密钥（`setup-storage.js`，项目 `moivfobm…`）属于已删除的 Supabase 项目、已失效，保留在历史中，不改写历史 · Jason · 级联：公开审计记录
   - 2026-10-19 · 远端旧分支（`maintenance/v4.6.4-*`、`claude/sharp-allen-*`）先逐个核对未合并提交、列给 Jason，再随 `development` 删除 · Jason · 级联：范围 2

@@ -95,6 +95,30 @@
       "reason": "Flagged only because it depends on braces (see the braces entry). Dev-only lint tooling, not in the production image.",
       "expiresOn": "2027-01-12",
       "fixPlan": "Removed together with the braces entry."
+    },
+    {
+      "package": "zod",
+      "advisoryId": "1243066",
+      "severity": "high",
+      "reason": "GHSA-mrhx-c7xc-m3w5: memory exhaustion when an array schema without a length cap receives a huge array; denial of service, no data exposure. Fixed only in zod 4.6.6 (a major upgrade). Unbounded arrays exist in src/lib/validation/api-schemas.ts (report sections and findings); it was not confirmed that every route parsing them authenticates first, so treat it as reachable without sign-in. Accepted for a short window so the Next.js RCE fix (v4.7.2) is not held behind the zod 4 migration (Jason, 2026-10-29).",
+      "expiresOn": "2026-11-15",
+      "fixPlan": "v4.7.3 (maintenance, Codex pre-deploy pass): zod ^4.6.7, which also clears openai and chromium-bidi; then delete these three entries. zod defines the agent tools' argument schemas that LangChain turns into the JSON Schema the model sees, so the move is output-affecting and is proven on staging with real questions, not folded into a security patch."
+    },
+    {
+      "package": "openai",
+      "advisoryId": "unknown",
+      "severity": "high",
+      "reason": "Flagged only because it depends on zod 3 (see the zod entry); no advisory of its own.",
+      "expiresOn": "2026-11-15",
+      "fixPlan": "v4.7.3 (maintenance, Codex pre-deploy pass): zod ^4.6.7, which also clears openai and chromium-bidi; then delete these three entries. zod defines the agent tools' argument schemas that LangChain turns into the JSON Schema the model sees, so the move is output-affecting and is proven on staging with real questions, not folded into a security patch."
+    },
+    {
+      "package": "chromium-bidi",
+      "advisoryId": "unknown",
+      "severity": "high",
+      "reason": "Flagged only because it depends on zod 3 (see the zod entry). Dev-only: @lhci/cli -> lighthouse -> puppeteer-core, not in the production image.",
+      "expiresOn": "2026-11-15",
+      "fixPlan": "With the zod entry; chromium-bidi pins zod 3 itself, so if v4.7.3's zod upgrade leaves it flagged, it joins the @lhci/cli chain entries (expiring 2026-12-19) instead."
     }
   ]
 }
