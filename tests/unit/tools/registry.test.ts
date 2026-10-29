@@ -67,6 +67,26 @@ describe('ToolRegistry', () => {
       tags: { type: 'array', description: 'Optional tags', items: { type: 'string' } },
     });
     expect(definition.function.parameters.required).toEqual(['year']);
+    expect(definition.function.parameters).not.toHaveProperty('$schema');
+  });
+
+  it('shows the model the constraints the input schema will enforce', () => {
+    const registry = new ToolRegistry();
+    registry.register(buildTool({
+      inputSchema: z.object({
+        year: z.string(),
+        kind: z.enum(['annual', 'Q1']).default('annual'),
+        keywords: z.array(z.string().min(2)).min(1).max(8),
+      }) as unknown as Tool<SampleInput, SampleOutput>['inputSchema'],
+    }));
+
+    const parameters = registry.toOpenAIFunctionDefs()[0].function.parameters!;
+
+    expect(parameters.properties).toMatchObject({
+      kind: { enum: ['annual', 'Q1'] },
+      keywords: { minItems: 1, maxItems: 8, items: { minLength: 2 } },
+    });
+    expect(parameters.required).toEqual(['year', 'keywords']);
   });
 
   it('uses parameter overrides and financial metadata in detailed mode', () => {

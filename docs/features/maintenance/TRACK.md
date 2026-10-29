@@ -11,7 +11,7 @@
      - `z.record(值)` 单参数写法（`src/lib/tools/types.ts:186`）在 zod 4 须写明键
      - `.uuid()` 在 zod 4 按 RFC 9562 校验版本位；`gen_random_uuid()` 与 `uuid` v4 不受影响，测试里的假 UUID 可能被拒
      - `src/lib/ai/index.ts` 的 `openai/helpers/zod`（`zodResponseFormat` / `zodTextFormat`）随 SDK 升级核对
-  3. 删除 audit 允许清单中 `zod`、`openai`、`chromium-bidi` 三条；`chromium-bidi` 若仍被标出，并入 `@lhci/cli` 链的条目（2026-12-19 到期）
+  3. audit 允许清单：删除 `openai`；`chromium-bidi` 自带 zod 3（puppeteer-core 24.x 钉在 chromium-bidi 14），`zod` 与 `chromium-bidi` 两条改为只覆盖这条仅开发用的链，并入 `@lhci/cli` 链的条目（2026-12-19 到期）
 - 明确不做：给 `api-schemas.ts` 的数组加长度上限（升级本身修复公告）；发布流水线 TRACK 范围内的技术债（TD-023 / 027 / 029 / 031 / 032）
 - 全局约束：
   - 版本地板：Node → `.nvmrc`；依赖 → `package.json`
@@ -26,6 +26,7 @@
   - 2026-10-29 · TD-036 删除（非漏洞，见上）；TD-021 描述更正为实际覆盖范围 · Jason · 级联：`docs/TECHNICAL_DEBT.md`
   - 2026-10-29 · 调用 AI 的报告接口（`generate`、`parse-config`）在本版并入 `ai` 档；查看报告的接口仍按 `default` · Jason · 级联：`src/lib/security/rate-limiter.ts`、TD-021
   - 2026-10-29 · openai 升到 7.x，不停在 6.x：两者都跨大版本，SDK 只在 `src/lib/ai/` 使用 · Jason · 级联：本 TRACK 范围 1
+  - 2026-10-29 · 工具参数改由 `z.toJSONSchema()` 生成（方案 A），不移植旧转换（方案 B）：27 个工具的字段名、类型、必填与旧输出一致，新增模型原先看不到的约束（`extract_document` 的枚举、检索关键词的个数与长度、`evaluate_expression.variables` 的值类型）。模型输入因此改变，不算"行为不变"；不新增模块、不改契约，留在 maintenance，由 staging 的工具提问与 Codex 审查验证。不选 B：B 仍读 zod 私有内部字段（本次正是它失效），且继续向模型隐藏约束 · Jason · 级联：`src/lib/tools/registry.ts`、`.claude/rules/code-conventions.md`（删去 `_def` 的 any 理由）
 
 ## 三、门与发布
 
