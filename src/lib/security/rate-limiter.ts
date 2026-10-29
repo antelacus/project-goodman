@@ -50,6 +50,8 @@ const ENDPOINT_CATEGORIES: Record<string, string> = {
     // AI-intensive endpoints (expensive OpenAI calls)
     '/api/chat': 'ai',
     '/api/quick-actions/extract': 'ai',
+    '/api/reports/generate': 'ai',
+    '/api/reports/parse-config': 'ai',
 
     // Authentication endpoints (strict limits)
     '/api/admin/verify-password': 'auth',

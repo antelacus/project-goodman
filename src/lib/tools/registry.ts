@@ -15,9 +15,9 @@ import type {
   ToolExecutionResult,
   ChatCompletionTool,
   ToOpenAIOptions,
-  OpenAIParameterSchema,
 } from "./types";
 import { isFinancialTool } from "./types";
+import { z } from "zod";
 
 // ============================================================================
 // ToolRegistry Class
@@ -162,93 +162,14 @@ export class ToolRegistry {
   }
 
   /**
-   * Convert Zod schema to OpenAI parameter format
-   * This is a simplified implementation - handles common cases
+   * Convert a Zod schema to OpenAI function parameters.
+   * io "input": the model writes what the schema parses, so defaulted fields are optional.
    */
-  private zodSchemaToOpenAI(schema: unknown): OpenAIParameterSchema {
-    // Default schema for unknown types
-    const defaultSchema: OpenAIParameterSchema = {
-      type: "object",
-      properties: {},
-      required: [],
-    };
-
-    // Try to extract shape from Zod object schema
-    if (schema && typeof schema === "object" && "_def" in schema) {
-      // REASON: Accessing Zod internal _def property for runtime schema introspection.
-      // Required for converting Zod schemas to OpenAI function parameters. No public API exists.
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const def = (schema as any)._def;
-
-      if (def.typeName === "ZodObject" && def.shape) {
-        const properties: OpenAIParameterSchema["properties"] = {};
-        const required: string[] = [];
-
-        const shape =
-          typeof def.shape === "function" ? def.shape() : def.shape;
-
-        for (const [key, value] of Object.entries(shape)) {
-          // REASON: Accessing Zod internal _def for field type introspection. No public API exists.
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          const fieldDef = (value as any)?._def;
-          if (!fieldDef) continue;
-
-          // Determine field type
-          let fieldType = "string";
-          let fieldDescription = fieldDef.description || "";
-          let isOptional = false;
-
-          // Handle optional wrapper
-          if (fieldDef.typeName === "ZodOptional") {
-            isOptional = true;
-            const innerDef = fieldDef.innerType?._def;
-            if (innerDef) {
-              fieldType = this.getZodType(innerDef.typeName);
-              fieldDescription = innerDef.description || fieldDescription;
-            }
-          } else {
-            fieldType = this.getZodType(fieldDef.typeName);
-          }
-
-          properties[key] = {
-            type: fieldType,
-            ...(fieldDescription && { description: fieldDescription }),
-          };
-
-          // Handle arrays
-          if (fieldType === "array") {
-            properties[key].items = { type: "string" };
-          }
-
-          if (!isOptional) {
-            required.push(key);
-          }
-        }
-
-        return {
-          type: "object",
-          properties,
-          ...(required.length > 0 && { required }),
-        };
-      }
-    }
-
-    return defaultSchema;
-  }
-
-  /**
-   * Map Zod type names to JSON Schema types
-   */
-  private getZodType(typeName: string): string {
-    const typeMap: Record<string, string> = {
-      ZodString: "string",
-      ZodNumber: "number",
-      ZodBoolean: "boolean",
-      ZodArray: "array",
-      ZodObject: "object",
-      ZodRecord: "object", // z.record() maps to object type
-    };
-    return typeMap[typeName] || "string";
+  private zodSchemaToOpenAI(schema: z.ZodType): Record<string, unknown> {
+    const parameters: Record<string, unknown> = z.toJSONSchema(schema, { io: "input" });
+    // The dialect marker is not a parameter; the model would only pay tokens for it.
+    delete parameters.$schema;
+    return parameters;
   }
 
   // ==========================================================================

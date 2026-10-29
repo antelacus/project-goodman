@@ -117,7 +117,6 @@ const jsonData = XLSX.utils.sheet_to_json(sheet, { header: 1 }) as any[][];
 Known justified cases:
 
 - XLSX library parsing (returns untyped data)
-- Zod internal `_def` access for schema introspection
 - LangGraph DeepPartial state initialization
 
 ### ESLint Config Quirks
