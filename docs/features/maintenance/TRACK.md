@@ -30,9 +30,14 @@
 
 ## 三、门与发布
 
-**评审发现登记**：（Codex 上线前审查、`/code-review` 后登记）
+**评审发现登记**：
+- Codex 上线前审查（`registry.ts`、`src/lib/ai/index.ts`，xhigh，只读，`9211b4c`）：无 MUST / SHOULD / NICE。待核两项：① relay 是否接受联合类型数组（`type: ["number","string"]`）与 `propertyNames`——每次带工具的对话都会发送全部工具定义，staging 上一次智能体提问即可核实；② 未对照 openai 5.6.0 源码（本地已无）
+  - status: 待核 ① 由 staging 智能体提问关闭；② 不另行处理，SDK 7 的行为由 fake relay 验收测试覆盖
+- `/code-review`（版本 PR）：未开始
 
-**Phase 4 证据**：（Phase 4）
+**Phase 4 证据**：
+- 本地（`9211b4c`）：vitest 70 个文件、318 个测试全过；`tsc` 通过；lint 0 错误、16 条警告（与 v4.7.2 相同）；`npm run test:audit` 通过
+- 变异检查：去掉 `$schema` 删除、或把 `io` 改为 `output`，`registry.test.ts` 各变红一例
 
 **Phase 6 boxes**：
 - [ ] CHANGELOG 条目
