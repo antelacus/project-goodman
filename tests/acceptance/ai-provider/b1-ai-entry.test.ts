@@ -114,6 +114,13 @@ describe('B1 AI entry point', () => {
       relay.reply(() => searchCall(args));
       await expect(chat()).rejects.toBeInstanceOf(ai.AIUnavailableError);
     }
+    // A custom (non-function) tool call, which no request of ours offers.
+    relay.reply(() => {
+      const reply = chatReply(null, { toolCalls: [{ id: 'c1', name: 'search', arguments: '{}' }] });
+      reply.choices[0].message.tool_calls = [{ id: 'c1', type: 'custom', custom: { name: 'search', input: '{}' } }] as never;
+      return { body: reply };
+    });
+    await expect(chat()).rejects.toBeInstanceOf(ai.AIUnavailableError);
 
     // HTTP 200 with a body that is cut off, or with no choices at all.
     for (const reply of [{ raw: '{"choices":' }, { body: {} }]) {

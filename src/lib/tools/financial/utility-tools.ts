@@ -165,7 +165,7 @@ export const evaluateExpressionTool: Tool = {
         '数学表达式字符串，例如 "(65 - 60) / 60 * 100" 或 "1500000 / 1200000 - 1"。支持变量替换。'
       ),
     variables: z
-      .record(z.union([z.number(), z.string()]))
+      .record(z.string(), z.union([z.number(), z.string()]))
       .optional()
       .describe(
         '变量值映射，例如 {"current": 65, "previous": 60}。表达式中可使用这些变量名。'

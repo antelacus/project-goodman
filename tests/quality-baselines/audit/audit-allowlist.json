@@ -100,25 +100,17 @@
       "package": "zod",
       "advisoryId": "1243066",
       "severity": "high",
-      "reason": "GHSA-mrhx-c7xc-m3w5: memory exhaustion when an array schema without a length cap receives a huge array; denial of service, no data exposure. Fixed only in zod 4.6.6 (a major upgrade). Unbounded arrays exist in src/lib/validation/api-schemas.ts (report sections and findings); it was not confirmed that every route parsing them authenticates first, so treat it as reachable without sign-in. Accepted for a short window so the Next.js RCE fix (v4.7.2) is not held behind the zod 4 migration (Jason, 2026-10-29).",
-      "expiresOn": "2026-11-15",
-      "fixPlan": "v4.7.3 (maintenance, Codex pre-deploy pass): zod ^4.6.7, which also clears openai and chromium-bidi; then delete these three entries. zod defines the agent tools' argument schemas that LangChain turns into the JSON Schema the model sees, so the move is output-affecting and is proven on staging with real questions, not folded into a security patch."
-    },
-    {
-      "package": "openai",
-      "advisoryId": "unknown",
-      "severity": "high",
-      "reason": "Flagged only because it depends on zod 3 (see the zod entry); no advisory of its own.",
-      "expiresOn": "2026-11-15",
-      "fixPlan": "v4.7.3 (maintenance, Codex pre-deploy pass): zod ^4.6.7, which also clears openai and chromium-bidi; then delete these three entries. zod defines the agent tools' argument schemas that LangChain turns into the JSON Schema the model sees, so the move is output-affecting and is proven on staging with real questions, not folded into a security patch."
+      "reason": "GHSA-mrhx-c7xc-m3w5 (memory exhaustion on oversized arrays, fixed in zod 4.6.6). The app's own zod is 4.x; the only flagged copy is zod 3 nested under chromium-bidi (@lhci/cli -> lighthouse -> puppeteer-core -> chromium-bidi), dev-only Lighthouse CI tooling, not in the production image.",
+      "expiresOn": "2026-12-19",
+      "fixPlan": "On or before expiry: check for an extract-zip release newer than 2.0.1 or an @lhci/cli release newer than 0.15.1 that drops the puppeteer/extract-zip chain, upgrade, and delete these entries. If neither exists, consider replacing @lhci/cli with a direct lighthouse + playwright invocation before renewing."
     },
     {
       "package": "chromium-bidi",
       "advisoryId": "unknown",
       "severity": "high",
-      "reason": "Flagged only because it depends on zod 3 (see the zod entry). Dev-only: @lhci/cli -> lighthouse -> puppeteer-core, not in the production image.",
-      "expiresOn": "2026-11-15",
-      "fixPlan": "With the zod entry; chromium-bidi pins zod 3 itself, so if v4.7.3's zod upgrade leaves it flagged, it joins the @lhci/cli chain entries (expiring 2026-12-19) instead."
+      "reason": "Pins its own zod 3 (see the zod entry); puppeteer-core 24.x pins chromium-bidi 14. Dev-only: @lhci/cli -> lighthouse -> puppeteer-core, not in the production image.",
+      "expiresOn": "2026-12-19",
+      "fixPlan": "On or before expiry: check for an extract-zip release newer than 2.0.1 or an @lhci/cli release newer than 0.15.1 that drops the puppeteer/extract-zip chain, upgrade, and delete these entries. If neither exists, consider replacing @lhci/cli with a direct lighthouse + playwright invocation before renewing."
     }
   ]
 }
