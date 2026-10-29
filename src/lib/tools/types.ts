@@ -183,7 +183,7 @@ const FinancialToolSuccessSchema = z.object({
   value: z.number().describe("计算结果数值"),
   formatted: z.string().describe("格式化后的结果字符串"),
   warnings: z.array(z.string()).optional().describe("计算警告信息"),
-  inputs: z.record(z.number()).describe("计算使用的输入数据"),
+  inputs: z.record(z.string(), z.number()).describe("计算使用的输入数据"),
   formula: z.string().describe("计算公式"),
   steps: z.array(z.string()).optional().describe("计算步骤"),
 });
