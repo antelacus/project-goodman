@@ -58,6 +58,6 @@
 - [x] staging：部署冒烟 + 一次用到智能体工具的真实提问（核对工具参数到达模型）
 - [x] 生产部署 + 核对 served 版本：Deploy 40814045286（`afc816d`）通过；`/api/health` 报 4.7.3；VPS 构建目录在 `afc816d`；容器内 Node v26.13.0
 - [x] tag `v4.7.3`（附注 tag，指向 `afc816d`）
-- [x] 各门读数（运行 / 改变了输出的拦截）：`tsc` 3 / 1（openai 7 的 custom 工具调用 → 新增守卫）；vitest 全量 4 / 1（`registry.test.ts` 抓到工具参数为空 → 方案 A）；本地 `test:audit` 2 / 1（嵌套 zod 3 仍被标出 → 允许项改范围）；Codex 上线前 1 / 0；staging 冒烟 1 / 0；staging 智能体提问 1 / 0（关闭 Codex 待核 ①）；CI `quality` 1 / 0；生产 Deploy 1 / 0；`/code-review` 1 / 2（#2 缺 `type` 的工具调用、#3 `upload-temp` 限流）
-- [ ] 收尾 PR（评审修复）：staging 冒烟 → 合并 → 生产部署 + 核对 served 版本。staging（`bc29f05`）：Deploy Staging 40814932962 与 CI 40814933030 通过，冒烟含真实报告生成；本地 vitest 320 个测试全过、lint 16 条警告不变
-- [ ] **关版（最后一项）**：未了事项归位 → `git mv TRACK.md TRACK_v4.7.3.md`
+- [x] 各门读数（运行 / 改变了输出的拦截）：`tsc` 3 / 1（openai 7 的 custom 工具调用 → 新增守卫）；vitest 全量 4 / 1（`registry.test.ts` 抓到工具参数为空 → 方案 A）；本地 `test:audit` 2 / 1（嵌套 zod 3 仍被标出 → 允许项改范围）；Codex 上线前 1 / 0；staging 冒烟 2 / 0；staging 智能体提问 1 / 0（关闭 Codex 待核 ①）；CI `quality` 2 / 0；生产 Deploy 2 / 0；`/code-review` 1 / 2（#2 缺 `type` 的工具调用、#3 `upload-temp` 限流）
+- [x] 收尾 PR（评审修复，PR #11）：staging 冒烟 → 合并 → 生产部署 + 核对 served 版本。staging（`bc29f05`）：Deploy Staging 40814932962 与 CI 40814933030 通过，冒烟含真实报告生成；本地 vitest 320 个测试全过、lint 16 条警告不变。生产：Deploy 40832874915（`c91638d`）通过；`/api/health` 报 4.7.3；VPS 构建目录在 `c91638d`。tag `v4.7.3` 不移动，仍指向 `afc816d`；生产所跑的评审修复以合并提交 `c91638d` 为准
+- [x] **关版（最后一项）**：未了事项归位（TD-021、TD-037、TD-038）→ `git mv TRACK.md TRACK_v4.7.3.md`
