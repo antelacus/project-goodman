@@ -38,8 +38,8 @@ docs/versions/v4/
     ├── production-readiness/        # v4.4
     ├── gap-closure/                 # v4.5
     ├── performance-optimization/    # v4.6
-    ├── quick-actions/               # v4.7
-    └── management-reports/          # v4.8
+    ├── quick-actions/               # 待规划
+    └── management-reports/          # 待规划
 ```
 
 ### 1.3 发布流程
@@ -81,7 +81,8 @@ docs/versions/v4/
 | **v4.6** | 性能优化 | 功能正确性、稳定性与性能提升（含检索可靠性） | ✅ 已发布 (2026-01-26) |
 | **v4.6.4** | 运行时维护 | Node 26、Next.js 16.4.0 安全修复、依赖审计清零 | ✅ 已发布 (2026-10-12) |
 | **v4.7** | AI 服务切换 | 改用第三方 relay 与新模型，去掉 embedding，AI 失败时不再编造分析（标准模式） | ✅ 已发布 (2026-10-22) |
-| — | 发布流水线 | 移植 antelacus 的分支模式与发布流水线（标准模式） | 下一个 |
+| **v4.8** | 公开就绪 | 修复公开前须修的技术债（含 TD-032）、泄密审计，然后公开仓库（§3.13） | 进行中 |
+| — | 发布流水线 | 移植 antelacus 的分支模式与发布流水线（标准模式） | 公开就绪之后 |
 | — | 快捷操作扩展 | 财务计算器、财务日历提醒（易于实现） | 待规划 |
 | — | 管理用财报体系 | 净经营资产、管理用 ROE 等（增强报告深度） | 待规划 |
 
@@ -425,7 +426,7 @@ docs/versions/v4/
 |------|------|
 | **模式** | 标准模式（REQ / DESIGN / TRACK） |
 | **参照** | `~/Projects/project-antelacus` 的 `branch.yml` / `production.yml` / `pr-checklist` |
-| **状态** | 下一个 |
+| **状态** | 公开就绪（§3.13）之后：分支保护要求仓库已公开 |
 
 **范围**（裁定见 `features/maintenance/TRACK_v4.6.4.md` 与 `features/release-pipeline/TRACK.md`）:
 
@@ -454,7 +455,25 @@ docs/versions/v4/
 - AI 调用失败时不再编造分析文字；冒烟测试检查报告里没有失败的章节
 - 去掉 embedding，改为关键词加 agentic 检索（中文需分词），以测试查询集证明检索质量不下降
 - 结构化条款重新拆分，出处由程序按检索结果生成
+
+---
+
+### 3.13 公开就绪
+
+| 属性 | 详情 |
+|------|------|
+| **目录** | `features/public-readiness/` |
+| **模式** | 标准模式（v4.8.0） |
+| **状态** | 进行中 |
+
+从发布流水线拆出（裁定见 `features/release-pipeline/TRACK.md`）。安全修复不依赖流水线，先在现有部署流程上单独验证。
+
+- 修复公开前须修的技术债：TD-032（服务端以 anon 访问数据库）、TD-023、TD-029
+- 全部提交与 Actions 日志 / 产物的泄密审计；fork PR 的工作流须经批准
+- 删除许可证（`LICENSE`、`package.json`、README）
+- 以上完成、TD-032 在生产核实后，经 Jason 明确同意再公开仓库（不可撤回）
+
 ---
 
 *文档创建: 2026-01-05*
-*最后更新: 2026-10-22 (v4.7 已发布；下一个为发布流水线)*
+*最后更新: 2026-11-04 (发布流水线拆出公开就绪，v4.8 开工)*
