@@ -99,7 +99,7 @@
 - 依赖：none
 
 ### Batch 6 — 输入验证与清理
-- 状态：open
+- 状态：done `8d7d314`
 - 范围：文档访问核对归属（`preview-url` 只接受 `id`、`extract_document`，`ProcessLog.tsx` 改用 `id`）；TD-023 三个路由的 Zod schema；TD-029 删 PDF 预览路由与 `canvas` / `pdfjs-dist` / `src/types/pdfjs-dist.d.ts`；TD-038 删 `ToOpenAIOptions` 与 detailed 分支 · REQ §5.2
 - 验收判据：§input-validation、§doc-access；`npm ls canvas pdfjs-dist` 无结果；`registry.test.ts` 通过
 - 依赖：none
