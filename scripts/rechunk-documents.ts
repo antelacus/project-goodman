@@ -6,15 +6,20 @@
  *   npx tsx scripts/rechunk-documents.ts check <out-dir>
  *     Read-only. For each document, rebuilds its text two independent ways — from
  *     the old overlapping chunks, and by re-extracting the original file from
- *     Storage — and requires them to be identical. Writes <out-dir>/report.json
- *     (hashes, chunk counts, anomalies; no document text) and <out-dir>/backup.json
- *     (every current document_chunks row, the rollback copy).
+ *     Storage — and requires them to be identical. Writes <out-dir>/backup.json
+ *     (every current document_chunks row, the rollback copy) and
+ *     <out-dir>/report.json (hashes, chunk counts, anomalies, the backup's hash; no
+ *     document text). Refuses to write into a directory that already holds either,
+ *     so a second run can never replace the backup taken before the first apply.
  *
  *   npx tsx scripts/rechunk-documents.ts apply <out-dir>
- *     Replaces each clean document's chunks, one transaction per document
- *     (replace_document_chunks), then re-reads them and checks they join to the
- *     text. Refuses if a document or its chunks changed since `check`, or if any
- *     anomaly lacks a ruling in report.json. Re-runnable.
+ *     Verifies the backup against the report, then replaces each clean document's
+ *     chunks, one transaction per document (replace_document_chunks), and re-reads
+ *     them to check they join to the text. The function locks the document and
+ *     compares its chunks with the hash taken at `check` inside that transaction,
+ *     so a concurrent write fails the run instead of being overwritten. Refuses if
+ *     an anomaly lacks a ruling. Re-runnable: a document already holding its new
+ *     chunks is skipped. Admin uploads stay frozen while it runs (DESIGN §9).
  *
  * Credentials come from .env.scripts (NEXT_PUBLIC_SUPABASE_URL, SUPABASE_SECRET_KEY),
  * which Next.js does not load, so local dev never reaches production.
@@ -44,6 +49,7 @@ interface DocumentReport {
   fileSha256: string | null;
   oldChunksSha256: string;
   textSha256: string | null;
+  newChunksSha256: string | null;
   oldChunks: number;
   newChunks: number;
   anomalies: Anomaly[];
@@ -77,6 +83,42 @@ export function firstDifference(a: string, b: string): number {
 
 const sha256 = (data: string | Buffer) => crypto.createHash('sha256').update(data).digest('hex');
 
+/**
+ * A document's chunks, in order, as one hash. replace_document_chunks computes the
+ * same in SQL: sha256 of each chunk's UTF-8 content, hex, joined with ','.
+ */
+export const chunksSha256 = (contents: string[]) => sha256(contents.map(c => sha256(c)).join(','));
+
+/** Writes each file, refusing if any already exists: nothing is ever overwritten. */
+export function writeOnce(dir: string, files: Record<string, string>) {
+  fs.mkdirSync(dir, { recursive: true });
+  const existing = Object.keys(files).filter(name => fs.existsSync(path.join(dir, name)));
+  if (existing.length) throw new Error(`${dir} already holds ${existing.join(', ')}; use a new directory`);
+  for (const [name, data] of Object.entries(files)) fs.writeFileSync(path.join(dir, name), data, { flag: 'wx' });
+}
+
+interface Report { checkedAt: string; backupSha256: string; documents: DocumentReport[] }
+
+/** The report, after checking the backup next to it is the one `check` wrote and holds every document's old chunks. */
+export function readVerified(dir: string): Report {
+  const report = JSON.parse(fs.readFileSync(path.join(dir, 'report.json'), 'utf8')) as Report;
+  const raw = fs.readFileSync(path.join(dir, 'backup.json'));
+  if (sha256(raw) !== report.backupSha256) throw new Error('backup.json does not match the hash in report.json');
+  const backup = JSON.parse(raw.toString('utf8')) as ChunkRow[];
+  for (const entry of report.documents) {
+    const rows = backup.filter(r => r.document_id === entry.id).sort((a, b) => a.chunk_index - b.chunk_index);
+    if (chunksSha256(rows.map(r => r.content)) !== entry.oldChunksSha256) throw new Error(`backup.json lacks the old chunks of ${entry.name}`);
+  }
+  return report;
+}
+
+/** What apply does with a document whose chunks now hash to `current`. */
+export function nextStep(entry: Pick<DocumentReport, 'name' | 'oldChunksSha256' | 'newChunksSha256'>, current: string): 'replace' | 'done' {
+  if (current === entry.newChunksSha256) return 'done';
+  if (current === entry.oldChunksSha256) return 'replace';
+  throw new Error(`${entry.name}: chunks changed since check`);
+}
+
 function connect(): SupabaseClient {
   dotenv.config({ path: '.env.scripts', quiet: true });
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -95,8 +137,10 @@ async function documents(db: SupabaseClient): Promise<Doc[]> {
 }
 
 async function chunksOf(db: SupabaseClient, documentId: string): Promise<ChunkRow[]> {
-  const { data, error } = await db.from('document_chunks').select('*').eq('document_id', documentId).order('chunk_index');
+  const { data, error, count } = await db.from('document_chunks').select('*', { count: 'exact' }).eq('document_id', documentId).order('chunk_index');
   if (error) throw new Error(`chunks query failed: ${error.message}`);
+  // The API caps a read's rows; a cut read would hash and back up a partial document.
+  if (count !== data.length) throw new Error(`document ${documentId}: read ${data.length} of ${count} chunks; page the read`);
   return data as ChunkRow[];
 }
 
@@ -119,7 +163,9 @@ async function textFromFile(db: SupabaseClient, doc: Doc): Promise<{ text: strin
 
 async function check(outDir: string) {
   const db = connect();
-  fs.mkdirSync(outDir, { recursive: true });
+  for (const name of ['report.json', 'backup.json']) {
+    if (fs.existsSync(path.join(outDir, name))) throw new Error(`${outDir} already holds ${name}; use a new directory`);
+  }
   const reports: DocumentReport[] = [];
   const backup: ChunkRow[] = [];
 
@@ -146,8 +192,9 @@ async function check(outDir: string) {
       id: doc.id,
       name: doc.name,
       fileSha256,
-      oldChunksSha256: sha256(JSON.stringify(old)),
+      oldChunksSha256: chunksSha256(old),
       textSha256: text === null ? null : sha256(text),
+      newChunksSha256: text === null ? null : chunksSha256(createSectionAwareChunks(text, []).map(c => c.content)),
       oldChunks: old.length,
       newChunks: text === null ? 0 : createSectionAwareChunks(text, []).length,
       anomalies,
@@ -155,15 +202,16 @@ async function check(outDir: string) {
     console.log(`${anomalies.length ? '✗' : '✓'} ${doc.name}: ${old.length} → ${text === null ? '-' : reports[reports.length - 1].newChunks}${anomalies.map(a => ` [${a.kind}]`).join('')}`);
   }
 
-  fs.writeFileSync(path.join(outDir, 'backup.json'), JSON.stringify(backup));
-  fs.writeFileSync(path.join(outDir, 'report.json'), JSON.stringify({ checkedAt: new Date().toISOString(), documents: reports }, null, 2));
+  const backupJson = JSON.stringify(backup);
+  const report: Report = { checkedAt: new Date().toISOString(), backupSha256: sha256(backupJson), documents: reports };
+  writeOnce(outDir, { 'backup.json': backupJson, 'report.json': JSON.stringify(report, null, 2) });
   const flagged = reports.filter(r => r.anomalies.length);
   console.log(`\n${reports.length} documents, ${flagged.length} with anomalies; backup of ${backup.length} chunks written.`);
 }
 
 async function apply(outDir: string) {
   const db = connect();
-  const report = JSON.parse(fs.readFileSync(path.join(outDir, 'report.json'), 'utf8')) as { documents: DocumentReport[] };
+  const report = readVerified(outDir);
   const unruled = report.documents.filter(d => d.anomalies.length && (d.rulings?.length ?? 0) !== d.anomalies.length);
   if (unruled.length) throw new Error(`anomalies without a ruling: ${unruled.map(d => d.name).join(', ')}`);
 
@@ -175,14 +223,17 @@ async function apply(outDir: string) {
     const doc = (await documents(db)).find(d => d.id === entry.id);
     if (!doc) throw new Error(`${entry.name} no longer exists`);
     const old = (await chunksOf(db, doc.id)).map(r => r.content);
-    if (sha256(JSON.stringify(old)) !== entry.oldChunksSha256) throw new Error(`${entry.name}: chunks changed since check`);
+    if (nextStep(entry, chunksSha256(old)) === 'done') {
+      console.log(`= ${entry.name}: already re-chunked`);
+      continue;
+    }
     const source = await textFromFile(db, doc);
     if (!('text' in source) || sha256(source.text) !== entry.textSha256 || source.fileSha256 !== entry.fileSha256) {
       throw new Error(`${entry.name}: original file changed since check`);
     }
 
     const chunks = createSectionAwareChunks(source.text, []).map(c => ({ content: c.content }));
-    const { error } = await db.rpc('replace_document_chunks', { p_document_id: doc.id, p_chunks: chunks });
+    const { error } = await db.rpc('replace_document_chunks', { p_document_id: doc.id, p_expected_sha256: entry.oldChunksSha256, p_chunks: chunks });
     if (error) throw new Error(`${entry.name}: replace failed: ${error.message}`);
     const stored = (await chunksOf(db, doc.id)).map(r => r.content);
     if (stored.join('') !== source.text) throw new Error(`${entry.name}: stored chunks do not join to the text`);

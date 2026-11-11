@@ -120,4 +120,60 @@ describe('createSectionAwareChunks', () => {
       }
     });
   });
+
+  describe('Codex pre-deploy review', () => {
+    const table = '| 项目 | 金额 |\n| --- | --- |\n' + Array.from({ length: 30 }, (_, i) => `| 第${i}条 | ${i}00 |\n`).join('');
+
+    it('M3 a section start inside a table does not split the table; the section starts after it', () => {
+      const text = '前文\n' + table + '后文\n';
+      const inside = text.indexOf('| 第5条');
+      const chunks = createSectionAwareChunks(text, [{ title: '第5条', level: 1, startIndex: inside }], 100);
+      expect(chunks.map(c => c.content).join('')).toBe(text);
+      expect(chunks.some(c => c.content.includes(table))).toBe(true);
+      expect(chunks.find(c => c.content.includes('后文'))?.sectionTitle).toBe('第5条');
+    });
+
+    it('M4 a lone \\r ends a line', () => {
+      const text = Array.from({ length: 20 }, (_, i) => `第${i}行` + '甲'.repeat(40) + '\r').join('');
+      const chunks = createSectionAwareChunks(text, [], 100);
+      expect(chunks.map(c => c.content).join('')).toBe(text);
+      for (const c of chunks) expect(c.content.endsWith('\r')).toBe(true);
+    });
+
+    it('M5 rejects a chunk size that is not a positive integer', () => {
+      for (const size of [0, -1, 1.5, NaN]) expect(() => createSectionAwareChunks('文本', [], size)).toThrow(RangeError);
+    });
+
+    it('M6 cuts an over-long English line at full stops, not inside a sentence', () => {
+      const line = Array.from({ length: 20 }, (_, i) => `Sentence ${i} has some words in it.`).join(' ') + '\n';
+      const chunks = createSectionAwareChunks(line, [], 100);
+      expect(chunks.map(c => c.content).join('')).toBe(line);
+      for (const c of chunks.slice(0, -1)) expect(c.content.trimEnd().endsWith('.')).toBe(true);
+    });
+
+    it('M7 a "table" inside a code fence is not kept whole as a table', () => {
+      const text = '```\n' + table + '```\n';
+      const chunks = createSectionAwareChunks(text, [], 100);
+      expect(chunks.map(c => c.content).join('')).toBe(text);
+      for (const c of chunks) expect(c.content.length).toBeLessThanOrEqual(100);
+    });
+
+    it('S9 a hard cut never splits a surrogate pair', () => {
+      const text = '😀'.repeat(150);
+      const chunks = createSectionAwareChunks(text, [], 101);
+      expect(chunks.map(c => c.content).join('')).toBe(text);
+      for (const c of chunks) expect(c.content.isWellFormed()).toBe(true);
+    });
+
+    it('S10 builds the section path from unsorted sections', () => {
+      const text = '# 第一章\n' + paragraphs(2) + '## 第一节\n' + paragraphs(2);
+      const sections: Section[] = [
+        { title: '第一节', level: 2, startIndex: text.indexOf('## 第一节'), parent: '第一章' },
+        { title: '第一章', level: 1, startIndex: 0 },
+      ];
+      const chunks = createSectionAwareChunks(text, sections);
+      expect(chunks.at(-1)?.sectionPath).toEqual(['第一章', '第一节']);
+    });
+  });
 });
+
