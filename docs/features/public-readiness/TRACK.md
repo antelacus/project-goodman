@@ -131,7 +131,7 @@
   - SHOULD-5 强推前没有核验备份可恢复、没有先在副本上验收改写结果，没有处理部分引用推送失败与旧克隆重新推入 —— status: 处置已定，写入 DESIGN（Batch 落码时以测试关闭）
   - SHOULD-6 "前 5 步可以回退"没有对应的回退方案：迁移后回退到旧应用会停机，重新启用旧密钥不恢复已撤的权限 —— status: 处置已定，写入 DESIGN（Batch 落码时以测试关闭）
   - SHOULD-7 gitleaks 的执行方式未定：引用覆盖范围、脱敏、报告存放、无法判定时停止公开 —— status: 处置已定，写入 DESIGN（Batch 落码时以测试关闭）
-  - 待核：① 线上对象属主、有效权限 —— 已关闭：12 张表、12 个函数属 `postgres`，有效权限以 `has_*_privilege` 核对；② 首次新建密钥是否附带默认的 publishable 密钥 —— 未关闭，第 1 步时核对；③ 停用旧密钥对 Storage 签名链接的影响 —— 未关闭，第 4 步冒烟时核对；④ staging 用 `git pull` —— 已关闭：改写后历史不相关，拉取会失败，按设计重新克隆；⑤ PR 中是否有分支 / tag 不可达的提交 —— 已关闭：12 个 PR 的提交全部可达，扫描全部分支与 tag 即覆盖
+  - 待核：① 线上对象属主、有效权限 —— 已关闭：12 张表、12 个函数属 `postgres`，有效权限以 `has_*_privilege` 核对；② 首次新建密钥是否附带默认的 publishable 密钥 —— 核实：附带（须先点"Create new API keys"，同时生成 `default` publishable 与 secret 两把）；`default` secret 已删，`default` publishable 待删（第 4 步之前必须删）；③ 停用旧密钥对 Storage 签名链接的影响 —— 未关闭，第 4 步冒烟时核对；④ staging 用 `git pull` —— 已关闭：改写后历史不相关，拉取会失败，按设计重新克隆；⑤ PR 中是否有分支 / tag 不可达的提交 —— 已关闭：12 个 PR 的提交全部可达，扫描全部分支与 tag 即覆盖
 - Codex 设计门 · 任务二（DESIGN + ai-provider REQ §5.4 / §5.5 / §5.7，xhigh，只读，`de5e45c`）。原文照录，严重性为 Codex 所给；核实结论为 Claude 对照源码所得：
   - MUST-1 引用识别有绕过路径：Markdown 链接拆开的条款号（`根据第[九十九](…)条`）与 `[R1][第二款](…)` 都原样保留，`removed=0` —— 核实：在现有代码上复现，属 v4.7.0 起的缺陷 —— status: 已关闭：§citation-text（b4）含链接包住的条款号与 `[R1][第二款](…)`；去掉链接还原即变红
   - MUST-2 "只看 cited 里有没有 regulation"会让纯计算、只读用户文档的回答也被标为资料库外，且失去检索失败标注 —— 核实：DESIGN §4 措辞遗漏了"做过或请求过法规检索"与"全部出错"两项条件，现有代码有 —— status: 已关闭：§out-of-library（b4、b9）与 §retrieval-error 三条
@@ -158,7 +158,7 @@
   - SHOULD-10 非法数字实体（`&#x110000;`）让整个处理抛异常 —— status: 已关闭：改用页面同款解析器（见裁定），`tests/unit/citations/codex-review.test.ts` 逐条回归
 - Codex 上线前审查 · 任务二（`chunker.ts` 与 `scripts/rechunk-documents.ts`，xhigh，只读，`f7db920`）。原文照录：
   - MUST-1 `apply` 不读也不校验备份；再次 `check` 会覆盖原备份 —— status: 已关闭：`check` 拒绝写入已有报告或备份的目录，报告记备份哈希，`apply` 先校验备份哈希与每份文档的旧切块（`rechunk-documents.test.ts`）
-  - MUST-2 哈希检查与事务内替换之间有并发写入的窗口 —— status: 已关闭：`replace_document_chunks` 锁住文档与切块后在事务内比对哈希；TS 与 SQL 的哈希公式用 Postgres 17.6 算出的值互证；函数在事务内的试跑待做（MCP 确认超时）；`apply` 期间冻结管理员上传
+  - MUST-2 哈希检查与事务内替换之间有并发写入的窗口 —— status: 已关闭：`replace_document_chunks` 锁住文档与切块后在事务内比对哈希；TS 与 SQL 的哈希公式用 Postgres 17.6 算出的值互证；函数在生产库上试跑后整体回滚：过期哈希被拒，匹配哈希替换 2 块；回滚后无残留、函数未创建；`apply` 期间冻结管理员上传
   - MUST-3 先切章节、后识别表格：章节起点落在表格里时表格被拆开 —— status: 已关闭：先在全文识别表格，落在表格里的章节起点挪到表格之后（`chunker.test.ts` M3）
   - MUST-4 不识别单独的 `\r` 换行，短行被内部截断 —— status: 已关闭（M4）
   - MUST-5 未校验 `chunkSize`：0、负数会死循环，非整数丢字（生产固定为 1000，不触发） —— status: 已关闭：不是不小于 2 的整数即抛 `RangeError`（M5）
