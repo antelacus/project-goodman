@@ -46,7 +46,12 @@ export type AgentMemory = Pick<
  * Service for managing conversation history and state persistence.
  */
 export class ConversationMemory {
-    private supabase: SupabaseClient<Database> = createServerSupabaseClient();
+    private client: SupabaseClient<Database> | null = null;
+
+    /** Created on first use: the module is loaded at build time, when there is no database key. */
+    private get supabase(): SupabaseClient<Database> {
+        return (this.client ??= createServerSupabaseClient());
+    }
 
     /**
      * Creates a new conversation session.

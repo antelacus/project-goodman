@@ -65,6 +65,7 @@ export async function GET(): Promise<NextResponse<HealthCheckResult>> {
     {
       status,
       version: process.env.NEXT_PUBLIC_APP_VERSION || 'unknown',
+      commit: process.env.NEXT_PUBLIC_APP_COMMIT || 'unknown',
       timestamp: new Date().toISOString(),
       checks,
     },

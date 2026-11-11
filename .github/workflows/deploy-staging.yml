@@ -30,6 +30,7 @@ jobs:
             cd $GOODMAN_STAGING_DIR/project-goodman
             git checkout -- . && git clean -fd
             git pull origin development
+            git rev-parse HEAD > BUILD_SHA
             # Export env vars for docker compose build args
             set -a && source $GOODMAN_STAGING_DIR/.env.staging && set +a
             # Clean up any orphaned containers before rebuild
@@ -37,6 +38,9 @@ jobs:
             docker compose -f docker-compose.staging.yml up -d --build
             sleep 15
             curl -f http://localhost:3001/api/health || exit 1
+            # the served build must be the commit just pulled
+            served=$(curl -fsS http://localhost:3001/api/health | grep -o '"commit":"[0-9a-f]*"' | cut -d'"' -f4)
+            test "$served" = "$(cat BUILD_SHA)" || { echo "served commit '$served' is not $(cat BUILD_SHA)"; exit 1; }
             SMOKE_BASE_URL=http://localhost:3001 \
             SMOKE_ENV_FILE=$GOODMAN_STAGING_DIR/.env.staging \
             node scripts/smoke-test-staging.js

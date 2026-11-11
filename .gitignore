@@ -76,3 +76,6 @@ supabase/.temp/
 
 # Local MCP config (per-machine)
 .mcp.json
+
+# Written by the deploy before building; /api/health reports it
+BUILD_SHA
