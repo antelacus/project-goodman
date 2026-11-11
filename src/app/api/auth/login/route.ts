@@ -12,7 +12,7 @@ import {
     logSecurityEvent,
     setCsrfCookie,
 } from "@/lib/security";
-import { createAdminSession } from "@/lib/security/session";
+import { createAccountSession } from "@/lib/security/session";
 import { authenticateUser } from "@/lib/auth";
 import { validateRequest, LoginSchema } from "@/lib/validation/api-schemas";
 
@@ -30,7 +30,7 @@ function getClientIP(request: NextRequest): string {
 /**
  * POST /api/auth/login
  *
- * Authenticate admin user with username and password.
+ * Authenticate an account with username and password; the session carries the account's role.
  * On success: creates Redis session and sets HTTP-only cookie.
  *
  * Security features:
@@ -130,9 +130,10 @@ export async function POST(req: NextRequest) {
         // Step 4: Create session and reset brute-force
         await resetBruteForce(clientIP);
 
-        const session = await createAdminSession(clientIP, userAgent, {
+        const session = await createAccountSession(clientIP, userAgent, {
             id: authResult.user.id,
             username: authResult.user.username,
+            role: authResult.user.role,
             displayName: authResult.user.displayName,
         });
 
@@ -158,7 +159,7 @@ export async function POST(req: NextRequest) {
         );
 
         // Set HTTP-only session cookie
-        response.cookies.set(COOKIE_NAME, session.token, getCookieOptions('admin'));
+        response.cookies.set(COOKIE_NAME, session.token, getCookieOptions(session.role));
 
         // V3.9: Set CSRF cookie for authenticated requests
         await setCsrfCookie();

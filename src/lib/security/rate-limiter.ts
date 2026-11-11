@@ -55,7 +55,7 @@ const ENDPOINT_CATEGORIES: Record<string, string> = {
     '/api/documents/upload-temp': 'ai', // OCR for scanned PDFs and images
 
     // Authentication endpoints (strict limits)
-    '/api/admin/verify-password': 'auth',
+    '/api/auth/login': 'auth',
 
     // Data endpoints (moderate limits)
     '/api/documents': 'data',

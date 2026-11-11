@@ -40,6 +40,19 @@ vi.mock('@/lib/security', () => ({
   },
 }));
 
+const documents = vi.hoisted(() => new Map<string, { file_url: string; name: string; doc_type: string; doc_category: string; owner_type: string; owner_id: string }>());
+vi.mock('@/lib/database', () => ({
+  createServerSupabaseClient: () => ({
+    from: () => ({
+      select: () => ({
+        eq: (_column: string, id: string) => ({
+          single: async () => (documents.has(id) ? { data: documents.get(id), error: null } : { data: null, error: { code: 'PGRST116' } }),
+        }),
+      }),
+    }),
+  }),
+}));
+
 const mockSessionResult: EnsureSessionResult = {
   session: {
     token: 'session-token',
@@ -123,5 +136,14 @@ describe('POST /api/quick-actions/extract', () => {
         requestId: 'req-1',
       })
     );
+  });
+
+  it('answers someone else\'s document like a missing one: 404, not 403', async () => {
+    const theirs = '9b3e4c5a-6d7f-4e8a-8b92-3c4d5e6f7081';
+    documents.set(theirs, { file_url: 'x.pdf', name: 'x.pdf', doc_type: 'contract', doc_category: 'business', owner_type: 'guest', owner_id: 'someone-else' });
+    const refused = await POST(createRequest({ documentId: theirs }));
+    const missing = await POST(createRequest({ documentId: '7f1c2a3e-4b5d-4c6e-8f70-1a2b3c4d5e6f' }));
+    expect(refused.status).toBe(404);
+    expect(await refused.json()).toEqual(await missing.json());
   });
 });

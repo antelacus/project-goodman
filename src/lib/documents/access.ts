@@ -2,7 +2,7 @@
  * Who may read a document by its id. One rule for every reader that takes an id
  * from a request (the preview link, the extract tool): library documents, and the
  * requester's own uploads; an admin reads everything. The chat's selected
- * documents are narrower (own uploads only), see load-memory.
+ * documents are narrower: see isSelectableBy.
  */
 
 export interface Requester {
@@ -27,4 +27,13 @@ export function isOwnedBy(doc: Pick<DocumentOwnership, 'owner_type' | 'owner_id'
 
 export function isReadableBy(doc: DocumentOwnership, requester: Partial<Requester>): boolean {
   return requester.ownerType === 'admin' || doc.doc_category === 'knowledge' || isOwnedBy(doc, requester);
+}
+
+/**
+ * A document the chat may number as the user's own (D ids): only the requester's
+ * uploads, never a library document, even one an admin uploaded, whose regulations
+ * would otherwise be shown as 「您上传的文档」.
+ */
+export function isSelectableBy(doc: DocumentOwnership, requester: Partial<Requester>): boolean {
+  return doc.doc_category !== 'knowledge' && isOwnedBy(doc, requester);
 }

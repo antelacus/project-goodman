@@ -6,9 +6,9 @@
 
 import { describe, it, expect } from 'vitest';
 import {
-  AdminVerifyPasswordSchema,
   LoginSchema,
   ChatMessageSchema,
+  SessionIdParamSchema,
   VALIDATION_LIMITS,
   validateRequest,
   parseRequest,
@@ -19,35 +19,6 @@ describe('VALIDATION_LIMITS constants', () => {
     expect(VALIDATION_LIMITS.MAX_QUESTION_LENGTH).toBe(2000);
     expect(VALIDATION_LIMITS.MAX_MESSAGES_COUNT).toBe(10);
     expect(VALIDATION_LIMITS.MAX_PASSWORD_LENGTH).toBe(128);
-  });
-});
-
-describe('AdminVerifyPasswordSchema', () => {
-  it('should accept valid password', () => {
-    const result = AdminVerifyPasswordSchema.safeParse({ password: 'validPassword123' });
-    expect(result.success).toBe(true);
-  });
-
-  it('should reject empty password', () => {
-    const result = AdminVerifyPasswordSchema.safeParse({ password: '' });
-    expect(result.success).toBe(false);
-    if (!result.success) {
-      expect(result.error.issues[0].message).toBe('密码不能为空');
-    }
-  });
-
-  it('should reject password exceeding max length', () => {
-    const longPassword = 'a'.repeat(VALIDATION_LIMITS.MAX_PASSWORD_LENGTH + 1);
-    const result = AdminVerifyPasswordSchema.safeParse({ password: longPassword });
-    expect(result.success).toBe(false);
-    if (!result.success) {
-      expect(result.error.issues[0].message).toContain('密码长度不能超过');
-    }
-  });
-
-  it('should reject missing password field', () => {
-    const result = AdminVerifyPasswordSchema.safeParse({});
-    expect(result.success).toBe(false);
   });
 });
 
@@ -212,14 +183,14 @@ describe('ChatMessageSchema', () => {
 
 describe('validateRequest helper', () => {
   it('should return success for valid data', () => {
-    const result = validateRequest(AdminVerifyPasswordSchema, { password: 'test123' });
+    const result = validateRequest(LoginSchema, { username: 'admin', password: 'test123' });
     expect(result.success).toBe(true);
-    expect(result.data).toEqual({ password: 'test123' });
+    expect(result.data).toEqual({ username: 'admin', password: 'test123' });
     expect(result.error).toBeUndefined();
   });
 
   it('should return error for invalid data', () => {
-    const result = validateRequest(AdminVerifyPasswordSchema, { password: '' });
+    const result = validateRequest(LoginSchema, { username: 'admin', password: '' });
     expect(result.success).toBe(false);
     expect(result.data).toBeUndefined();
     expect(result.error).toBe('密码不能为空');
@@ -234,13 +205,20 @@ describe('validateRequest helper', () => {
 
 describe('parseRequest helper', () => {
   it('should return parsed data for valid input', () => {
-    const data = parseRequest(AdminVerifyPasswordSchema, { password: 'valid' });
-    expect(data).toEqual({ password: 'valid' });
+    const data = parseRequest(LoginSchema, { username: 'admin', password: 'valid' });
+    expect(data).toEqual({ username: 'admin', password: 'valid' });
   });
 
   it('should throw Error for invalid input', () => {
     expect(() => {
-      parseRequest(AdminVerifyPasswordSchema, { password: '' });
+      parseRequest(LoginSchema, { username: 'admin', password: '' });
     }).toThrow('密码不能为空');
+  });
+});
+
+describe('uuid inputs', () => {
+  it('are lowercased, since ids are compared as strings against the database form', () => {
+    expect(SessionIdParamSchema.parse('550E8400-E29B-41D4-A716-446655440000')).toBe('550e8400-e29b-41d4-a716-446655440000');
+    expect(ChatMessageSchema.parse({ question: 'q', documentIds: ['550E8400-E29B-41D4-A716-446655440000'] }).documentIds).toEqual(['550e8400-e29b-41d4-a716-446655440000']);
   });
 });

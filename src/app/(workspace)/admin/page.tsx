@@ -17,7 +17,7 @@ import {
 
 interface Session {
     sessionId: string;
-    role: "admin" | "guest";
+    role: "admin" | "user" | "guest";
     ip: string;
     userAgent: string;
     createdAt: string;
@@ -312,7 +312,7 @@ export default function AdminPage() {
                                                         : "bg-gray-100 text-gray-700"
                                                         }`}
                                                 >
-                                                    {session.role === "admin" ? "管理员" : "访客"}
+                                                    {session.role === "admin" ? "管理员" : session.role === "user" ? "用户" : "访客"}
                                                 </span>
                                             </td>
                                             <td className="px-4 py-3 text-gray-900">
