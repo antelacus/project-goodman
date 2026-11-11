@@ -132,7 +132,7 @@ N/A —— 证据编号沿用 ai-provider 的叫法；`R` 是法规检索结果�
 7. 在另一份副本上用 `git filter-repo` 改写全部分支与 tag（邮箱 → noreply，路径清单中的路径 → 占位符）；在副本上先验收 §history-emails、§history-internals，再扫描一次（§audit-findings）。
 8. 停用全部 3 个工作流；记下远端分支与 tag 清单；强推；逐个核对远端引用与副本一致。
 9. VPS 上两份检出重新克隆；手动触发一次 staging 与生产部署，核对线上 SHA（§deploy-after-rewrite）；再次停用工作流，等全部运行结束；删除全部运行记录与产物，分页计数为 0（§actions-cleared）。
-10. Jason 同意后公开；立即设置 fork PR 审批、私密漏洞报告、密钥扫描与推送保护，读回设置（§public-settings）；最后恢复工作流。
+10. 公开前：PR #12 的描述含 VPS 路径（全部 PR、评论、issue 中唯一一处）——改为变量名，并在网页的编辑历史里删除旧版本（编辑历史对能看到仓库的人可见，API 改不了）。Jason 同意后公开；立即设置 fork PR 审批、私密漏洞报告、密钥扫描与推送保护，读回设置（§public-settings）；最后恢复工作流。
 
 ## 10 开放设计问题
 
