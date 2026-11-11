@@ -61,6 +61,7 @@
   - 2026-11-11 · Codex 设计门任务一 MUST-2：REQ §5.1 写明例外——`supabase_admin` 新建的对象仍默认授予 anon，每次迁移后检查并收回；前提是项目里没有能以 anon 身份请求的密钥 · Jason（初判 a，终裁 a） · 级联：`REQ.md` §5.1、DESIGN §5
   - 2026-11-11 · Codex 设计门其余 15 项按 Claude 所提处置写入 DESIGN（含：重切挪到新代码上线之前、健康接口报提交 SHA、Actions 最后清理、强推前在副本上验收） · Jason（无异议） · 级联：DESIGN §4–§9、本 TRACK Batch 1 / 4 / 5 / 8
   - 2026-11-11 · Phase 2 结束：设计评审发现全部有处置，验收测试已写为待办，批次已切 · Jason · 级联：本 TRACK
+  - 2026-11-11 · 按 ID 读文档须核对归属：预览接口去掉 `fileUrl` 参数、只接受 `id`；预览与 `extract_document` 只允许资料库文档与请求者自己的文档；过程日志的原文链接改用 `id` · Jason（初判 a 工具只接受本人文档，终裁 a''；反驳要点：去掉 `fileUrl` 会断掉过程日志的链接，工具只收本人文档会挡住资料库报表） · 级联：`REQ.md` §5.7、本 TRACK Batch 6
   - 2026-11-11 · 用户文档拆条款与法规拆分共用"什么算条款的开头"，重复的处理各自定义；共用规则配法规样例测试，进 CI · Jason（初判 a，终裁 a 加样例测试） · 级联：DESIGN
 
 ## 二、批次
@@ -99,8 +100,8 @@
 
 ### Batch 6 — 输入验证与清理
 - 状态：open
-- 范围：TD-023 三个路由的 Zod schema；TD-029 删 PDF 预览路由与 `canvas` / `pdfjs-dist` / `src/types/pdfjs-dist.d.ts`；TD-038 删 `ToOpenAIOptions` 与 detailed 分支 · REQ §5.2
-- 验收判据：§input-validation；`npm ls canvas pdfjs-dist` 无结果；`registry.test.ts` 通过
+- 范围：文档访问核对归属（`preview-url` 只接受 `id`、`extract_document`，`ProcessLog.tsx` 改用 `id`）；TD-023 三个路由的 Zod schema；TD-029 删 PDF 预览路由与 `canvas` / `pdfjs-dist` / `src/types/pdfjs-dist.d.ts`；TD-038 删 `ToOpenAIOptions` 与 detailed 分支 · REQ §5.2
+- 验收判据：§input-validation、§doc-access；`npm ls canvas pdfjs-dist` 无结果；`registry.test.ts` 通过
 - 依赖：none
 
 ### Batch 7 — 公开内容
