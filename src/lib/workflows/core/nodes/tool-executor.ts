@@ -91,10 +91,12 @@ export async function toolExecutorNode(
 
 function numberResults(data: SearchRegulationsData, evidence: Evidence[]): SearchRegulationsData {
     const results: RegulationResult[] = data.results.map(r => {
-        const id = `R${evidence.length + 1}`;
+        // R ids count regulation evidence only: the selected documents' D ids share the list.
+        const id = `R${evidence.filter(e => e.kind === "regulation").length + 1}`;
         evidence.push({
             id,
-            regulationName: r.regulationName,
+            kind: "regulation",
+            name: r.regulationName,
             articleNumber: r.articleNumber,
             documentId: r.documentId,
             fileUrl: r.fileUrl,

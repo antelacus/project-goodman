@@ -22,6 +22,7 @@ import {
 import type { ProcessEvent, SourceReference } from '@/types/process-events';
 import type { WorkflowErrorType } from '@/lib/errors';
 import type { ChatWarning } from '@/lib/chat/warnings';
+import { sourceName, type Evidence } from '@/lib/citations';
 import {
     RETRIEVAL_EMPTY_DATA_REASON,
     RETRIEVAL_FAILED_REASON,
@@ -543,6 +544,36 @@ export async function POST(req: NextRequest) {
                             else if (event.event === 'on_chain_end' && event.name === 'loadMemory') {
                                 if (event.data?.output?.agent?.sessionId) {
                                     capturedSessionId = event.data.output.agent.sessionId;
+                                }
+                                if (event.data?.output?.documentLoadErrors?.length) {
+                                    recordWarning({ type: 'DOCUMENT_UNAVAILABLE', message: '所选文档无法读取，回答未参考它' }, 'VALIDATION');
+                                }
+                            }
+
+                            // Citation check of the final answer: removed places and the selected
+                            // documents' articles it cites, each linking to its document (REQ §5.4).
+                            else if (event.event === 'on_chain_end' && event.name === 'finalizeAnswer') {
+                                const agent = event.data?.output?.agent as { cited?: Evidence[]; removedCitations?: number } | undefined;
+                                const removed = agent?.removedCitations ?? 0;
+                                const documentCitations = (agent?.cited ?? []).filter(e => e.kind === 'user_document');
+                                if (removed > 0 || documentCitations.length > 0) {
+                                    const parts = [
+                                        ...(documentCitations.length > 0 ? [`引用了您上传的文档中的 ${documentCitations.length} 条`] : []),
+                                        ...(removed > 0 ? [`删去 ${removed} 处未经核实的引用`] : []),
+                                    ];
+                                    sendEvent('process', createProcessEvent(
+                                        'data_fetch',
+                                        `出处核对：${parts.join('；')}`,
+                                        { removedCitations: removed },
+                                        documentCitations.length > 0
+                                            ? documentCitations.map(e => ({
+                                                documentId: e.documentId,
+                                                documentName: sourceName(e),
+                                                documentType: 'user_document',
+                                                article: e.articleNumber,
+                                            }))
+                                            : undefined
+                                    ));
                                 }
                             }
 

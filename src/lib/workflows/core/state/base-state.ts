@@ -88,6 +88,8 @@ export interface AgentRuntimeState {
     mustAnswer: boolean;
     /** Evidence the final answer cites, for the response's sources. */
     cited: Evidence[];
+    /** Places in the final answer replaced by the deletion marker (REQ §5.4). */
+    removedCitations: number;
 }
 
 export interface SearchStats {
@@ -100,8 +102,8 @@ export interface SearchStats {
     regulationFailed: number;
 }
 
-export function newQuestionState(): Pick<AgentRuntimeState, "search" | "evidence" | "mustAnswer" | "cited"> {
-    return { search: { used: 0, regulationSearched: false, regulationRuns: 0, regulationFailed: 0 }, evidence: [], mustAnswer: false, cited: [] };
+export function newQuestionState(): Pick<AgentRuntimeState, "search" | "evidence" | "mustAnswer" | "cited" | "removedCitations"> {
+    return { search: { used: 0, regulationSearched: false, regulationRuns: 0, regulationFailed: 0 }, evidence: [], mustAnswer: false, cited: [], removedCitations: 0 };
 }
 
 /**

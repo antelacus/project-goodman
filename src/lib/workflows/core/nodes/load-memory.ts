@@ -10,6 +10,7 @@ import type { AgentMemory } from "@/lib/memory/conversation-memory";
 import { SystemMessage, HumanMessage, AIMessage, BaseMessage } from "@langchain/core/messages";
 import { createServerSupabaseClient } from "@/lib/database";
 import { loadDocumentText } from "@/lib/documents/text";
+import { numberDocuments, type DocumentForNumbering, type Evidence } from "@/lib/citations";
 
 /**
  * Loads memory and initializes agent state
@@ -38,14 +39,28 @@ export const createLoadMemoryNode = (memory: AgentMemory) => async function load
         ownerType
     );
 
-    // 2. Fetch Document Context if documentIds are present
+    // 2. The selected documents: only the requester's own uploads are read. Anyone
+    // else's, and library documents (whose regulations would be numbered as the
+    // user's own), are reported as not loaded, the same as a missing one.
     let contextMessage: SystemMessage | null = null;
     const documentLoadErrors: DocumentLoadError[] = [];
+    let documentEvidence: Evidence[] = [];
 
     if (documentIds && documentIds.length > 0) {
         try {
             const supabase = createServerSupabaseClient();
-            const docsContentPromises = documentIds.map(async (docId) => {
+            const { data: rows, error } = await supabase
+                .from("documents")
+                .select("id, name, file_url, owner_type, owner_id")
+                .in("id", documentIds);
+            if (error) throw new Error(error.message);
+
+            const loaded = await Promise.all(documentIds.map(async (docId): Promise<DocumentForNumbering | null> => {
+                const doc = rows?.find(r => r.id === docId);
+                if (!doc || !ownerType || !ownerId || doc.owner_type !== ownerType || doc.owner_id !== ownerId) {
+                    documentLoadErrors.push({ documentId: docId, error: "Document not found" });
+                    return null;
+                }
                 let text: string | null;
                 try {
                     text = await loadDocumentText(supabase, docId);
@@ -58,23 +73,21 @@ export const createLoadMemoryNode = (memory: AgentMemory) => async function load
                     return null;
                 }
                 if (text === null) {
-                    documentLoadErrors.push({
-                        documentId: docId,
-                        error: "Document has no content chunks",
-                    });
+                    documentLoadErrors.push({ documentId: docId, error: "Document has no content chunks" });
                     return null;
                 }
+                return { id: doc.id, name: doc.name, fileUrl: doc.file_url, text };
+            }));
 
-                return `Document ID: ${docId}\n\n${text}`;
-            });
-
-            const docsContents = await Promise.all(docsContentPromises);
-            const validContents = docsContents.filter(c => c !== null);
-
-            if (validContents.length > 0) {
-                const combinedContext = validContents.join("\n\n---\n\n");
+            const documents = loaded.filter((d): d is DocumentForNumbering => d !== null);
+            if (documents.length > 0) {
+                const numbered = numberDocuments(documents);
+                documentEvidence = numbered.evidence;
+                const combinedContext = documents
+                    .map((doc, i) => `Document ID: ${doc.id}\nFile name: ${doc.name}\n\n${numbered.texts[i]}`)
+                    .join("\n\n---\n\n");
                 contextMessage = new SystemMessage(
-                    `[Active Document Context]\nThe user has provided the following document content for reference in this conversation. If you need to perform specific extraction tools, use the provided Document IDs.\n\n${combinedContext}\n\n[End of Document Context]`
+                    `[Active Document Context]\nThe user has provided the following document content for reference in this conversation. If you need to perform specific extraction tools, use the provided Document IDs. Articles marked [Dn] are cited by that id only.\n\n${combinedContext}\n\n[End of Document Context]`
                 );
             }
         } catch (err) {
@@ -113,6 +126,7 @@ export const createLoadMemoryNode = (memory: AgentMemory) => async function load
             isComplete: false,
             pendingToolCalls: [],
             ...newQuestionState(),
+            evidence: documentEvidence,
         },
         // Reset tool results for this turn
         toolResults: [],

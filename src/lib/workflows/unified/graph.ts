@@ -16,7 +16,7 @@ import {
 } from "./nodes";
 import { generateResponseNode } from "../core/nodes/generate-response";
 import { afterAgentLoop, afterTools } from "../core/edges/routing";
-import { newQuestionState } from "../core/state/base-state";
+import { newQuestionState, type DocumentLoadError } from "../core/state/base-state";
 import { conversationMemory, type AgentMemory } from "@/lib/memory/conversation-memory";
 
 /**
@@ -62,6 +62,11 @@ export function createUnifiedGraph({ memory }: { memory: AgentMemory }) {
             meta: {
                 // eslint-disable-next-line @typescript-eslint/no-explicit-any
                 value: (left?: any, right?: any) => right ? right : left,
+                default: () => undefined,
+            },
+            // Selected documents that were not read (missing, or not the requester's own).
+            documentLoadErrors: {
+                value: (left?: DocumentLoadError[], right?: DocumentLoadError[]) => right ?? left,
                 default: () => undefined,
             },
         },

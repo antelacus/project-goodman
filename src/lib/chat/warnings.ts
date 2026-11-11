@@ -1,4 +1,4 @@
-export type ChatWarningType = 'RETRIEVAL_EMPTY' | 'RETRIEVAL_FAILED';
+export type ChatWarningType = 'RETRIEVAL_EMPTY' | 'RETRIEVAL_FAILED' | 'DOCUMENT_UNAVAILABLE';
 
 export interface ChatWarning {
   type: ChatWarningType;
