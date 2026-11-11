@@ -105,7 +105,7 @@
 - 依赖：none
 
 ### Batch 7 — 公开内容
-- 状态：open
+- 状态：done `3e91387`（"staging 用改过的工作流部署一次"在 DESIGN §9 第 2 步完成）
 - 范围：删 `LICENSE`、`package.json` 改 `UNLICENSED`；README 改写；部署工作流的路径改读 Secrets；运维文档的路径改为变量名，真实值放 `GOODMAN_DATA_DIR` 下的私有文件；`docs/SECURITY.md` 改为私密漏洞报告；`CLAUDE.md` 的部署一节 · REQ §5.3
 - 验收判据：§no-license、§no-internals、§no-personal-email；staging 用改过的工作流部署一次
 - 依赖：none
