@@ -31,6 +31,10 @@ vi.mock('@/lib/database', async importOriginal => ({
             error: null,
           }),
         }),
+        in: async (_column: 'id', ids: string[]) => ({
+          data: ((db.inserts.documents ?? []) as Array<Record<string, unknown> | Array<Record<string, unknown>>>).flat().filter(d => ids.includes(String(d.id))),
+          error: null,
+        }),
       }),
     }),
   }),
@@ -55,6 +59,7 @@ vi.mock('@/lib/documents/storage', () => ({
   deleteFileFromStorage: vi.fn(),
 }));
 
+const GUEST_ID = '550e8400-e29b-41d4-a716-446655440000';
 const relay = installFakeRelay();
 const isChat = (r: RelayRequest) => r.path.endsWith('/chat/completions');
 
@@ -77,7 +82,7 @@ beforeEach(() => {
   vi.mocked(security.ensureSession).mockResolvedValue({
     session: {
       token: 't', createdAt: '', expiresAt: '', ip: '127.0.0.1', userAgent: 'vitest',
-      sessionId: '550e8400-e29b-41d4-a716-446655440000', role: 'guest' as const,
+      sessionId: GUEST_ID, role: 'guest' as const,
     },
     isNewSession: false,
   });
@@ -104,7 +109,7 @@ describe('B5 non-overlapping chunks', () => {
     expect(stored.join('')).toBe(DOCUMENT);
 
     relay.reply(() => ({ body: chatReply('已阅读。') }));
-    await createUnifiedGraph({ memory: createInMemoryMemory() }).invoke({ input: { question: '账期是多少？', documentIds: [documentId] } });
+    await createUnifiedGraph({ memory: createInMemoryMemory() }).invoke({ input: { question: '账期是多少？', documentIds: [documentId], ownerId: GUEST_ID, ownerType: 'guest' } });
     const sent = JSON.stringify(relay.requests.filter(isChat)[0].body.messages);
     expect(sent).toContain(JSON.stringify(DOCUMENT).slice(1, -1));
     for (const line of DOCUMENT.split('\n').filter(l => l.length > 12)) {

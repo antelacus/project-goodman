@@ -52,6 +52,22 @@ export function followsFinishedSentence(previous: string): boolean {
   return previous === '' || SENTENCE_END.test(previous) || HEADING_LINE.test(previous);
 }
 
+/**
+ * For each line of a document (line endings kept), the article it starts, judged
+ * with the previous non-blank line as the regulation splitter judges it; null for
+ * any other line.
+ */
+export function articleStartsByLine(lines: string[]): (ArticleStart | null)[] {
+  let previous = '';
+  return lines.map(line => {
+    const trimmed = line.trim();
+    if (trimmed === '') return null;
+    const start = articleStart(trimmed, previous);
+    previous = trimmed;
+    return start?.heading ? start : null;
+  });
+}
+
 /** A 编、章 or 节 heading ("第一章 总则"). */
 export function isHeadingLine(line: string): boolean {
   return HEADING_LINE.test(line);

@@ -49,6 +49,9 @@ import { uploadFileToStorage } from "@/lib/documents/storage";
 import { createSectionAwareChunks } from "@/lib/documents/chunker";
 import { extractTextFromFile } from "@/lib/documents/extract-text";
 import { isRegulation } from "@/lib/documents/constants";
+import { articleStartsByLine } from "@/lib/extraction/article-lines";
+
+const ARTICLE_NUMBERED_HINT = "提示：这份文档按“第X条”编号；回答中引用它的条款号时，条款号会被删去。";
 import { splitRegulation, type SplitArticle, type SplitAnomaly } from "@/lib/extraction/regulation-splitter";
 
 
@@ -568,6 +571,11 @@ export async function POST(request: NextRequest) {
     }
     if (articlesCount > 0) {
       message += `提取了 ${articlesCount} 个法规条款。`;
+    }
+    // Document search results carry no evidence ids (a search returns chunks, and an
+    // article can span two), so an answer citing this document's 第X条 loses the number.
+    if (!isRegulation(documentType) && articleStartsByLine(extractedText.split('\n')).some(Boolean)) {
+      message += ARTICLE_NUMBERED_HINT;
     }
 
     logWorkflowSuccess();
