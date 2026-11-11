@@ -61,7 +61,55 @@
 
 ## 二、批次
 
-（Phase 2 切分）
+验收测试：`tests/acceptance/public-readiness/`、`tests/acceptance/ai-provider/b9-user-doc-citations.test.ts`；数据库权限的验收在 `supabase/tests/access.sql`。
+
+### Batch 1 — 数据库唯一入口
+- 状态：open
+- 范围：`src/lib/database/supabase.ts`（读 `SUPABASE_SECRET_KEY`，删 `createBrowserSupabaseClient`）；`src/lib/documents/storage.ts`、`src/lib/reports/docx-upload.ts`、`pdf-upload.ts` 改用它；`scripts/` 下 4 个脚本、`.env*.example`、CI 构建不提供密钥 · REQ §5.1
+- 验收判据：§server-secret-key；CI 构建不提供 secret 密钥仍通过（DESIGN 不变量 5）
+- 依赖：none
+
+### Batch 2 — 权限迁移
+- 状态：open
+- 范围：新迁移（收回 anon / authenticated 的授权与 `postgres` 的默认权限，`public` 全部表开 RLS）；`supabase/tests/access.sql`；`npx supabase gen types`；`.claude/rules/code-conventions.md` 的 RLS 一节 · REQ §5.1
+- 验收判据：§anon-denied、§default-privileges、§rls-all（在事务内试跑并回滚；正式执行在 DESIGN §9 第 3 步）
+- 依赖：Batch 1
+
+### Batch 3 — 条款开头的共用规则
+- 状态：open
+- 范围：新建 `src/lib/extraction/article-lines.ts`；`regulation-splitter.ts` 改用它；法规样例行单测进 CI · DESIGN 不变量 4
+- 验收判据：法规拆分既有单测全过；样例行覆盖正文交叉引用、无空格的条款开头、页码行
+- 依赖：none
+
+### Batch 4 — 用户文档出处与删除标记
+- 状态：open
+- 范围：`src/lib/citations/`（D 编号、删除标记、计数）；`load-memory.ts`、`finalize-answer.ts`、流式路由的过程事件；管理员上传的提示；`chat-system.md` 写明 D 编号；`b4-search-citations.test.ts` 中按旧规则断言的用例随规则改 · ai-provider REQ §5.4、§5.5
+- 验收判据：§citation-text、§user-doc-citation、§user-doc-duplicate、§removal-count、§doc-article-hint、§out-of-library
+- 依赖：Batch 3、Batch 5（拼接出的全文须无重复）
+
+### Batch 5 — 不重叠的切块
+- 状态：open
+- 范围：`src/lib/documents/chunker.ts` 重写；管理员上传路由删 `chunkDocument` 改用它；一次性 `scripts/rechunk-documents.ts`（关版前删除） · ai-provider REQ §5.7
+- 验收判据：§chunk-partition、§table-chunk；重切后在生产库上核对两条
+- 依赖：none
+
+### Batch 6 — 输入验证与清理
+- 状态：open
+- 范围：TD-023 三个路由的 Zod schema；TD-029 删 PDF 预览路由与 `canvas` / `pdfjs-dist` / `src/types/pdfjs-dist.d.ts`；TD-038 删 `ToOpenAIOptions` 与 detailed 分支 · REQ §5.2
+- 验收判据：§input-validation；`npm ls canvas pdfjs-dist` 无结果；`registry.test.ts` 通过
+- 依赖：none
+
+### Batch 7 — 公开内容
+- 状态：open
+- 范围：删 `LICENSE`、`package.json` 改 `UNLICENSED`；README 改写；部署工作流的路径改读 Secrets；运维文档的路径改为变量名，真实值放 `GOODMAN_DATA_DIR` 下的私有文件；`docs/SECURITY.md` 改为私密漏洞报告；`CLAUDE.md` 的部署一节 · REQ §5.3
+- 验收判据：§no-license、§no-internals、§no-personal-email；staging 用改过的工作流部署一次
+- 依赖：none
+
+### Batch 8 — 上线、改写历史与公开
+- 状态：open
+- 范围：DESIGN §9 第 1–10 步（第 6 步起每步执行前 Jason 确认） · REQ §5.1、§5.4–§5.6
+- 验收判据：§env-smoke、§legacy-keys-disabled、§history-emails、§history-internals、§history-backup、§deploy-after-rewrite、§actions-cleared、§audit-findings、§public-settings
+- 依赖：Batch 1–7 合并并在生产上线
 
 ## 三、门与发布
 
