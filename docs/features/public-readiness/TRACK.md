@@ -57,6 +57,7 @@
   - 2026-11-11 · 选中文档的完整文本：新切块代码不重叠，切块拼起来即原文；两套切块代码合并；已入库文档一次性还原原文后重新切块 · Jason（初判 a 拼接时去重叠，终裁 c；反驳要点：重叠长度会成为切块与拼接两处的隐含约定，章节边界会误剪；重新切块只影响 6 份非法规知识文档的检索） · 级联：`docs/features/ai-provider/REQ.md` §5.7、DESIGN
   - 2026-11-11 · 部署说明留在仓库，路径换成变量名，真实值放仓库外的私有文件；工作流的路径放 GitHub Secrets（公开仓库的运行日志人人可见，Secrets 被遮蔽、仓库变量不会） · Jason（初判 b，终裁 b） · 级联：`REQ.md` §5.3、本 TRACK 范围 10
   - 2026-11-11 · DQ-1 长表格：表格永远不切，超长表格的切块偏大；首次出现超过切块长度的表格时再做续块带表头（随本版上线在 Phase 6 登记为已接受） · Jason（初判 a 表头独立成列，终裁 c；反驳要点：现有 50 张表最长 568 字，都不超过 1000 字，独立成列要加列、改生成列、重建索引） · 级联：`docs/features/ai-provider/REQ.md` §5.7、DESIGN §4
+  - 2026-11-11 · 选中文档只接受当前用户自己上传的文档；别人的文档与资料库文档按文档加载失败处理（修正读取不核对归属的缺口） · Jason（初判 a 自己的文档加资料库文档，终裁 a'；反驳要点：资料库里的准则会被标成「您上传的文档」） · 级联：`docs/features/ai-provider/REQ.md` §5.7、本 TRACK Batch 4
   - 2026-11-11 · 用户文档拆条款与法规拆分共用"什么算条款的开头"，重复的处理各自定义；共用规则配法规样例测试，进 CI · Jason（初判 a，终裁 a 加样例测试） · 级联：DESIGN
 
 ## 二、批次
@@ -83,8 +84,8 @@
 
 ### Batch 4 — 用户文档出处与删除标记
 - 状态：open
-- 范围：`src/lib/citations/`（D 编号、删除标记、计数）；`load-memory.ts`、`finalize-answer.ts`、流式路由的过程事件；管理员上传的提示；`chat-system.md` 写明 D 编号；`b4-search-citations.test.ts` 中按旧规则断言的用例随规则改 · ai-provider REQ §5.4、§5.5
-- 验收判据：§citation-text、§user-doc-citation、§user-doc-duplicate、§removal-count、§doc-article-hint、§out-of-library
+- 范围：`src/lib/citations/`（D 编号、删除标记、计数）；`load-memory.ts`（只接受当前用户自己的文档）、`finalize-answer.ts`、流式路由的过程事件；管理员上传的提示；`chat-system.md` 写明 D 编号；`b4-search-citations.test.ts` 中按旧规则断言的用例随规则改 · ai-provider REQ §5.4、§5.5
+- 验收判据：§citation-text、§user-doc-citation、§user-doc-duplicate、§removal-count、§doc-article-hint、§out-of-library、§selected-doc-owner
 - 依赖：Batch 3、Batch 5（拼接出的全文须无重复）
 
 ### Batch 5 — 不重叠的切块
