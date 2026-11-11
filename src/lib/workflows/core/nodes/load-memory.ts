@@ -10,6 +10,7 @@ import type { AgentMemory } from "@/lib/memory/conversation-memory";
 import { SystemMessage, HumanMessage, AIMessage, BaseMessage } from "@langchain/core/messages";
 import { createServerSupabaseClient } from "@/lib/database";
 import { loadDocumentText } from "@/lib/documents/text";
+import { isOwnedBy } from "@/lib/documents/access";
 import { numberDocuments, type DocumentForNumbering, type Evidence } from "@/lib/citations";
 
 /**
@@ -57,7 +58,7 @@ export const createLoadMemoryNode = (memory: AgentMemory) => async function load
 
             const loaded = await Promise.all(documentIds.map(async (docId): Promise<DocumentForNumbering | null> => {
                 const doc = rows?.find(r => r.id === docId);
-                if (!doc || !ownerType || !ownerId || doc.owner_type !== ownerType || doc.owner_id !== ownerId) {
+                if (!doc || !isOwnedBy(doc, { ownerType, ownerId })) {
                     documentLoadErrors.push({ documentId: docId, error: "Document not found" });
                     return null;
                 }

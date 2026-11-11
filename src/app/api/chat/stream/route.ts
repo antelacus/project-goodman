@@ -1,5 +1,6 @@
 import { newQuestionState } from "@/lib/workflows/core/state/base-state";
 import { NextRequest, NextResponse } from 'next/server';
+import { requesterOf } from '@/lib/documents/access';
 import { unifiedAgentGraph } from '@/lib/workflows/unified/graph';
 import { AIUnavailableError, AI_FAILURE_TEXT } from '@/lib/ai';
 import {
@@ -354,8 +355,7 @@ export async function POST(req: NextRequest) {
             // V3.10+: Determine owner info for session tracking
             // For admin/user: use userId as owner
             // For guest: use auth sessionId as owner
-            const ownerId = session.userId || session.sessionId;
-            const ownerType = session.role;
+            const { ownerId, ownerType } = requesterOf(session);
 
             // Initialize state
             // We cast to any to avoid strict type checking on DeepPartial,
