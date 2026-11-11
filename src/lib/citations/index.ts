@@ -12,7 +12,7 @@
  *
  * Detection works on the text as the page shows it, read with the parser the page
  * renders with (remark + ANSWER_SYNTAX): emphasis, code marks, link syntax and
- * reference definitions are not shown, character references are decoded, full-width
+ * reference definitions are not shown, table cells and footnotes are, character references are decoded, full-width
  * forms are folded, because "第[十九](…)条" and "第&#51;条" render as article
  * numbers. A replacement lands on the Markdown that produced the flagged
  * characters, widened over any formatting it would otherwise cut in two.
@@ -62,7 +62,7 @@ const parser = unified().use(remarkParse).use(ANSWER_SYNTAX);
 /** Separates blocks in the shown text: no pattern matches across it, so list items never merge. */
 const BLOCK_END = '\u0000';
 const CONTAINERS = new Set(['emphasis', 'strong', 'delete', 'link', 'linkReference', 'inlineCode', 'inlineMath']);
-const INLINE = new Set([...CONTAINERS, 'text', 'break', 'html', 'image', 'imageReference']);
+const INLINE = new Set([...CONTAINERS, 'text', 'break', 'html', 'image', 'imageReference', 'footnoteReference']);
 const HIDDEN = new Set(['definition', 'image', 'imageReference', 'thematicBreak']);
 
 /** The text as the page shows it, with each shown character's source range (-1 for a block separator). */
@@ -144,19 +144,22 @@ function render(src: string): Shown {
     // Unalignable: every character maps to the whole node, so a replacement takes it all.
     for (let k = 0; k < value.length; k++) push(value[k], map ? map[k][0] : from, map ? map[k][1] : to);
   };
-  const visit = (node: Nodes, inline: boolean) => {
+  const visit = (node: Nodes, inline: boolean, parent: [number, number]) => {
     if (HIDDEN.has(node.type)) return;
-    const from = node.position?.start.offset ?? 0;
-    const to = node.position?.end.offset ?? src.length;
+    // A node a transform made without a position maps within its parent, never the whole answer.
+    const from = node.position?.start.offset ?? parent[0];
+    const to = node.position?.end.offset ?? parent[1];
     const block = !inline && !INLINE.has(node.type);
     if (block) push(BLOCK_END, -1, -1);
     const before = shown.text.length;
     if (node.type === 'break') push('\n', from, to);
+    // Rendered as a superscript number: 第[^1]条 shows as an article number.
+    else if (node.type === 'footnoteReference') push('1', from, to);
     else if (node.type === 'text' || node.type === 'html') literal(node.value, from, to, false);
     else if (node.type === 'inlineCode' || node.type === 'inlineMath' || node.type === 'code' || node.type === 'math') literal(node.value, from, to, true);
     else if ('children' in node) {
-      const childrenInline = inline || node.type === 'paragraph' || node.type === 'heading' || CONTAINERS.has(node.type);
-      for (const child of node.children) visit(child as Nodes, childrenInline);
+      const childrenInline = inline || ['paragraph', 'heading', 'tableCell'].includes(node.type) || CONTAINERS.has(node.type);
+      for (const child of node.children) visit(child as Nodes, childrenInline, [from, to]);
     }
     if (CONTAINERS.has(node.type)) {
       const starts = shown.start.slice(before).filter(n => n >= 0);
@@ -164,7 +167,7 @@ function render(src: string): Shown {
     }
     if (block) push(BLOCK_END, -1, -1);
   };
-  visit(parser.parse(src) as Root, false);
+  visit(parser.runSync(parser.parse(src)) as Root, false, [0, src.length]);
   shown.text = shown.text.replace(/[０-９ＲＤ［］]/g, ch => String.fromCharCode(ch.charCodeAt(0) - 0xfee0));
   return shown;
 }
