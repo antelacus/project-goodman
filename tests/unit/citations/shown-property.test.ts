@@ -11,7 +11,7 @@ const EVIDENCE: Evidence[] = [
   { id: 'R1', kind: 'regulation', name: '企业会计准则第99号-示例业务-2026', articleNumber: '第一条', documentId: 'd', fileUrl: null },
   { id: 'D1', kind: 'user_document', name: '合同.md', articleNumber: '第三条', documentId: 'u', fileUrl: null },
 ];
-const PIECES = ['依据', '[R1]', '[D1]', '[R9]', '第', '九', '十', '\n', ' ', '条', '款', '之', '二', '**', '*', '`', '[', ']', '(x)', '(x "t")', '&#57;', '&nbsp;', '&#xff19;', '１', '- ', '> ', '\n\n', 'R', '2', '、', '（', '）', '$', '\\', '[R1]: http://x\n', '<b>', '</b>', '~~', '😀', '&#x1F600;'];
+const PIECES = ['依据', '[R1]', '[D1]', '[R9]', '第', '九', '十', '\n', ' ', '条', '款', '之', '二', '**', '*', '`', '[', ']', '(x)', '(x "t")', '&#57;', '&nbsp;', '&#xff19;', '１', '- ', '> ', '\n\n', 'R', '2', '、', '（', '）', '$', '\\', '[R1]: http://x\n', '<b>', '</b>', '~~', '😀', '&#x1F600;', '| ', ' |', '\n|---|---|\n', '~~', '[^1]', '\n\n[^1]: ', 'www.x.io/', '。**'];
 const parser = unified().use(remarkParse).use(ANSWER_SYNTAX);
 function shownText(md: string): string {
   const out: string[] = [];
@@ -21,10 +21,11 @@ function shownText(md: string): string {
     if (['definition', 'image', 'imageReference'].includes(n.type)) return;
     if ('value' in n) out.push(n.value);
     if (n.type === 'break') out.push('\n');
+    if (n.type === 'footnoteReference') out.push('1');
     n.children?.forEach(walk);
-    if (['paragraph', 'heading', 'listItem', 'code', 'math', 'html', 'blockquote'].includes(n.type)) out.push('\u0000');
+    if (['paragraph', 'heading', 'listItem', 'code', 'math', 'html', 'blockquote', 'tableCell', 'footnoteDefinition'].includes(n.type)) out.push('\u0000');
   };
-  walk(parser.parse(md));
+  walk(parser.runSync(parser.parse(md)));
   return out.join('').replace(/[０-９ＲＤ［］]/g, ch => String.fromCharCode(ch.charCodeAt(0) - 0xfee0));
 }
 const NUMERAL = '[零〇一二三四五六七八九十百千两壹贰叁肆伍陆柒捌玖拾佰仟\\d]';

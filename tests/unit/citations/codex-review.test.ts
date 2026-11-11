@@ -75,3 +75,28 @@ describe('citations: Codex pre-deploy review', () => {
     expect(run('依据&#x110000;第9条。依据[R1]。').removed).toBe(1);
   });
 });
+
+describe('citations: GFM and CJK emphasis (the page renders both)', () => {
+  it('a table cell is its own place: numbers in two cells are two removals, the table stays a table', () => {
+    const { text, removed } = run('依据[R1]：\n\n| 事项 | 依据 |\n|---|---|\n| 甲 | 第九条 |\n| 乙 | 第十条 |');
+    expect(removed).toBe(2);
+    expect(text).toBe(`依据${R1}：\n\n| 事项 | 依据 |\n|---|---|\n| 甲 | ${M} |\n| 乙 | ${M} |`);
+  });
+
+  it('a valid id inside a table cell is cited', () => {
+    expect(run('| 事项 | 依据 |\n|---|---|\n| 收入 | [R1] |')).toMatchObject({ text: `| 事项 | 依据 |\n|---|---|\n| 收入 | ${R1} |`, removed: 0 });
+  });
+
+  it('strikethrough still shows its text', () => {
+    expect(run('依据~~第九条~~可以免税。依据[R1]。')).toMatchObject({ text: `依据${M}可以免税。依据${R1}。`, removed: 1 });
+  });
+
+  it('a footnote reference renders as a number, so 第[^1]条 is an article number; a footnote\'s text is shown', () => {
+    expect(run('依据第[^1]条可以免税。依据[R1]。\n\n[^1]: 注').removed).toBe(1);
+    expect(run('依据[R1]。[^1]\n\n[^1]: 另见第五条').removed).toBe(1);
+  });
+
+  it('CJK emphasis closes after Chinese punctuation, and a number inside it is still caught whole', () => {
+    expect(run('**依据第九条。**企业可以免税。依据[R1]。').text).toBe(`**依据${M}。**企业可以免税。依据${R1}。`);
+  });
+});
