@@ -9,7 +9,7 @@
   3. TD-029：删除无调用方的 PDF 预览路由及 `canvas` / `pdfjs-dist`
   4. 删除许可证（`LICENSE`、`package.json` 改 `UNLICENSED`）；README 改写给外部读者（招聘方），写明"保留所有权利"
   5. 泄密审计：全部提交历史
-  10. 去掉服务器内部细节（`$DEPLOY_HOME/...` 路径、端口、容器名、VPS 目录结构）：工作流改读仓库变量，部署说明移到仓库外的私有目录，`CLAUDE.md` 只留指针；安全联系改用 GitHub 私密漏洞报告；产品网址 `goodman.antelacus.com` 保留
+  10. 去掉服务器内部细节（VPS 上的文件系统路径与目录结构，如 `$DEPLOY_HOME/...`；端口、nginx 配置、容器名保留）：工作流改读仓库变量，部署说明移到仓库外的私有目录，`CLAUDE.md` 只留指针；安全联系改用 GitHub 私密漏洞报告；产品网址 `goodman.antelacus.com` 保留
   11. 改写全部历史（原仓库内）：作者邮箱换成 GitHub noreply，服务器内部细节替换为占位符；改写前做镜像备份到仓库外；改写后 VPS 上的两份检出重新克隆；删除全部 Actions 运行记录与产物
   6. 公开：TD-032 在生产核实、审计通过、Jason 明确同意后，把仓库改为公开，随即设置 fork PR 的工作流须经批准
   7. TD-034：用户选中的文档也发证据编号，其条款引用由程序生成；未核实的条款号只删该处、原处留标记，不再删整句；管理员上传按"第X条"编号的非法规文档时给出提示（出处契约的变更，改 `docs/features/ai-provider/` 的 REQ / DESIGN；细则见下方裁定）
@@ -51,6 +51,9 @@
   - 2026-11-11 · Actions 历史运行记录与产物在公开前全部删除，不逐一审计 · Jason（初判 b，终裁 b） · 级联：本 TRACK 范围 5、11
   - 2026-11-11 · 新的 secret 密钥 staging 与生产各用一把（名为 staging / production） · Jason（初判 a 共用，终裁 b；反驳要点：成本为零，流水线版本本就要分开，staging 泄露可单独撤销） · 级联：本 TRACK 范围 1
   - 2026-11-11 · README 改写给外部读者，守"只做地图、不重复事实"，功能细节交落地页 · Jason（初判 b，终裁 b） · 级联：本 TRACK 范围 4
+  - 2026-11-11 · 服务器内部细节只指 VPS 上的文件系统路径与目录结构；端口分配、nginx 配置、容器名保留 · Jason（初判保留，终裁保留） · 级联：`REQ.md` §5.3、§5.4，本 TRACK 范围 10
+  - 2026-11-11 · 删除标记文案为 `〔未经核实的引用，已删去〕` · Jason（初判同 Claude 草稿，终裁同） · 级联：`docs/features/ai-provider/REQ.md` §5.4
+  - 2026-11-11 · Phase 1 结束：Jason 审阅两份 REQ 完毕 · Jason · 级联：`REQ.md`、`docs/features/ai-provider/REQ.md`
 
 ## 二、批次
 
