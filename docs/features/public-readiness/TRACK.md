@@ -69,7 +69,7 @@
 验收测试：`tests/acceptance/public-readiness/`、`tests/acceptance/ai-provider/b9-user-doc-citations.test.ts`；数据库权限的验收在 `supabase/tests/access.sql`。
 
 ### Batch 1 — 数据库唯一入口
-- 状态：open
+- 状态：done `f5d7053`
 - 范围：`src/lib/database/supabase.ts`（读 `SUPABASE_SECRET_KEY`，删 `createBrowserSupabaseClient`）；健康接口报提交 SHA（`GIT_SHA` 构建参数）；`src/lib/documents/storage.ts`、`src/lib/reports/docx-upload.ts`、`pdf-upload.ts` 改用它；`scripts/` 下 4 个脚本、`.env*.example`、CI 构建不提供密钥 · REQ §5.1
 - 验收判据：§server-secret-key；CI 构建不提供 secret 密钥仍通过（DESIGN 不变量 5）
 - 依赖：none
