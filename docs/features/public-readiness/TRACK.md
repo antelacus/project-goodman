@@ -115,6 +115,15 @@
 ## 三、门与发布
 
 **评审发现登记**：
+- Codex 设计门 · 任务一（DESIGN + 本 feature REQ，xhigh，只读，`de5e45c`）。原文照录，严重性为 Codex 所给；核实结论为 Claude 所得：
+  - MUST-1 函数撤权漏了 `PUBLIC` 伪角色与全局默认权限：只撤 anon / authenticated 的直接授权，经 `PUBLIC` 的执行权仍在，新函数默认授予 `PUBLIC` —— 核实：11 个函数经 `PUBLIC` 可执行；`postgres` 没有全局的函数默认权限条目（即内置默认生效） —— status: open
+  - MUST-2 DESIGN 接受"`supabase_admin` 新建的对象仍授予 anon"，与 REQ §5.1"今后新建的对象也不授予"冲突 —— 核实：成立；`postgres` 改不了 `supabase_admin` 的默认权限，MCP 执行身份为 `postgres` —— status: open
+  - MUST-3 第 7 步清空 Actions 后，第 9 步部署与强推触发的 CI 会重新产生记录，违反 §actions-cleared —— 核实：成立（`ci.yml` 响应 `development` 推送并上传覆盖率产物） —— status: open
+  - MUST-4 §deploy-after-rewrite 要求核对提交，健康接口只报版本号 —— 核实：成立（`src/app/api/health/route.ts`、`next.config.ts` 只取 `package.json` 版本） —— status: open
+  - SHOULD-5 强推前没有核验备份可恢复、没有先在副本上验收改写结果，没有处理部分引用推送失败与旧克隆重新推入 —— status: open
+  - SHOULD-6 "前 5 步可以回退"没有对应的回退方案：迁移后回退到旧应用会停机，重新启用旧密钥不恢复已撤的权限 —— status: open
+  - SHOULD-7 gitleaks 的执行方式未定：引用覆盖范围、脱敏、报告存放、无法判定时停止公开 —— status: open
+  - 待核：① 线上对象属主、有效权限 —— 已关闭：12 张表、12 个函数属 `postgres`，有效权限以 `has_*_privilege` 核对；② 首次新建密钥是否附带默认的 publishable 密钥 —— 未关闭，第 1 步时核对；③ 停用旧密钥对 Storage 签名链接的影响 —— 未关闭，第 4 步冒烟时核对；④ staging 用 `git pull` —— 已关闭：改写后历史不相关，拉取会失败，按设计重新克隆；⑤ PR 中是否有分支 / tag 不可达的提交 —— 已关闭：12 个 PR 的提交全部可达，扫描全部分支与 tag 即覆盖
 - Codex 设计门 · 任务二（DESIGN + ai-provider REQ §5.4 / §5.5 / §5.7，xhigh，只读，`de5e45c`）。原文照录，严重性为 Codex 所给；核实结论为 Claude 对照源码所得：
   - MUST-1 引用识别有绕过路径：Markdown 链接拆开的条款号（`根据第[九十九](…)条`）与 `[R1][第二款](…)` 都原样保留，`removed=0` —— 核实：在现有代码上复现，属 v4.7.0 起的缺陷 —— status: open
   - MUST-2 "只看 cited 里有没有 regulation"会让纯计算、只读用户文档的回答也被标为资料库外，且失去检索失败标注 —— 核实：DESIGN §4 措辞遗漏了"做过或请求过法规检索"与"全部出错"两项条件，现有代码有 —— status: open
