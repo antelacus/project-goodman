@@ -180,6 +180,18 @@
   - NICE-6 UUID 大小写不同会误拒本人文档 —— status: 已关闭：Zod 的 UUID 输入统一转小写，`api-schemas.test.ts`
   - 待核：登录接口给所有账户发管理员会话 —— 核实：成立，但生产只有 1 个账户且为管理员，当前不触发 —— 已关闭：会话按账户角色发放（§account-role）
 
+- `/code-review high` · PR #13 全量 diff（Phase 5，`81ecad7`）。核实：1 由 Claude 读码确认并核对生产库（51 份资料库文档均为 2026-01-26 原始上传，无被写入的迹象）；2–7 由评审以探针输入复现：
+  - 1 管理员上传路由把 `verifyAdminPassword` 返回的对象当布尔判断，任意非空密码都通过，资料库可被任何人写入（自 2025-12-29 `490317b` 起，生产当前受影响） —— status: open
+  - 2 "第十一、十二条""第五至七条""第5-7条"不被识别 —— status: open
+  - 3 代码块的信息串与首行相同时，替换落在不显示的信息串上 —— status: open
+  - 4 零宽字符等不可见字符插在条款号中绕过识别 —— status: open
+  - 5 图片的 alt 文本在图片加载失败时显示，未检查 —— status: open
+  - 6 裸写的 `D12`（单元格引用）、`R&D 2024` 被当成编号删去 —— status: open
+  - 7 合并编辑时被吞掉的有效引用仍留在 `cited`，资料库外标注因此缺失 —— status: open
+  - 8 `upload-temp` 仍有自己的一份文本提取，与共用模块重复 —— status: open
+  - 9 字符引用的解码缓存无上限 —— status: open
+  - 10 `load-memory` 里的模型指令写在代码字符串里，未放进 `src/lib/ai/prompts/` —— status: open
+
 **Phase 4 证据**：
 - 本地：全量 80 个文件、366 个测试通过，无待办；`tsc` 通过；lint 16 条警告（与基线相同）；`npm run test:audit` 通过；不提供 secret 密钥的 `npm run build` 通过
 - 生产只读核对：重切 `check` 51/51 份文档旧切块还原与原文件重新解析逐字一致；45 部法规重拆 1505 条与线上逐条相同；B2 迁移与 `access.sql` 在一个事务内试跑通过并回滚
