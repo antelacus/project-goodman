@@ -157,17 +157,17 @@
   - SHOULD-9 替换跨越部分强调或链接时留下不配对的 Markdown（`**第九**条` → `**〔…〕`） —— status: open
   - SHOULD-10 非法数字实体（`&#x110000;`）让整个处理抛异常 —— status: open
 - Codex 上线前审查 · 任务二（`chunker.ts` 与 `scripts/rechunk-documents.ts`，xhigh，只读，`f7db920`）。原文照录：
-  - MUST-1 `apply` 不读也不校验备份；再次 `check` 会覆盖原备份 —— status: open
-  - MUST-2 哈希检查与事务内替换之间有并发写入的窗口 —— status: open
-  - MUST-3 先切章节、后识别表格：章节起点落在表格里时表格被拆开 —— status: open
-  - MUST-4 不识别单独的 `\r` 换行，短行被内部截断 —— status: open
-  - MUST-5 未校验 `chunkSize`：0、负数会死循环，非整数丢字（生产固定为 1000，不触发） —— status: open
-  - MUST-6 不认英文句号，超长行按长度切进句中 —— status: open
-  - MUST-7 代码围栏里的"表格"被当成表格，得到超长块 —— status: open
-  - SHOULD-8 "可重跑"不成立：中断后重跑会停在第一份已完成的文档 —— status: open
-  - SHOULD-9 按 UTF-16 长度硬切会切开代理对 —— status: open
-  - SHOULD-10 章节数组无序时祖先路径丢失 —— status: open
-  - 待核：单份文档的切块数是否超过 API 单次返回上限（脚本读切块未分页）；迁移期间的写入冻结
+  - MUST-1 `apply` 不读也不校验备份；再次 `check` 会覆盖原备份 —— status: 已关闭：`check` 拒绝写入已有报告或备份的目录，报告记备份哈希，`apply` 先校验备份哈希与每份文档的旧切块（`rechunk-documents.test.ts`）
+  - MUST-2 哈希检查与事务内替换之间有并发写入的窗口 —— status: 已关闭：`replace_document_chunks` 锁住文档与切块后在事务内比对哈希；TS 与 SQL 的哈希公式用 Postgres 17.6 算出的值互证；函数在事务内的试跑待做（MCP 确认超时）；`apply` 期间冻结管理员上传
+  - MUST-3 先切章节、后识别表格：章节起点落在表格里时表格被拆开 —— status: 已关闭：先在全文识别表格，落在表格里的章节起点挪到表格之后（`chunker.test.ts` M3）
+  - MUST-4 不识别单独的 `\r` 换行，短行被内部截断 —— status: 已关闭（M4）
+  - MUST-5 未校验 `chunkSize`：0、负数会死循环，非整数丢字（生产固定为 1000，不触发） —— status: 已关闭：不是不小于 2 的整数即抛 `RangeError`（M5）
+  - MUST-6 不认英文句号，超长行按长度切进句中 —— status: 已关闭：后接空白或行尾的句点算句末，`3.14` 不算（M6）
+  - MUST-7 代码围栏里的"表格"被当成表格，得到超长块 —— status: 已关闭（M7）
+  - SHOULD-8 "可重跑"不成立：中断后重跑会停在第一份已完成的文档 —— status: 已关闭：切块已是新切块的文档跳过（`nextStep`）
+  - SHOULD-9 按 UTF-16 长度硬切会切开代理对 —— status: 已关闭（S9）
+  - SHOULD-10 章节数组无序时祖先路径丢失 —— status: 已关闭：先按起点排序（S10）
+  - 待核：单份文档的切块数是否超过 API 单次返回上限（脚本读切块未分页）—— 已关闭：最大一份 135 块；脚本读切块时带精确计数，读不全即停；迁移期间的写入冻结 —— 已关闭：写入 DESIGN §9 第 1 步
 
 - Codex 上线前审查 · 任务三（`access.ts` 与 `load-memory.ts`，xhigh，只读，`f7db920`）。原文照录；核实结论为 Claude 所得：
   - MUST-1 用别人的会话 ID 发起对话，会加载那个会话的历史问答（`conversation-memory.ts` 的 `getOrCreateSession` 不核对归属） —— 核实：成立 —— status: 已关闭：§session-owner（b8）；会话详情对别人的会话也改为 404
