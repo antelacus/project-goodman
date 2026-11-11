@@ -23,7 +23,7 @@
 
 The server reaches the database only through `createServerSupabaseClient()` (`src/lib/database/supabase.ts`), on the secret key (role `service_role`, not bound by RLS). The legacy anon and service_role keys are disabled and no publishable key exists, so nothing can call the API as `anon`; API routes (`src/lib/security/`) are the security boundary, and reading a document by id goes through `src/lib/documents/access.ts`.
 
-Defense in depth, kept by `supabase/migrations/20261111130000_revoke_anon_access.sql`:
+Defense in depth, kept by `supabase/migrations/20261111132938_revoke_anon_access.sql`:
 
 - `anon`, `authenticated` and `PUBLIC` hold no right on any table, sequence or function in `public`, and objects later migrations create get none either (default privileges of `postgres`).
 - Every table in `public` has RLS enabled, with no policies.
