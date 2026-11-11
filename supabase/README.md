@@ -29,7 +29,7 @@ This directory contains SQL migrations and setup instructions for the Supabase P
 1. Navigate to **Project Settings** → **API**
 2. Copy the following values:
    - **Project URL**: `https://xxxxx.supabase.co`
-   - **anon public** key: `eyJ...` (long JWT token)
+   - A **secret key** (`sb_secret_...`, Settings → API Keys); server-only, never in a browser
 
 ### 4. Configure Environment Variables
 
@@ -38,7 +38,7 @@ Add to your `.env.local` file:
 ```bash
 # Supabase Configuration
 NEXT_PUBLIC_SUPABASE_URL=your_project_url_here
-NEXT_PUBLIC_SUPABASE_ANON_KEY=your_anon_key_here
+SUPABASE_SECRET_KEY=your_secret_key_here
 
 # AI relay
 LLM_API_KEY=your_relay_key

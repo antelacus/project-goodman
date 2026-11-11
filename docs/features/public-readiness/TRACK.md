@@ -135,7 +135,7 @@
   - SHOULD-5 强推前没有核验备份可恢复、没有先在副本上验收改写结果，没有处理部分引用推送失败与旧克隆重新推入 —— status: 处置已定，写入 DESIGN（Batch 落码时以测试关闭）
   - SHOULD-6 "前 5 步可以回退"没有对应的回退方案：迁移后回退到旧应用会停机，重新启用旧密钥不恢复已撤的权限 —— status: 处置已定，写入 DESIGN（Batch 落码时以测试关闭）
   - SHOULD-7 gitleaks 的执行方式未定：引用覆盖范围、脱敏、报告存放、无法判定时停止公开 —— status: 处置已定，写入 DESIGN（Batch 落码时以测试关闭）
-  - 待核：① 线上对象属主、有效权限 —— 已关闭：12 张表、12 个函数属 `postgres`，有效权限以 `has_*_privilege` 核对；② 首次新建密钥是否附带默认的 publishable 密钥 —— 核实：附带（须先点"Create new API keys"，同时生成 `default` publishable 与 secret 两把）；`default` secret 已删，`default` publishable 待删（第 4 步之前必须删）；③ 停用旧密钥对 Storage 签名链接的影响 —— 未关闭，第 4 步冒烟时核对；④ staging 用 `git pull` —— 已关闭：改写后历史不相关，拉取会失败，按设计重新克隆；⑤ PR 中是否有分支 / tag 不可达的提交 —— 已关闭：12 个 PR 的提交全部可达，扫描全部分支与 tag 即覆盖
+  - 待核：① 线上对象属主、有效权限 —— 已关闭：12 张表、12 个函数属 `postgres`，有效权限以 `has_*_privilege` 核对；② 首次新建密钥是否附带默认的 publishable 密钥 —— 已关闭：附带（须先点"Create new API keys"，同时生成 `default` publishable 与 secret 两把），两把都已删除；③ 停用旧密钥对 Storage 签名链接的影响 —— 已关闭：无影响，停用后签名地址取回 PDF 200；④ staging 用 `git pull` —— 已关闭：改写后历史不相关，拉取会失败，按设计重新克隆；⑤ PR 中是否有分支 / tag 不可达的提交 —— 已关闭：12 个 PR 的提交全部可达，扫描全部分支与 tag 即覆盖
 - Codex 设计门 · 任务二（DESIGN + ai-provider REQ §5.4 / §5.5 / §5.7，xhigh，只读，`de5e45c`）。原文照录，严重性为 Codex 所给；核实结论为 Claude 对照源码所得：
   - MUST-1 引用识别有绕过路径：Markdown 链接拆开的条款号（`根据第[九十九](…)条`）与 `[R1][第二款](…)` 都原样保留，`removed=0` —— 核实：在现有代码上复现，属 v4.7.0 起的缺陷 —— status: 已关闭：§citation-text（b4）含链接包住的条款号与 `[R1][第二款](…)`；去掉链接还原即变红
   - MUST-2 "只看 cited 里有没有 regulation"会让纯计算、只读用户文档的回答也被标为资料库外，且失去检索失败标注 —— 核实：DESIGN §4 措辞遗漏了"做过或请求过法规检索"与"全部出错"两项条件，现有代码有 —— status: 已关闭：§out-of-library（b4、b9）与 §retrieval-error 三条
@@ -198,6 +198,7 @@
 - 本地：全量 80 个文件、366 个测试通过，无待办；`tsc` 通过；lint 16 条警告（与基线相同）；`npm run test:audit` 通过；不提供 secret 密钥的 `npm run build` 通过
 - 生产只读核对：重切 `check` 51/51 份文档旧切块还原与原文件重新解析逐字一致；45 部法规重拆 1505 条与线上逐条相同；B2 迁移与 `access.sql` 在一个事务内试跑通过并回滚
 - Codex 上线前审查：三个任务共 16 项 MUST、9 项 SHOULD、1 项 NICE 全部关闭，每项有修复前失败的回归测试；出处检查另加一条性质测试：随机拼出的回答（覆盖各项发现的写法）经处理后，页面同款解析器读出的显示文字里没有不来自证据的条款号或编号——本地 4 个种子共 8 万例通过，CI 跑 3000 例；修复后全量 82 个文件、389 个测试通过，lint 16 条警告（基线），不提供 secret 密钥的 `npm run build` 通过
+- 发布第 4 步：Jason 在 Dashboard 停用旧密钥（2026-11-11 13:35 UTC）；在 VPS 上用旧 anon 与旧 service_role 密钥请求 REST 与 Storage，均返回 `Legacy API keys are disabled`；生产冒烟：健康 ok，资料库文档预览 307、签名地址取回 PDF 200（待核③关闭：停用旧密钥不影响 Storage 签名链接），访客提问引用《企业会计准则第4号——固定资产》第十七条、表格正常；staging 冒烟重跑通过。两个环境文件删去旧密钥两行（改前备份在原目录，600）；代码与常新文档中的旧密钥名改为 secret 密钥（删去无人引用的 v3.10 一次性脚本 `fix-admin.mjs`），TD-032 删除；GitHub Secret `NEXT_PUBLIC_SUPABASE_ANON_KEY` 待 Jason 删除（写 Secret 的操作被权限拦截）
 - 发布第 3 步：`revoke_anon_access` 已应用（版本 `20261111132938`，文件随之改名）；`access.sql` 在生产库全部通过（以异常结束整体回滚，探针对象无残留）；安全检查由 1 ERROR + 2 WARN 变为 2 条 INFO（`users`、`guest_activity` 开 RLS 无策略，按设计）；在 VPS 上用仍有效的旧 anon 密钥请求 4 张表与检索函数，全部 `42501 permission denied`（密钥值未离开 VPS）；生产冒烟：访客提问法规检索 3 次、引用显示为《企业会计准则第1号——存货》第十五条、表格与加粗正常、会话保存，资料库文档预览 307 至签名地址，不存在的文档 404
 - 发布第 2 步：PR #13 合并（`ab6aebe`），生产部署通过，健康接口报 `4.8.0`、提交 `ab6aebe`、数据库 ok（经新 secret 密钥）；staging 为 `b8594fa`（同一树，之后只有文档提交）
 - staging 冒烟（`6dd45d0`、`b8594fa`）：两次都只在报告生成一步失败（一次"AI 服务不可用"、一次 180 秒超时），重跑均通过；报告生成全程走 AI 中转，本版未改动该路径。staging 上真实提问：表格显示为表格（单元格内公式正常渲染），中文标点后的加粗正确闭合
