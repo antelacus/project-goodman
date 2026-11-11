@@ -28,11 +28,16 @@ vi.mock('@/lib/database', async importOriginal => ({
     };
   },
 }));
+// The admin upload route requires an admin session (v4.7.4).
+vi.mock('@/lib/security/guest-session', async importOriginal => ({
+  ...(await importOriginal<typeof import('@/lib/security/guest-session')>()),
+  requireAdmin: vi.fn(async () => ({ role: 'admin', sessionId: 's', userId: 'u' })),
+}));
 vi.mock('@/lib/security', async importOriginal => ({
   ...(await importOriginal<typeof import('@/lib/security')>()),
   verifySession: vi.fn(),
   ensureSession: vi.fn(),
-  verifyAdminPassword: vi.fn(async () => true),
+  verifyAdminPassword: vi.fn(async () => ({ valid: true, needsRehash: false })),
 }));
 vi.mock('@/lib/documents/storage', () => ({
   getSignedFileUrl: vi.fn(async (path: string) => `https://storage.test/signed/${path}`),

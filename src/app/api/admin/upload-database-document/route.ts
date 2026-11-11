@@ -14,6 +14,7 @@ export const runtime = "nodejs";
 
 import { NextRequest, NextResponse } from "next/server";
 import { createServerSupabaseClient } from "@/lib/database";
+import { requireAdmin, isErrorResponse } from "@/lib/security/guest-session";
 import type { InsertTables, Database } from "@/lib/database";
 import { SupabaseClient } from "@supabase/supabase-js";
 import { logWorkflowEvent } from "@/lib/logging";
@@ -238,6 +239,15 @@ export async function POST(request: NextRequest) {
     );
   };
 
+  // Writes the knowledge library every user is answered from: an admin session
+  // first, as on the other admin routes, then the password.
+  const admin = await requireAdmin(request);
+  if (isErrorResponse(admin)) {
+    logWorkflowFailure('AUTH');
+    const { error } = await admin.json();
+    return createJsonResponse({ success: false, message: error, error: "Authentication failed" }, admin.status);
+  }
+
   try {
     const parsed = validateRequest(AdminUploadDocumentSchema, await request.json());
     if (!parsed.success) {
@@ -261,8 +271,8 @@ export async function POST(request: NextRequest) {
     } = parsed.data;
 
     // Verify admin password
-    const isValidPassword = await verifyAdminPassword(adminPassword);
-    if (!isValidPassword) {
+    const { valid } = await verifyAdminPassword(adminPassword);
+    if (!valid) {
       logWorkflowFailure('AUTH');
       return createJsonResponse(
         {
