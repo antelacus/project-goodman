@@ -92,7 +92,7 @@
 - 依赖：Batch 3、Batch 5（拼接出的全文须无重复）
 
 ### Batch 5 — 不重叠的切块
-- 状态：open
+- 状态：done（提交见下）
 - 范围：`src/lib/documents/chunker.ts` 重写；管理员上传路由删 `chunkDocument` 改用它；一次性 `scripts/rechunk-documents.ts`（关版前删除） · ai-provider REQ §5.7
 - 验收判据：§chunk-partition、§table-chunk；重切后在生产库上核对两条
 - 依赖：none

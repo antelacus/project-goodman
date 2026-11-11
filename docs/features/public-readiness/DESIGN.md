@@ -20,6 +20,8 @@ N/A —— 证据编号沿用 ai-provider 的叫法；`R` 是法规检索结果�
 | `src/lib/database/supabase.ts` | 服务端唯一的数据库与 Storage 客户端，读 secret 密钥；缺密钥即抛错。`storage.ts`、`docx-upload.ts`、`pdf-upload.ts` 不再各建客户端；无调用方的 `createBrowserSupabaseClient` 删除 | IO |
 | `supabase/migrations/`（新迁移） | 收回 anon / authenticated 的授权与 `postgres` 的默认权限；`public` 全部表开 RLS | infra（由验收 SQL 守住） |
 | `src/lib/documents/chunker.ts` | 唯一的切块器：按行、不重叠，表格整块不切；管理员上传路由里的 `chunkDocument` 删除 | core |
+| `src/lib/documents/text.ts` | 由切块读回文档全文（`loadDocumentText`） | IO |
+| `src/lib/documents/extract-text.ts` | 按文件类型提取文本（从管理员上传路由移出，重切脚本以它重新解析原文件） | IO |
 | `src/lib/extraction/article-lines.ts`（新） | "什么算条款的开头"：一行是否以条款号开头、条款号是什么。法规拆分与用户文档拆条款共用；遇到重复怎么办不在这里 | core |
 | `src/lib/extraction/regulation-splitter.ts` | 法规拆分：用 `article-lines` 判定，重复条款号仍让上传失败 | core |
 | `src/lib/citations/` | 证据的显示与核对：给用户文档按条发 `D` 编号；`finalizeAnswer` 把有效编号换成出处、把未核实的那一处换成删除标记、计数 | core |
@@ -62,7 +64,7 @@ N/A —— 证据编号沿用 ai-provider 的叫法；`R` 是法规检索结果�
   - 只有 `[Rn]` / `[Dn]` 形式的有效编号会被展开；裸写的"第五条"即使与某条 `D` 证据同号，也是未核实。
   - 资料库外标注的判定沿用现有条件，只改一处：本问题做过或请求过法规检索、且回答中**没有有效的 `R` 引用**时加标注；本问题实际执行的法规检索全部出错时用检索失败的标注。`D` 引用不影响这两项判断。
 - **条款开头**：`article-lines` 判定"这一行（结合前一行）是不是条款的开头、条款号是什么"，返回候选；序号是否递增、重复怎么处理由调用方决定（法规拆分：重复则上传失败；用户文档：重复的不编号）。
-- **切块**：`chunk(text) → string[]`，按顺序直接连接（不加分隔符）等于 `text`。切点只落在行尾。一张 GFM 表格（含 `|` 的表头行、分隔行、其后连续的含 `|` 的行，外侧竖线可省略）整块放进一个切块，比切块长度长也不切。不切而不是续块带表头：现有 50 张表最长 568 字，都不超过切块长度 1000 字；续块带表头要加列、改生成列、重建索引，读切块的地方还都得补表头。
+- **切块**：`createSectionAwareChunks(text, sections)` 返回带章节信息的切块，`content` 按顺序直接连接（不加分隔符）等于 `text`；读回全文只经 `loadDocumentText`（选中文档、文档提取工具、报告取数三处共用）。切点只落在行尾，也不跨章节；比切块长度长的单行在句末切开，没有句末则按长度切。一张 GFM 表格（含 `|` 的表头行、分隔行、其后连续的含 `|` 的行，外侧竖线可省略）整块放进一个切块，比切块长度长也不切。不切而不是续块带表头：现有 50 张表最长 568 字，都不超过切块长度 1000 字；续块带表头要加列、改生成列、重建索引，读切块的地方还都得补表头。
 - **`createServerSupabaseClient()`**：签名不变，36 处调用不动；读 `SUPABASE_SECRET_KEY`，缺失即抛错，不回退。
 - **过程事件**：增加一种事件，带本次回答被删去的处数（为 0 时不发）。
 - **健康接口**：返回版本号与构建时注入的提交 SHA（构建参数 `GIT_SHA`，不是密钥）。部署后核对线上 SHA 等于目标提交。
