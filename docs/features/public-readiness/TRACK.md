@@ -80,7 +80,7 @@
 - 依赖：Batch 1
 
 ### Batch 3 — 条款开头的共用规则
-- 状态：open
+- 状态：done `0617171`
 - 范围：新建 `src/lib/extraction/article-lines.ts`；`regulation-splitter.ts` 改用它；法规样例行单测进 CI · DESIGN 不变量 4
 - 验收判据：法规拆分既有单测全过；样例行覆盖正文交叉引用、无空格的条款开头、页码行
 - 依赖：none
