@@ -9,6 +9,7 @@ import { BaseAgentState, DocumentLoadError, newQuestionState } from "../state/ba
 import type { AgentMemory } from "@/lib/memory/conversation-memory";
 import { SystemMessage, HumanMessage, AIMessage, BaseMessage } from "@langchain/core/messages";
 import { createServerSupabaseClient } from "@/lib/database";
+import { loadDocumentText } from "@/lib/documents/text";
 
 /**
  * Loads memory and initializes agent state
@@ -45,21 +46,18 @@ export const createLoadMemoryNode = (memory: AgentMemory) => async function load
         try {
             const supabase = createServerSupabaseClient();
             const docsContentPromises = documentIds.map(async (docId) => {
-                const { data: chunks, error } = await supabase
-                    .from("document_chunks")
-                    .select("content")
-                    .eq("document_id", docId)
-                    .order("chunk_index", { ascending: true });
-
-                if (error) {
+                let text: string | null;
+                try {
+                    text = await loadDocumentText(supabase, docId);
+                } catch (error) {
                     console.error(`Failed to fetch chunks for doc ${docId}:`, error);
                     documentLoadErrors.push({
                         documentId: docId,
-                        error: error.message || "Unknown database error",
+                        error: error instanceof Error ? error.message : "Unknown database error",
                     });
                     return null;
                 }
-                if (!chunks || chunks.length === 0) {
+                if (text === null) {
                     documentLoadErrors.push({
                         documentId: docId,
                         error: "Document has no content chunks",
@@ -67,7 +65,7 @@ export const createLoadMemoryNode = (memory: AgentMemory) => async function load
                     return null;
                 }
 
-                return `Document ID: ${docId}\n\n${chunks.map((c: { content: string }) => c.content).join("\n")}`;
+                return `Document ID: ${docId}\n\n${text}`;
             });
 
             const docsContents = await Promise.all(docsContentPromises);

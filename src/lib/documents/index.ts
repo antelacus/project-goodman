@@ -35,6 +35,9 @@ export {
   type ChunkWithSection,
 } from "./chunker";
 
+// Stored document text
+export { loadDocumentText } from "./text";
+
 // Parser
 export {
   parseDocumentSections,

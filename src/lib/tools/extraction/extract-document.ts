@@ -7,6 +7,7 @@
 import { z } from "zod";
 import type { Tool } from "../types";
 import { createServerSupabaseClient } from "@/lib/database";
+import { loadDocumentText } from "@/lib/documents/text";
 import { performStructuredExtraction, type DocumentType } from "@/lib/extraction";
 
 export const ExtractDocumentInputSchema = z.object({
@@ -31,18 +32,10 @@ export const extractDocumentTool: Tool<ExtractDocumentInput, any> = {
         try {
             const supabase = createServerSupabaseClient();
 
-            // 1. Fetch document chunks to reconstruct text
-            // We assume the document text is available in chunks being stored in order.
-            const { data: chunks, error: chunkError } = await supabase
-                .from("document_chunks")
-                .select("content")
-                .eq("document_id", input.documentId)
-                .order("chunk_index", { ascending: true });
-
-            if (chunkError) throw new Error(`Failed to fetch document content: ${chunkError.message}`);
-            if (!chunks || chunks.length === 0) throw new Error("Document has no content");
-
-            const fullText = chunks.map((c: { content: string }) => c.content).join("\n\n");
+            const fullText = await loadDocumentText(supabase, input.documentId).catch((e: Error) => {
+                throw new Error(`Failed to fetch document content: ${e.message}`);
+            });
+            if (fullText === null) throw new Error("Document has no content");
 
             // 2. Perform Extraction
             const result = await performStructuredExtraction(
