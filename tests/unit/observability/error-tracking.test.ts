@@ -11,7 +11,7 @@ test('sanitizeEvent removes request and redacts secrets', () => {
       values: [
         {
           value: 'Bearer token',
-          stacktrace: { frames: [{ filename: '/home/deploy/app.js' }] },
+          stacktrace: { frames: [{ filename: '/srv/app.js' }] },
         },
       ],
     },

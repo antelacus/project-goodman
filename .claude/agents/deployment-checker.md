@@ -25,7 +25,7 @@ Both use:
 
 ```bash
 # Find docker-compose files
-find /home/deploy/goodman* -name "docker-compose.yml" -maxdepth 2
+find $GOODMAN_PROD_DIR* -name "docker-compose.yml" -maxdepth 2
 
 # Check current containers
 docker ps --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}"
@@ -90,8 +90,8 @@ Check docker-compose files for both environments:
 
 ```bash
 # Discover compose files
-cat /home/deploy/goodman/docker-compose.yml
-cat /home/deploy/goodman-staging/docker-compose.yml 2>/dev/null
+cat $GOODMAN_PROD_DIR/docker-compose.yml
+cat $GOODMAN_STAGING_DIR/docker-compose.yml 2>/dev/null
 ```
 
 - [ ] Correct image/build configuration
@@ -124,11 +124,11 @@ docker logs --tail 50 goodman-staging 2>&1 | grep -i error
 
 ```bash
 # 1. Pull latest code (if using git)
-cd /home/deploy/goodman/project-goodman
+cd $GOODMAN_PROD_DIR/project-goodman
 git pull
 
 # 2. Build and deploy
-cd /home/deploy/goodman
+cd $GOODMAN_PROD_DIR
 docker compose up -d --build goodman
 
 # 3. Verify deployment
@@ -180,7 +180,7 @@ curl -s http://localhost:3000/api/health || echo "Health check failed"
 
 ### Deployment Command
 \`\`\`bash
-cd /home/deploy/goodman && docker compose up -d --build goodman
+cd $GOODMAN_PROD_DIR && docker compose up -d --build goodman
 \`\`\`
 ```
 

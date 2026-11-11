@@ -38,7 +38,7 @@ npm run build  # TypeScript + production build
 ## Deployment Command
 
 ```bash
-cd /home/deploy/goodman && docker compose up -d --build goodman
+cd $GOODMAN_PROD_DIR && docker compose up -d --build goodman
 ```
 
 ## Post-Deployment

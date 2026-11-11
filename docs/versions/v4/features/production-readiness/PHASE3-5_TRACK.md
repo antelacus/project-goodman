@@ -14,7 +14,7 @@
 
 **状态**: ✅ 完成
 
-- [x] 创建 `/home/deploy/goodman-staging/` 目录结构
+- [x] 创建 `$GOODMAN_STAGING_DIR/` 目录结构
 - [x] 新增 `docker-compose.staging.yml`（app + redis）
 - [x] 端口绑定到 3001
 
@@ -26,7 +26,7 @@
 完成时间: 2026-01-17 09:25
 变更点:
 - 新增 docker-compose.staging.yml（app + redis + 3001 端口）
-- 创建 /home/deploy/goodman-staging/project-goodman 目录
+- 创建 $GOODMAN_STAGING_DIR/project-goodman 目录
 备注: staging 仅绑定 127.0.0.1，避免外网直连
 ```
 
@@ -49,7 +49,7 @@
 变更点:
 - 新增 .env.staging.example，明确 staging Supabase 需独立项目或隔离 schema
 - Redis 使用 goodman-redis-staging 容器，避免与生产混用
-备注: 实际部署需将模板复制为 /home/deploy/goodman-staging/.env.staging
+备注: 实际部署需将模板复制为 $GOODMAN_STAGING_DIR/.env.staging
 ```
 
 ---
@@ -73,7 +73,7 @@
 变更点:
 - 新增 deploy-staging 工作流，development 分支自动部署
 - 健康检查切换为 staging 端口 3001
-备注: staging 部署目录为 /home/deploy/goodman-staging/project-goodman
+备注: staging 部署目录为 $GOODMAN_STAGING_DIR/project-goodman
 ```
 
 ---

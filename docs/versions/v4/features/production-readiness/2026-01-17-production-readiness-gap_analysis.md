@@ -213,7 +213,7 @@ jobs:
           username: ${{ secrets.STAGING_USER }}
           key: ${{ secrets.STAGING_KEY }}
           script: |
-            cd /home/deploy/goodman-staging/project-goodman
+            cd $GOODMAN_STAGING_DIR/project-goodman
             git pull origin development
             docker compose up -d --build
             sleep 15

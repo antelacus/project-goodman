@@ -95,8 +95,8 @@
 
 ## 4. 运行环境与配置
 
-- **Production**：端口 3000，目录 `/home/deploy/goodman/project-goodman`
-- **Staging**：端口 3001，目录 `/home/deploy/goodman-staging/project-goodman`
+- **Production**：端口 3000，目录 `$GOODMAN_PROD_DIR/project-goodman`
+- **Staging**：端口 3001，目录 `$GOODMAN_STAGING_DIR/project-goodman`
 - **配置管理**：`.env` / `.env.staging`
 
 ---

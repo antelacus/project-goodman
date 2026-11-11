@@ -14,7 +14,11 @@ jobs:
       - name: Deploy to production
         # pinned to a commit SHA: a tag can be re-pointed, a SHA cannot
         uses: appleboy/ssh-action@0ff4204d59e8e51228ff73bce53f80d53301dee2 # v1.2.5
+        # The deploy path is a Secret so the public run log masks it; envs passes it to the script.
+        env:
+          GOODMAN_PROD_DIR: ${{ secrets.GOODMAN_PROD_DIR }}
         with:
+          envs: GOODMAN_PROD_DIR
           host: ${{ secrets.DEPLOY_HOST }}
           username: ${{ secrets.DEPLOY_USER }}
           key: ${{ secrets.DEPLOY_KEY }}
@@ -27,15 +31,15 @@ jobs:
             set -euo pipefail
             # the git repository is the project-goodman subdirectory; docker-compose.yml
             # and .env live one level up and build from ./project-goodman
-            cd /home/deploy/goodman/project-goodman
+            cd $GOODMAN_PROD_DIR/project-goodman
             git fetch --prune origin
             git checkout main
             # fast-forward only: if the server checkout was edited, fail instead of overwriting
             git merge --ff-only origin/main
             echo "deploying $(git rev-parse --short HEAD)"
-            cd /home/deploy/goodman
+            cd $GOODMAN_PROD_DIR
             # export env vars for docker compose build args
-            set -a && source /home/deploy/goodman/.env && set +a
+            set -a && source $GOODMAN_PROD_DIR/.env && set +a
             # the old container keeps serving if the build fails
             docker compose up -d --build
             for i in $(seq 1 20); do

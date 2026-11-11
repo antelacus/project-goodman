@@ -51,13 +51,15 @@
 - `goodman` container (Next.js app)
 - `goodman-redis` container (Redis)
 - nginx reverse proxy + SSL
-- `docker-compose.yml` in `/home/deploy/goodman/`
+- `docker-compose.yml` in `$GOODMAN_PROD_DIR/`
 
 **Staging**: Docker on same VPS (port 3001)
 
 - Auto-deploys when pushing to `development` branch
 - Runs smoke tests (health, auth, sessions, reports)
-- Directory: `/home/deploy/goodman-staging/`
+- Directory: `$GOODMAN_STAGING_DIR/`
+
+**Paths**: `$DEPLOY_HOME`, `$GOODMAN_PROD_DIR`, `$GOODMAN_STAGING_DIR` in docs and workflows are the VPS paths, kept out of the public repo. Values: `$GOODMAN_DATA_DIR/deploy.env` locally, the same-named GitHub Secrets in workflows.
 
 **Development**: `npm run dev` (local Node.js with hot reload)
 

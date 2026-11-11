@@ -1179,7 +1179,7 @@ jobs:
           username: ${{ secrets.DEPLOY_USER }}
           key: ${{ secrets.DEPLOY_KEY }}
           script: |
-            cd /home/deploy/goodman
+            cd $GOODMAN_PROD_DIR
             git pull origin main
             docker compose up -d --build
             sleep 10

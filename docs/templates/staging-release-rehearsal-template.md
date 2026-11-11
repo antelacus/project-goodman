@@ -34,7 +34,7 @@
 手动参考命令（如适用）：
 
 ```bash
-cd /home/deploy/goodman-staging/project-goodman
+cd $GOODMAN_STAGING_DIR/project-goodman
 
 docker compose -f docker-compose.staging.yml up -d --build
 ```
@@ -53,7 +53,7 @@ curl http://localhost:3001/api/health
 
 ```bash
 SMOKE_BASE_URL=http://localhost:3001 \
-SMOKE_ENV_FILE=/home/deploy/goodman-staging/.env.staging \
+SMOKE_ENV_FILE=$GOODMAN_STAGING_DIR/.env.staging \
 node scripts/smoke-test-staging.js
 ```
 
@@ -84,7 +84,7 @@ node scripts/smoke-test-staging.js
 手动参考命令（如适用）：
 
 ```bash
-cd /home/deploy/goodman-staging/project-goodman
+cd $GOODMAN_STAGING_DIR/project-goodman
 
 git checkout 【回滚提交】
 

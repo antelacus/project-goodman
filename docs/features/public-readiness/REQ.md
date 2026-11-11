@@ -97,7 +97,7 @@ N/A —— secret / publishable 密钥、旧的 anon / service_role 密钥沿用
   - 安全联系改用 GitHub 私密漏洞报告，仓库中不出现个人邮箱。
 - 验收判据：
   - §no-license 仓库中没有 `LICENSE` 文件，`package.json` 的 license 为 `UNLICENSED`，README 含"保留所有权利"
-  - §no-internals 当前文件中检索不到 VPS 上的部署路径（检索用的路径清单放在仓库外的私有文件中：清单本身就是要隐藏的内容）
+  - §no-internals 被跟踪的文件中没有 `/home/` 下的绝对路径（通用规则，本身不泄露路径；真实路径只在历史改写的替换清单里，清单在仓库外的私有目录）
   - §no-personal-email 当前文件中没有个人邮箱；安全联系指向 GitHub 私密漏洞报告
 
 ### 5.4 历史改写（F4）
@@ -111,7 +111,7 @@ N/A —— secret / publishable 密钥、旧的 anon / service_role 密钥沿用
   - 全部 Actions 运行记录与产物在公开前删除。
 - 验收判据：
   - §history-emails 全部分支与 tag 的提交中，作者与提交者邮箱只有 noreply 地址
-  - §history-internals 全部分支与 tag 的历史中检索不到 VPS 上的部署路径（同一份私有清单）
+  - §history-internals 全部分支与 tag 的历史中没有 `/home/` 下的绝对路径
   - §history-backup 镜像备份可以克隆，提交数与改写前一致
   - §deploy-after-rewrite 改写后 staging 与生产各部署一次，健康接口报出的提交 SHA 等于改写后的目标提交
   - §actions-cleared 仓库的 Actions 运行记录数与产物数均为 0

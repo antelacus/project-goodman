@@ -33,8 +33,8 @@ SENTRY_TRACES_SAMPLE_RATE="0.1" # 0-1 之间，默认 0
 ### 3) 重启生产容器
 
 ```bash
-cd /home/deploy/goodman/project-goodman
-set -a && source /home/deploy/goodman/.env && set +a
+cd $GOODMAN_PROD_DIR/project-goodman
+set -a && source $GOODMAN_PROD_DIR/.env && set +a
 docker compose up -d --build
 ```
 

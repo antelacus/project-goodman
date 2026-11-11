@@ -68,7 +68,7 @@
 ```bash
 # 回滚到上一个提交
 git checkout HEAD~1
-cd /home/deploy/goodman && docker compose up -d --build goodman
+cd $GOODMAN_PROD_DIR && docker compose up -d --build goodman
 ```
 
 ### 4.2 数据回滚

@@ -63,7 +63,7 @@
 
 ### 2.1 Staging 环境
 
-- 新目录：`/home/deploy/goodman-staging/`
+- 新目录：`$GOODMAN_STAGING_DIR/`
 - 新端口：`3001`
 - 新 env：`.env.staging`
 - 新 compose：`docker-compose.staging.yml`（含 app + redis）

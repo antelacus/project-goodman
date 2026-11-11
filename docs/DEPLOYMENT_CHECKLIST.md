@@ -54,12 +54,12 @@
 curl http://localhost:3001/api/health
 
 # Manual deploy (if needed)
-cd /home/deploy/goodman-staging/project-goodman
+cd $GOODMAN_STAGING_DIR/project-goodman
 docker compose -f docker-compose.staging.yml up -d --build
 
 # Manual smoke test
 SMOKE_BASE_URL=http://localhost:3001 \
-SMOKE_ENV_FILE=/home/deploy/goodman-staging/.env.staging \
+SMOKE_ENV_FILE=$GOODMAN_STAGING_DIR/.env.staging \
 node scripts/smoke-test-staging.js
 
 # === PRODUCTION ===
@@ -67,7 +67,7 @@ node scripts/smoke-test-staging.js
 curl http://localhost:3000/api/health
 
 # Manual deploy (if needed)
-cd /home/deploy/goodman && docker compose up -d --build goodman
+cd $GOODMAN_PROD_DIR && docker compose up -d --build goodman
 
 # View logs
 docker logs -f goodman
@@ -192,9 +192,9 @@ git checkout development
 
 ```bash
 # On server
-cd /home/deploy/goodman/project-goodman
+cd $GOODMAN_PROD_DIR/project-goodman
 git checkout HEAD~1
-cd /home/deploy/goodman && docker compose up -d --build goodman
+cd $GOODMAN_PROD_DIR && docker compose up -d --build goodman
 
 # Verify
 curl http://localhost:3000/api/health
@@ -211,7 +211,7 @@ Migrations are forward-only. For schema changes:
 
 ## Environment Variables
 
-### Production (`/home/deploy/goodman/.env`)
+### Production (`$GOODMAN_PROD_DIR/.env`)
 
 | Variable | Required | Description |
 |----------|----------|-------------|
@@ -225,7 +225,7 @@ Migrations are forward-only. For schema changes:
 | `REDIS_PORT` | Yes | Redis port |
 | `REDIS_PASSWORD` | Yes | Redis password |
 
-### Staging (`/home/deploy/goodman-staging/.env.staging`)
+### Staging (`$GOODMAN_STAGING_DIR/.env.staging`)
 
 Same variables, but pointing to staging Supabase project.
 
@@ -237,9 +237,9 @@ Same variables, but pointing to staging Supabase project.
 
 | Environment | Container | Port | Directory |
 |-------------|-----------|------|-----------|
-| Production | `goodman` | 3000 | `/home/deploy/goodman/` |
+| Production | `goodman` | 3000 | `$GOODMAN_PROD_DIR/` |
 | Production | `goodman-redis` | 6379 | - |
-| Staging | `goodman-staging` | 3001 | `/home/deploy/goodman-staging/` |
+| Staging | `goodman-staging` | 3001 | `$GOODMAN_STAGING_DIR/` |
 | Staging | `goodman-redis-staging` | 6380 | - |
 
 ### Troubleshooting
