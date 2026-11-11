@@ -1,8 +1,8 @@
 import React, { useEffect, useRef, memo } from 'react';
 import ReactMarkdown from 'react-markdown';
-import remarkMath from 'remark-math';
 import remarkBreaks from 'remark-breaks';
 import rehypeKatex from 'rehype-katex';
+import { ANSWER_SYNTAX } from '@/lib/markdown/answer-syntax';
 import { Bot } from 'lucide-react';
 import 'katex/dist/katex.min.css';
 import ThinkingIndicator from './ThinkingIndicator';
@@ -75,7 +75,7 @@ const MessageList: React.FC<MessageListProps> = ({
                             ) : (
                                 <div className="prose prose-neutral max-w-none prose-p:leading-relaxed prose-pre:bg-neutral-100 prose-pre:rounded-xl prose-pre:p-4">
                                     <ReactMarkdown
-                                        remarkPlugins={[remarkMath, remarkBreaks]}
+                                        remarkPlugins={[...ANSWER_SYNTAX, remarkBreaks]}
                                         rehypePlugins={[rehypeKatex]}
                                     >
                                         {msg.content}

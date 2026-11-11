@@ -11,7 +11,7 @@
  * remembered, so it is never shown, not even flagged.
  *
  * Detection works on the text as the page shows it, read with the parser the page
- * renders with (remark + remark-math): emphasis, code marks, link syntax and
+ * renders with (remark + ANSWER_SYNTAX): emphasis, code marks, link syntax and
  * reference definitions are not shown, character references are decoded, full-width
  * forms are folded, because "第[十九](…)条" and "第&#51;条" render as article
  * numbers. A replacement lands on the Markdown that produced the flagged
@@ -20,7 +20,7 @@
 
 import { unified } from 'unified';
 import remarkParse from 'remark-parse';
-import remarkMath from 'remark-math';
+import { ANSWER_SYNTAX } from '@/lib/markdown/answer-syntax';
 import type { Nodes, Root } from 'mdast';
 import { articleStartsByLine } from '@/lib/extraction/article-lines';
 export interface Evidence {
@@ -55,9 +55,9 @@ const STRAY_ID = /(?<![A-Za-z0-9])[RD]\s*\d+/g;
 const JOINING_GAP = /^[\s\-–—~～、，,和及与或至]{0,3}$/;
 const BRACKET_PAIRS: Record<string, string> = { '[': ']', '［': '］', '【': '】', '(': ')', '（': '）' };
 
-// remark-breaks, which the page also uses, only turns a line end into a <br>: both
-// are whitespace to detection, and its new nodes carry no source position.
-const parser = unified().use(remarkParse).use(remarkMath);
+// The page's syntax; not remark-breaks, which only turns a line end into a <br>:
+// both are whitespace to detection, and its new nodes carry no source position.
+const parser = unified().use(remarkParse).use(ANSWER_SYNTAX);
 
 /** Separates blocks in the shown text: no pattern matches across it, so list items never merge. */
 const BLOCK_END = '\u0000';

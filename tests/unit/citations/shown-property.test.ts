@@ -4,7 +4,7 @@
 
 import { unified } from 'unified';
 import remarkParse from 'remark-parse';
-import remarkMath from 'remark-math';
+import { ANSWER_SYNTAX } from '@/lib/markdown/answer-syntax';
 import { finalizeAnswer, type Evidence } from '@/lib/citations';
 
 const EVIDENCE: Evidence[] = [
@@ -12,7 +12,7 @@ const EVIDENCE: Evidence[] = [
   { id: 'D1', kind: 'user_document', name: '合同.md', articleNumber: '第三条', documentId: 'u', fileUrl: null },
 ];
 const PIECES = ['依据', '[R1]', '[D1]', '[R9]', '第', '九', '十', '\n', ' ', '条', '款', '之', '二', '**', '*', '`', '[', ']', '(x)', '(x "t")', '&#57;', '&nbsp;', '&#xff19;', '１', '- ', '> ', '\n\n', 'R', '2', '、', '（', '）', '$', '\\', '[R1]: http://x\n', '<b>', '</b>', '~~', '😀', '&#x1F600;'];
-const parser = unified().use(remarkParse).use(remarkMath);
+const parser = unified().use(remarkParse).use(ANSWER_SYNTAX);
 function shownText(md: string): string {
   const out: string[] = [];
   // REASON: a minimal walk over mdast nodes of every type; only value, type and children are read.
