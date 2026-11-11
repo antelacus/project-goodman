@@ -8,6 +8,7 @@ import { z } from "zod";
 import type { Tool } from "../types";
 import { createServerSupabaseClient } from "@/lib/database";
 import { loadDocumentText } from "@/lib/documents/text";
+import { isReadableBy } from "@/lib/documents/access";
 import { performStructuredExtraction, type DocumentType } from "@/lib/extraction";
 
 export const ExtractDocumentInputSchema = z.object({
@@ -28,9 +29,19 @@ export const extractDocumentTool: Tool<ExtractDocumentInput, any> = {
     category: "extraction",
     inputSchema: ExtractDocumentInputSchema,
     outputSchema: z.any(),
-    execute: async (input) => {
+    execute: async (input, requester) => {
         try {
             const supabase = createServerSupabaseClient();
+
+            // Library documents and the requester's own uploads only (public-readiness REQ §5.7).
+            const { data: doc } = await supabase
+                .from("documents")
+                .select("doc_category, owner_type, owner_id")
+                .eq("id", input.documentId)
+                .maybeSingle();
+            if (!doc || !isReadableBy(doc, requester)) {
+                return { success: false, error: "Document not found" };
+            }
 
             const fullText = await loadDocumentText(supabase, input.documentId).catch((e: Error) => {
                 throw new Error(`Failed to fetch document content: ${e.message}`);

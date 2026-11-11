@@ -170,7 +170,7 @@ export default function DocumentsPage() {
     if (previewOpen && previewDoc?.fileUrl) {
       setPreviewLoading(true);
       setPreviewSignedUrl(null);
-      fetch(`/api/documents/preview-url?fileUrl=${encodeURIComponent(previewDoc.fileUrl)}`)
+      fetch(`/api/documents/preview-url?id=${encodeURIComponent(previewDoc.id)}`)
         .then(res => res.json())
         .then(data => {
           if (data.signedUrl) {
@@ -182,7 +182,7 @@ export default function DocumentsPage() {
     } else {
       setPreviewSignedUrl(null);
     }
-  }, [previewOpen, previewDoc?.fileUrl]);
+  }, [previewOpen, previewDoc?.id, previewDoc?.fileUrl]);
 
   // 全选
   const allKnowledgeSelected = knowledgeDocs.length > 0 && selectedKnowledge.length === knowledgeDocs.length;

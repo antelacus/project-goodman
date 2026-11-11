@@ -13,6 +13,7 @@
 export const runtime = "nodejs";
 
 import { NextRequest, NextResponse } from "next/server";
+import { requesterOf } from '@/lib/documents/access';
 import ExcelJS from "exceljs";
 import { readDocumentText, AIUnavailableError, AI_FAILURE_TEXT } from "@/lib/ai";
 import { createServerSupabaseClient } from "@/lib/database";
@@ -308,8 +309,7 @@ export async function POST(req: NextRequest) {
       const documentId = crypto.randomUUID();
 
       // V3.10: Calculate ownership based on session role
-      const ownerId = session.role === 'guest' ? session.sessionId : session.userId;
-      const ownerType = session.role;
+      const { ownerId, ownerType } = requesterOf(session);
       // Guest documents expire in 1 hour
       const expiresAt = session.role === 'guest'
         ? new Date(Date.now() + 60 * 60 * 1000).toISOString()

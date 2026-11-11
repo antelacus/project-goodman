@@ -46,7 +46,7 @@ export async function toolExecutorNode(
             // Asked for, it is a regulation question: the answer gets its label.
             if (call.name === "search_regulations") search.regulationSearched = true;
         } else {
-            result = await toolRegistry.execute(call.name, call.arguments);
+            result = await toolRegistry.execute(call.name, call.arguments, { ownerType: state.input?.ownerType, ownerId: state.input?.ownerId });
             if (SEARCH_TOOLS.has(call.name)) search.used += 1;
             if (call.name === "search_regulations") {
                 search.regulationSearched = true;

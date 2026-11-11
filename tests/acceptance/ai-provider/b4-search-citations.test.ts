@@ -47,8 +47,13 @@ vi.mock('@/lib/database', async importOriginal => ({
         return Object.assign(done, { select: () => ({ single: () => done }) });
       },
       select: () => ({
-        eq: (column: 'document_id', value: string) => ({
-          order: async () => ({ data: db.chunks.filter(c => c[column] === value), error: null }),
+        eq: (column: 'document_id' | 'id', value: string) => ({
+          order: async () => ({ data: db.chunks.filter(c => c[column as 'document_id'] === value), error: null }),
+          // The preview route reads one library document: the synthetic standard.
+          maybeSingle: async () => ({
+            data: value === ARTICLE.document_id ? { file_url: ARTICLE.file_url, doc_category: 'knowledge', owner_type: 'system', owner_id: null } : null,
+            error: null,
+          }),
         }),
         in: async (_column: 'id', ids: string[]) => ({
           data: ((db.inserts.documents ?? []) as Array<Record<string, unknown> | Array<Record<string, unknown>>>).flat().filter(d => ids.includes(String(d.id))),
@@ -69,6 +74,8 @@ vi.mock('@/lib/security', () => ({
   checkGuestRate: vi.fn(),
   incrementGuestRate: vi.fn(),
   generateRequestId: () => 'req-1',
+  COOKIE_NAME: 'session',
+  verifySession: vi.fn(async () => null),
   createErrorResponse: (error: unknown, requestId: string, status = 500) =>
     new Response(JSON.stringify({ error: error instanceof Error ? error.message : String(error), requestId }), {
       status,
@@ -86,11 +93,11 @@ const isChat = (r: RelayRequest) => r.path.endsWith('/chat/completions');
 
 const ARTICLE = {
   id: '00000000-0000-0000-0000-000000000001',
-  document_id: 'doc-synthetic-standard',
+  document_id: '7f1c2a3e-4b5d-4c6e-8f70-1a2b3c4d5e6f',
   regulation_name: '企业会计准则第99号-示例业务-2026',
   article_number: '第一条',
   content: '第一条 合成金融资产应当计提减值准备。',
-  file_url: 'doc-synthetic-standard/file.pdf',
+  file_url: 'synthetic-standard/file.pdf',
   score: 12.5,
 };
 

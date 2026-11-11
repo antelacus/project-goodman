@@ -28,7 +28,6 @@ import {
   performStructuredExtraction,
   performColumnBasedExtraction,
   performAIExtraction,
-  type DocumentType,
   type ExtractionResult,
   type FinancialExtractionResult,
   type ColumnMapping,
@@ -49,6 +48,7 @@ import { uploadFileToStorage } from "@/lib/documents/storage";
 import { createSectionAwareChunks } from "@/lib/documents/chunker";
 import { extractTextFromFile } from "@/lib/documents/extract-text";
 import { isRegulation } from "@/lib/documents/constants";
+import { AdminUploadDocumentSchema, validateRequest } from "@/lib/validation/api-schemas";
 import { articleStartsByLine } from "@/lib/extraction/article-lines";
 
 const ARTICLE_NUMBERED_HINT = "提示：这份文档按“第X条”编号；回答中引用它的条款号时，条款号会被删去。";
@@ -56,21 +56,6 @@ import { splitRegulation, type SplitArticle, type SplitAnomaly } from "@/lib/ext
 
 
 
-/**
- * Request body schema
- */
-interface UploadRequest {
-  documentText: string; // Can be actual text OR base64 file data
-  fileName: string;
-  documentType: DocumentType;
-  year?: string;
-  period?: string;
-  startDate?: string;
-  endDate?: string;
-  columnMapping?: ColumnMapping;
-  adminPassword: string;
-  metadata?: Record<string, unknown>;
-}
 
 /**
  * Type guard to check if extraction result has year/period (financial document)
@@ -254,8 +239,14 @@ export async function POST(request: NextRequest) {
   };
 
   try {
-    // Parse request body
-    const body: UploadRequest = await request.json();
+    const parsed = validateRequest(AdminUploadDocumentSchema, await request.json());
+    if (!parsed.success) {
+      logWorkflowFailure('VALIDATION');
+      return createJsonResponse(
+        { success: false, message: "Missing or invalid fields", error: parsed.error } as UploadResponse,
+        400
+      );
+    }
     const {
       documentText,
       fileName,
@@ -267,20 +258,7 @@ export async function POST(request: NextRequest) {
       columnMapping,
       adminPassword,
       metadata = {},
-    } = body;
-
-    // Validate required fields
-    if (!documentText || !fileName || !documentType || !adminPassword) {
-      logWorkflowFailure('VALIDATION');
-      return createJsonResponse(
-        {
-          success: false,
-          message: "Missing required fields",
-          error: "documentText, fileName, documentType, and adminPassword are required",
-        } as UploadResponse,
-        400
-      );
-    }
+    } = parsed.data;
 
     // Verify admin password
     const isValidPassword = await verifyAdminPassword(adminPassword);

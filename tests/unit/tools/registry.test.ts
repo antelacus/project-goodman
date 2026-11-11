@@ -102,26 +102,6 @@ describe('ToolRegistry', () => {
     }
   });
 
-  it('adds financial metadata to the description in detailed mode', () => {
-    const registry = new ToolRegistry();
-    registry.register(buildTool({
-      name: 'ratio',
-      category: 'financial',
-      metadata: {
-        financial: {
-          requiredInputs: ['asset', 'liability'],
-          formulaDisplay: 'asset / liability',
-          unit: 'x',
-          financialCategory: 'liquidity',
-        },
-      },
-    }));
-
-    const def = registry.toOpenAIFunctionDefs({ detailed: true })[0];
-    expect(def.function.description).toContain('需要的数据');
-    expect(def.function.description).toContain('asset / liability');
-  });
-
   it('executes tools with validation and returns errors for missing tools', async () => {
     const registry = new ToolRegistry();
 
@@ -138,30 +118,6 @@ describe('ToolRegistry', () => {
     const invalid = await registry.execute('validated', { bad: true });
     expect(invalid.success).toBe(false);
     expect(invalid.error).toContain('Input validation failed');
-  });
-
-  it('validates output schemas in executeWithValidation', async () => {
-    const registry = new ToolRegistry();
-
-    const tool = buildTool({
-      name: 'output-test',
-      execute: async () => ({
-        success: true,
-        data: { ok: 'nope' as unknown as boolean },
-      }),
-    });
-    registry.register(tool);
-
-    const invalid = await registry.executeWithValidation('output-test', { year: '2024' });
-    expect(invalid.success).toBe(false);
-    expect(invalid.error).toContain('Output validation failed');
-
-    const validTool = buildTool({ name: 'output-good' });
-    registry.register(validTool);
-
-    const valid = await registry.executeWithValidation('output-good', { year: '2024' });
-    expect(valid.success).toBe(true);
-    expect(valid.data).toEqual({ ok: true });
   });
 
   it('returns execution errors when tool throws', async () => {

@@ -39,13 +39,11 @@ function SourceLink({ source }: { source: SourceReference }) {
             ? `${source.year}年${source.documentType || source.documentName}`
             : source.documentName;
 
-    // v4.6: Build link via preview-url redirect to support non-PDF files
-    const href = source.fileUrl
-        ? `/api/documents/preview-url?fileUrl=${encodeURIComponent(source.fileUrl)}&redirect=1`
-        : (source.documentId ? `/api/documents/preview-url?id=${encodeURIComponent(source.documentId)}&redirect=1` : '#');
+    // The preview route opens a document by id only, checking who may read it.
+    const href = source.documentId ? `/api/documents/preview-url?id=${encodeURIComponent(source.documentId)}&redirect=1` : '#';
 
     // Don't render if no meaningful link target
-    if (!source.fileUrl && !source.documentId) {
+    if (!source.documentId) {
         return (
             <span className="text-neutral-500 text-xs ml-2">
                 [来源: {displayText}]

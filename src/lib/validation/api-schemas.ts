@@ -96,26 +96,40 @@ export const ChatMessageSchema = z.object({
 export type ChatMessageRequest = z.infer<typeof ChatMessageSchema>;
 
 /**
- * Chat Request (Legacy non-streaming endpoint)
- * POST /api/chat
- * Note: Uses 'message' field name (different from ChatMessageSchema which uses 'question')
+ * GET /api/documents/preview-url
+ * Only a document id: a Storage path would let the route sign any file in the bucket.
  */
-export const ChatRequestSchema = z.object({
-    message: z
-        .string()
-        .min(1, '消息不能为空')
-        .max(
-            VALIDATION_LIMITS.MAX_QUESTION_LENGTH,
-            `消息长度不能超过 ${VALIDATION_LIMITS.MAX_QUESTION_LENGTH} 字符`
-        ),
-    sessionId: z.string().uuid('无效的会话ID').optional(),
-    documentIds: z
-        .array(z.string().uuid())
-        .max(VALIDATION_LIMITS.MAX_DOCUMENT_IDS, `最多选择 ${VALIDATION_LIMITS.MAX_DOCUMENT_IDS} 个文档`)
-        .optional(),
-});
+export const PreviewUrlQuerySchema = z.object({
+    id: z.string().uuid('无效的文档ID'),
+    redirect: z.literal('1').optional(),
+}).strict();
 
-export type ChatRequest = z.infer<typeof ChatRequestSchema>;
+/**
+ * Route param of /api/sessions/[id]
+ */
+export const SessionIdParamSchema = z.string().uuid('无效的会话ID');
+
+const DOCUMENT_TYPES = [
+    'balance_sheet', 'income_statement', 'cash_flow', 'financial_report', 'account_detail', 'regulation',
+    'accounting_standard', 'policy', 'business_info', 'contract', 'invoice', 'voucher', 'general',
+] as const;
+
+/**
+ * POST /api/admin/upload-database-document
+ * `documentText` is the file's text, or its base64 bytes for a binary file.
+ */
+export const AdminUploadDocumentSchema = z.object({
+    documentText: z.string().min(1, '文件内容不能为空'),
+    fileName: z.string().min(1, '文件名不能为空').max(VALIDATION_LIMITS.MAX_FILENAME_LENGTH),
+    documentType: z.enum(DOCUMENT_TYPES),
+    year: z.string().max(10).optional(),
+    period: z.string().max(20).optional(),
+    startDate: z.string().max(20).optional(),
+    endDate: z.string().max(20).optional(),
+    columnMapping: z.object({ name: z.string(), periodEnd: z.string(), periodStart: z.string() }).optional(),
+    adminPassword: z.string().min(1, '缺少管理员密码').max(VALIDATION_LIMITS.MAX_PASSWORD_LENGTH),
+    metadata: z.record(z.string(), z.unknown()).optional(),
+});
 
 /**
  * Data Extraction Request (V3.9)

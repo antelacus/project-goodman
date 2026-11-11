@@ -33,7 +33,6 @@ export type {
   ToolMetadata,
   FinancialToolMetadata,
   ToolExecutionResult,
-  ToOpenAIOptions,
   ChatCompletionTool,
 } from "./types";
 

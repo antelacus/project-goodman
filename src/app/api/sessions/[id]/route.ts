@@ -4,6 +4,8 @@
  * Retrieves messages for a specific conversation session.
  */
 
+import { SessionIdParamSchema } from '@/lib/validation/api-schemas';
+import { requesterOf } from '@/lib/documents/access';
 import { NextRequest, NextResponse } from 'next/server';
 import { ensureSession, generateRequestId, createErrorResponse } from '@/lib/security';
 import { conversationMemory } from '@/lib/memory';
@@ -15,15 +17,18 @@ export async function GET(
     const requestId = req.headers.get('x-request-id') || generateRequestId();
 
     try {
-        const { id: sessionId } = await params;
+        const parsedId = SessionIdParamSchema.safeParse((await params).id);
+        if (!parsedId.success) {
+            return NextResponse.json({ success: false, error: parsedId.error.issues[0].message }, { status: 400 });
+        }
+        const sessionId = parsedId.data;
 
         // Get current auth session
         const sessionResult = await ensureSession(req);
         const { session: authSession } = sessionResult;
 
         // Determine owner info
-        const ownerId = authSession.userId || authSession.sessionId;
-        const ownerType = authSession.role;
+        const { ownerId, ownerType } = requesterOf(authSession);
 
         // Load the conversation session
         const conversationSession = await conversationMemory.loadSession(sessionId);
