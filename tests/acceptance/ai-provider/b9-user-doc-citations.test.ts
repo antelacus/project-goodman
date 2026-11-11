@@ -11,6 +11,7 @@ describe('B4 user-document citations and the deletion marker', () => {
   it.todo('§removal-count the number of removed places is a process-log event; the answer has no closing notice');
   it.todo('§doc-article-hint an admin upload of a non-regulation knowledge document with line-start 第X条 returns the hint; one without does not');
   it.todo('§out-of-library an answer that cites only a selected document after a regulation search carries the out-of-library label');
+  it.todo('§selected-doc-owner a documentId owned by someone else, or a knowledge-library document, is not read and reports a document load error; the requester\'s own document is read');
 });
 
 describe('B5 non-overlapping chunks', () => {
