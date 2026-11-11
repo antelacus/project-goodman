@@ -14,7 +14,11 @@ jobs:
       - name: Deploy to production
         # pinned to a commit SHA: a tag can be re-pointed, a SHA cannot
         uses: appleboy/ssh-action@0ff4204d59e8e51228ff73bce53f80d53301dee2 # v1.2.5
+        # The deploy path is a Secret so the public run log masks it; envs passes it to the script.
+        env:
+          GOODMAN_PROD_DIR: ${{ secrets.GOODMAN_PROD_DIR }}
         with:
+          envs: GOODMAN_PROD_DIR
           host: ${{ secrets.DEPLOY_HOST }}
           username: ${{ secrets.DEPLOY_USER }}
           key: ${{ secrets.DEPLOY_KEY }}

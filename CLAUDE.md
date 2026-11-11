@@ -59,6 +59,8 @@
 - Runs smoke tests (health, auth, sessions, reports)
 - Directory: `$GOODMAN_STAGING_DIR/`
 
+**Paths**: `$DEPLOY_HOME`, `$GOODMAN_PROD_DIR`, `$GOODMAN_STAGING_DIR` in docs and workflows are the VPS paths, kept out of the public repo. Values: `$GOODMAN_DATA_DIR/deploy.env` locally, the same-named GitHub Secrets in workflows.
+
 **Development**: `npm run dev` (local Node.js with hot reload)
 
 ---

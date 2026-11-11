@@ -55,10 +55,7 @@
 
 ## 6. 漏洞披露与响应流程
 
-如发现安全漏洞，请通过以下方式联系：
-
-- 安全联系人：`74610535+antelacus@users.noreply.github.com`
-- 期望响应时间：24-48 小时内确认
+如发现安全漏洞，请通过 GitHub 仓库的 **Security → Report a vulnerability**（私密漏洞报告）提交，不要开公开 issue。期望 24–48 小时内确认。
 
 响应流程：
 
