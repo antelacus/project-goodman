@@ -209,6 +209,7 @@
 - [ ] 常新文档扫尾：两份 REQ、DESIGN、`docs/ARCHITECTURE.md`、`docs/DEPLOYMENT_CHECKLIST.md`、`docs/SECURITY.md` 与交付一致；两个迁移文件改名为数据库记录的版本号，`code-conventions.md` 中的引用随之改
 - [ ] 删除一次性重切脚本及其测试
 - [ ] DESIGN §9 第 1–5 步（可回退）：密钥、重切、两环境上线并核对 SHA、权限迁移、停用旧密钥；删除 GitHub Secrets 中的 `NEXT_PUBLIC_SUPABASE_ANON_KEY`
+- [ ] 讲回（teach-back）：PR #13 已于讲回之前合并（`ab6aebe`）；Claude 已讲解四个结构问题，待 Jason 用自己的话讲回问题 2（会话归属的各层）与问题 4（切块重叠为何会删掉正常的引用）
 - [ ] tag `v4.8.0`
 - [ ] DESIGN §9 第 6–10 步（不可回退，每步 Jason 确认）：备份、改写前扫描、改写并验收、强推、重新克隆与部署、清空 Actions、PR #12 描述去路径并删编辑历史、公开与公开后设置
 - [ ] FEEDBACK 扫尾 · `v4_DEVELOPMENT_PLAN.md` §3.13 状态
