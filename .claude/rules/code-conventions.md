@@ -17,65 +17,19 @@
 ## Supabase
 
 - Run `npx supabase gen types typescript` after every migration to keep `src/lib/database/types.ts` in sync
-- Service Role Key usage must be isolated to `src/lib/` server modules with runtime `typeof window` check
 - Verify schema changes work in Supabase before writing dependent code
 
-## Database Security (RLS Design Decisions)
+## Database Security
 
-> **Context**: Our architecture uses Next.js API routes as the security boundary. All database access goes through server-side code using the Service Role Key, which bypasses RLS. The RLS policies exist as a defense-in-depth layer, not the primary security mechanism.
+The server reaches the database only through `createServerSupabaseClient()` (`src/lib/database/supabase.ts`), on the secret key (role `service_role`, not bound by RLS). The legacy anon and service_role keys are disabled and no publishable key exists, so nothing can call the API as `anon`; API routes (`src/lib/security/`) are the security boundary, and reading a document by id goes through `src/lib/documents/access.ts`.
 
-### Architecture Overview
+Defense in depth, kept by `supabase/migrations/20261111130000_revoke_anon_access.sql`:
 
-```
-┌─────────────┐     ┌─────────────────┐     ┌──────────────┐
-│   Browser   │────▶│   Next.js API   │────▶│   Supabase   │
-│  (Client)   │     │   (Server)      │     │  (Database)  │
-└─────────────┘     └─────────────────┘     └──────────────┘
-                            │
-                    Service Role Key
-                    (bypasses RLS)
-```
+- `anon`, `authenticated` and `PUBLIC` hold no right on any table, sequence or function in `public`, and objects later migrations create get none either (default privileges of `postgres`).
+- Every table in `public` has RLS enabled, with no policies.
+- Exception: objects `supabase_admin` creates in `public` still default to `anon` — `postgres` cannot change its defaults. Run `supabase/tests/access.sql` on the live database after every migration; it fails on any opening. Before ever creating a publishable key, re-evaluate this: it would make `anon` reachable.
 
-**Primary Security**: API route authentication/authorization in `src/lib/security/`
-**Secondary Security**: RLS policies (defense-in-depth)
-
-### Tables Without RLS (by design)
-
-| Table | Reason | Mitigation |
-|-------|--------|------------|
-| `users` | Contains password hashes - must NEVER be exposed to client. Server-only access via Service Role. | No client-side Supabase access; all auth through API routes |
-| `guest_activity` | Anonymous tracking for admin dashboard. No user-specific data. Currently unused (0 rows). | Only admin dashboard reads this; no sensitive user data |
-
-### Tables with USING(true) Policies (by design)
-
-These tables have RLS enabled with permissive policies because:
-
-1. All access is through Service Role (which bypasses RLS anyway)
-2. The policies allow our server code to work without role-based complications
-3. Client-side never directly accesses these tables
-
-| Table | Policy | Reason |
-|-------|--------|--------|
-| `documents` | Allow all via service key | Server manages document ownership; API validates access |
-| `document_chunks` | Allow all via service key | Internal table, only accessed during search |
-| `financial_data` | Allow all via service key | Read-only demo data from uploaded statements |
-| `structured_regulations` | Allow all via service key | Public knowledge base content |
-| `preset_functions` | Allow all via service key | System-defined calculation formulas |
-| `calculation_history` | Allow all via service key | Audit log, server-only writes |
-| `admin_config` | Allow all via service key | Admin-only configuration |
-| `conversation_sessions` | Allow all access | API validates session ownership |
-| `conversation_messages` | Allow all access | API validates session ownership |
-| `reports` | Allow all access | API validates report ownership |
-
-### When to Add Stricter RLS
-
-Consider implementing user-based RLS when:
-
-- Supporting multiple authenticated users (not just admin)
-- Adding direct client-side Supabase access
-- Implementing real multi-tenancy
-
-For now, our single-admin + guest model doesn't require row-level user isolation.
+A new function the app calls needs no grant: the default privileges give `service_role` EXECUTE.
 
 ## State Management
 
