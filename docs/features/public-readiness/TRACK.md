@@ -58,6 +58,9 @@
   - 2026-11-11 · 部署说明留在仓库，路径换成变量名，真实值放仓库外的私有文件；工作流的路径放 GitHub Secrets（公开仓库的运行日志人人可见，Secrets 被遮蔽、仓库变量不会） · Jason（初判 b，终裁 b） · 级联：`REQ.md` §5.3、本 TRACK 范围 10
   - 2026-11-11 · DQ-1 长表格：表格永远不切，超长表格的切块偏大；首次出现超过切块长度的表格时再做续块带表头（随本版上线在 Phase 6 登记为已接受） · Jason（初判 a 表头独立成列，终裁 c；反驳要点：现有 50 张表最长 568 字，都不超过 1000 字，独立成列要加列、改生成列、重建索引） · 级联：`docs/features/ai-provider/REQ.md` §5.7、DESIGN §4
   - 2026-11-11 · 选中文档只接受当前用户自己上传的文档；别人的文档与资料库文档按文档加载失败处理（修正读取不核对归属的缺口） · Jason（初判 a 自己的文档加资料库文档，终裁 a'；反驳要点：资料库里的准则会被标成「您上传的文档」） · 级联：`docs/features/ai-provider/REQ.md` §5.7、本 TRACK Batch 4
+  - 2026-11-11 · Codex 设计门任务一 MUST-2：REQ §5.1 写明例外——`supabase_admin` 新建的对象仍默认授予 anon，每次迁移后检查并收回；前提是项目里没有能以 anon 身份请求的密钥 · Jason（初判 a，终裁 a） · 级联：`REQ.md` §5.1、DESIGN §5
+  - 2026-11-11 · Codex 设计门其余 15 项按 Claude 所提处置写入 DESIGN（含：重切挪到新代码上线之前、健康接口报提交 SHA、Actions 最后清理、强推前在副本上验收） · Jason（无异议） · 级联：DESIGN §4–§9、本 TRACK Batch 1 / 4 / 5 / 8
+  - 2026-11-11 · Phase 2 结束：设计评审发现全部有处置，验收测试已写为待办，批次已切 · Jason · 级联：本 TRACK
   - 2026-11-11 · 用户文档拆条款与法规拆分共用"什么算条款的开头"，重复的处理各自定义；共用规则配法规样例测试，进 CI · Jason（初判 a，终裁 a 加样例测试） · 级联：DESIGN
 
 ## 二、批次
@@ -66,13 +69,13 @@
 
 ### Batch 1 — 数据库唯一入口
 - 状态：open
-- 范围：`src/lib/database/supabase.ts`（读 `SUPABASE_SECRET_KEY`，删 `createBrowserSupabaseClient`）；`src/lib/documents/storage.ts`、`src/lib/reports/docx-upload.ts`、`pdf-upload.ts` 改用它；`scripts/` 下 4 个脚本、`.env*.example`、CI 构建不提供密钥 · REQ §5.1
+- 范围：`src/lib/database/supabase.ts`（读 `SUPABASE_SECRET_KEY`，删 `createBrowserSupabaseClient`）；健康接口报提交 SHA（`GIT_SHA` 构建参数）；`src/lib/documents/storage.ts`、`src/lib/reports/docx-upload.ts`、`pdf-upload.ts` 改用它；`scripts/` 下 4 个脚本、`.env*.example`、CI 构建不提供密钥 · REQ §5.1
 - 验收判据：§server-secret-key；CI 构建不提供 secret 密钥仍通过（DESIGN 不变量 5）
 - 依赖：none
 
 ### Batch 2 — 权限迁移
 - 状态：open
-- 范围：新迁移（收回 anon / authenticated 的授权与 `postgres` 的默认权限，`public` 全部表开 RLS）；`supabase/tests/access.sql`；`npx supabase gen types`；`.claude/rules/code-conventions.md` 的 RLS 一节 · REQ §5.1
+- 范围：新迁移（收回 anon / authenticated / `PUBLIC` 的授权与 `postgres` 的默认权限含全局函数默认，显式授予 service_role，`public` 全部表开 RLS）；`supabase/tests/access.sql`；`npx supabase gen types`；`.claude/rules/code-conventions.md` 的 RLS 一节 · REQ §5.1
 - 验收判据：§anon-denied、§default-privileges、§rls-all（在事务内试跑并回滚；正式执行在 DESIGN §9 第 3 步）
 - 依赖：Batch 1
 
@@ -110,30 +113,30 @@
 - 状态：open
 - 范围：DESIGN §9 第 1–10 步（第 6 步起每步执行前 Jason 确认） · REQ §5.1、§5.4–§5.6
 - 验收判据：§env-smoke、§legacy-keys-disabled、§history-emails、§history-internals、§history-backup、§deploy-after-rewrite、§actions-cleared、§audit-findings、§public-settings
-- 依赖：Batch 1–7 合并并在生产上线
+- 依赖：Batch 1–7 合并；DESIGN §9 第 1 步（重切）在新代码上线之前
 
 ## 三、门与发布
 
 **评审发现登记**：
 - Codex 设计门 · 任务一（DESIGN + 本 feature REQ，xhigh，只读，`de5e45c`）。原文照录，严重性为 Codex 所给；核实结论为 Claude 所得：
-  - MUST-1 函数撤权漏了 `PUBLIC` 伪角色与全局默认权限：只撤 anon / authenticated 的直接授权，经 `PUBLIC` 的执行权仍在，新函数默认授予 `PUBLIC` —— 核实：11 个函数经 `PUBLIC` 可执行；`postgres` 没有全局的函数默认权限条目（即内置默认生效） —— status: open
-  - MUST-2 DESIGN 接受"`supabase_admin` 新建的对象仍授予 anon"，与 REQ §5.1"今后新建的对象也不授予"冲突 —— 核实：成立；`postgres` 改不了 `supabase_admin` 的默认权限，MCP 执行身份为 `postgres` —— status: open
-  - MUST-3 第 7 步清空 Actions 后，第 9 步部署与强推触发的 CI 会重新产生记录，违反 §actions-cleared —— 核实：成立（`ci.yml` 响应 `development` 推送并上传覆盖率产物） —— status: open
-  - MUST-4 §deploy-after-rewrite 要求核对提交，健康接口只报版本号 —— 核实：成立（`src/app/api/health/route.ts`、`next.config.ts` 只取 `package.json` 版本） —— status: open
-  - SHOULD-5 强推前没有核验备份可恢复、没有先在副本上验收改写结果，没有处理部分引用推送失败与旧克隆重新推入 —— status: open
-  - SHOULD-6 "前 5 步可以回退"没有对应的回退方案：迁移后回退到旧应用会停机，重新启用旧密钥不恢复已撤的权限 —— status: open
-  - SHOULD-7 gitleaks 的执行方式未定：引用覆盖范围、脱敏、报告存放、无法判定时停止公开 —— status: open
+  - MUST-1 函数撤权漏了 `PUBLIC` 伪角色与全局默认权限：只撤 anon / authenticated 的直接授权，经 `PUBLIC` 的执行权仍在，新函数默认授予 `PUBLIC` —— 核实：11 个函数经 `PUBLIC` 可执行；`postgres` 没有全局的函数默认权限条目（即内置默认生效） —— status: 处置已定，写入 DESIGN（Batch 落码时以测试关闭）
+  - MUST-2 DESIGN 接受"`supabase_admin` 新建的对象仍授予 anon"，与 REQ §5.1"今后新建的对象也不授予"冲突 —— 核实：成立；`postgres` 改不了 `supabase_admin` 的默认权限，MCP 执行身份为 `postgres` —— status: 已关闭：REQ §5.1 写明例外（见裁定）
+  - MUST-3 第 7 步清空 Actions 后，第 9 步部署与强推触发的 CI 会重新产生记录，违反 §actions-cleared —— 核实：成立（`ci.yml` 响应 `development` 推送并上传覆盖率产物） —— status: 处置已定，写入 DESIGN（Batch 落码时以测试关闭）
+  - MUST-4 §deploy-after-rewrite 要求核对提交，健康接口只报版本号 —— 核实：成立（`src/app/api/health/route.ts`、`next.config.ts` 只取 `package.json` 版本） —— status: 处置已定，写入 DESIGN（Batch 落码时以测试关闭）
+  - SHOULD-5 强推前没有核验备份可恢复、没有先在副本上验收改写结果，没有处理部分引用推送失败与旧克隆重新推入 —— status: 处置已定，写入 DESIGN（Batch 落码时以测试关闭）
+  - SHOULD-6 "前 5 步可以回退"没有对应的回退方案：迁移后回退到旧应用会停机，重新启用旧密钥不恢复已撤的权限 —— status: 处置已定，写入 DESIGN（Batch 落码时以测试关闭）
+  - SHOULD-7 gitleaks 的执行方式未定：引用覆盖范围、脱敏、报告存放、无法判定时停止公开 —— status: 处置已定，写入 DESIGN（Batch 落码时以测试关闭）
   - 待核：① 线上对象属主、有效权限 —— 已关闭：12 张表、12 个函数属 `postgres`，有效权限以 `has_*_privilege` 核对；② 首次新建密钥是否附带默认的 publishable 密钥 —— 未关闭，第 1 步时核对；③ 停用旧密钥对 Storage 签名链接的影响 —— 未关闭，第 4 步冒烟时核对；④ staging 用 `git pull` —— 已关闭：改写后历史不相关，拉取会失败，按设计重新克隆；⑤ PR 中是否有分支 / tag 不可达的提交 —— 已关闭：12 个 PR 的提交全部可达，扫描全部分支与 tag 即覆盖
 - Codex 设计门 · 任务二（DESIGN + ai-provider REQ §5.4 / §5.5 / §5.7，xhigh，只读，`de5e45c`）。原文照录，严重性为 Codex 所给；核实结论为 Claude 对照源码所得：
-  - MUST-1 引用识别有绕过路径：Markdown 链接拆开的条款号（`根据第[九十九](…)条`）与 `[R1][第二款](…)` 都原样保留，`removed=0` —— 核实：在现有代码上复现，属 v4.7.0 起的缺陷 —— status: open
-  - MUST-2 "只看 cited 里有没有 regulation"会让纯计算、只读用户文档的回答也被标为资料库外，且失去检索失败标注 —— 核实：DESIGN §4 措辞遗漏了"做过或请求过法规检索"与"全部出错"两项条件，现有代码有 —— status: open
-  - MUST-3 表格只认行首 `|`，省略外侧竖线的合法 Markdown 表格会被切开 —— 核实：成立 —— status: open
-  - MUST-4 重切以"切块数一致"判定还原正确，没有独立的原文基准；旧切块器会丢掉 50 字以内的序言 —— 核实：成立；51 份文档在 Storage 都有原文件，可作基准 —— status: open
-  - MUST-5 新代码上线到重切之间，D 编号会读到旧的重叠切块，唯一的条款被误判为重复 —— 核实：机制成立；生产中用户文档为 0 份、选中只接受本人文档，窗口内无受影响文档 —— status: open
-  - SHOULD-6 局部替换缺少原文区间映射与"处"的计数单位（规范化后的位置不能截取原始 Markdown） —— status: open
-  - SHOULD-7 `article-lines` 需要上下文契约（前一行是否结束、序号状态）；现有拆分器对无空格的重复条款号不报重复 —— status: open
-  - SHOULD-8 多份选中文档的 D 编号如何分配不在接口里，并行编号会互相覆盖 —— status: open
-  - SHOULD-9 `load-memory` 用 `join("\n")` 拼接，会多插换行；需要"上传 → 存储 → 读取 → 编号前全文"的端到端验证 —— status: open
+  - MUST-1 引用识别有绕过路径：Markdown 链接拆开的条款号（`根据第[九十九](…)条`）与 `[R1][第二款](…)` 都原样保留，`removed=0` —— 核实：在现有代码上复现，属 v4.7.0 起的缺陷 —— status: 处置已定，写入 DESIGN（Batch 落码时以测试关闭）
+  - MUST-2 "只看 cited 里有没有 regulation"会让纯计算、只读用户文档的回答也被标为资料库外，且失去检索失败标注 —— 核实：DESIGN §4 措辞遗漏了"做过或请求过法规检索"与"全部出错"两项条件，现有代码有 —— status: 处置已定，写入 DESIGN（Batch 落码时以测试关闭）
+  - MUST-3 表格只认行首 `|`，省略外侧竖线的合法 Markdown 表格会被切开 —— 核实：成立 —— status: 处置已定，写入 DESIGN（Batch 落码时以测试关闭）
+  - MUST-4 重切以"切块数一致"判定还原正确，没有独立的原文基准；旧切块器会丢掉 50 字以内的序言 —— 核实：成立；51 份文档在 Storage 都有原文件，可作基准 —— status: 处置已定，写入 DESIGN（Batch 落码时以测试关闭）
+  - MUST-5 新代码上线到重切之间，D 编号会读到旧的重叠切块，唯一的条款被误判为重复 —— 核实：机制成立；生产中用户文档为 0 份、选中只接受本人文档，窗口内无受影响文档 —— status: 处置已定，写入 DESIGN（Batch 落码时以测试关闭）
+  - SHOULD-6 局部替换缺少原文区间映射与"处"的计数单位（规范化后的位置不能截取原始 Markdown） —— status: 处置已定，写入 DESIGN（Batch 落码时以测试关闭）
+  - SHOULD-7 `article-lines` 需要上下文契约（前一行是否结束、序号状态）；现有拆分器对无空格的重复条款号不报重复 —— status: 处置已定，写入 DESIGN（Batch 落码时以测试关闭）
+  - SHOULD-8 多份选中文档的 D 编号如何分配不在接口里，并行编号会互相覆盖 —— status: 处置已定，写入 DESIGN（Batch 落码时以测试关闭）
+  - SHOULD-9 `load-memory` 用 `join("\n")` 拼接，会多插换行；需要"上传 → 存储 → 读取 → 编号前全文"的端到端验证 —— status: 处置已定，写入 DESIGN（Batch 落码时以测试关闭）
   - 待核：① D 引用的链接需要文件名与 `fileUrl`，`load-memory` 目前只查切块内容 —— 未关闭；② 流式路由是否先推送未经核对的原始输出 —— 已关闭：答案只在完成事件中整体发送；③ 原文可恢复性 —— 已关闭：51 份文档在 Storage 都有原文件，用户文档 0 份
 
 **Phase 4 证据**：（Phase 4）

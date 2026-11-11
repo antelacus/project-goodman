@@ -68,13 +68,14 @@ N/A —— secret / publishable 密钥、旧的 anon / service_role 密钥沿用
 - 规则：
   - 服务端访问数据库与 Storage 只用 secret 密钥。staging 与生产各一把（名为 `staging` / `production`），任一把可以单独撤销。不用旧的 service_role 密钥：旧密钥是以项目 JWT 密钥签发的令牌，无法单独撤销或轮换。
   - 旧的 anon 与 service_role 密钥停用。项目不发 publishable 密钥：没有任何浏览器端直连数据库的代码。
-  - anon 与 authenticated 对 `public` 下的表、函数、序列没有任何权限；`public` 的默认权限同样收回，今后的迁移新建的对象也不授予它们。只收回现有对象的授权不够：默认权限会让下一条迁移重新开放。
+  - anon 与 authenticated 对 `public` 下的表、函数、序列没有任何实际生效的权限（包括经 `PUBLIC` 获得的）；默认权限同样收回，我们的迁移今后新建的对象也不授予它们。只收回现有对象的授权不够：默认权限会让下一条迁移重新开放。
+  - 例外：Supabase 平台以 `supabase_admin` 身份在 `public` 下新建的对象仍会默认授予 anon（我们改不了它的默认权限）。每次迁移后检查实际权限与 Supabase 安全检查，发现即收回。这个例外不构成暴露面，前提是项目里没有任何能以 anon 身份请求的密钥；新建 publishable 密钥之前须重新评估。
   - `public` 下每张表都开启 RLS，包括 `users` 与 `guest_activity`。
   - 停用旧密钥只在 staging 与生产都已改用 secret 密钥、并各自核实之后执行：两环境共用一个项目，提前停用会让两边同时连不上数据库。
 - 硬错误（响亮失败）：服务端缺少 secret 密钥 → 报错并指出缺少的环境变量，不回退到其他密钥
 - 验收判据：
   - §anon-denied 以 anon 与 authenticated 身份，对 `public` 下每张表的读与写、每个函数的执行都被拒绝
-  - §default-privileges 新建一张表与一个函数后，anon 与 authenticated 对它们没有任何权限
+  - §default-privileges 以 `postgres` 身份新建一张表、一个序列与一个函数后，anon、authenticated 与 `PUBLIC` 对它们没有任何实际生效的权限
   - §rls-all `public` 下每张表都开启 RLS；Supabase 安全检查没有"表未开 RLS"与"anon / authenticated 可执行 SECURITY DEFINER 函数"两类提示
   - §legacy-keys-disabled 用旧的 anon 密钥与旧的 service_role 密钥请求 REST 接口，均被拒绝
   - §server-secret-key 服务端代码不再读取旧密钥的环境变量；缺少 secret 密钥时报错，不回退
@@ -112,7 +113,7 @@ N/A —— secret / publishable 密钥、旧的 anon / service_role 密钥沿用
   - §history-emails 全部分支与 tag 的提交中，作者与提交者邮箱只有 noreply 地址
   - §history-internals 全部分支与 tag 的历史中检索不到 VPS 上的部署路径（同一份私有清单）
   - §history-backup 镜像备份可以克隆，提交数与改写前一致
-  - §deploy-after-rewrite 改写后 staging 与生产各部署一次，健康检查报出的版本与提交都是改写后的
+  - §deploy-after-rewrite 改写后 staging 与生产各部署一次，健康接口报出的提交 SHA 等于改写后的目标提交
   - §actions-cleared 仓库的 Actions 运行记录数与产物数均为 0
 
 ### 5.5 泄密审计（F5）
