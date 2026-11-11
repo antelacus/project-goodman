@@ -18,8 +18,8 @@ N/A —— 证据编号沿用 ai-provider 的叫法；`R` 是法规检索结果�
 | 模块 / 文件 | 单一职责 | 测试层级 |
 |-------------|---------|---------|
 | `src/lib/database/supabase.ts` | 服务端唯一的数据库与 Storage 客户端，读 secret 密钥；缺密钥即抛错。`storage.ts`、`docx-upload.ts`、`pdf-upload.ts` 不再各建客户端；无调用方的 `createBrowserSupabaseClient` 删除 | IO |
-| `supabase/migrations/`（新迁移） | 收回 anon / authenticated 的授权与 `postgres` 的默认权限；`public` 全部表开 RLS；`document_chunks` 加表头列 | infra（由验收 SQL 守住） |
-| `src/lib/documents/chunker.ts` | 唯一的切块器：按行、表格成块、不重叠；管理员上传路由里的 `chunkDocument` 删除 | core |
+| `supabase/migrations/`（新迁移） | 收回 anon / authenticated 的授权与 `postgres` 的默认权限；`public` 全部表开 RLS | infra（由验收 SQL 守住） |
+| `src/lib/documents/chunker.ts` | 唯一的切块器：按行、不重叠，表格整块不切；管理员上传路由里的 `chunkDocument` 删除 | core |
 | `src/lib/extraction/article-lines.ts`（新） | "什么算条款的开头"：一行是否以条款号开头、条款号是什么。法规拆分与用户文档拆条款共用；遇到重复怎么办不在这里 | core |
 | `src/lib/extraction/regulation-splitter.ts` | 法规拆分：用 `article-lines` 判定，重复条款号仍让上传失败 | core |
 | `src/lib/citations/` | 证据的显示与核对：给用户文档按条发 `D` 编号；`finalizeAnswer` 把有效编号换成出处、把未核实的那一处换成删除标记、计数 | core |
@@ -41,8 +41,7 @@ N/A —— 证据编号沿用 ai-provider 的叫法；`R` 是法规检索结果�
         ├─▶ 保存的消息与界面显示（文本）
         └─▶ 过程日志（删除次数）
 
-写入切块：原文 ──chunker──▶ [{ content, tableHeader }] ──▶ document_chunks
-        search_text = normalize(tableHeader + content)（生成列）；检索结果把 tableHeader 放在 content 前面返回
+写入切块：原文 ──chunker──▶ [content] ──▶ document_chunks（search_text 仍由 content 生成）
 ```
 
 ## 3 入口
@@ -57,13 +56,13 @@ N/A —— 证据编号沿用 ai-provider 的叫法；`R` 是法规检索结果�
 - **证据**：`{ id, kind: 'regulation' | 'user_document', name, articleNumber, documentId, fileUrl }`。显示：`regulation` →《名》第X条；`user_document` →《文件名去扩展名》（您上传的文档）第X条。两种都带链接。
 - **`citations.numberDocument(document)`**：输入文档的 id、文件名与全文；输出带编号的文本和 `D` 证据。编号写在每条条款开头那一行之前。同一份文档里出现两次以上的条款号，这几条都不编号；没有条款开头的文档原样返回、没有证据。编号在本问题内唯一，与 `R` 互不重叠。
 - **`finalizeAnswer`**：入参增加 `D` 证据；返回 `{ text, cited, removed }`，不再在文末追加汇总。资料库外标注只看 `cited` 里有没有 `regulation`。每一处未核实内容替换为 `〔未经核实的引用，已删去〕`，不删句子。
-- **切块**：`chunk(text) → { content, tableHeader: string | null }[]`。`content` 按顺序拼起来等于 `text`。`tableHeader` 只在一张表被切成多块时，出现在第二块及以后，内容是这张表的表头行与分隔行。
+- **切块**：`chunk(text) → string[]`，按顺序拼起来等于 `text`。切点只落在行尾；一张 Markdown 表格（连续的以 `|` 开头的行）整块放进一个切块，比切块长度长也不切。不切而不是续块带表头：现有 50 张表最长 568 字，都不超过切块长度 1000 字；续块带表头要加列、改生成列、重建索引，读切块的地方还都得补表头。
 - **`createServerSupabaseClient()`**：签名不变，36 处调用不动；读 `SUPABASE_SECRET_KEY`，缺失即抛错，不回退。
 - **过程事件**：增加一种事件，带本次回答被删去的处数（为 0 时不发）。
 
 ## 5 持久化数据
 
-- `document_chunks`：一行 = 一份文档的一个切块。新增可空列 `table_header`。`search_text` 的生成表达式改为对 `table_header` 与 `content` 一起规范化，PGroonga 索引随之重建。
+- `document_chunks`：一行 = 一份文档的一个切块；结构不变，只是内容按新规则重切。
 - 权限：新迁移收回 anon / authenticated 对 `public` 下表、函数、序列的全部授权，收回 `postgres` 在 `public` 的默认权限；`users`、`guest_activity` 开启 RLS，不加策略（只有 secret 密钥访问，它不受 RLS 限制）。
 - 环境变量：新增 `SUPABASE_SECRET_KEY`（运行时经 `env_file` 进容器，不作构建参数）。停用旧密钥后，`NEXT_PUBLIC_SUPABASE_ANON_KEY` 与 `SUPABASE_SERVICE_ROLE_KEY` 从代码、`.env` 与 GitHub Secrets 中删去；构建参数里的旧值失效后留给发布流水线清理。新增 `GOODMAN_DATA_DIR`：仓库外私有目录，存放部署路径文件与镜像备份。
 
@@ -78,7 +77,7 @@ N/A —— 证据编号沿用 ai-provider 的叫法；`R` 是法规检索结果�
 ## 7 不变量
 
 1. anon 与 authenticated 对 `public` 下任何对象都没有权限，迁移新建的对象也没有 —— 验收 SQL（§anon-denied、§default-privileges），对线上库执行。
-2. 一份文档的切块按顺序拼起来等于它的全文，相邻切块不重叠 —— `chunker` 单测（含表格、长表、空行、无换行的长段落），加上重切后在生产库上的核对（§chunk-partition）。
+2. 一份文档的切块按顺序拼起来等于它的全文，相邻切块不重叠，没有一张表格被切开 —— `chunker` 单测（含表格、超长表格、空行、无换行的长段落），加上重切后在生产库上的核对（§chunk-partition、§table-chunk）。
 3. 显示给用户的每一个条款号都来自本问题的 `R` 或 `D` 证据 —— `citations` 单测与 §citation-text。
 4. "什么算条款的开头"只有一处定义 —— `article-lines` 的单测带一组法规样例行（含正文中的交叉引用、无空格的条款开头、页码行），在 CI 中运行；法规拆分的既有单测照常运行。
 5. 构建不需要 secret 密钥 —— CI 构建时不提供它。
@@ -117,4 +116,4 @@ N/A —— 证据编号沿用 ai-provider 的叫法；`R` 是法规检索结果�
 
 ## 10 开放设计问题
 
-- DQ-1 长表格续块的表头放在哪里？已选方案：表头存在独立的 `table_header` 列，`content` 只放这一块自己的那段原文；检索按"表头加内容"建索引，返回结果时把表头放在内容前面。这样"切块拼起来等于原文"（REQ §chunk-partition）与"续块带表头"（§table-chunk）能同时成立。另一种做法是表头直接重复写进 `content`，拼接时再按记录剪掉，但那就是 D1 已经否决的"拼接时剪掉重复部分"。
+无。
