@@ -92,11 +92,11 @@ N/A —— secret / publishable 密钥、旧的 anon / service_role 密钥沿用
 - 规则：
   - 不放许可证：没有 `LICENSE` 文件，`package.json` 的 license 为 `UNLICENSED`，README 写明"保留所有权利"，公开仅供查看。
   - README 写给外部读者（招聘方）：这是什么、在哪能看到产品（`goodman.antelacus.com`）、文档在哪。只做地图，不重复其他文档的内容；功能细节交给落地页。
-  - 仓库中不出现服务器内部细节，即 VPS 上的文件系统路径与目录结构（如 `$DEPLOY_HOME/...`）；SSH 连接信息本就只在 GitHub Secrets 中。端口分配、nginx 配置、容器名是常见的技术配置，可以保留。工作流需要的路径放 GitHub Secrets：公开仓库的运行日志人人可见，Secrets 在日志中被遮蔽，仓库变量不会。部署说明留在仓库，其中的路径写成变量名，真实值只在仓库外的一个私有文件中（文件位置由 `.env` 中的环境变量给出）。产品网址可以出现。
+  - 仓库中不出现服务器内部细节，即 VPS 上的文件系统路径与目录结构；SSH 连接信息本就只在 GitHub Secrets 中。端口分配、nginx 配置、容器名是常见的技术配置，可以保留。工作流需要的路径放 GitHub Secrets：公开仓库的运行日志人人可见，Secrets 在日志中被遮蔽，仓库变量不会。部署说明留在仓库，其中的路径写成变量名，真实值只在仓库外的一个私有文件中（文件位置由 `.env` 中的环境变量给出）。产品网址可以出现。
   - 安全联系改用 GitHub 私密漏洞报告，仓库中不出现个人邮箱。
 - 验收判据：
   - §no-license 仓库中没有 `LICENSE` 文件，`package.json` 的 license 为 `UNLICENSED`，README 含"保留所有权利"
-  - §no-internals 当前文件中检索不到 VPS 上的文件系统路径（`$DEPLOY_HOME`）
+  - §no-internals 当前文件中检索不到 VPS 上的部署路径（检索用的路径清单放在仓库外的私有文件中：清单本身就是要隐藏的内容）
   - §no-personal-email 当前文件中没有个人邮箱；安全联系指向 GitHub 私密漏洞报告
 
 ### 5.4 历史改写（F4）
@@ -110,7 +110,7 @@ N/A —— secret / publishable 密钥、旧的 anon / service_role 密钥沿用
   - 全部 Actions 运行记录与产物在公开前删除。
 - 验收判据：
   - §history-emails 全部分支与 tag 的提交中，作者与提交者邮箱只有 noreply 地址
-  - §history-internals 全部分支与 tag 的历史中检索不到 VPS 上的文件系统路径（`$DEPLOY_HOME`）
+  - §history-internals 全部分支与 tag 的历史中检索不到 VPS 上的部署路径（同一份私有清单）
   - §history-backup 镜像备份可以克隆，提交数与改写前一致
   - §deploy-after-rewrite 改写后 staging 与生产各部署一次，健康检查报出的版本与提交都是改写后的
   - §actions-cleared 仓库的 Actions 运行记录数与产物数均为 0
