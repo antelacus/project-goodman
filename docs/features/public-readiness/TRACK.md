@@ -141,6 +141,23 @@
 ")` 即变红
   - 待核：① D 引用的链接需要文件名与 `fileUrl`，`load-memory` 目前只查切块内容 —— 已关闭：`load-memory` 读文档名称与归属，链接经过程日志按文档 ID 打开（§user-doc-citation）；② 流式路由是否先推送未经核对的原始输出 —— 已关闭：答案只在完成事件中整体发送；③ 原文可恢复性 —— 已关闭：51 份文档在 Storage 都有原文件，用户文档 0 份
 
-**Phase 4 证据**：（Phase 4）
+**Phase 4 证据**：
+- 本地：全量 80 个文件、366 个测试通过，无待办；`tsc` 通过；lint 16 条警告（与基线相同）；`npm run test:audit` 通过；不提供 secret 密钥的 `npm run build` 通过
+- 生产只读核对：重切 `check` 51/51 份文档旧切块还原与原文件重新解析逐字一致；45 部法规重拆 1505 条与线上逐条相同；B2 迁移与 `access.sql` 在一个事务内试跑通过并回滚
+- （待补：Codex 上线前审查；staging 上的真实提问——选中一份按"第X条"编号的合成合同提问，核对 D 引用、链接与删除标记）
+
+**Phase 6 boxes**：
+- [ ] CHANGELOG 条目
+- [ ] TECHNICAL_DEBT 定稿：删除 TD-032；登记为已接受：列举序号、资料库文档检索结果不发编号、文档内重复条款号、超长表格不切、阿拉伯数字的"第1条"不发编号（各附触发条件）
+- [ ] README 仍然属实
+- [ ] 常新文档扫尾：两份 REQ、DESIGN、`docs/ARCHITECTURE.md`、`docs/DEPLOYMENT_CHECKLIST.md`、`docs/SECURITY.md` 与交付一致；两个迁移文件改名为数据库记录的版本号，`code-conventions.md` 中的引用随之改
+- [ ] 删除一次性重切脚本及其测试
+- [ ] DESIGN §9 第 1–5 步（可回退）：密钥、重切、两环境上线并核对 SHA、权限迁移、停用旧密钥；删除 GitHub Secrets 中的 `NEXT_PUBLIC_SUPABASE_ANON_KEY`
+- [ ] tag `v4.8.0`
+- [ ] DESIGN §9 第 6–10 步（不可回退，每步 Jason 确认）：备份、改写前扫描、改写并验收、强推、重新克隆与部署、清空 Actions、公开与公开后设置
+- [ ] FEEDBACK 扫尾 · `v4_DEVELOPMENT_PLAN.md` §3.13 状态
+- [ ] 各门读数：运行次数 / 改变了输出的拦截次数
+- [ ] 文档预算 · 记忆修剪
+- [ ] **关版（最后一项）**：未了事项归位 → `git mv TRACK.md TRACK_v4.8.0.md`
 
 ## 四、Session-end pickup
