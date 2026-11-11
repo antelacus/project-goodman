@@ -20,6 +20,11 @@ vi.mock('@/lib/logging', () => ({
   logError: vi.fn(),
   logWorkflowEvent: vi.fn(),
 }));
+// The admin upload route requires an admin session (hotfix v4.7.4).
+vi.mock('@/lib/security/guest-session', async importOriginal => ({
+  ...(await importOriginal<typeof import('@/lib/security/guest-session')>()),
+  requireAdmin: vi.fn(async () => ({ role: 'admin', sessionId: 's', userId: 'u' })),
+}));
 vi.mock('@/lib/security', () => ({
   verifyAdminPassword: vi.fn(),
   validateFileByExtension: vi.fn(() => ({ valid: true })),
@@ -120,7 +125,7 @@ describe('B3 regulation re-split', () => {
       );
 
     beforeEach(() => {
-      vi.mocked(security.verifyAdminPassword).mockResolvedValue(true);
+      vi.mocked(security.verifyAdminPassword).mockResolvedValue({ valid: true, needsRehash: false });
       vi.mocked(uploadFileToStorage).mockResolvedValue('doc/file.txt');
     });
 

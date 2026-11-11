@@ -32,6 +32,22 @@ vi.mock('@/lib/security', () => ({
   validateFileByExtension: vi.fn(() => ({ valid: true })),
 }));
 
+// The real route requires an admin session; each test sets who is asking.
+const session = vi.hoisted(() => ({ role: 'admin' as 'admin' | 'guest' | null }));
+vi.mock('@/lib/security/guest-session', async () => {
+  const { NextResponse } = await import('next/server');
+  return {
+    requireAdmin: vi.fn(async () =>
+      session.role === null
+        ? NextResponse.json({ error: '未授权访问' }, { status: 401 })
+        : session.role === 'admin'
+          ? { role: 'admin', sessionId: 's', userId: 'u' }
+          : NextResponse.json({ error: '权限不足' }, { status: 403 })
+    ),
+    isErrorResponse: (r: unknown) => r instanceof Response,
+  };
+});
+
 vi.mock('@/lib/database', () => ({
   createServerSupabaseClient: vi.fn(),
 }));
@@ -52,7 +68,8 @@ function createRequest(body: unknown) {
 
 beforeEach(() => {
   vi.clearAllMocks();
-  vi.mocked(security.verifyAdminPassword).mockResolvedValue(false);
+  session.role = 'admin';
+  vi.mocked(security.verifyAdminPassword).mockResolvedValue({ valid: false, needsRehash: false });
 });
 
 describe('POST /api/admin/upload-database-document', () => {
@@ -91,7 +108,7 @@ describe('POST /api/admin/upload-database-document', () => {
   });
 
   it('stores documents when admin upload succeeds', async () => {
-    vi.mocked(security.verifyAdminPassword).mockResolvedValue(true);
+    vi.mocked(security.verifyAdminPassword).mockResolvedValue({ valid: true, needsRehash: false });
 
     vi.mocked(performStructuredExtraction).mockResolvedValue({
       documentType: 'general',
@@ -154,7 +171,7 @@ describe('POST /api/admin/upload-database-document', () => {
   });
 
   it('decodes markdown uploads before storing document size', async () => {
-    vi.mocked(security.verifyAdminPassword).mockResolvedValue(true);
+    vi.mocked(security.verifyAdminPassword).mockResolvedValue({ valid: true, needsRehash: false });
 
     vi.mocked(performStructuredExtraction).mockResolvedValue({
       documentType: 'general',
@@ -209,4 +226,21 @@ describe('POST /api/admin/upload-database-document', () => {
     expect(response.status).toBe(200);
     expect(insertedDocument?.size).toBe(Buffer.byteLength(markdown, 'utf8'));
   });
+
+  it('rejects a wrong password even though the verifier returns an object, not a boolean', async () => {
+    const response = await POST(createRequest({ documentText: 'test', fileName: 'test.pdf', documentType: 'balance_sheet', adminPassword: 'wrong' }));
+    expect(response.status).toBe(401);
+    expect(createServerSupabaseClient).not.toHaveBeenCalled();
+  });
+
+  it('requires an admin session, whatever the password', async () => {
+    vi.mocked(security.verifyAdminPassword).mockResolvedValue({ valid: true, needsRehash: false });
+    for (const role of [null, 'guest'] as const) {
+      session.role = role;
+      const response = await POST(createRequest({ documentText: 'test', fileName: 'test.pdf', documentType: 'balance_sheet', adminPassword: 'right' }));
+      expect(response.status, String(role)).toBe(role === null ? 401 : 403);
+    }
+    expect(createServerSupabaseClient).not.toHaveBeenCalled();
+  });
 });
+
