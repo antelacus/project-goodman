@@ -146,16 +146,16 @@
   - 待核：① D 引用的链接需要文件名与 `fileUrl`，`load-memory` 目前只查切块内容 —— 已关闭：`load-memory` 读文档名称与归属，链接经过程日志按文档 ID 打开（§user-doc-citation）；② 流式路由是否先推送未经核对的原始输出 —— 已关闭：答案只在完成事件中整体发送；③ 原文可恢复性 —— 已关闭：51 份文档在 Storage 都有原文件，用户文档 0 份
 
 - Codex 上线前审查 · 任务一（`src/lib/citations/index.ts` 对照 ai-provider REQ §5.4 / §5.5，xhigh，只读，`f7db920`）。原文照录；核实：Claude 在现有代码上复现了 1、3（带标题的链接）、4、7、9：
-  - MUST-1 补充平面字符实体（`&#x1F600;`）让位置映射错位，未核实的"第99条"被原样再输出 —— status: open
-  - MUST-2 只解码数字实体，且解码结果不做全角折叠：`第&nbsp;99条`、`第&#xff19;&#xff19;条` 漏检 —— status: open
-  - MUST-3 链接解析不符合 Markdown：带标题的链接漏检；代码段内的 `[R99]` 漏检、`[R1](x)` 被误删 —— status: open
-  - MUST-4 数字内部的换行或空格绕过检测（`第十\n九条`） —— status: open
-  - MUST-5 编号后补写的款项只查一次：`[R1]第二款第三项` 留下"第三项"，`之十二` 只删"之十"，`（第二款）` 漏检 —— status: open
-  - MUST-6 不显示的 Markdown 引用定义里的 `[R1]` 被计为有效引用，资料库外标注因此缺失 —— status: open
-  - MUST-7 跨列表项合并删除范围：`- 第九条\n- 第十条` 变成一项、计 1 处 —— status: open
-  - MUST-8 模型把资料库外标注写在链接里时，程序重复添加 —— status: open
-  - SHOULD-9 替换跨越部分强调或链接时留下不配对的 Markdown（`**第九**条` → `**〔…〕`） —— status: open
-  - SHOULD-10 非法数字实体（`&#x110000;`）让整个处理抛异常 —— status: open
+  - MUST-1 补充平面字符实体（`&#x1F600;`）让位置映射错位，未核实的"第99条"被原样再输出 —— status: 已关闭：改用页面同款解析器（见裁定），`tests/unit/citations/codex-review.test.ts` 逐条回归
+  - MUST-2 只解码数字实体，且解码结果不做全角折叠：`第&nbsp;99条`、`第&#xff19;&#xff19;条` 漏检 —— status: 已关闭：改用页面同款解析器（见裁定），`tests/unit/citations/codex-review.test.ts` 逐条回归
+  - MUST-3 链接解析不符合 Markdown：带标题的链接漏检；代码段内的 `[R99]` 漏检、`[R1](x)` 被误删 —— status: 已关闭：改用页面同款解析器（见裁定），`tests/unit/citations/codex-review.test.ts` 逐条回归
+  - MUST-4 数字内部的换行或空格绕过检测（`第十\n九条`） —— status: 已关闭：改用页面同款解析器（见裁定），`tests/unit/citations/codex-review.test.ts` 逐条回归
+  - MUST-5 编号后补写的款项只查一次：`[R1]第二款第三项` 留下"第三项"，`之十二` 只删"之十"，`（第二款）` 漏检 —— status: 已关闭：改用页面同款解析器（见裁定），`tests/unit/citations/codex-review.test.ts` 逐条回归
+  - MUST-6 不显示的 Markdown 引用定义里的 `[R1]` 被计为有效引用，资料库外标注因此缺失 —— status: 已关闭：改用页面同款解析器（见裁定），`tests/unit/citations/codex-review.test.ts` 逐条回归
+  - MUST-7 跨列表项合并删除范围：`- 第九条\n- 第十条` 变成一项、计 1 处 —— status: 已关闭：改用页面同款解析器（见裁定），`tests/unit/citations/codex-review.test.ts` 逐条回归
+  - MUST-8 模型把资料库外标注写在链接里时，程序重复添加 —— status: 已关闭：改用页面同款解析器（见裁定），`tests/unit/citations/codex-review.test.ts` 逐条回归
+  - SHOULD-9 替换跨越部分强调或链接时留下不配对的 Markdown（`**第九**条` → `**〔…〕`） —— status: 已关闭：改用页面同款解析器（见裁定），`tests/unit/citations/codex-review.test.ts` 逐条回归
+  - SHOULD-10 非法数字实体（`&#x110000;`）让整个处理抛异常 —— status: 已关闭：改用页面同款解析器（见裁定），`tests/unit/citations/codex-review.test.ts` 逐条回归
 - Codex 上线前审查 · 任务二（`chunker.ts` 与 `scripts/rechunk-documents.ts`，xhigh，只读，`f7db920`）。原文照录：
   - MUST-1 `apply` 不读也不校验备份；再次 `check` 会覆盖原备份 —— status: 已关闭：`check` 拒绝写入已有报告或备份的目录，报告记备份哈希，`apply` 先校验备份哈希与每份文档的旧切块（`rechunk-documents.test.ts`）
   - MUST-2 哈希检查与事务内替换之间有并发写入的窗口 —— status: 已关闭：`replace_document_chunks` 锁住文档与切块后在事务内比对哈希；TS 与 SQL 的哈希公式用 Postgres 17.6 算出的值互证；函数在事务内的试跑待做（MCP 确认超时）；`apply` 期间冻结管理员上传
@@ -181,7 +181,8 @@
 **Phase 4 证据**：
 - 本地：全量 80 个文件、366 个测试通过，无待办；`tsc` 通过；lint 16 条警告（与基线相同）；`npm run test:audit` 通过；不提供 secret 密钥的 `npm run build` 通过
 - 生产只读核对：重切 `check` 51/51 份文档旧切块还原与原文件重新解析逐字一致；45 部法规重拆 1505 条与线上逐条相同；B2 迁移与 `access.sql` 在一个事务内试跑通过并回滚
-- （待补：Codex 上线前审查；staging 上的真实提问——选中一份按"第X条"编号的合成合同提问，核对 D 引用、链接与删除标记）
+- Codex 上线前审查：三个任务共 16 项 MUST、9 项 SHOULD、1 项 NICE 全部关闭，每项有修复前失败的回归测试；出处检查另加一条性质测试：随机拼出的回答（覆盖各项发现的写法）经处理后，页面同款解析器读出的显示文字里没有不来自证据的条款号或编号——本地 4 个种子共 8 万例通过，CI 跑 3000 例；修复后全量 82 个文件、389 个测试通过，lint 16 条警告（基线），不提供 secret 密钥的 `npm run build` 通过
+- （待补：staging 上的真实提问——选中一份按"第X条"编号的合成合同提问，核对 D 引用、链接与删除标记）
 
 **Phase 6 boxes**：
 - [ ] CHANGELOG 条目
