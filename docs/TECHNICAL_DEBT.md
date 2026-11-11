@@ -27,6 +27,8 @@
 | TD-027 | CI/CD | **E2E 测试曾在 CI 中不稳定**：Playwright E2E 因 Next.js dev server 锁文件冲突偶发失败，CI 中标记为 `continue-on-error: true`。2026-09 起能读到结果的 5 次运行均为 3/3 通过。 | 低 | 发布流水线版本：新流水线中改为阻断；该版内一直为绿则删除本条 |
 | TD-028 | 代码规范 | **`react-hooks/set-state-in-effect` 暂降为 warn**：eslint-config-next 16 新增此规则，现有 12 处违规（10 个 UI 文件，`npx eslint .` 可列出）。暂缓原因：UI 层缺少可靠的 E2E 安全网（TD-027）。退役条件：修复这 12 处，并在 `eslint.config.mjs` 中恢复为 error。 | 中 | TD-027 删除后，紧接着的 light 版本 |
 | TD-029 | 代码规范 | **无调用方的 PDF 预览路由**：`src/app/api/documents/pdf-preview/route.ts` 用 pdfjs-dist + canvas 在服务端渲染 PDF 页；v4.6（`464d5c7`）起前端预览改走 `/api/documents/preview-url` 签名链接，该路由再无调用方。它是 `canvas` 原生依赖与 `allowScripts` 批准项的唯一理由，也是 `pdfjs-dist` 的唯一使用者。处理：删除路由及 `canvas` / `pdfjs-dist` / `src/types/pdfjs-dist.d.ts`。 | 低 | v4.8（公开前） |
+| TD-039 | 出处 | **未做法规检索的会计处理回答没有任何标注**：资料库外标注只在本问题做过或请求过法规检索时才加（`src/lib/citations/` `finalizeAnswer` 的 `regulationSearched`）。用户问"按合同第五条的违约金怎么做账"，模型不检索法规、凭自身知识写出会计处理时，回答既无出处也无标注，用户会以为有依据。v4.7.0 起即如此。处理方向（待裁定）：涉及会计处理的问题必须先做法规检索，或对无出处的会计处理同样加标注。 | 中 | v4.8 之后的下一个版本 Phase 0 裁定 |
+| TD-040 | 检索 | **PDF 中的表格解析后丢失结构**：`2024年度财务报告.pdf` 的 135 个切块中没有表格行，表格变成无表头的文字与数字串；按表格中的项目或数字检索，命中的块读不出列的含义。属解析阶段的问题，TD-033（v4.8）只处理 Markdown 表格。 | 中 | v4.8 之后的下一个版本 Phase 0 裁定 |
 
 ## 已接受
 
