@@ -37,13 +37,17 @@ jobs:
             # fast-forward only: if the server checkout was edited, fail instead of overwriting
             git merge --ff-only origin/main
             echo "deploying $(git rev-parse --short HEAD)"
+            git rev-parse HEAD > BUILD_SHA
+            expected=$(cat BUILD_SHA)
             cd $GOODMAN_PROD_DIR
             # export env vars for docker compose build args
             set -a && source $GOODMAN_PROD_DIR/.env && set +a
             # the old container keeps serving if the build fails
             docker compose up -d --build
             for i in $(seq 1 20); do
-              if curl -fsS -o /dev/null http://localhost:3000/api/health; then echo "healthy after $((i*3))s"; exit 0; fi
+              served=$(curl -fsS http://localhost:3000/api/health 2>/dev/null | grep -o '"commit":"[0-9a-f]*"' | cut -d'"' -f4 || true)
+              # healthy is not enough: the served build must be the commit just merged
+              if [ "$served" = "$expected" ]; then echo "serving $expected after $((i*3))s"; exit 0; fi
               sleep 3
             done
             echo "health check failed"; docker compose logs --tail 60; exit 1

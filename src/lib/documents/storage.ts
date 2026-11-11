@@ -4,29 +4,11 @@
  * Provides functions for uploading, downloading, and managing files
  * in the document-files bucket.
  *
- * ⚠️ SERVER-SIDE ONLY ⚠️
- * This module uses SUPABASE_SERVICE_ROLE_KEY and must NEVER be imported
- * in Client Components. Doing so would expose the service key to the browser.
- *
- * Safe to import in:
- * - API routes (src/app/api/*)
- * - Server Components
- * - Server Actions
- *
- * NOT safe to import in:
- * - Client Components ('use client')
- * - Anything that runs in the browser
+ * Server-side only: it uses the database client on the secret key (see
+ * createServerSupabaseClient).
  */
 
-// Runtime check to prevent accidental client-side import
-if (typeof window !== 'undefined') {
-  throw new Error(
-    '[SECURITY] storage.ts must not be imported in client-side code. ' +
-    'This module uses SUPABASE_SERVICE_ROLE_KEY which must never be exposed to the browser.'
-  );
-}
-
-import { createClient, SupabaseClient } from '@supabase/supabase-js';
+import { createServerSupabaseClient } from '@/lib/database/supabase';
 import {
   getFileExtension,
   isPreviewable,
@@ -43,29 +25,6 @@ const BUCKET_NAME = 'document-files';
 // Signed URL expiration time (1 hour)
 const SIGNED_URL_EXPIRY_SECONDS = 3600;
 
-/**
- * Create a Supabase client with service role key for storage operations
- * This bypasses RLS and is used for server-side admin operations only
- */
-function createStorageClient(): SupabaseClient {
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-
-  if (!supabaseUrl) {
-    throw new Error('Missing NEXT_PUBLIC_SUPABASE_URL environment variable');
-  }
-
-  if (!serviceRoleKey) {
-    throw new Error('Missing SUPABASE_SERVICE_ROLE_KEY environment variable');
-  }
-
-  return createClient(supabaseUrl, serviceRoleKey, {
-    auth: {
-      autoRefreshToken: false,
-      persistSession: false,
-    },
-  });
-}
 
 /**
  * Sanitize filename for Supabase Storage
@@ -107,7 +66,7 @@ export async function uploadFileToStorage(
   filename: string,
   base64Data: string
 ): Promise<string> {
-  const supabase = createStorageClient();
+  const supabase = createServerSupabaseClient();
 
   // Sanitize filename for Supabase Storage (doesn't accept non-ASCII)
   const safeFilename = sanitizeFilename(filename);
@@ -152,7 +111,7 @@ export async function deleteFileFromStorage(storagePath: string): Promise<void> 
     return;
   }
 
-  const supabase = createStorageClient();
+  const supabase = createServerSupabaseClient();
 
   console.log(`[Storage] Deleting file: ${storagePath}`);
 
@@ -174,7 +133,7 @@ export async function deleteFileFromStorage(storagePath: string): Promise<void> 
  * @param documentId - The document ID
  */
 export async function deleteDocumentFiles(documentId: string): Promise<void> {
-  const supabase = createStorageClient();
+  const supabase = createServerSupabaseClient();
 
   console.log(`[Storage] Deleting all files for document: ${documentId}`);
 
@@ -223,7 +182,7 @@ export async function getSignedFileUrl(
     return null;
   }
 
-  const supabase = createStorageClient();
+  const supabase = createServerSupabaseClient();
 
   const { data, error } = await supabase.storage
     .from(BUCKET_NAME)
@@ -248,7 +207,7 @@ export async function getSignedFileUrls(
   storagePaths: string[],
   expiresIn: number = SIGNED_URL_EXPIRY_SECONDS
 ): Promise<Map<string, string>> {
-  const supabase = createStorageClient();
+  const supabase = createServerSupabaseClient();
   const urlMap = new Map<string, string>();
 
   // Filter out empty paths
@@ -307,7 +266,7 @@ export function getContentType(filename: string): string {
  * @returns Base64 string of the file content
  */
 export async function downloadFileAsBase64(storagePath: string): Promise<string> {
-  const supabase = createStorageClient();
+  const supabase = createServerSupabaseClient();
 
   // If a full URL is provided, extract the path
   // Assume standard Supabase storage URL format or just the path
@@ -346,7 +305,7 @@ export async function downloadFileAsBase64(storagePath: string): Promise<string>
  * Used as a fallback when file_url is missing in database
  */
 export async function getFirstFileForDocument(documentId: string): Promise<{ path: string; name: string } | null> {
-  const supabase = createStorageClient();
+  const supabase = createServerSupabaseClient();
 
   const { data: files, error } = await supabase.storage
     .from(BUCKET_NAME)

@@ -122,8 +122,8 @@ N/A —— 证据编号沿用 ai-provider 的叫法；`R` 是法规检索结果�
 
 第 1–5 步可以回退（方式见 §6）；第 6 步起不可回退，每步执行前由 Jason 确认。
 
-1. 在本机用新代码运行重切脚本（先备份 `document_chunks`；基准与停止条件见 §6）；跑 §chunk-partition、§table-chunk。旧版本应用读不重叠的切块照常工作。先于新代码上线：新代码的 `D` 编号若读到旧的重叠切块，会把唯一的条款误判为重复。
-2. 在 Dashboard 新建两把 secret 密钥（`staging`、`production`），写进两个环境的环境文件；有默认 publishable 密钥则删除。新代码（读 `SUPABASE_SECRET_KEY`）先上 staging，冒烟通过，再上生产，核对线上 SHA。此时旧密钥仍有效，两个环境都已不再读它。
+1. 在 Dashboard 新建两把 secret 密钥（`staging`、`production`），分别写进两个环境的环境文件，`production` 那把同时写进本机 `.env.scripts`；有默认 publishable 密钥则删除。此时旧密钥仍有效，线上照常。然后在本机用新代码运行重切脚本（先备份 `document_chunks`；基准与停止条件见 §6），跑 §chunk-partition、§table-chunk。旧版本应用读不重叠的切块照常工作。重切先于新代码上线：新代码的 `D` 编号若读到旧的重叠切块，会把唯一的条款误判为重复。
+2. 新代码（读 `SUPABASE_SECRET_KEY`）先上 staging，冒烟通过、线上 SHA 与部署的提交一致，再上生产，同样核对。此时旧密钥仍有效，两个环境都已不再读它。
 3. 执行权限迁移；两个环境各冒烟一次（§env-smoke）；跑 `access.sql`（§anon-denied、§default-privileges、§rls-all）。不在第 2 步之前执行：旧版本应用读的是 anon 密钥，迁移一执行，两个环境就同时读写不了数据库。
 4. 停用旧密钥（可重新启用）；跑 §legacy-keys-disabled；两个环境各冒烟一次，含打开一次文档预览。
 5. 镜像备份到 `GOODMAN_DATA_DIR`；从备份克隆一次，提交数、分支与 tag 清单与远端一致（§history-backup）。

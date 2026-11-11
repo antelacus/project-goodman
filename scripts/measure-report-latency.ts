@@ -18,8 +18,6 @@ import dotenv from 'dotenv';
 
 dotenv.config({ path: '.env', quiet: true });
 dotenv.config({ path: '.env.scripts', override: true, quiet: true });
-// The app's server client reads the anon variable; the script reads as service_role.
-process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
 process.env.REDIS_DISABLED = 'true';
 
 async function main(outDir: string, runs: number) {

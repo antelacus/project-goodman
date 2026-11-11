@@ -9,42 +9,13 @@
  * ⚠️ SERVER-SIDE ONLY ⚠️
  */
 
-// Runtime check to prevent client-side import
-if (typeof window !== 'undefined') {
-  throw new Error(
-    '[SECURITY] pdf-upload.ts must not be imported in client-side code.'
-  );
-}
-
-import { createClient, SupabaseClient } from '@supabase/supabase-js';
+import { createServerSupabaseClient } from '@/lib/database/supabase';
 import { generateReportPDF } from './pdf-generator';
 import type { ReportContent } from '@/types/report';
 
 const BUCKET_NAME = 'document-files';
 const REPORTS_FOLDER = 'reports';
 
-/**
- * Create a Supabase client with service role key for storage operations
- */
-function createStorageClient(): SupabaseClient {
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-
-  if (!supabaseUrl) {
-    throw new Error('Missing NEXT_PUBLIC_SUPABASE_URL environment variable');
-  }
-
-  if (!serviceRoleKey) {
-    throw new Error('Missing SUPABASE_SERVICE_ROLE_KEY environment variable');
-  }
-
-  return createClient(supabaseUrl, serviceRoleKey, {
-    auth: {
-      autoRefreshToken: false,
-      persistSession: false,
-    },
-  });
-}
 
 /**
  * Generate a safe filename for the PDF
@@ -70,7 +41,7 @@ export async function uploadReportPdf(
   year: string,
   comparisonYear?: string
 ): Promise<string> {
-  const supabase = createStorageClient();
+  const supabase = createServerSupabaseClient();
 
   const filename = generatePdfFilename(reportId, year, comparisonYear);
   const storagePath = `${REPORTS_FOLDER}/${reportId}/${filename}`;
@@ -98,7 +69,7 @@ export async function uploadReportPdf(
  * Update the report record with the PDF storage path
  */
 async function updateReportPdfPath(reportId: string, storagePath: string): Promise<void> {
-  const supabase = createStorageClient();
+  const supabase = createServerSupabaseClient();
 
   const { error } = await supabase
     .from('reports')

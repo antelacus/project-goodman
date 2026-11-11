@@ -12,7 +12,7 @@
  *     verifies it. Refuses to run if the document set or any file changed since
  *     `check`, or if any anomaly in report.json lacks a ruling. Re-runnable.
  *
- * Credentials come from .env.scripts (NEXT_PUBLIC_SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY),
+ * Credentials come from .env.scripts (NEXT_PUBLIC_SUPABASE_URL, SUPABASE_SECRET_KEY),
  * which Next.js does not load, so local dev never reaches production.
  */
 
@@ -44,8 +44,8 @@ interface Report {
 function connect(): SupabaseClient {
   dotenv.config({ path: '.env.scripts', quiet: true });
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
-  if (!url || !key) throw new Error('.env.scripts must set NEXT_PUBLIC_SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY');
+  const key = process.env.SUPABASE_SECRET_KEY;
+  if (!url || !key) throw new Error('.env.scripts must set NEXT_PUBLIC_SUPABASE_URL and SUPABASE_SECRET_KEY');
   return createClient(url, key, { auth: { persistSession: false } });
 }
 
