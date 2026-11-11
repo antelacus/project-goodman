@@ -186,4 +186,15 @@ describe('POST /api/documents/upload-temp', () => {
       })
     );
   });
+
+  it('reads the type from the MIME type when the name has no extension, and refuses an unsupported file', async () => {
+    const text = '这是一段没有扩展名的文本，长度足够用于测试。';
+    const named = await POST(createRequest({ fileData: Buffer.from(text).toString('base64'), fileName: '合同', fileType: 'text/markdown' }));
+    expect(named.status).toBe(200);
+    expect((await named.json()).textPreview).toContain('没有扩展名的文本');
+
+    const refused = await POST(createRequest({ fileData: Buffer.from('PK').toString('base64'), fileName: 'archive', fileType: 'application/zip' }));
+    expect(refused.status).toBeGreaterThanOrEqual(400);
+  });
 });
+

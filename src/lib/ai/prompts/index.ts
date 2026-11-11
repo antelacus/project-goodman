@@ -54,7 +54,9 @@ export function loadPromptWithVariables(
 
   let result = content;
   for (const [key, value] of Object.entries(variables)) {
-    result = result.replace(new RegExp(`{{${key}}}`, 'g'), value);
+    // A function, not a string: a value is inserted as written ($& and $1 in a
+    // document stay text instead of being expanded as replacement patterns).
+    result = result.replace(new RegExp(`{{${key}}}`, 'g'), () => value);
   }
 
   return result;

@@ -100,3 +100,42 @@ describe('citations: GFM and CJK emphasis (the page renders both)', () => {
     expect(run('**依据第九条。**企业可以免税。依据[R1]。').text).toBe(`**依据${M}。**企业可以免税。依据${R1}。`);
   });
 });
+
+describe('citations: /code-review on PR #13', () => {
+  it('2 lists and ranges of article numbers are article numbers', () => {
+    for (const written of ['第十一、十二条', '第五至七条', '第5-7条', '第五条至第七条']) {
+      expect(run(`依据${written}的规定。依据[R1]。`), written).toMatchObject({ text: `依据${M}的规定。依据${R1}。`, removed: 1 });
+    }
+  });
+
+  it('3 a code block\'s info string is not shown; the number in its body is what gets replaced', () => {
+    const { text, removed } = run('```第九条\n第九条\n```\n\n依据[R1]。');
+    expect(removed).toBe(1);
+    expect(text.split('\n').slice(1).join('\n')).not.toContain('第九条');
+  });
+
+  it('4 invisible format characters inside a number do not hide it', () => {
+    for (const written of ['第五​条', '第⁠五条', '第五­条', '第五&#8203;条']) {
+      expect(run(`依据${written}可以免税。依据[R1]。`), JSON.stringify(written)).toMatchObject({ removed: 1 });
+    }
+  });
+
+  it('5 alt text (shown when an image fails) and link titles (shown on hover) are checked', () => {
+    expect(run('![第九条](http://x/none.png)依据[R1]。')).toMatchObject({ removed: 1 });
+    expect(run('[见此](http://x "依据第九条")依据[R1]。')).toMatchObject({ removed: 1 });
+    expect(run('![第九条](http://x/none.png)依据[R1]。').text).not.toContain('第九条');
+  });
+
+  it('6 a bare D with digits is an id only when this question has D evidence; R&D years and cells stay', () => {
+    expect(run('请看单元格 D12 的数值。依据[R1]。')).toMatchObject({ text: `请看单元格 D12 的数值。依据${R1}。`, removed: 0 });
+    expect(run('R&D 2024年投入增加。依据[R1]。')).toMatchObject({ text: `R&D 2024年投入增加。依据${R1}。`, removed: 0 });
+    const withD = { ...ctx, evidence: [...EVIDENCE, { id: 'D1', kind: 'user_document' as const, name: '合同.md', articleNumber: '第一条', documentId: 'u', fileUrl: null }] };
+    expect(finalizeAnswer('依据D3可以免税。依据[R1]。', withD)).toMatchObject({ removed: 1 });
+  });
+
+  it('7 a valid citation swallowed by a removal is not counted as cited', () => {
+    const { text, cited } = run('第*五条[R1]*');
+    expect(cited).toEqual([]);
+    expect(text.startsWith(OUT_OF_LIBRARY_LABEL)).toBe(true);
+  });
+});

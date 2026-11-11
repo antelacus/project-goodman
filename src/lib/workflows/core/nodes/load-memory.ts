@@ -5,6 +5,7 @@
  * Standardized for use in Unified Agent.
  */
 
+import { loadPromptWithVariables } from "@/lib/ai/prompts";
 import { BaseAgentState, DocumentLoadError, newQuestionState } from "../state/base-state";
 import type { AgentMemory } from "@/lib/memory/conversation-memory";
 import { SystemMessage, HumanMessage, AIMessage, BaseMessage } from "@langchain/core/messages";
@@ -87,9 +88,7 @@ export const createLoadMemoryNode = (memory: AgentMemory) => async function load
                 const combinedContext = documents
                     .map((doc, i) => `Document ID: ${doc.id}\nFile name: ${doc.name}\n\n${numbered.texts[i]}`)
                     .join("\n\n---\n\n");
-                contextMessage = new SystemMessage(
-                    `[Active Document Context]\nThe user has provided the following document content for reference in this conversation. If you need to perform specific extraction tools, use the provided Document IDs. Articles marked [Dn] are cited by that id only.\n\n${combinedContext}\n\n[End of Document Context]`
-                );
+                contextMessage = new SystemMessage(loadPromptWithVariables("document-context.md", { documents: combinedContext }));
             }
         } catch (err) {
             console.error("Error fetching document context:", err);
