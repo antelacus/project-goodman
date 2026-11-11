@@ -87,7 +87,7 @@
 - 依赖：none
 
 ### Batch 4 — 用户文档出处与删除标记
-- 状态：open
+- 状态：done `f889ec3`
 - 范围：`src/lib/citations/`（D 编号、删除标记、计数）；`load-memory.ts`（只接受当前用户自己的文档）、`finalize-answer.ts`、流式路由的过程事件；管理员上传的提示；`chat-system.md` 写明 D 编号；`b4-search-citations.test.ts` 中按旧规则断言的用例随规则改 · ai-provider REQ §5.4、§5.5
 - 验收判据：§citation-text、§user-doc-citation、§user-doc-duplicate、§removal-count、§doc-article-hint、§out-of-library、§selected-doc-owner
 - 依赖：Batch 3、Batch 5（拼接出的全文须无重复）
