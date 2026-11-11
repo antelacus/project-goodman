@@ -29,6 +29,11 @@ vi.mock('@/lib/logging', () => ({
   logError: vi.fn(),
   logWorkflowEvent: vi.fn(),
 }));
+// The admin upload route requires an admin session (hotfix v4.7.4).
+vi.mock('@/lib/security/guest-session', async importOriginal => ({
+  ...(await importOriginal<typeof import('@/lib/security/guest-session')>()),
+  requireAdmin: vi.fn(async () => ({ role: 'admin', sessionId: 's', userId: 'u' })),
+}));
 vi.mock('@/lib/security', () => ({
   ensureSession: vi.fn(),
   checkGuestRate: vi.fn(),
@@ -66,7 +71,7 @@ beforeEach(() => {
   relay.reset();
   vi.mocked(security.ensureSession).mockResolvedValue(guest);
   vi.mocked(security.checkGuestRate).mockResolvedValue({ allowed: true, remaining: 4, total: 5, resetsAt: Date.now() + 3600_000 });
-  vi.mocked(security.verifyAdminPassword).mockResolvedValue(true);
+  vi.mocked(security.verifyAdminPassword).mockResolvedValue({ valid: true, needsRehash: false });
 });
 
 function reportState(): ReportWorkflowState {
