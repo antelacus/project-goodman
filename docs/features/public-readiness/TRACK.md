@@ -184,15 +184,15 @@
 
 - `/code-review high` · PR #13 全量 diff（Phase 5，`81ecad7`）。核实：1 由 Claude 读码确认并核对生产库（51 份资料库文档均为 2026-01-26 原始上传，无被写入的迹象）；2–7 由评审以探针输入复现：
   - 1 管理员上传路由把 `verifyAdminPassword` 返回的对象当布尔判断，任意非空密码都通过，资料库可被任何人写入（自 2025-12-29 `490317b` 起，生产当前受影响） —— status: 修复在热修复 v4.7.4（PR #14，待合并）：要求管理员会话并检查 `.valid`；测试原把校验函数模拟成布尔值，掩盖了缺陷
-  - 2 "第十一、十二条""第五至七条""第5-7条"不被识别 —— status: open
-  - 3 代码块的信息串与首行相同时，替换落在不显示的信息串上 —— status: open
-  - 4 零宽字符等不可见字符插在条款号中绕过识别 —— status: open
-  - 5 图片的 alt 文本在图片加载失败时显示，未检查 —— status: open
-  - 6 裸写的 `D12`（单元格引用）、`R&D 2024` 被当成编号删去 —— status: open
-  - 7 合并编辑时被吞掉的有效引用仍留在 `cited`，资料库外标注因此缺失 —— status: open
-  - 8 `upload-temp` 仍有自己的一份文本提取，与共用模块重复 —— status: open
-  - 9 字符引用的解码缓存无上限 —— status: open
-  - 10 `load-memory` 里的模型指令写在代码字符串里，未放进 `src/lib/ai/prompts/` —— status: open
+  - 2 "第十一、十二条""第五至七条""第5-7条"不被识别 —— status: 已关闭：条款号含连写与区间
+  - 3 代码块的信息串与首行相同时，替换落在不显示的信息串上 —— status: 已关闭：代码的正文起点按语法定位（围栏行之后、开头反引号之后）
+  - 4 零宽字符等不可见字符插在条款号中绕过识别 —— status: 已关闭：Unicode 格式字符（Cf）按空白处理
+  - 5 图片的 alt 文本在图片加载失败时显示，未检查 —— status: 已关闭：alt 与链接、图片的 title 计入显示文字
+  - 6 裸写的 `D12`（单元格引用）、`R&D 2024` 被当成编号删去 —— status: 已关闭：裸写编号不含空格；裸写的 D 只在有 D 证据时算（见裁定）
+  - 7 合并编辑时被吞掉的有效引用仍留在 `cited`，资料库外标注因此缺失 —— status: 已关闭：`cited` 按合并后留下的编辑计算
+  - 8 `upload-temp` 仍有自己的一份文本提取，与共用模块重复 —— status: 已关闭：改用共用模块；无扩展名按 MIME 类型补，不支持的类型仍拒绝（`upload-temp.test.ts`）
+  - 9 字符引用的解码缓存无上限 —— status: 已关闭：改用 micromark 自己的解码器，去掉缓存
+  - 10 `load-memory` 里的模型指令写在代码字符串里，未放进 `src/lib/ai/prompts/` —— status: 已关闭：`document-context.md`；同时修正 `loadPromptWithVariables` 把变量当替换串（文档中的 `$&` 会被展开），`prompt-loader.test.ts`
 
 **Phase 4 证据**：
 - 本地：全量 80 个文件、366 个测试通过，无待办；`tsc` 通过；lint 16 条警告（与基线相同）；`npm run test:audit` 通过；不提供 secret 密钥的 `npm run build` 通过

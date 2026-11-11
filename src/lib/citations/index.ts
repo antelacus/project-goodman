@@ -22,6 +22,8 @@ import { unified } from 'unified';
 import remarkParse from 'remark-parse';
 import { ANSWER_SYNTAX } from '@/lib/markdown/answer-syntax';
 import type { Nodes, Root } from 'mdast';
+import { decodeNamedCharacterReference } from 'decode-named-character-reference';
+import { decodeNumericCharacterReference } from 'micromark-util-decode-numeric-character-reference';
 import { articleStartsByLine } from '@/lib/extraction/article-lines';
 export interface Evidence {
   id: string;
@@ -45,12 +47,14 @@ const ID = '[RD]\\s*\\d+';
 const CITATION = new RegExp(`[[【]\\s*(${ID}(?:\\s*[,，、]\\s*${ID})*)\\s*[\\]】]`, 'g');
 // Citations side by side ("[R1][R3]", "[R1]、[R3]") are shown as one list.
 const CITATION_RUN = new RegExp(`${CITATION.source}(?:[ \\t]*、?[ \\t]*${CITATION.source})*`, 'g');
-const ARTICLE_NUMBER = new RegExp(`第\\s*${NUMBER}\\s*条`, 'g');
+// Lists and ranges are one article reference: 第十一、十二条, 第五至七条, 第5-7条.
+const ARTICLE_NUMBER = new RegExp(`第\\s*${NUMBER}(?:\\s*[、，,和及与或至到\\-–—~～]\\s*(?:第\\s*)?${NUMBER})*\\s*条`, 'g');
 // A paragraph, item or sub-article tacked onto a cited article is not part of the
 // evidence; each match is one more addition, bracketed or not.
 const AFTER_CITATION = new RegExp(`^\\s*[（(]?\\s*(?:第\\s*${NUMBER}\\s*[款项目]|之\\s*${NUMBER})\\s*[)）]?`);
-// An id outside a well-formed citation: bare R3, a range [R1-R3].
-const STRAY_ID = /(?<![A-Za-z0-9])[RD]\s*\d+/g;
+// An id outside a well-formed citation: bare R3, a range [R1-R3]. A bare D counts
+// only when this question has D evidence: otherwise "D12" is a spreadsheet cell.
+const strayIds = (withD: boolean) => (withD ? /(?<![A-Za-z0-9&])[RD]\d+(?!\d)/g : /(?<![A-Za-z0-9&])R\d+(?!\d)/g);
 // Gaps that join two flagged spans into one place: [R1-R3], "第五条、第六条".
 const JOINING_GAP = /^[\s\-–—~～、，,和及与或至]{0,3}$/;
 const BRACKET_PAIRS: Record<string, string> = { '[': ']', '［': '］', '【': '】', '(': ')', '（': '）' };
@@ -63,7 +67,10 @@ const parser = unified().use(remarkParse).use(ANSWER_SYNTAX);
 const BLOCK_END = '\u0000';
 const CONTAINERS = new Set(['emphasis', 'strong', 'delete', 'link', 'linkReference', 'inlineCode', 'inlineMath']);
 const INLINE = new Set([...CONTAINERS, 'text', 'break', 'html', 'image', 'imageReference', 'footnoteReference']);
-const HIDDEN = new Set(['definition', 'image', 'imageReference', 'thematicBreak']);
+const HIDDEN = new Set(['definition', 'thematicBreak']);
+// Unicode format characters (zero-width space, word joiner, soft hyphen…) render as
+// nothing, so to detection they are whitespace.
+const FORMAT_CHARACTER = /\p{Cf}/gu;
 
 /** The text as the page shows it, with each shown character's source range (-1 for a block separator). */
 interface Shown {
@@ -74,17 +81,12 @@ interface Shown {
   containers: Array<{ from: number; to: number; innerFrom: number; innerTo: number }>;
 }
 
-const references = new Map<string, string>();
 /** A character reference as the parser decodes it ('&nbsp;' → U+00A0); itself when it is not one. */
 function decodeReference(raw: string): string {
-  let decoded = references.get(raw);
-  if (decoded === undefined) {
-    const paragraph = parser.parse(raw).children[0];
-    const first = paragraph?.type === 'paragraph' ? paragraph.children[0] : undefined;
-    decoded = paragraph?.type === 'paragraph' && paragraph.children.length === 1 && first?.type === 'text' ? first.value : raw;
-    references.set(raw, decoded);
-  }
-  return decoded;
+  const body = raw.slice(1, -1);
+  if (body[0] !== '#') return decodeNamedCharacterReference(body) || raw;
+  const hex = body[1] === 'x' || body[1] === 'X';
+  return decodeNumericCharacterReference(body.slice(hex ? 2 : 1), hex ? 16 : 10);
 }
 
 /**
@@ -137,12 +139,17 @@ function render(src: string): Shown {
     shown.start.push(s);
     shown.end.push(e);
   };
-  const literal = (value: string, from: number, to: number, code: boolean) => {
-    // A code node's value starts after its fence or backticks.
-    const at = code ? src.indexOf(value.split('\n')[0], from) : from;
-    const map = at >= from && at < to ? align(src, at, to, value) : null;
+  const literal = (value: string, from: number, at: number, to: number) => {
+    const map = at >= from && at <= to ? align(src, at, to, value) : null;
     // Unalignable: every character maps to the whole node, so a replacement takes it all.
     for (let k = 0; k < value.length; k++) push(value[k], map ? map[k][0] : from, map ? map[k][1] : to);
+  };
+  /** Text shown apart from the flow (alt, title): separated, so no pattern joins it to its neighbours. */
+  const shownAside = (value: string, at: number, to: number) => {
+    push(BLOCK_END, -1, -1);
+    const map = at < to ? align(src, at, to, value) : null;
+    for (let k = 0; k < value.length; k++) push(value[k], map ? map[k][0] : at, map ? map[k][1] : to);
+    push(BLOCK_END, -1, -1);
   };
   const visit = (node: Nodes, inline: boolean, parent: [number, number]) => {
     if (HIDDEN.has(node.type)) return;
@@ -155,11 +162,24 @@ function render(src: string): Shown {
     if (node.type === 'break') push('\n', from, to);
     // Rendered as a superscript number: 第[^1]条 shows as an article number.
     else if (node.type === 'footnoteReference') push('1', from, to);
-    else if (node.type === 'text' || node.type === 'html') literal(node.value, from, to, false);
-    else if (node.type === 'inlineCode' || node.type === 'inlineMath' || node.type === 'code' || node.type === 'math') literal(node.value, from, to, true);
+    else if (node.type === 'text' || node.type === 'html') literal(node.value, from, from, to);
+    // A code node's value starts after its opening backticks or dollars, or after
+    // its fence line (whose info string is not shown).
+    else if (node.type === 'inlineCode' || node.type === 'inlineMath') literal(node.value, from, from + /^(`+|\$+)/.exec(src.slice(from))![0].length, to);
+    else if (node.type === 'code' || node.type === 'math') {
+      const fenced = /^[ \t]*(`{3,}|~{3,}|\$\$)/.test(src.slice(from));
+      literal(node.value, from, fenced ? src.indexOf('\n', from) + 1 || to : from, to);
+    }
+    // Alt text shows when the image fails to load.
+    else if (node.type === 'image' || node.type === 'imageReference') shownAside(node.alt ?? '', from + 2, to);
     else if ('children' in node) {
       const childrenInline = inline || ['paragraph', 'heading', 'tableCell'].includes(node.type) || CONTAINERS.has(node.type);
       for (const child of node.children) visit(child as Nodes, childrenInline, [from, to]);
+    }
+    // A title shows on hover.
+    if ((node.type === 'link' || node.type === 'image') && node.title) {
+      const at = src.lastIndexOf(node.title, to);
+      shownAside(node.title, at >= from ? at : from, to);
     }
     if (CONTAINERS.has(node.type)) {
       const starts = shown.start.slice(before).filter(n => n >= 0);
@@ -168,7 +188,9 @@ function render(src: string): Shown {
     if (block) push(BLOCK_END, -1, -1);
   };
   visit(parser.runSync(parser.parse(src)) as Root, false, [0, src.length]);
-  shown.text = shown.text.replace(/[０-９ＲＤ［］]/g, ch => String.fromCharCode(ch.charCodeAt(0) - 0xfee0));
+  shown.text = shown.text
+    .replace(/[０-９ＲＤ［］]/g, ch => String.fromCharCode(ch.charCodeAt(0) - 0xfee0))
+    .replace(FORMAT_CHARACTER, ch => ' '.repeat(ch.length));
   return shown;
 }
 
@@ -176,6 +198,23 @@ interface Edit {
   start: number;
   end: number;
   text: string;
+  /** The evidence a citation edit shows; it counts as cited only if the edit survives. */
+  ids?: string[];
+}
+
+/** Widening can make edits overlap: they merge into the first, which keeps its text and evidence, plus one marker. */
+function mergeEdits(edits: Edit[]): Edit[] {
+  const merged: Edit[] = [];
+  for (const edit of [...edits].sort((x, y) => x.start - y.start || y.end - x.end)) {
+    const last = merged[merged.length - 1];
+    if (last && edit.start < last.end) {
+      last.end = Math.max(last.end, edit.end);
+      if (edit.text.includes(REMOVED_MARKER) && !last.text.includes(REMOVED_MARKER)) last.text += REMOVED_MARKER;
+    } else {
+      merged.push({ ...edit });
+    }
+  }
+  return merged;
 }
 
 /**
@@ -239,7 +278,6 @@ export function finalizeAnswer(
   context: { evidence: Evidence[]; regulationSearched: boolean; allRegulationSearchesFailed: boolean }
 ): { text: string; cited: Evidence[]; removed: number } {
   const byId = new Map(context.evidence.map(e => [e.id, e]));
-  const cited = new Map<string, Evidence>();
   const shown = render(answer);
   const edits: Edit[] = [];
   const taken: Array<[number, number]> = [];
@@ -254,9 +292,9 @@ export function finalizeAnswer(
     taken.push([a, b]);
     const ids = [...run[0].matchAll(CITATION)].flatMap(m => idsIn(m[1])).filter((id, i, all) => all.indexOf(id) === i);
     let previous: string | undefined;
-    const parts = ids.filter(id => byId.has(id)).map(id => {
+    const valid = ids.filter(id => byId.has(id));
+    const parts = valid.map(id => {
       const e = byId.get(id)!;
-      cited.set(id, e);
       // Within one list, an article of the same source as the one before drops the name.
       const key = `${e.kind}:${e.name}`;
       const shownName = key === previous ? '' : sourceName(e);
@@ -265,7 +303,7 @@ export function finalizeAnswer(
     });
     const unknown = ids.some(id => !byId.has(id));
     const [start, end] = sourceOf(answer, shown, a, b);
-    edits.push({ start, end, text: [...parts, ...(unknown ? [REMOVED_MARKER] : [])].join('、') });
+    edits.push({ start, end, text: [...parts, ...(unknown ? [REMOVED_MARKER] : [])].join('、'), ids: valid });
 
     // Everything tacked on after it is one place: 第二款第三项 goes whole.
     let tailEnd = b;
@@ -278,7 +316,7 @@ export function finalizeAnswer(
   }
 
   const isTaken = (a: number, b: number) => taken.some(([s, e]) => a < e && b > s);
-  const selfWritten = [...shown.text.matchAll(ARTICLE_NUMBER), ...shown.text.matchAll(STRAY_ID)]
+  const selfWritten = [...shown.text.matchAll(ARTICLE_NUMBER), ...shown.text.matchAll(strayIds(context.evidence.some(e => e.kind === 'user_document')))]
     .map(m => [m.index!, m.index! + m[0].length] as [number, number])
     .filter(([a, b]) => !isTaken(a, b))
     .sort((x, y) => x[0] - y[0]);
@@ -291,25 +329,15 @@ export function finalizeAnswer(
   }
   for (const [a, b] of places) strike(a, b);
 
-  const citedRegulation = [...cited.values()].some(e => e.kind === 'regulation');
+  let merged = mergeEdits(edits);
+  const cited = [...new Set(merged.flatMap(e => e.ids ?? []))].map(id => byId.get(id)!);
+  const citedRegulation = cited.some(e => e.kind === 'regulation');
   const label = context.regulationSearched && !citedRegulation
     ? (context.allRegulationSearchesFailed ? RETRIEVAL_FAILED_LABEL : OUT_OF_LIBRARY_LABEL)
     : null;
   const written = label ? leadingLabelEnd(shown.text) : -1;
-  if (written >= 0) edits.push({ start: 0, end: sourceOf(answer, shown, 0, written)[1], text: '' });
+  if (written >= 0) merged = mergeEdits([...merged, { start: 0, end: sourceOf(answer, shown, 0, written)[1], text: '' }]);
 
-  // Widening can make edits overlap: they merge into one, keeping one marker.
-  edits.sort((x, y) => x.start - y.start || y.end - x.end);
-  const merged: Edit[] = [];
-  for (const edit of edits) {
-    const last = merged[merged.length - 1];
-    if (last && edit.start < last.end) {
-      last.end = Math.max(last.end, edit.end);
-      if (edit.text.includes(REMOVED_MARKER) && !last.text.includes(REMOVED_MARKER)) last.text += REMOVED_MARKER;
-    } else {
-      merged.push({ ...edit });
-    }
-  }
   let text = '';
   let at = 0;
   for (const edit of merged) {
@@ -320,7 +348,7 @@ export function finalizeAnswer(
   const removed = merged.filter(e => e.text.includes(REMOVED_MARKER)).length;
 
   if (label) text = `${label}\n\n${text.replace(/^[\s：:，,。]+/, '')}`.trim();
-  return { text, cited: [...cited.values()], removed };
+  return { text, cited, removed };
 }
 
 export interface DocumentForNumbering {
