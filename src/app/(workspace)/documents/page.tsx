@@ -142,7 +142,7 @@ export default function DocumentsPage() {
   const businessDocs = documents.filter((d) => d.docCategory === "business");
 
   // Admin Auth
-  const { isAuthenticated, logout, modal } = useAdminAuth();
+  const { isAuthenticated, logout } = useAdminAuth();
 
   // Upload State
   const [uploadStatus, setUploadStatus] = useState<'idle' | 'uploading' | 'success' | 'error' | 'unsupported'>('idle');
@@ -561,7 +561,6 @@ export default function DocumentsPage() {
 
   return (
     <PageContainer maxWidth="4xl">
-      {modal}
       <div className="flex flex-col gap-8">
         <section className="w-full">
           <PageTitle className="flex items-center gap-3">

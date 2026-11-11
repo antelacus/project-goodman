@@ -1,4 +1,4 @@
-import { isOwnedBy, isReadableBy, requesterOf } from '@/lib/documents/access';
+import { isOwnedBy, isReadableBy, isSelectableBy, requesterOf } from '@/lib/documents/access';
 
 const own = { doc_category: 'business', owner_type: 'guest', owner_id: 's-1' };
 const library = { doc_category: 'knowledge', owner_type: 'system', owner_id: null };
@@ -21,5 +21,12 @@ describe('document access', () => {
     expect(isReadableBy(own, { ownerType: 'guest', ownerId: 's-1' })).toBe(true);
     expect(isReadableBy(own, { ownerType: 'guest', ownerId: 's-9' })).toBe(false);
     expect(isReadableBy(own, { ownerType: 'admin', ownerId: 'u-0' })).toBe(true);
+  });
+
+  it('selects only own uploads for numbering, never a library document, even one the admin uploaded', () => {
+    expect(isSelectableBy(own, { ownerType: 'guest', ownerId: 's-1' })).toBe(true);
+    const adminsLibraryUpload = { doc_category: 'knowledge', owner_type: 'admin', owner_id: 'u-0' };
+    expect(isOwnedBy(adminsLibraryUpload, { ownerType: 'admin', ownerId: 'u-0' })).toBe(true);
+    expect(isSelectableBy(adminsLibraryUpload, { ownerType: 'admin', ownerId: 'u-0' })).toBe(false);
   });
 });

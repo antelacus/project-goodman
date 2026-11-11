@@ -21,8 +21,7 @@ export {
 
 // Session (V3.10: Redis-backed sessions with role support)
 export {
-  createSession,
-  createAdminSession,
+  createAccountSession,
   createGuestSession,
   verifySession,
   destroySession,
@@ -30,7 +29,6 @@ export {
   getSessionRemainingTime,
   getCookieOptions,
   COOKIE_NAME,
-  COOKIE_OPTIONS,
   type SessionData,
 } from "./session";
 

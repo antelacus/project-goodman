@@ -4,4 +4,4 @@
  * Admin authentication and management components.
  */
 
-export { useAdminAuth } from "./PasswordModal";
+export { useAdminAuth } from "./useAdminAuth";

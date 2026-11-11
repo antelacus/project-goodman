@@ -10,7 +10,7 @@ import type { AgentMemory } from "@/lib/memory/conversation-memory";
 import { SystemMessage, HumanMessage, AIMessage, BaseMessage } from "@langchain/core/messages";
 import { createServerSupabaseClient } from "@/lib/database";
 import { loadDocumentText } from "@/lib/documents/text";
-import { isOwnedBy } from "@/lib/documents/access";
+import { isSelectableBy } from "@/lib/documents/access";
 import { numberDocuments, type DocumentForNumbering, type Evidence } from "@/lib/citations";
 
 /**
@@ -52,13 +52,13 @@ export const createLoadMemoryNode = (memory: AgentMemory) => async function load
             const supabase = createServerSupabaseClient();
             const { data: rows, error } = await supabase
                 .from("documents")
-                .select("id, name, file_url, owner_type, owner_id")
+                .select("id, name, file_url, doc_category, owner_type, owner_id")
                 .in("id", documentIds);
             if (error) throw new Error(error.message);
 
             const loaded = await Promise.all(documentIds.map(async (docId): Promise<DocumentForNumbering | null> => {
                 const doc = rows?.find(r => r.id === docId);
-                if (!doc || !isOwnedBy(doc, { ownerType, ownerId })) {
+                if (!doc || !isSelectableBy(doc, { ownerType, ownerId })) {
                     documentLoadErrors.push({ documentId: docId, error: "Document not found" });
                     return null;
                 }

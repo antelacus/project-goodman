@@ -22,6 +22,7 @@ import {
   incrementGuestRate,
 } from "@/lib/security";
 import { createServerSupabaseClient } from "@/lib/database";
+import { isReadableBy, requesterOf } from "@/lib/documents/access";
 import { ExtractRequestSchema, validateRequest } from "@/lib/validation/api-schemas";
 import { downloadFileAsBase64, getFirstFileForDocument } from "@/lib/documents/storage";
 import { withSentrySpan } from "@/lib/observability/error-tracking";
@@ -173,19 +174,10 @@ export async function POST(req: NextRequest) {
           .eq('id', documentId)
           .single<{ file_url: string | null; name: string; doc_type: string; owner_id: string | null; owner_type: string | null; doc_category: string }>();
 
-        if (docError || !doc) {
+        // Someone else's document answers like a missing one, so its existence does not leak.
+        if (docError || !doc || !isReadableBy(doc, requesterOf(session))) {
           logWorkflowFailure('RETRIEVAL_EMPTY');
           return createJsonResponse({ success: false, error: 'document_not_found', message: '找不到指定文档' }, 404);
-        }
-
-        // V3.10: Check document access permission
-        // Admin can access all; Others can only access knowledge or own documents
-        if (session.role !== 'admin' && doc.doc_category !== 'knowledge') {
-          const ownerId = session.role === 'guest' ? session.sessionId : session.userId;
-          if (doc.owner_id !== ownerId) {
-            logWorkflowFailure('FORBIDDEN');
-            return createJsonResponse({ success: false, error: 'forbidden', message: '无权访问此文档' }, 403);
-          }
         }
 
         let storagePath = doc.file_url;

@@ -33,18 +33,11 @@ export async function GET(
         // Load the conversation session
         const conversationSession = await conversationMemory.loadSession(sessionId);
 
-        if (!conversationSession) {
+        // Someone else's session answers like a missing one, so its existence does not leak.
+        if (!conversationSession || !ownerId || conversationSession.ownerId !== ownerId || conversationSession.ownerType !== ownerType) {
             return NextResponse.json(
                 { error: 'Session not found' },
                 { status: 404 }
-            );
-        }
-
-        // Verify ownership - only allow access to own sessions
-        if (conversationSession.ownerId !== ownerId || conversationSession.ownerType !== ownerType) {
-            return NextResponse.json(
-                { error: 'Unauthorized' },
-                { status: 403 }
             );
         }
 
