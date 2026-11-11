@@ -1,43 +1,21 @@
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
 import { Database } from './types';
 
-// Supabase client for server-side operations (API routes)
+/**
+ * The server's only database and Storage client, on the project's secret key
+ * (public-readiness REQ §5.1). The anon and authenticated roles have no rights
+ * and no key reaches them; a missing secret key fails loudly rather than falling
+ * back to a legacy key, which would make "switched over" look true when checked.
+ * Server-only: the secret key must never reach a browser (Supabase also refuses
+ * it on a browser User-Agent).
+ */
 export function createServerSupabaseClient(): SupabaseClient<Database> {
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-
-  if (!supabaseUrl || !supabaseKey) {
-    throw new Error(
-      'Missing Supabase environment variables. Please set NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY'
-    );
+  if (typeof window !== 'undefined') {
+    throw new Error('createServerSupabaseClient is server-only: the secret key must never reach the browser');
   }
-
-  return createClient<Database>(supabaseUrl, supabaseKey);
-}
-
-// Supabase client for client-side operations (frontend)
-// This can be called directly in client components
-let browserClient: ReturnType<typeof createClient<Database>> | null = null;
-
-export function createBrowserSupabaseClient() {
-  if (typeof window === 'undefined') {
-    throw new Error('createBrowserSupabaseClient can only be used in browser context');
-  }
-
-  // Singleton pattern for browser client
-  if (browserClient) {
-    return browserClient;
-  }
-
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-
-  if (!supabaseUrl || !supabaseKey) {
-    throw new Error(
-      'Missing Supabase environment variables. Please set NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY'
-    );
-  }
-
-  browserClient = createClient<Database>(supabaseUrl, supabaseKey);
-  return browserClient;
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const key = process.env.SUPABASE_SECRET_KEY;
+  if (!url) throw new Error('Missing NEXT_PUBLIC_SUPABASE_URL environment variable');
+  if (!key) throw new Error('Missing SUPABASE_SECRET_KEY environment variable');
+  return createClient<Database>(url, key, { auth: { autoRefreshToken: false, persistSession: false } });
 }

@@ -5,10 +5,14 @@
  * Standardized for use in Unified Agent.
  */
 
+import { loadPromptWithVariables } from "@/lib/ai/prompts";
 import { BaseAgentState, DocumentLoadError, newQuestionState } from "../state/base-state";
 import type { AgentMemory } from "@/lib/memory/conversation-memory";
 import { SystemMessage, HumanMessage, AIMessage, BaseMessage } from "@langchain/core/messages";
 import { createServerSupabaseClient } from "@/lib/database";
+import { loadDocumentText } from "@/lib/documents/text";
+import { isSelectableBy } from "@/lib/documents/access";
+import { numberDocuments, type DocumentForNumbering, type Evidence } from "@/lib/citations";
 
 /**
  * Loads memory and initializes agent state
@@ -37,47 +41,54 @@ export const createLoadMemoryNode = (memory: AgentMemory) => async function load
         ownerType
     );
 
-    // 2. Fetch Document Context if documentIds are present
+    // 2. The selected documents: only the requester's own uploads are read. Anyone
+    // else's, and library documents (whose regulations would be numbered as the
+    // user's own), are reported as not loaded, the same as a missing one.
     let contextMessage: SystemMessage | null = null;
     const documentLoadErrors: DocumentLoadError[] = [];
+    let documentEvidence: Evidence[] = [];
 
     if (documentIds && documentIds.length > 0) {
         try {
             const supabase = createServerSupabaseClient();
-            const docsContentPromises = documentIds.map(async (docId) => {
-                const { data: chunks, error } = await supabase
-                    .from("document_chunks")
-                    .select("content")
-                    .eq("document_id", docId)
-                    .order("chunk_index", { ascending: true });
+            const { data: rows, error } = await supabase
+                .from("documents")
+                .select("id, name, file_url, doc_category, owner_type, owner_id")
+                .in("id", documentIds);
+            if (error) throw new Error(error.message);
 
-                if (error) {
+            const loaded = await Promise.all(documentIds.map(async (docId): Promise<DocumentForNumbering | null> => {
+                const doc = rows?.find(r => r.id === docId);
+                if (!doc || !isSelectableBy(doc, { ownerType, ownerId })) {
+                    documentLoadErrors.push({ documentId: docId, error: "Document not found" });
+                    return null;
+                }
+                let text: string | null;
+                try {
+                    text = await loadDocumentText(supabase, docId);
+                } catch (error) {
                     console.error(`Failed to fetch chunks for doc ${docId}:`, error);
                     documentLoadErrors.push({
                         documentId: docId,
-                        error: error.message || "Unknown database error",
+                        error: error instanceof Error ? error.message : "Unknown database error",
                     });
                     return null;
                 }
-                if (!chunks || chunks.length === 0) {
-                    documentLoadErrors.push({
-                        documentId: docId,
-                        error: "Document has no content chunks",
-                    });
+                if (text === null) {
+                    documentLoadErrors.push({ documentId: docId, error: "Document has no content chunks" });
                     return null;
                 }
+                return { id: doc.id, name: doc.name, fileUrl: doc.file_url, text };
+            }));
 
-                return `Document ID: ${docId}\n\n${chunks.map((c: { content: string }) => c.content).join("\n")}`;
-            });
-
-            const docsContents = await Promise.all(docsContentPromises);
-            const validContents = docsContents.filter(c => c !== null);
-
-            if (validContents.length > 0) {
-                const combinedContext = validContents.join("\n\n---\n\n");
-                contextMessage = new SystemMessage(
-                    `[Active Document Context]\nThe user has provided the following document content for reference in this conversation. If you need to perform specific extraction tools, use the provided Document IDs.\n\n${combinedContext}\n\n[End of Document Context]`
-                );
+            const documents = loaded.filter((d): d is DocumentForNumbering => d !== null);
+            if (documents.length > 0) {
+                const numbered = numberDocuments(documents);
+                documentEvidence = numbered.evidence;
+                const combinedContext = documents
+                    .map((doc, i) => `Document ID: ${doc.id}\nFile name: ${doc.name}\n\n${numbered.texts[i]}`)
+                    .join("\n\n---\n\n");
+                contextMessage = new SystemMessage(loadPromptWithVariables("document-context.md", { documents: combinedContext }));
             }
         } catch (err) {
             console.error("Error fetching document context:", err);
@@ -115,6 +126,7 @@ export const createLoadMemoryNode = (memory: AgentMemory) => async function load
             isComplete: false,
             pendingToolCalls: [],
             ...newQuestionState(),
+            evidence: documentEvidence,
         },
         // Reset tool results for this turn
         toolResults: [],

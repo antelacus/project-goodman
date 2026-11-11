@@ -7,6 +7,8 @@
 import { z } from "zod";
 import type { Tool } from "../types";
 import { createServerSupabaseClient } from "@/lib/database";
+import { loadDocumentText } from "@/lib/documents/text";
+import { isReadableBy } from "@/lib/documents/access";
 import { performStructuredExtraction, type DocumentType } from "@/lib/extraction";
 
 export const ExtractDocumentInputSchema = z.object({
@@ -27,22 +29,24 @@ export const extractDocumentTool: Tool<ExtractDocumentInput, any> = {
     category: "extraction",
     inputSchema: ExtractDocumentInputSchema,
     outputSchema: z.any(),
-    execute: async (input) => {
+    execute: async (input, requester) => {
         try {
             const supabase = createServerSupabaseClient();
 
-            // 1. Fetch document chunks to reconstruct text
-            // We assume the document text is available in chunks being stored in order.
-            const { data: chunks, error: chunkError } = await supabase
-                .from("document_chunks")
-                .select("content")
-                .eq("document_id", input.documentId)
-                .order("chunk_index", { ascending: true });
+            // Library documents and the requester's own uploads only (public-readiness REQ §5.7).
+            const { data: doc } = await supabase
+                .from("documents")
+                .select("doc_category, owner_type, owner_id")
+                .eq("id", input.documentId)
+                .maybeSingle();
+            if (!doc || !isReadableBy(doc, requester)) {
+                return { success: false, error: "Document not found" };
+            }
 
-            if (chunkError) throw new Error(`Failed to fetch document content: ${chunkError.message}`);
-            if (!chunks || chunks.length === 0) throw new Error("Document has no content");
-
-            const fullText = chunks.map((c: { content: string }) => c.content).join("\n\n");
+            const fullText = await loadDocumentText(supabase, input.documentId).catch((e: Error) => {
+                throw new Error(`Failed to fetch document content: ${e.message}`);
+            });
+            if (fullText === null) throw new Error("Document has no content");
 
             // 2. Perform Extraction
             const result = await performStructuredExtraction(

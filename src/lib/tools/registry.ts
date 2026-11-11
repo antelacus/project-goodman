@@ -14,9 +14,8 @@ import type {
   ToolCategory,
   ToolExecutionResult,
   ChatCompletionTool,
-  ToOpenAIOptions,
+  ToolContext,
 } from "./types";
-import { isFinancialTool } from "./types";
 import { z } from "zod";
 
 // ============================================================================
@@ -96,56 +95,15 @@ export class ToolRegistry {
   /**
    * Convert all registered tools to OpenAI function definitions
    */
-  toOpenAIFunctionDefs(options?: ToOpenAIOptions): ChatCompletionTool[] {
-    let tools = this.getAll();
-
-    // Filter by category if specified
-    if (options?.category) {
-      tools = tools.filter((tool) => tool.category === options.category);
-    }
-
-    return tools.map((tool) =>
-      this.toolToOpenAIFormat(tool, options)
-    );
-  }
-
-  /**
-   * Convert a single tool to OpenAI format
-   */
-  private toolToOpenAIFormat(
-    tool: Tool,
-    options?: ToOpenAIOptions
-  ): ChatCompletionTool {
-    const parameters = this.zodSchemaToOpenAI(tool.inputSchema);
-
-    return {
+  toOpenAIFunctionDefs(): ChatCompletionTool[] {
+    return this.getAll().map((tool) => ({
       type: "function",
       function: {
         name: tool.name,
-        description: this.buildDescription(tool, options),
-        parameters,
+        description: tool.description,
+        parameters: this.zodSchemaToOpenAI(tool.inputSchema),
       },
-    };
-  }
-
-  /**
-   * Build tool description for OpenAI
-   */
-  private buildDescription(tool: Tool, options?: ToOpenAIOptions): string {
-    if (!options?.detailed) {
-      return tool.description;
-    }
-
-    // For detailed mode, include additional context
-    const parts = [tool.description];
-
-    if (isFinancialTool(tool)) {
-      const meta = tool.metadata.financial;
-      parts.push(`需要的数据：${meta.requiredInputs.join("、")}。`);
-      parts.push(`公式：${meta.formulaDisplay}`);
-    }
-
-    return parts.join(" ");
+    }));
   }
 
   /**
@@ -168,7 +126,8 @@ export class ToolRegistry {
    */
   async execute<TOutput = unknown>(
     name: string,
-    input: unknown
+    input: unknown,
+    context: ToolContext = {}
   ): Promise<ToolExecutionResult<TOutput>> {
     const tool = this.get(name);
 
@@ -191,7 +150,7 @@ export class ToolRegistry {
       }
 
       // Execute tool
-      const result = await tool.execute(validationResult.data);
+      const result = await tool.execute(validationResult.data, context);
       return result as ToolExecutionResult<TOutput>;
     } catch (error) {
       return {
@@ -199,38 +158,6 @@ export class ToolRegistry {
         error: error instanceof Error ? error.message : "Unknown error",
       };
     }
-  }
-
-  /**
-   * Execute a tool and validate output
-   */
-  async executeWithValidation<TInput, TOutput>(
-    name: string,
-    input: TInput
-  ): Promise<ToolExecutionResult<TOutput>> {
-    const tool = this.get<TInput, TOutput>(name);
-
-    if (!tool) {
-      return {
-        success: false,
-        error: `Tool "${name}" not found`,
-      };
-    }
-
-    const result = await this.execute<TOutput>(name, input);
-
-    if (result.success && result.data) {
-      // Validate output
-      const outputValidation = tool.outputSchema.safeParse(result.data);
-      if (!outputValidation.success) {
-        return {
-          success: false,
-          error: `Output validation failed: ${outputValidation.error.message}`,
-        };
-      }
-    }
-
-    return result;
   }
 
   // ==========================================================================

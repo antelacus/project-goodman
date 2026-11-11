@@ -48,30 +48,18 @@ export function getCookieOptions(role: 'admin' | 'user' | 'guest') {
     };
 }
 
-// Legacy constant for backward compatibility
-export const COOKIE_OPTIONS = {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === 'production',
-    sameSite: 'strict' as const,
-    path: '/',
-    maxAge: ADMIN_SESSION_TTL,
-};
-
 // =============================================================================
 // Session Functions
 // =============================================================================
 
 /**
- * Create an admin session for authenticated users
- * @param ip - Client IP address
- * @param userAgent - Client User-Agent string
- * @param user - User info from database
- * @returns Session data including token
+ * Create the session for a logged-in account. Its role is the account's role in
+ * the database: only an admin account gets an admin session (REQ §5.8).
  */
-export async function createAdminSession(
+export async function createAccountSession(
     ip: string,
     userAgent: string,
-    user: { id: string; username: string; displayName?: string | null }
+    user: { id: string; username: string; role: string; displayName?: string | null }
 ): Promise<SessionData> {
     const token = uuidv4();
     const sessionId = uuidv4();
@@ -85,7 +73,7 @@ export async function createAdminSession(
         expiresAt: expiresAt.toISOString(),
         ip,
         userAgent,
-        role: 'admin',
+        role: user.role === 'admin' ? 'admin' : 'user',
         userId: user.id,
         username: user.username,
         displayName: user.displayName || undefined,
@@ -126,35 +114,6 @@ export async function createGuestSession(ip: string, userAgent: string): Promise
         `${SESSION_KEY_PREFIX}${token}`,
         JSON.stringify(session),
         GUEST_SESSION_TTL
-    );
-
-    return session;
-}
-
-/**
- * Legacy: Create a new session (defaults to admin for backward compatibility)
- * @deprecated Use createAdminSession or createGuestSession instead
- */
-export async function createSession(ip: string, userAgent: string): Promise<SessionData> {
-    const token = uuidv4();
-    const sessionId = uuidv4();
-    const now = new Date();
-    const expiresAt = new Date(now.getTime() + ADMIN_SESSION_TTL * 1000);
-
-    const session: SessionData = {
-        token,
-        sessionId,
-        createdAt: now.toISOString(),
-        expiresAt: expiresAt.toISOString(),
-        ip,
-        userAgent,
-        role: 'admin',
-    };
-
-    await redis.set(
-        `${SESSION_KEY_PREFIX}${token}`,
-        JSON.stringify(session),
-        ADMIN_SESSION_TTL
     );
 
     return session;

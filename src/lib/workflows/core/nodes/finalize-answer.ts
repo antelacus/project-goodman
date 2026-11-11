@@ -17,7 +17,7 @@ export async function finalizeAnswerNode(
     if (!last || last._getType() !== "ai" || typeof last.content !== "string") return {};
 
     const { search, evidence } = agent;
-    const { text, cited } = finalizeAnswer(last.content, {
+    const { text, cited, removed } = finalizeAnswer(last.content, {
         evidence,
         regulationSearched: search.regulationSearched,
         allRegulationSearchesFailed: search.regulationRuns > 0 && search.regulationFailed === search.regulationRuns,
@@ -28,6 +28,7 @@ export async function finalizeAnswerNode(
             ...agent,
             messages: [...agent.messages.slice(0, -1), new AIMessage(text)],
             cited,
+            removedCitations: removed,
         },
     };
 }

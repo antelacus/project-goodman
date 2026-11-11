@@ -36,4 +36,14 @@ describe('Prompt Loader', () => {
       expect(content).not.toContain('---'); // No frontmatter delimiters
     });
   });
+
+  describe('document context', () => {
+    it('carries the document text as written, even a $& or $1 that a replacement string would expand', () => {
+      const documents = '金额 $& 与 $1 和 $$ 原样保留';
+      const result = loadPromptWithVariables('document-context.md', { documents });
+      expect(result).toContain(documents);
+      expect(result).toContain('[Dn]');
+    });
+  });
 });
+

@@ -10,7 +10,6 @@
 // Supabase
 export {
   createServerSupabaseClient,
-  createBrowserSupabaseClient,
 } from "./supabase";
 
 // Note: Redis is NOT re-exported here to avoid bundling issues.

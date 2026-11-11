@@ -1,14 +1,25 @@
 import React, { useEffect, useRef, memo } from 'react';
-import ReactMarkdown from 'react-markdown';
-import remarkMath from 'remark-math';
+import ReactMarkdown, { type Components } from 'react-markdown';
 import remarkBreaks from 'remark-breaks';
 import rehypeKatex from 'rehype-katex';
+import { ANSWER_SYNTAX } from '@/lib/markdown/answer-syntax';
 import { Bot } from 'lucide-react';
 import 'katex/dist/katex.min.css';
 import ThinkingIndicator from './ThinkingIndicator';
 import { ProcessLog } from './ProcessLog';
 import { ReportMessage } from '@/components/reports';
 import type { MessageListProps } from '@/types/message';
+
+// Answers carry GFM tables; without the typography plugin they need their own borders.
+const ANSWER_COMPONENTS: Components = {
+    table: ({ children }) => (
+        <div className="my-4 overflow-x-auto">
+            <table className="w-full border-collapse text-sm">{children}</table>
+        </div>
+    ),
+    th: ({ children }) => <th className="border border-neutral-300 bg-neutral-50 px-3 py-2 text-left font-semibold">{children}</th>,
+    td: ({ children }) => <td className="border border-neutral-300 px-3 py-2 align-top">{children}</td>,
+};
 
 const MessageList: React.FC<MessageListProps> = ({
     messages,
@@ -75,8 +86,9 @@ const MessageList: React.FC<MessageListProps> = ({
                             ) : (
                                 <div className="prose prose-neutral max-w-none prose-p:leading-relaxed prose-pre:bg-neutral-100 prose-pre:rounded-xl prose-pre:p-4">
                                     <ReactMarkdown
-                                        remarkPlugins={[remarkMath, remarkBreaks]}
+                                        remarkPlugins={[...ANSWER_SYNTAX, remarkBreaks]}
                                         rehypePlugins={[rehypeKatex]}
+                                        components={ANSWER_COMPONENTS}
                                     >
                                         {msg.content}
                                     </ReactMarkdown>

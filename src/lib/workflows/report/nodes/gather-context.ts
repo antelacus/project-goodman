@@ -6,6 +6,7 @@
  */
 
 import { createServerSupabaseClient } from '@/lib/database/supabase';
+import { loadDocumentText } from '@/lib/documents/text';
 import type { Database } from '@/lib/database';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import type { ReportWorkflowState } from '../state';
@@ -81,30 +82,22 @@ async function fetchDocumentContent(
   maxChars = CONTEXT_CONTENT_MAX_CHARS,
   timeoutMs = CONTEXT_FETCH_TIMEOUT_MS
 ): Promise<FetchContentResult> {
-  const queryPromise = supabase
-    .from('document_chunks')
-    .select('content')
-    .eq('document_id', documentId)
-    .order('chunk_index', { ascending: true })
-    .then(response => response);
-
-  const result = await withTimeout(queryPromise, timeoutMs);
+  const loaded = loadDocumentText(supabase, documentId).then(
+    text => ({ text }),
+    (error: Error) => ({ error: error.message })
+  );
+  const result = await withTimeout(loaded, timeoutMs);
 
   if (!result) {
     return { error: 'timeout' };
   }
-
-  const { data, error } = result;
-
-  if (error) {
-    return { error: error.message || 'query_failed' };
+  if ('error' in result) {
+    return { error: result.error };
   }
-
-  if (!data || data.length === 0) {
+  if (result.text === null) {
     return { error: 'empty' };
   }
-
-  const content = data.map((chunk: { content: string }) => chunk.content).join('\n\n');
+  const content = result.text;
 
   return {
     content: truncateContent(content, maxChars),

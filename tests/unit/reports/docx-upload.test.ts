@@ -53,7 +53,7 @@ describe('generateAndSaveReportDocx', () => {
     process.env = {
       ...originalEnv,
       NEXT_PUBLIC_SUPABASE_URL: 'https://example.supabase.co',
-      SUPABASE_SERVICE_ROLE_KEY: 'service-role-key',
+      SUPABASE_SECRET_KEY: 'sb_secret_test',
     };
     vi.clearAllMocks();
   });

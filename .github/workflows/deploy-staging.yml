@@ -14,7 +14,11 @@ jobs:
       - name: Deploy to staging
         # pinned to a commit SHA: a tag can be re-pointed, a SHA cannot
         uses: appleboy/ssh-action@0ff4204d59e8e51228ff73bce53f80d53301dee2 # v1.2.5
+        # The deploy path is a Secret so the public run log masks it; envs passes it to the script.
+        env:
+          GOODMAN_STAGING_DIR: ${{ secrets.GOODMAN_STAGING_DIR }}
         with:
+          envs: GOODMAN_STAGING_DIR
           host: ${{ secrets.DEPLOY_HOST }}
           username: ${{ secrets.DEPLOY_USER }}
           key: ${{ secrets.DEPLOY_KEY }}
@@ -26,6 +30,7 @@ jobs:
             cd $GOODMAN_STAGING_DIR/project-goodman
             git checkout -- . && git clean -fd
             git pull origin development
+            git rev-parse HEAD > BUILD_SHA
             # Export env vars for docker compose build args
             set -a && source $GOODMAN_STAGING_DIR/.env.staging && set +a
             # Clean up any orphaned containers before rebuild
@@ -33,6 +38,9 @@ jobs:
             docker compose -f docker-compose.staging.yml up -d --build
             sleep 15
             curl -f http://localhost:3001/api/health || exit 1
+            # the served build must be the commit just pulled
+            served=$(curl -fsS http://localhost:3001/api/health | grep -o '"commit":"[0-9a-f]*"' | cut -d'"' -f4)
+            test "$served" = "$(cat BUILD_SHA)" || { echo "served commit '$served' is not $(cat BUILD_SHA)"; exit 1; }
             SMOKE_BASE_URL=http://localhost:3001 \
             SMOKE_ENV_FILE=$GOODMAN_STAGING_DIR/.env.staging \
             node scripts/smoke-test-staging.js

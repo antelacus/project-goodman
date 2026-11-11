@@ -47,9 +47,8 @@ jobs:
         run: |
           NODE_ENV=development PERF_TEST_MODE=true REDIS_DISABLED=true \
           NEXT_PUBLIC_SUPABASE_URL=${{ secrets.NEXT_PUBLIC_SUPABASE_URL || 'https://placeholder.supabase.co' }} \
-          NEXT_PUBLIC_SUPABASE_ANON_KEY=${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'placeholder-anon-key' }} \
           LLM_API_KEY=placeholder-llm-key LLM_BASE_URL=http://127.0.0.1:9/v1 \
-          SUPABASE_SERVICE_ROLE_KEY=${{ secrets.SUPABASE_SERVICE_ROLE_KEY || 'placeholder-service-role-key' }} \
+          SUPABASE_SECRET_KEY=placeholder-secret-key \
           npm run dev -- --hostname 127.0.0.1 --port 3100 > /tmp/next-dev.log 2>&1 &
           echo $! > /tmp/next-dev.pid
           sleep 15
@@ -94,10 +93,10 @@ jobs:
         continue-on-error: true
         env:
           NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL || 'https://placeholder.supabase.co' }}
-          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'placeholder-anon-key' }}
           LLM_API_KEY: placeholder-llm-key
           LLM_BASE_URL: http://127.0.0.1:9/v1
-          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY || 'placeholder-service-role-key' }}
+          # CI never holds a real database key: the secret key bypasses every row rule
+          SUPABASE_SECRET_KEY: placeholder-secret-key
 
       - name: Security audit
         run: npm run test:audit
@@ -105,7 +104,5 @@ jobs:
       - name: Build
         run: npm run build
         env:
-          # Provide required env vars for build (non-sensitive placeholders)
+          # The build needs no database key (DESIGN invariant 5): none is given
           NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL || 'https://placeholder.supabase.co' }}
-          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'placeholder-anon-key' }}
-          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY || 'placeholder-service-role-key' }}

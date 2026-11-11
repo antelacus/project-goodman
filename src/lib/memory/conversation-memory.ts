@@ -46,7 +46,12 @@ export type AgentMemory = Pick<
  * Service for managing conversation history and state persistence.
  */
 export class ConversationMemory {
-    private supabase: SupabaseClient<Database> = createServerSupabaseClient();
+    private client: SupabaseClient<Database> | null = null;
+
+    /** Created on first use: the module is loaded at build time, when there is no database key. */
+    private get supabase(): SupabaseClient<Database> {
+        return (this.client ??= createServerSupabaseClient());
+    }
 
     /**
      * Creates a new conversation session.
@@ -183,7 +188,9 @@ export class ConversationMemory {
     }
 
     /**
-     * Helper to get an existing session or start a new one.
+     * Resumes the requester's own session, or starts a new one. A session id that
+     * belongs to someone else is treated like an unknown one: its history must not
+     * reach the model (public-readiness REQ §5.8).
      */
     async getOrCreateSession(
         sessionId: string | undefined,
@@ -191,9 +198,9 @@ export class ConversationMemory {
         ownerId?: string,
         ownerType?: 'admin' | 'user' | 'guest'
     ): Promise<{ sessionId: string; messages: ConversationMessage[]; isNew: boolean }> {
-        if (sessionId) {
+        if (sessionId && ownerId) {
             const session = await this.loadSession(sessionId);
-            if (session) {
+            if (session && session.ownerId === ownerId && session.ownerType === ownerType) {
                 return {
                     sessionId: session.id,
                     messages: session.messages,

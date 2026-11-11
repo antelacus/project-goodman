@@ -8,6 +8,7 @@
  */
 
 import { z } from "zod";
+import type { Requester } from "@/lib/documents/access";
 import type { ToolDefinition } from "@/lib/ai";
 
 // ============================================================================
@@ -110,8 +111,8 @@ export interface Tool<TInput = unknown, TOutput = unknown> {
   /** Zod schema for output validation */
   outputSchema: z.ZodSchema<TOutput>;
 
-  /** Execute the tool with validated input */
-  execute: (input: TInput) => Promise<ToolExecutionResult<TOutput>>;
+  /** Execute the tool with validated input, on behalf of the requester (who may read what) */
+  execute: (input: TInput, context: ToolContext) => Promise<ToolExecutionResult<TOutput>>;
 
   /** Optional metadata */
   metadata?: ToolMetadata;
@@ -121,15 +122,8 @@ export interface Tool<TInput = unknown, TOutput = unknown> {
 // OpenAI Integration Types
 // ============================================================================
 
-/**
- * Options for converting tools to OpenAI format
- */
-export interface ToOpenAIOptions {
-  /** Include detailed descriptions */
-  detailed?: boolean;
-  /** Filter by category */
-  category?: ToolCategory;
-}
+/** Who the tool runs for: the chat's requester, as its uploads are stored. */
+export type ToolContext = Partial<Requester>;
 
 // ============================================================================
 // Financial Tool Specific Types

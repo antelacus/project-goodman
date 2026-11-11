@@ -28,27 +28,13 @@ export const VALIDATION_LIMITS = {
 // =============================================================================
 
 // UUID validation
-const uuidSchema = z.string().uuid('无效的文档 ID 格式');
+/** Lowercased: ids are compared as strings against the database's lowercase form. */
+const uuid = (message?: string) => z.string().uuid(message).transform(id => id.toLowerCase());
+const uuidSchema = uuid('无效的文档 ID 格式');
 
 // =============================================================================
 // API Request Schemas
 // =============================================================================
-
-/**
- * Admin Password Verification Request (Legacy)
- * POST /api/admin/verify-password
- */
-export const AdminVerifyPasswordSchema = z.object({
-    password: z
-        .string()
-        .min(1, '密码不能为空')
-        .max(
-            VALIDATION_LIMITS.MAX_PASSWORD_LENGTH,
-            `密码长度不能超过 ${VALIDATION_LIMITS.MAX_PASSWORD_LENGTH} 字符`
-        ),
-});
-
-export type AdminVerifyPasswordRequest = z.infer<typeof AdminVerifyPasswordSchema>;
 
 /**
  * Login Request (V3.10)
@@ -85,10 +71,10 @@ export const ChatMessageSchema = z.object({
             VALIDATION_LIMITS.MAX_QUESTION_LENGTH,
             `问题长度不能超过 ${VALIDATION_LIMITS.MAX_QUESTION_LENGTH} 字符`
         ),
-    sessionId: z.string().uuid().optional(),
+    sessionId: uuid().optional(),
     files: z.array(z.string()).max(5, '最多上传5个文件').optional(),
     documentIds: z
-        .array(z.string().uuid())
+        .array(uuid())
         .max(VALIDATION_LIMITS.MAX_DOCUMENT_IDS, `最多选择 ${VALIDATION_LIMITS.MAX_DOCUMENT_IDS} 个文档`)
         .optional(),
 });
@@ -96,26 +82,40 @@ export const ChatMessageSchema = z.object({
 export type ChatMessageRequest = z.infer<typeof ChatMessageSchema>;
 
 /**
- * Chat Request (Legacy non-streaming endpoint)
- * POST /api/chat
- * Note: Uses 'message' field name (different from ChatMessageSchema which uses 'question')
+ * GET /api/documents/preview-url
+ * Only a document id: a Storage path would let the route sign any file in the bucket.
  */
-export const ChatRequestSchema = z.object({
-    message: z
-        .string()
-        .min(1, '消息不能为空')
-        .max(
-            VALIDATION_LIMITS.MAX_QUESTION_LENGTH,
-            `消息长度不能超过 ${VALIDATION_LIMITS.MAX_QUESTION_LENGTH} 字符`
-        ),
-    sessionId: z.string().uuid('无效的会话ID').optional(),
-    documentIds: z
-        .array(z.string().uuid())
-        .max(VALIDATION_LIMITS.MAX_DOCUMENT_IDS, `最多选择 ${VALIDATION_LIMITS.MAX_DOCUMENT_IDS} 个文档`)
-        .optional(),
-});
+export const PreviewUrlQuerySchema = z.object({
+    id: uuid('无效的文档ID'),
+    redirect: z.literal('1').optional(),
+}).strict();
 
-export type ChatRequest = z.infer<typeof ChatRequestSchema>;
+/**
+ * Route param of /api/sessions/[id]
+ */
+export const SessionIdParamSchema = uuid('无效的会话ID');
+
+const DOCUMENT_TYPES = [
+    'balance_sheet', 'income_statement', 'cash_flow', 'financial_report', 'account_detail', 'regulation',
+    'accounting_standard', 'policy', 'business_info', 'contract', 'invoice', 'voucher', 'general',
+] as const;
+
+/**
+ * POST /api/admin/upload-database-document
+ * `documentText` is the file's text, or its base64 bytes for a binary file.
+ */
+export const AdminUploadDocumentSchema = z.object({
+    documentText: z.string().min(1, '文件内容不能为空'),
+    fileName: z.string().min(1, '文件名不能为空').max(VALIDATION_LIMITS.MAX_FILENAME_LENGTH),
+    documentType: z.enum(DOCUMENT_TYPES),
+    year: z.string().max(10).optional(),
+    period: z.string().max(20).optional(),
+    startDate: z.string().max(20).optional(),
+    endDate: z.string().max(20).optional(),
+    columnMapping: z.object({ name: z.string(), periodEnd: z.string(), periodStart: z.string() }).optional(),
+    adminPassword: z.string().min(1, '缺少管理员密码').max(VALIDATION_LIMITS.MAX_PASSWORD_LENGTH),
+    metadata: z.record(z.string(), z.unknown()).optional(),
+});
 
 /**
  * Data Extraction Request (V3.9)
@@ -132,7 +132,7 @@ export const ExtractRequestSchema = z.object({
         .string()
         .max(VALIDATION_LIMITS.MAX_FILENAME_LENGTH, '文件名过长')
         .optional(),
-    documentId: z.string().uuid().optional(),
+    documentId: uuid().optional(),
 }).refine(
     (data) => data.fileData || data.documentId,
     { message: '必须提供文件数据或文档ID' }
@@ -164,7 +164,7 @@ export type TempUploadRequest = z.infer<typeof TempUploadSchema>;
  * PATCH /api/documents
  */
 export const DocumentUpdateSchema = z.object({
-    documentId: z.string().uuid('无效的文档ID'),
+    documentId: uuid('无效的文档ID'),
     updates: z.object({
         name: z
             .string()
@@ -191,7 +191,7 @@ export type DocumentUpdateRequest = z.infer<typeof DocumentUpdateSchema>;
  * DELETE /api/admin/sessions
  */
 export const SessionTerminateSchema = z.object({
-    sessionId: z.string().uuid('无效的会话ID'),
+    sessionId: uuid('无效的会话ID'),
 });
 
 export type SessionTerminateRequest = z.infer<typeof SessionTerminateSchema>;

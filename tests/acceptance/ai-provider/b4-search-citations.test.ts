@@ -12,7 +12,7 @@ import path from 'path';
 import { NextRequest } from 'next/server';
 import { installFakeRelay, chatReply, type RelayRequest } from '../../stubs/fake-relay';
 import { searchRegulations } from '@/lib/search';
-import { finalizeAnswer, type Evidence } from '@/lib/citations';
+import { finalizeAnswer, REMOVED_MARKER, type Evidence } from '@/lib/citations';
 import { createUnifiedGraph, unifiedAgentGraph } from '@/lib/workflows/unified/graph';
 import { createInMemoryMemory } from '@/lib/memory/in-memory';
 import * as security from '@/lib/security';
@@ -47,8 +47,17 @@ vi.mock('@/lib/database', async importOriginal => ({
         return Object.assign(done, { select: () => ({ single: () => done }) });
       },
       select: () => ({
-        eq: (column: 'document_id', value: string) => ({
-          order: async () => ({ data: db.chunks.filter(c => c[column] === value), error: null }),
+        eq: (column: 'document_id' | 'id', value: string) => ({
+          order: async () => ({ data: db.chunks.filter(c => c[column as 'document_id'] === value), error: null }),
+          // The preview route reads one library document: the synthetic standard.
+          maybeSingle: async () => ({
+            data: value === ARTICLE.document_id ? { file_url: ARTICLE.file_url, doc_category: 'knowledge', owner_type: 'system', owner_id: null } : null,
+            error: null,
+          }),
+        }),
+        in: async (_column: 'id', ids: string[]) => ({
+          data: ((db.inserts.documents ?? []) as Array<Record<string, unknown> | Array<Record<string, unknown>>>).flat().filter(d => ids.includes(String(d.id))),
+          error: null,
         }),
       }),
     }),
@@ -65,6 +74,8 @@ vi.mock('@/lib/security', () => ({
   checkGuestRate: vi.fn(),
   incrementGuestRate: vi.fn(),
   generateRequestId: () => 'req-1',
+  COOKIE_NAME: 'session',
+  verifySession: vi.fn(async () => null),
   createErrorResponse: (error: unknown, requestId: string, status = 500) =>
     new Response(JSON.stringify({ error: error instanceof Error ? error.message : String(error), requestId }), {
       status,
@@ -82,18 +93,21 @@ const isChat = (r: RelayRequest) => r.path.endsWith('/chat/completions');
 
 const ARTICLE = {
   id: '00000000-0000-0000-0000-000000000001',
-  document_id: 'doc-synthetic-standard',
+  document_id: '7f1c2a3e-4b5d-4c6e-8f70-1a2b3c4d5e6f',
   regulation_name: '企业会计准则第99号-示例业务-2026',
   article_number: '第一条',
   content: '第一条 合成金融资产应当计提减值准备。',
-  file_url: 'doc-synthetic-standard/file.pdf',
+  file_url: 'synthetic-standard/file.pdf',
   score: 12.5,
 };
 
 const EVIDENCE: Evidence[] = [
-  { id: 'R1', regulationName: '企业会计准则第99号-示例业务-2026', articleNumber: '第一条', documentId: 'doc-1', fileUrl: 'doc-1/file.pdf' },
-  { id: 'R2', regulationName: '中华人民共和国示例法-2024', articleNumber: '第十二条', documentId: 'doc-2', fileUrl: 'doc-2/file.pdf' },
+  { id: 'R1', kind: 'regulation', name: '企业会计准则第99号-示例业务-2026', articleNumber: '第一条', documentId: 'doc-1', fileUrl: 'doc-1/file.pdf' },
+  { id: 'R2', kind: 'regulation', name: '中华人民共和国示例法-2024', articleNumber: '第十二条', documentId: 'doc-2', fileUrl: 'doc-2/file.pdf' },
 ];
+const M = REMOVED_MARKER;
+const R1 = '《企业会计准则第99号——示例业务》第一条';
+const R2 = '《中华人民共和国示例法》第十二条';
 
 const guest = {
   session: {
@@ -200,68 +214,68 @@ describe('B4 keyword search and citations', () => {
     expect(unpaired(memory.messagesOf(state.agent.sessionId))).toEqual([]);
   });
 
-  it('§citation-text every article number sent to the user comes from this question\'s evidence; self-written numbers and unknown ids are removed with a notice', () => {
+  it('§citation-text every article number shown comes from this question\'s evidence; a self-written number or unknown id is replaced in place and the rest of the sentence stays', () => {
     const answer = '根据[R1]，应当计提减值准备。另外第五条也有规定。[R9]也提到了这一点。\n按照[R2]，纳税人应当申报。';
     const { text, cited, removed } = finalizeAnswer(answer, { evidence: EVIDENCE, regulationSearched: true, allRegulationSearchesFailed: false });
-    expect(text).toBe(
-      '根据《企业会计准则第99号——示例业务》第一条，应当计提减值准备。\n按照《中华人民共和国示例法》第十二条，纳税人应当申报。\n\n（已删去 2 处未经资料库核实的条款引用）'
-    );
+    expect(text).toBe(`根据${R1}，应当计提减值准备。另外${M}也有规定。${M}也提到了这一点。\n按照${R2}，纳税人应当申报。`);
     expect(cited.map(e => e.id)).toEqual(['R1', 'R2']);
     expect(removed).toBe(2);
+    expect(text).not.toContain('已删去 ');
   });
 
-  it('§citation-text a valid id cannot carry a paragraph, item or sub-article the model added', () => {
-    for (const tail of ['第二款', '第 3 项', '之二']) {
+  it('§citation-text a valid id cannot carry a paragraph, item or sub-article the model added: only the addition goes', () => {
+    for (const tail of ['第二款', '第 3 项', '之二', '[第二款](https://example.invalid)']) {
       const { text, removed } = finalizeAnswer(`依据[R1]${tail}，应当复核。按照[R2]，纳税人应当申报。`, { evidence: EVIDENCE, regulationSearched: true, allRegulationSearchesFailed: false });
-      expect(removed).toBe(1);
-      expect(text).not.toContain(tail);
-      expect(text).toContain('《中华人民共和国示例法》第十二条');
+      expect(removed, tail).toBe(1);
+      expect(text, tail).toBe(`依据${R1}${M}，应当复核。按照${R2}，纳税人应当申报。`);
     }
   });
 
   it('§citation-text article numbers are caught whatever the numerals or formatting, since the page renders them alike', () => {
-    for (const written of ['第**十九**条', '**第十九条**', '第３条', '第叁条', '第&#51;条', '第`3`条']) {
+    for (const written of ['第**十九**条', '**第十九条**', '第３条', '第叁条', '第&#51;条', '第`3`条', '第[九十九](https://example.invalid)条', '[第十九条](https://example.invalid)']) {
       const { text, removed } = finalizeAnswer(`依据${written}，企业可以免税。`, { evidence: EVIDENCE, regulationSearched: true, allRegulationSearchesFailed: false });
       expect(removed, written).toBe(1);
-      expect(text, written).not.toContain('免税');
+      expect(text, written).toBe(`以下内容不是来自资料库，未经条款核对\n\n依据${M}，企业可以免税。`);
     }
   });
 
-  it('§citation-text an id is either a well-formed citation of this question\'s evidence or the sentence is removed', () => {
+  it('§citation-text an id is either a well-formed citation of this question\'s evidence or it is replaced', () => {
     const ctx = { evidence: EVIDENCE, regulationSearched: true, allRegulationSearchesFailed: false };
     // Spacing and full-width brackets are still the same id.
-    expect(finalizeAnswer('依据[R 1]，应当计提。', ctx).text).toBe('依据《企业会计准则第99号——示例业务》第一条，应当计提。');
-    expect(finalizeAnswer('依据［R1］，应当计提。', ctx).text).toBe('依据《企业会计准则第99号——示例业务》第一条，应当计提。');
+    expect(finalizeAnswer('依据[R 1]，应当计提。', ctx).text).toBe(`依据${R1}，应当计提。`);
+    expect(finalizeAnswer('依据［R1］，应当计提。', ctx).text).toBe(`依据${R1}，应当计提。`);
     for (const stray of ['[R 99]', 'R1', '[R1-R2]', '［R99］']) {
       const { text, removed } = finalizeAnswer(`依据${stray}可以免税。依据[R2]应当申报。`, ctx);
       expect(removed, stray).toBe(1);
-      expect(text, stray).not.toContain('免税');
+      expect(text, stray).toBe(`依据${M}可以免税。依据${R2}应当申报。`);
     }
+  });
+
+  it('§citation-text a valid and an unknown id side by side: the valid one shows, only the unknown one is replaced; separate places count separately', () => {
+    const ctx = { evidence: EVIDENCE, regulationSearched: true, allRegulationSearchesFailed: false };
+    expect(finalizeAnswer('依据[R1]和[R999]，应保留凭证。', ctx)).toMatchObject({ text: `依据${R1}和${M}，应保留凭证。`, removed: 1 });
+    expect(finalizeAnswer('依据[R1, R9]，应保留凭证。', ctx)).toMatchObject({ text: `依据${R1}、${M}，应保留凭证。`, removed: 1 });
+    expect(finalizeAnswer('依据第五条，以及[R9]的说明，应保留凭证。依据[R2]申报。', ctx)).toMatchObject({ removed: 2 });
   });
 
   it('§citation-text citations written side by side read as one list, naming each regulation once', () => {
     const evidence = [...EVIDENCE, { ...EVIDENCE[0], id: 'R3', articleNumber: '第三条' }];
     const ctx = { evidence, regulationSearched: true, allRegulationSearchesFailed: false };
     for (const written of ['[R1][R3]', '[R1] [R3]', '[R1]、[R3]', '[R1, R3]']) {
-      expect(finalizeAnswer(`依据${written}，应当计提。`, ctx).text, written).toBe('依据《企业会计准则第99号——示例业务》第一条、第三条，应当计提。');
+      expect(finalizeAnswer(`依据${written}，应当计提。`, ctx).text, written).toBe(`依据${R1}、第三条，应当计提。`);
     }
-    expect(finalizeAnswer('依据[R1][R2][R3]，应当计提。', ctx).text).toBe(
-      '依据《企业会计准则第99号——示例业务》第一条、《中华人民共和国示例法》第十二条、《企业会计准则第99号——示例业务》第三条，应当计提。'
-    );
-    expect(finalizeAnswer('依据[R1][R1]，应当计提。', ctx).text).toBe('依据《企业会计准则第99号——示例业务》第一条，应当计提。');
+    expect(finalizeAnswer('依据[R1][R2][R3]，应当计提。', ctx).text).toBe(`依据${R1}、${R2}、《企业会计准则第99号——示例业务》第三条，应当计提。`);
+    expect(finalizeAnswer('依据[R1][R1]，应当计提。', ctx).text).toBe(`依据${R1}，应当计提。`);
   });
 
-  it('§citation-text a sentence broken across lines is judged whole; separate list items stay separate', () => {
+  it('§citation-text a number broken across lines is still caught; the sentence around it stays', () => {
     const ctx = { evidence: EVIDENCE, regulationSearched: true, allRegulationSearchesFailed: false };
-    const conditional = finalizeAnswer('第十九条所述情形才适用以下结论，\n企业无需计提减值。', ctx);
-    expect(conditional.text).not.toContain('无需计提减值');
-    expect(finalizeAnswer('依据第\n3条可以免税。', ctx).removed).toBe(1);
+    expect(finalizeAnswer('第十九条所述情形才适用以下结论，\n企业无需计提减值。依据[R1]。', ctx).text).toBe(`${M}所述情形才适用以下结论，\n企业无需计提减值。依据${R1}。`);
+    expect(finalizeAnswer('依据第\n3条可以免税。依据[R1]。', ctx).removed).toBe(1);
 
     const list = finalizeAnswer('处理如下：\n- 依据[R1]，应当计提减值。\n- 第五条也有规定\n- 按照[R2]申报', ctx);
     expect(list.removed).toBe(1);
-    expect(list.text).toContain('- 依据《企业会计准则第99号——示例业务》第一条，应当计提减值。');
-    expect(list.text).toContain('- 按照《中华人民共和国示例法》第十二条申报');
-    expect(list.text).not.toContain('第五条');
+    expect(list.text).toBe(`处理如下：\n- 依据${R1}，应当计提减值。\n- ${M}也有规定\n- 按照${R2}申报`);
   });
 
   it('§citation-link a regulation search event links to the preview of the article source file, and the link opens that file', async () => {
@@ -395,7 +409,7 @@ describe('B4 keyword search and citations', () => {
     const ask = async (documentIds: string[]) => {
       relay.reset();
       relay.reply(() => ({ body: chatReply('乘坐高铁二等座。') }));
-      await createUnifiedGraph({ memory: createInMemoryMemory() }).invoke({ input: { question: '出差坐什么？', documentIds } });
+      await createUnifiedGraph({ memory: createInMemoryMemory() }).invoke({ input: { question: '出差坐什么？', documentIds, ownerId: guest.session.sessionId, ownerType: 'guest' } });
       return JSON.stringify(relay.requests.filter(isChat)[0].body.messages);
     };
     expect(await ask([documentId])).toContain('出差乘坐高铁二等座');

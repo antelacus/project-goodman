@@ -13,8 +13,9 @@
 export const runtime = "nodejs";
 
 import { NextRequest, NextResponse } from "next/server";
-import ExcelJS from "exceljs";
-import { readDocumentText, AIUnavailableError, AI_FAILURE_TEXT } from "@/lib/ai";
+import { requesterOf } from '@/lib/documents/access';
+import { extractTextFromFile } from "@/lib/documents/extract-text";
+import { AIUnavailableError, AI_FAILURE_TEXT } from "@/lib/ai";
 import { createServerSupabaseClient } from "@/lib/database";
 import type { InsertTables } from "@/lib/database";
 import { logError, logWorkflowEvent } from "@/lib/logging";
@@ -39,109 +40,31 @@ import { isPerfTestRequest } from "@/lib/quality-gates/perf-test";
 import type { WorkflowErrorType } from "@/lib/errors";
 
 
-// Supported file types
-const SUPPORTED_IMAGE_TYPES = ['image/png', 'image/jpeg', 'image/webp', 'image/gif'];
-const SUPPORTED_PDF_TYPE = 'application/pdf';
-const SUPPORTED_EXCEL_TYPE = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
-const SUPPORTED_TEXT_TYPES = ['text/plain', 'text/markdown'];
-
 // Max file size: 2MB
 const MAX_FILE_SIZE = 2 * 1024 * 1024;
 
+const SUPPORTED_EXTENSIONS = new Set(['pdf', 'xlsx', 'txt', 'md', 'png', 'jpg', 'jpeg', 'webp', 'gif']);
+const EXTENSION_BY_TYPE: Record<string, string> = {
+  'application/pdf': 'pdf',
+  'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': 'xlsx',
+  'text/plain': 'txt',
+  'text/markdown': 'md',
+  'image/png': 'png',
+  'image/jpeg': 'jpg',
+  'image/webp': 'webp',
+  'image/gif': 'gif',
+};
 
 /**
- * Extract text from various file types
+ * The name the shared extractor reads the file type from: the file's own name
+ * when its extension is supported, otherwise one named after its MIME type.
+ * An unsupported file is refused here; the extractor would read it as text.
  */
-async function extractTextFromFile(
-  fileData: string,
-  fileName: string,
-  fileType: string
-): Promise<string> {
-  const ext = fileName.toLowerCase().split('.').pop();
-  console.log(`[upload-temp] Extracting text from: ${fileName}, type: ${fileType}, ext: ${ext}`);
-
-  // Text files
-  if (SUPPORTED_TEXT_TYPES.includes(fileType) || ext === 'txt' || ext === 'md') {
-    const buffer = Buffer.from(fileData, 'base64');
-    return buffer.toString('utf-8');
-  }
-
-  // Excel files
-  if (fileType === SUPPORTED_EXCEL_TYPE || ext === 'xlsx') {
-    const buffer = Buffer.from(fileData, 'base64');
-    const workbook = new ExcelJS.Workbook();
-    // REASON: exceljs types expect Buffer but Node.js 22+ returns Buffer<ArrayBuffer>
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    await workbook.xlsx.load(buffer as any);
-
-    // Find sheet with most data
-    let bestSheet = workbook.worksheets[0];
-    let bestRowCount = 0;
-
-    for (const worksheet of workbook.worksheets) {
-      let rowCount = 0;
-      worksheet.eachRow(() => { rowCount++; });
-      if (rowCount > bestRowCount) {
-        bestRowCount = rowCount;
-        bestSheet = worksheet;
-      }
-    }
-
-    // Convert worksheet to array of arrays
-    const rows: (string | number | null)[][] = [];
-    bestSheet.eachRow((row) => {
-      const rowData: (string | number | null)[] = [];
-      row.eachCell({ includeEmpty: true }, (cell, colNumber) => {
-        while (rowData.length < colNumber - 1) {
-          rowData.push(null);
-        }
-        const value = cell.value;
-        if (value === null || value === undefined) {
-          rowData.push(null);
-        } else if (typeof value === 'object' && 'result' in value) {
-          rowData.push(value.result as string | number | null);
-        } else if (typeof value === 'object' && 'text' in value) {
-          rowData.push(value.text as string);
-        } else {
-          rowData.push(value as string | number);
-        }
-      });
-      rows.push(rowData);
-    });
-
-    return rows
-      .filter(row => row.some(cell => cell != null && cell !== ''))
-      .map(row => row.map(cell => cell ?? '').join('\t'))
-      .join('\n');
-  }
-
-  // PDF files
-  if (fileType === SUPPORTED_PDF_TYPE || ext === 'pdf') {
-    const buffer = Buffer.from(fileData, 'base64');
-
-    // Try direct text extraction first
-    const { extractText } = await import('unpdf');
-    const result = await extractText(new Uint8Array(buffer));
-    const textContent = Array.isArray(result.text) ? result.text.join('\n\n') : result.text;
-
-    if (textContent.trim().length > 100) {
-      console.log(`[upload-temp] PDF direct extraction successful: ${textContent.length} chars`);
-      return textContent;
-    }
-
-    console.log(`[upload-temp] PDF text too short, reading it as a scan...`);
-    return readDocumentText({ fileName, mimeType: SUPPORTED_PDF_TYPE, base64: fileData });
-  }
-
-  // Image files
-  if (SUPPORTED_IMAGE_TYPES.includes(fileType) || ['png', 'jpg', 'jpeg', 'gif', 'webp'].includes(ext || '')) {
-    const mimeType = SUPPORTED_IMAGE_TYPES.includes(fileType)
-      ? fileType
-      : ext === 'jpg' ? 'image/jpeg' : `image/${ext}`;
-    return readDocumentText({ fileName, mimeType, base64: fileData });
-  }
-
-  throw new Error(`不支持的文件类型: ${fileType}`);
+function typedFileName(fileName: string, fileType: string): string {
+  if (SUPPORTED_EXTENSIONS.has(fileName.toLowerCase().split('.').pop() ?? '')) return fileName;
+  const extension = EXTENSION_BY_TYPE[fileType];
+  if (!extension) throw new Error(`不支持的文件类型: ${fileType}`);
+  return `${fileName}.${extension}`;
 }
 
 export async function POST(req: NextRequest) {
@@ -279,7 +202,7 @@ export async function POST(req: NextRequest) {
       console.log(`[upload-temp] Processing file: ${fileName}, type: ${fileType}, session: ${session.role}`);
 
       // Step 1: Extract text from file
-      const extractedText = await extractTextFromFile(fileData, fileName, fileType || '');
+      const { text: extractedText } = await extractTextFromFile(fileData, typedFileName(fileName, fileType || ''));
       logWorkflowEvent({
         ...workflowContext,
         step: 'extract',
@@ -308,8 +231,7 @@ export async function POST(req: NextRequest) {
       const documentId = crypto.randomUUID();
 
       // V3.10: Calculate ownership based on session role
-      const ownerId = session.role === 'guest' ? session.sessionId : session.userId;
-      const ownerType = session.role;
+      const { ownerId, ownerType } = requesterOf(session);
       // Guest documents expire in 1 hour
       const expiresAt = session.role === 'guest'
         ? new Date(Date.now() + 60 * 60 * 1000).toISOString()

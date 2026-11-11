@@ -1,6 +1,11 @@
 import type { NextConfig } from "next";
 import bundleAnalyzer from '@next/bundle-analyzer';
+import fs from 'fs';
 import packageJson from './package.json';
+
+// The commit being built, which /api/health reports so a deploy can check what is served.
+// The image has no .git: the deploy writes BUILD_SHA into the build context first.
+const commit = process.env.GIT_SHA ?? (fs.existsSync('BUILD_SHA') ? fs.readFileSync('BUILD_SHA', 'utf8').trim() : 'unknown');
 
 const withBundleAnalyzer = bundleAnalyzer({
   enabled: process.env.ANALYZE === 'true',
@@ -52,6 +57,7 @@ const nextConfig: NextConfig = {
   // Inject version from package.json at build time
   env: {
     NEXT_PUBLIC_APP_VERSION: packageJson.version,
+    NEXT_PUBLIC_APP_COMMIT: commit,
   },
   // Externalize @sentry/node to prevent webpack bundling Node.js-specific modules
   serverExternalPackages: ['@sentry/node', '@sentry/node-core'],
