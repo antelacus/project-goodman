@@ -141,6 +141,39 @@
 ")` 即变红
   - 待核：① D 引用的链接需要文件名与 `fileUrl`，`load-memory` 目前只查切块内容 —— 已关闭：`load-memory` 读文档名称与归属，链接经过程日志按文档 ID 打开（§user-doc-citation）；② 流式路由是否先推送未经核对的原始输出 —— 已关闭：答案只在完成事件中整体发送；③ 原文可恢复性 —— 已关闭：51 份文档在 Storage 都有原文件，用户文档 0 份
 
+- Codex 上线前审查 · 任务一（`src/lib/citations/index.ts` 对照 ai-provider REQ §5.4 / §5.5，xhigh，只读，`f7db920`）。原文照录；核实：Claude 在现有代码上复现了 1、3（带标题的链接）、4、7、9：
+  - MUST-1 补充平面字符实体（`&#x1F600;`）让位置映射错位，未核实的"第99条"被原样再输出 —— status: open
+  - MUST-2 只解码数字实体，且解码结果不做全角折叠：`第&nbsp;99条`、`第&#xff19;&#xff19;条` 漏检 —— status: open
+  - MUST-3 链接解析不符合 Markdown：带标题的链接漏检；代码段内的 `[R99]` 漏检、`[R1](x)` 被误删 —— status: open
+  - MUST-4 数字内部的换行或空格绕过检测（`第十\n九条`） —— status: open
+  - MUST-5 编号后补写的款项只查一次：`[R1]第二款第三项` 留下"第三项"，`之十二` 只删"之十"，`（第二款）` 漏检 —— status: open
+  - MUST-6 不显示的 Markdown 引用定义里的 `[R1]` 被计为有效引用，资料库外标注因此缺失 —— status: open
+  - MUST-7 跨列表项合并删除范围：`- 第九条\n- 第十条` 变成一项、计 1 处 —— status: open
+  - MUST-8 模型把资料库外标注写在链接里时，程序重复添加 —— status: open
+  - SHOULD-9 替换跨越部分强调或链接时留下不配对的 Markdown（`**第九**条` → `**〔…〕`） —— status: open
+  - SHOULD-10 非法数字实体（`&#x110000;`）让整个处理抛异常 —— status: open
+- Codex 上线前审查 · 任务二（`chunker.ts` 与 `scripts/rechunk-documents.ts`，xhigh，只读，`f7db920`）。原文照录：
+  - MUST-1 `apply` 不读也不校验备份；再次 `check` 会覆盖原备份 —— status: open
+  - MUST-2 哈希检查与事务内替换之间有并发写入的窗口 —— status: open
+  - MUST-3 先切章节、后识别表格：章节起点落在表格里时表格被拆开 —— status: open
+  - MUST-4 不识别单独的 `\r` 换行，短行被内部截断 —— status: open
+  - MUST-5 未校验 `chunkSize`：0、负数会死循环，非整数丢字（生产固定为 1000，不触发） —— status: open
+  - MUST-6 不认英文句号，超长行按长度切进句中 —— status: open
+  - MUST-7 代码围栏里的"表格"被当成表格，得到超长块 —— status: open
+  - SHOULD-8 "可重跑"不成立：中断后重跑会停在第一份已完成的文档 —— status: open
+  - SHOULD-9 按 UTF-16 长度硬切会切开代理对 —— status: open
+  - SHOULD-10 章节数组无序时祖先路径丢失 —— status: open
+  - 待核：单份文档的切块数是否超过 API 单次返回上限（脚本读切块未分页）；迁移期间的写入冻结
+
+- Codex 上线前审查 · 任务三（`access.ts` 与 `load-memory.ts`，xhigh，只读，`f7db920`）。原文照录；核实结论为 Claude 所得：
+  - MUST-1 用别人的会话 ID 发起对话，会加载那个会话的历史问答（`conversation-memory.ts` 的 `getOrCreateSession` 不核对归属） —— 核实：成立 —— status: open
+  - SHOULD-2 选中文档没有显式排除资料库文档，靠资料库文档的归属恰好不匹配 —— status: open
+  - SHOULD-3 快捷提取对别人的文档返回 403、对不存在的返回 404，泄露存在性 —— status: open
+  - SHOULD-4 快捷提取自写归属判断，忽略 `owner_type` 与空值检查 —— status: open
+  - SHOULD-5 旧的管理员密码入口建的会话没有账户 ID，上传后选不中自己的文档 —— status: open
+  - NICE-6 UUID 大小写不同会误拒本人文档 —— status: open
+  - 待核：登录接口给所有账户发管理员会话 —— 核实：成立，但生产只有 1 个账户且为管理员，当前不触发
+
 **Phase 4 证据**：
 - 本地：全量 80 个文件、366 个测试通过，无待办；`tsc` 通过；lint 16 条警告（与基线相同）；`npm run test:audit` 通过；不提供 secret 密钥的 `npm run build` 通过
 - 生产只读核对：重切 `check` 51/51 份文档旧切块还原与原文件重新解析逐字一致；45 部法规重拆 1505 条与线上逐条相同；B2 迁移与 `access.sql` 在一个事务内试跑通过并回滚
