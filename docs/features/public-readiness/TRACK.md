@@ -75,7 +75,7 @@
 - 依赖：none
 
 ### Batch 2 — 权限迁移
-- 状态：open
+- 状态：done `8827e5f`（事务内试跑通过并回滚；正式执行与类型重新生成在 DESIGN §9 第 3 步）
 - 范围：新迁移（收回 anon / authenticated / `PUBLIC` 的授权与 `postgres` 的默认权限含全局函数默认，显式授予 service_role，`public` 全部表开 RLS）；`supabase/tests/access.sql`；`npx supabase gen types`；`.claude/rules/code-conventions.md` 的 RLS 一节 · REQ §5.1
 - 验收判据：§anon-denied、§default-privileges、§rls-all（在事务内试跑并回滚；正式执行在 DESIGN §9 第 3 步）
 - 依赖：Batch 1
