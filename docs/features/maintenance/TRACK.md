@@ -50,11 +50,17 @@
 - R4 非空转证明：用升级前那份 14 条的允许清单跑真实的门——新门红并列出全部 14 条，旧门在同一输入上绿；当前空清单上新门绿（`blocked 0 / allowlisted 0 (allowlist entries: 0)`）
 - Lighthouse 门按 CI 的方式在本机运行（dev server、placeholder 环境变量、Playwright 的 Chromium）：升级后未改规则时红（找不到报告），放宽文件名规则后绿；判定读到了两份新报告（lighthouse 13.6.0）：`/` 性能 1.00、可访问性 0.93，`/chat` 性能 1.00、可访问性 0.96；基线（lighthouse 11.4.0）两页可访问性均为 0.94
 
+**合并前 CI**：`ci.yml` 只在推送 `development` 与向 `main` 开 PR 时运行，PR #17（→ `development`）本身不跑 CI；为在合并前验证本版改过的 CI，开草稿 PR #18（→ `main`，仅触发 CI，已关闭）：run 43155593122 全部步骤通过——Lighthouse 门对新基线通过、审计门 `blocked 0 / allowlisted 0 (allowlist entries: 0)`、80 个测试文件、build
+
+**Teach-back**（PR #17 合并前，Jason 不看材料复述）：① 删掉性能门为何生产行为不变——"被删的 4 段路由代码只在非生产环境生效"；补充：执行需三个条件同时成立（`PERF_TEST_MODE=true`、`NODE_ENV` 非 `production`、带性能测试请求头），生产镜像与 compose 写死 `NODE_ENV=production`，其一即足够 ② R4 新拦下什么——"不匹配任何告警的条目；原机制只对被匹配到的条目检查到期日"；补问后果，答"有漏洞的版本再次出现时永远不会被发现"；纠正"永远"：版本回来后条目重新匹配、到期日检查恢复，门放行到该条目到期为止，期间 Dependabot 仍会报警。判定通过
+
+**提交历史**：`49f2efe` 单独检出不能编译（删了 `perf-test.ts`，路由的改动在 `2b49409`）；重排后的提交被权限拦截强推，Jason 选择保留远端现状（最终树相同）。二分查找时跳过它
+
 **Phase 6 boxes**：
 - [x] CHANGELOG 条目（日期按实际 tag 日核对）
 - [x] TECHNICAL_DEBT 定稿（TD-046 overrides、TD-047 katex）
 - [x] 旧值清扫（`@lhci/cli` 0.15、lighthouse 11、`vitest` 4.0、autocannon 8、uuid ^8、minimatch ^10、katex 0.16 在活文档中无残留；冻结的历史文档不改）
-- [ ] staging 演练 + 冒烟 + 一条业务路径端到端（含回答中的公式渲染，若 R2 选 a）
+- [x] staging 演练 + 冒烟 + 一条业务路径端到端：PR #17 合并（`4882c53`）后 `deploy-staging.yml` 重新登记并运行，CI 与部署均通过；健康接口报 `4.8.1`、提交 `4882c53`（部署脚本自比对）；冒烟（健康、管理员登录、会话、报告生成）通过。业务路径（经 SSH 隧道）：访客上传合成利润表（xlsx，含数据条条件格式）——exceljs（uuid 11.1.1）解析 77 ms、166 字、1 块、存入 Storage；问净利润增长：回答增加额 55,762.50、增长率 38.25%（手算 55,762.50 ÷ 145,800 = 0.38246），表格与公式正常渲染，注明原表未标单位。日志中 `next/image` 缓存写入失败为既有问题（生产同样配置，本版未改 `Dockerfile`）→ TD-049
 - [ ] tag `v4.8.1`
 - [ ] 生产部署 + 核对服务的 SHA
 - [ ] Dependabot 告警复查：已修的 7 条在合并 `main` 后自动关闭；katex 驳回并注明 TD-047

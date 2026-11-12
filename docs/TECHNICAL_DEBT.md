@@ -25,6 +25,7 @@
 | TD-040 | 检索 | **PDF 中的表格解析后丢失结构**：`2024年度财务报告.pdf` 的 135 个切块中没有表格行，表格变成无表头的文字与数字串；按表格中的项目或数字检索，命中的块读不出列的含义。属解析阶段的问题，TD-033（v4.8）只处理 Markdown 表格。 | 中 | v4.8 之后的下一个版本 Phase 0 裁定 |
 | TD-046 | 依赖 | **`package.json` 的 `overrides` 把三个传递依赖强制到上游声明范围之外**，为的是清掉安全公告：`basic-ftp` ^6.2.3（get-uri 声明 ^5）、exceljs 的 `uuid` ^11.1.1（exceljs 4.4.0 声明 ^8，只调用 `v4()`）、`@typescript-eslint/typescript-estree` 的 `minimatch` ^11.0.1（声明 ^10）。npm 不会提示哪条已经不再需要。每条的撤除条件：上游声明的范围已包含修复版本——删掉这条 override，`npm install` 后 `npm audit` 不新增告警即可。 | 低 | 每个版本 Phase 0 逐条核对上游声明的范围 |
 | TD-048 | 可访问性 | **Lighthouse 基线带着已知的可访问性不及格项**：`/` 没有 `<main>` 地标（`landmark-one-main`，lighthouse 13 起计分，此前为不计分的隐藏项），读屏用户无法直接跳到正文；`/` 与 `/chat` 都有文字对比度不足（`color-contrast`）。基线（`tests/quality-baselines/lighthouse/`）按现状生成，所以门不会再报这几项；修好后重新生成基线。 | 低 | 下一个改动界面的版本 |
+| TD-049 | 部署 | **镜像里 `/app/.next` 属 root，服务以 `nextjs` 运行，`next/image` 的优化结果写不进缓存**（日志 `Failed to write image to cache ... EACCES: permission denied, mkdir '/app/.next/cache'`）：图片照常返回，每次请求重新优化。生产与 staging 相同。处理：`Dockerfile` 中让 `nextjs` 拥有 `/app/.next`（或单独建可写的 `cache` 目录）。 | 低 | 发布流水线版本（改 `Dockerfile` 时） |
 
 ## 已接受
 
