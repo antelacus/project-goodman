@@ -1,6 +1,6 @@
 // @vitest-environment node
 // Acceptance tests for docs/features/ai-provider/REQ.md §5.7 as changed in v4.8.0
-// (docs/features/public-readiness/TRACK.md, batch B5): chunks join back into the
+// (docs/features/public-readiness/TRACK_v4.8.0.md, batch B5): chunks join back into the
 // document, and tables are never split. Asserted elsewhere: the same two properties on
 // the production library after the re-chunk (DESIGN §9 step 1, Phase 4 evidence).
 

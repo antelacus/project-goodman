@@ -226,13 +226,13 @@
 - [x] DESIGN §9 第 1–5 步（可回退）：密钥、重切、两环境上线并核对 SHA、权限迁移、停用旧密钥；删除 GitHub Secrets 中的 `NEXT_PUBLIC_SUPABASE_ANON_KEY`
 - [x] 讲回（teach-back）：PR #13 已于讲回之前合并（`ab6aebe`）；Claude 讲解四个结构问题。问题 4 一次讲回完整；问题 2 第一次只讲了修复前的漏洞，补讲后讲清了核对位置（加载对话时比对归属）、对不上新开会话、查看别人的会话 404 且不暴露存在与否；"`ownerId` 必须存在"（双方都缺时 `undefined === undefined`）未讲回，由 Claude 再次说明
 - [x] tag `v4.8.0`（annotated，指向 `main` `4007013`，即生产服务的提交）
-- [ ] 收尾 PR 合并后：3 个工作流重新登记且为启用状态；生产服务合并提交；复查密钥扫描与 Dependabot 告警
+- [x] 收尾 PR 合并后（PR #15，`8e8318b`）：`ci.yml` 于 PR 开启时、`deploy.yml` 于合并推送时重新登记，均为启用；生产部署通过，公网健康接口报 `8e8318b`、数据库 ok；密钥扫描 0、Dependabot 8（与合并前相同）。`deploy-staging.yml` 只响应推送 `development`，尚未登记——归入发布流水线 TRACK 的现状
 - [x] 功能分支上两个提交写入了 `$DEPLOY_HOME` 的实际值：按 Q-H 改写并强推（`35a0745`，文件树与改写前相同，三个分支的历史中该值为 0）
 - [x] DESIGN §9 第 6–10 步（不可回退，每步 Jason 确认）：备份、改写前扫描、改写并验收、强推、重新克隆与部署、清空 Actions、PR #12 描述去路径并删编辑历史、公开与公开后设置
 - [x] FEEDBACK 扫尾（无未关闭反馈）· `v4_DEVELOPMENT_PLAN.md` §3.13 状态（已发布；v4.8.1 依赖维护排入）
 - [x] 各门读数：运行次数 / 改变了输出的拦截次数（见下）
 - [x] 文档预算 · 记忆修剪：本项目没有文档预算工具（属发布流水线范围）；按行数手查，T1 文档 REQ 168、DESIGN 139、TRACK 约 240 行，ai-provider REQ 239、DESIGN 203。项目记忆 2 条仍然成立；两条教训提升到通用记忆（改动 CI 本身会静默关掉所有门；扫除的记录写变量名、不写值）
-- [ ] **关版（最后一项）**：未了事项归位 → `git mv TRACK.md TRACK_v4.8.0.md`
+- [x] **关版（最后一项）**：未了事项归位（v4.8.1 依赖维护 → `v4_DEVELOPMENT_PLAN.md`；staging 工作流登记、构建参数中的旧密钥名 → `docs/features/release-pipeline/TRACK.md`；已接受的限制 → `docs/TECHNICAL_DEBT.md` TD-041–045）→ `git mv TRACK.md TRACK_v4.8.0.md`
 
 **门读数**（运行次数 / 改变了输出的拦截次数）：
 - Codex 设计门：1 次触发、2 个任务 / 16（任务一 7、任务二 9，全部改了 REQ / DESIGN，落码时以测试关闭）
