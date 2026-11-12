@@ -61,8 +61,17 @@
 - [x] TECHNICAL_DEBT 定稿（TD-046 overrides、TD-047 katex）
 - [x] 旧值清扫（`@lhci/cli` 0.15、lighthouse 11、`vitest` 4.0、autocannon 8、uuid ^8、minimatch ^10、katex 0.16 在活文档中无残留；冻结的历史文档不改）
 - [x] staging 演练 + 冒烟 + 一条业务路径端到端：PR #17 合并（`4882c53`）后 `deploy-staging.yml` 重新登记并运行，CI 与部署均通过；健康接口报 `4.8.1`、提交 `4882c53`（部署脚本自比对）；冒烟（健康、管理员登录、会话、报告生成）通过。业务路径（经 SSH 隧道）：访客上传合成利润表（xlsx，含数据条条件格式）——exceljs（uuid 11.1.1）解析 77 ms、166 字、1 块、存入 Storage；问净利润增长：回答增加额 55,762.50、增长率 38.25%（手算 55,762.50 ÷ 145,800 = 0.38246），表格与公式正常渲染，注明原表未标单位。日志中 `next/image` 缓存写入失败为既有问题（生产同样配置，本版未改 `Dockerfile`）→ TD-049
-- [ ] tag `v4.8.1`
-- [ ] 生产部署 + 核对服务的 SHA
-- [ ] Dependabot 告警复查：已修的 7 条在合并 `main` 后自动关闭；katex 驳回并注明 TD-047
-- [ ] 各门读数
-- [ ] **关版（最后一项）**：未了事项归位 → `git mv TRACK.md TRACK_v4.8.1.md`
+- [x] tag `v4.8.1`（附注 tag，指向 `1c007aa`）
+- [x] 生产部署 + 核对服务的 SHA：PR #19 合并（`1c007aa`），CI（PR 上）与 Deploy 均通过；公网健康接口报 `4.8.1`、提交 `1c007aa`，数据库与 Redis ok
+- [x] Dependabot 告警复查：#1–3、#5、#6、#9、#10 在合并 `main` 时自动关闭为 fixed；#4 katex 为 dismissed（tolerable_risk，注明 TD-047）；未处理 0
+- [x] 各门读数（运行次数 / 改变了输出的拦截）：
+  - Lighthouse 门：本机 4、CI 3 / 1（lhci 0.16 改了报告文件名，门报"找不到报告"变红 → 放宽文件名规则）
+  - 审计门：本机 6、CI 3 / 0（新规则的非空转证明是有意构造的旧清单，不计为拦截）
+  - `/code-review`：1 / 3（发现 3 → 修复重复键；发现 1 → R5 删除性能门；发现 4 → R6 重新生成基线）
+  - 类型检查、lint、单元测试（含 pre-commit 钩子）：本机多次、CI 3 / 0
+  - A11y 门：CI 3 / 0
+  - staging 冒烟 + 业务路径：1 / 0（看到的图片缓存问题早于本版，登记 TD-049，未改输出）
+  - 部署后核对服务的 SHA：staging 1、生产 1 / 0
+  - 性能门：本机 1 / 0，本版删除（R5）
+  - Codex：本版不触发
+- [x] **关版（最后一项）**：未了事项归位（overrides 的撤除条件 → TD-046；katex → TD-047；Lighthouse 基线中的已知不及格项 → TD-048；图片缓存 → TD-049；`ci.yml` 不跑进 `development` 的 PR、`deploy-staging.yml` 已登记 → `docs/features/release-pipeline/TRACK.md` 现状；版本状态 → `v4_DEVELOPMENT_PLAN.md`）→ `git mv TRACK.md TRACK_v4.8.1.md`

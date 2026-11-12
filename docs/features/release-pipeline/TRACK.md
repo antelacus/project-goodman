@@ -17,7 +17,7 @@
   - 现状（2026-10-19 核实）：staging 与生产连同一个 Supabase 项目（`pwqvou…`），持有同一把 service_role 密钥（只比对了哈希）；Redis 各自独立。每次 staging 冒烟的报告生成都在生产库写入一个会话和 2 条消息（10-12 三次部署 ↔ 三个会话，时间一一对应）。app 的数据访问多数经 anon 密钥（anon 对 `public` 的表有完整读写权限，RLS 策略为 `USING(true)` 或未开启；2026-10-20 核实，见 TD-032），少数经 service_role，所以 staging 上跑的任何分支代码都能读写生产数据。Supabase 免费档的 2 个项目额度已用满（antelacus、goodman）。staging 的数据隔离是 REQ / DESIGN 必须回答的问题。候选做法是 antelacus 的两层（CI 用本地 Supabase 加合成数据测写库路径，staging 读生产、不能写），它以 TD-031 为前提；待核：Supabase 新 secret 密钥的 `secret_jwt_template.role`（Management API）能否绑定一个只读角色，给 staging 用
   - LLM：v4.7.0 起生产与 staging 都经第三方 relay（`LLM_BASE_URL`、`LLM_API_KEY`，见 `docs/features/ai-provider/DESIGN.md` §8）；relay 为预付费、无用量上限
   - 生产的 `docker-compose.yml` 在仓库外（VPS 上生产部署目录）、属 root，deploy 用户改不了；构建参数仍含 `SUPABASE_SERVICE_ROLE_KEY` 与已删掉值的 `OPENAI_API_KEY`（构建时只报变量未设的警告）。范围 3、4 接手构建后随之退役（2026-10-22 核实）
-  - 现状（2026-11-12，v4.8.0 之后）：仓库已公开，`main` 尚无分支保护；v4.8.0 删除全部 Actions 记录后，`ci.yml` 与 `deploy.yml` 已重新登记，`deploy-staging.yml` 要到下一次推送 `development` 才登记——在那之前推送 `development` 不会部署 staging，先核对它已登记；staging 停在 `9682b03`。旧密钥已停用、环境文件中已删去，`Dockerfile` 与生产 compose 的构建参数仍是旧密钥名（值为空）。公开后 Dependabot 告警 8 条，交 v4.8.1（`v4_DEVELOPMENT_PLAN.md` §3.13）
+  - 现状（2026-11-12，v4.8.1 之后）：仓库已公开，`main` 尚无分支保护；三个工作流都已登记（`deploy-staging.yml` 于 v4.8.1 合并进 `development` 时重新登记并运行）。`ci.yml` 只在推送 `development` 与向 `main` 开 PR 时运行，进 `development` 的 PR 合并前没有 CI，合并后 CI 与 staging 部署同时开始、互不等待。旧密钥已停用、环境文件中已删去，`Dockerfile` 与生产 compose 的构建参数仍是旧密钥名（值为空）；`Dockerfile` 另有 TD-049（`/app/.next` 属 root，图片缓存写不进）。Dependabot 无未处理告警（katex 驳回，TD-047）
   - The Floor：审计只数命中、看前缀，不读出密钥的值；不用历史里的凭据去验证它是否有效
 - 裁定：
   - 2026-10-29 · Trivy 镜像扫描放进本版：v4.7.2 时镜像仍在 VPS 上构建，CI 扫不到上线的那一份 · Jason · 级联：本 TRACK 范围 3
