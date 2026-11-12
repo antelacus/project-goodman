@@ -1,6 +1,6 @@
 {
   "name": "project-goodman",
-  "version": "4.8.0",
+  "version": "4.8.1",
   "private": true,
   "license": "UNLICENSED",
   "scripts": {
@@ -69,7 +69,7 @@
   },
   "devDependencies": {
     "@axe-core/playwright": "^4.11.0",
-    "@lhci/cli": "^0.15.1",
+    "@lhci/cli": "^0.16.1",
     "@next/bundle-analyzer": "^15.5.9",
     "@playwright/test": "^1.64.0",
     "@tailwindcss/postcss": "^4.1.18",
@@ -80,7 +80,7 @@
     "@types/react-dom": "^19",
     "@types/uuid": "^10.0.0",
     "@vitejs/plugin-react": "^5.1.2",
-    "@vitest/coverage-v8": "^4.0.17",
+    "@vitest/coverage-v8": "^4.1.12",
     "autocannon": "^8.0.0",
     "eslint": "^9",
     "eslint-config-next": "^16.4.3",
@@ -91,7 +91,7 @@
     "tsx": "^4.20.6",
     "typescript": "^5",
     "vite-tsconfig-paths": "^6.0.4",
-    "vitest": "^4.0.17"
+    "vitest": "^4.1.12"
   },
   "lint-staged": {
     "*.{ts,tsx}": [
