@@ -81,7 +81,8 @@ docs/versions/v4/
 | **v4.6** | 性能优化 | 功能正确性、稳定性与性能提升（含检索可靠性） | ✅ 已发布 (2026-01-26) |
 | **v4.6.4** | 运行时维护 | Node 26、Next.js 16.4.0 安全修复、依赖审计清零 | ✅ 已发布 (2026-10-12) |
 | **v4.7** | AI 服务切换 | 改用第三方 relay 与新模型，去掉 embedding，AI 失败时不再编造分析（标准模式） | ✅ 已发布 (2026-10-22) |
-| **v4.8** | 公开就绪 | 修复公开前须修的技术债（含 TD-032）、泄密审计，然后公开仓库；出处误删与表格切块（§3.13） | 进行中 |
+| **v4.8** | 公开就绪 | 修复公开前须修的技术债（含 TD-032）、泄密审计，然后公开仓库；出处误删与表格切块（§3.13） | ✅ 已发布 (2026-11-11) |
+| **v4.8.1** | 依赖维护 | 处理公开后 Dependabot 首轮告警（维护模式，§3.13） | 下一个版本 |
 | — | 发布流水线 | 移植 antelacus 的分支模式与发布流水线（标准模式） | 公开就绪之后 |
 | — | 快捷操作扩展 | 财务计算器、财务日历提醒（易于实现） | 待规划 |
 | — | 管理用财报体系 | 净经营资产、管理用 ROE 等（增强报告深度） | 待规划 |
@@ -433,9 +434,9 @@ docs/versions/v4/
 - 分支：只留 `main` + `feat/*` / `hotfix/*`，删除 `development`；main 保护（必需检查、strict、管理员同样受限、禁止强推）
 - 部署底线：CI 拦截部署；镜像构建一次、推广至 staging 与生产，VPS 不再构建；核对 served SHA；失败自动回滚；自动打 tag
 - 密钥移出构建参数（Dockerfile 的 build ARG）、不进 `NEXT_PUBLIC_*`，以 `docker build --check` 强制
-- 漂移：开启 Dependabot 安全提醒（不开自动 PR）；CI 检查 `.nvmrc` 与镜像一致、运行时未过 EOL
+- 漂移：Dependabot 安全提醒（不开自动 PR，v4.8.0 公开时已开启）；CI 检查 `.nvmrc` 与镜像一致、运行时未过 EOL
 - 文档：`docs/architecture/DECISIONS.md` 记录分支模式、无技术债政策、Dependabot 只开提醒；文档预算工具与 post-merge 钩子；`DEPLOYMENT_CHECKLIST.md` 与新流程对齐
-- Phase 0：逐条裁定 `TECHNICAL_DEBT.md` 活跃项（含 TD-028、TD-029），删除"已解决的债务"一节
+- Phase 0：逐条裁定 `TECHNICAL_DEBT.md` 活跃项（含 TD-028），删除"已解决的债务"一节
 
 
 ---
@@ -464,7 +465,7 @@ docs/versions/v4/
 |------|------|
 | **目录** | `features/public-readiness/` |
 | **模式** | 标准模式（v4.8.0） |
-| **状态** | 进行中 |
+| **状态** | ✅ 已发布 (2026-11-11) |
 
 从发布流水线拆出（裁定见 `features/release-pipeline/TRACK.md`）。安全修复不依赖流水线，先在现有部署流程上单独验证。
 
@@ -474,7 +475,9 @@ docs/versions/v4/
 - TD-034（出处检查误删非法规的"第X条"）、TD-033（切块切开表格）、TD-038
 - 以上完成、TD-032 在生产核实后，经 Jason 明确同意再公开仓库（不可撤回）
 
+公开后 Dependabot 首轮告警 8 条，裁定为关版后单独的维护版 v4.8.1（`features/public-readiness/TRACK_v4.8.0.md` Q-I）：`@lhci/cli` 带进的 extract-zip 无修复版本，只能去掉或替换该依赖；katex 0.16 → 0.18 须在 staging 核对公式渲染；exceljs 自带的 uuid 8；vitest、minimatch、qs 补丁升级。
+
 ---
 
 *文档创建: 2026-01-05*
-*最后更新: 2026-11-04 (发布流水线拆出公开就绪，v4.8 开工)*
+*最后更新: 2026-11-12 (v4.8.0 发布，v4.8.1 依赖维护排入)*

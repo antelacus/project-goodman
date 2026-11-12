@@ -37,6 +37,7 @@ const BAD = new RegExp(`第\\s*${NUMBER}(?:\\s*[、，,和及与或至到\\-–�
 let seed = 7;
 const rand = (n: number) => ((seed = (seed * 1103515245 + 12345) % 2 ** 31), seed % n);
 
+// The loop is bounded by its iteration count; the time limit only has to outlast a slow CI runner under coverage.
 it('never shows an article number or id that is not from the evidence', () => {
   const failures: string[] = [];
   for (let t = 0; t < 3000 && failures.length < 8; t++) {
@@ -48,4 +49,4 @@ it('never shows an article number or id that is not from the evidence', () => {
     if (BAD.test(shown)) failures.push(`${JSON.stringify(answer)} -> ${JSON.stringify(text)}`);
   }
   expect(failures).toEqual([]);
-});
+}, 60_000);

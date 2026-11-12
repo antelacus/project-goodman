@@ -680,14 +680,6 @@ export type Database = {
           unit: string
         }[]
       }
-      replace_document_chunks: {
-        Args: {
-          p_chunks: Json
-          p_document_id: string
-          p_expected_sha256: string
-        }
-        Returns: number
-      }
       replace_regulation_articles: {
         Args: { p_articles: Json; p_document_id: string }
         Returns: number
