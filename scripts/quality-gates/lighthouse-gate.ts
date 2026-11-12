@@ -18,8 +18,9 @@ const CURRENT_DIR = process.env.LHCI_CURRENT_DIR
   ?? path.join(process.cwd(), '.lighthouseci');
 const STRICT_MODE = process.env.QUALITY_GATES_STRICT !== 'false';
 
-const LHR_JSON_REGEX = /^lhr-\d+\.json$/;
-const LHR_HTML_REGEX = /^lhr-\d+\.html$/;
+// Same naming lhci itself reads (@lhci/utils saved-reports): lhr-<time>[-<n>].json.
+const LHR_JSON_REGEX = /^lhr-\d+(?:-\d+)?\.json$/;
+const LHR_HTML_REGEX = /^lhr-\d+(?:-\d+)?\.html$/;
 
 function ensureDirectory(dirPath: string): void {
   if (!fs.existsSync(dirPath)) {

@@ -120,15 +120,13 @@ docker compose up -d --build
 
 - **Lighthouse CI**：`/` 与 `/chat` 基线存档在 `tests/quality-baselines/lighthouse/`，性能/可访问性评分下降 > 15 触发失败（阈值从 5 提升至 15 以适应 CI 环境波动）
 - **A11y（axe）**：基线存档在 `tests/quality-baselines/a11y/a11y-baseline.json`，不允许新增 critical/serious 违规
-- **性能基线（autocannon）**：基线存档在 `tests/quality-baselines/performance/perf-baseline.json`，P95 或失败率退化 > 20% 触发失败
-- **安全审计**：`npm audit` 的 High/Critical 作为硬门禁（允许带到期时间的豁免清单）
+- **安全审计**：`npm audit` 的 High/Critical 作为硬门禁；豁免清单的条目带到期时间，过期或不再匹配任何告警时报失败
 
 ### 相关命令
 
 ```
 npm run test:lighthouse
 npm run test:a11y
-npm run test:perf
 npm run test:audit
 ```
 

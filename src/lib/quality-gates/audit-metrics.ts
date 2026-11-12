@@ -31,6 +31,8 @@ export type AuditGateEvaluation = {
   allowed: AuditFinding[];
   blocked: AuditFinding[];
   expiredAllowlist: AuditAllowlistEntry[];
+  // An entry no finding matches would silently waive the advisory if it ever came back.
+  unmatchedAllowlist: AuditAllowlistEntry[];
 };
 
 type AuditVia = {
@@ -225,6 +227,8 @@ export function parseAuditAllowlistJson(raw: string): AuditAllowlistParseResult 
 
   const entries: AuditAllowlistEntry[] = [];
   const errors: string[] = [];
+  // The gate indexes one entry per key; a second would never be consulted or reported as unmatched.
+  const seenKeys = new Map<string, number>();
 
   entriesValue.forEach((entryValue, index) => {
     if (!isRecord(entryValue)) {
@@ -278,6 +282,14 @@ export function parseAuditAllowlistJson(raw: string): AuditAllowlistParseResult 
       return;
     }
 
+    const key = auditKey(packageName, advisoryId, severity);
+    const firstIndex = seenKeys.get(key);
+    if (firstIndex !== undefined) {
+      errors.push(`entries[${index}] duplicates entries[${firstIndex}] (${packageName} ${advisoryId} ${severity}); edit that entry instead`);
+      return;
+    }
+    seenKeys.set(key, index);
+
     entries.push({
       package: packageName,
       advisoryId,
@@ -308,6 +320,7 @@ export function evaluateAuditGate(
   const blocked: AuditFinding[] = [];
   const expiredAllowlist: AuditAllowlistEntry[] = [];
   const expiredKeys = new Set<string>();
+  const matchedKeys = new Set<string>();
 
   for (const finding of findings) {
     const key = auditKey(finding.package, finding.advisoryId, finding.severity);
@@ -317,6 +330,7 @@ export function evaluateAuditGate(
       blocked.push(finding);
       continue;
     }
+    matchedKeys.add(key);
 
     const expiryDate = parseExpiryDate(allowlistEntry.expiresOn);
     const isExpired = !expiryDate || expiryDate.getTime() < now.getTime();
@@ -333,5 +347,9 @@ export function evaluateAuditGate(
     allowed.push(finding);
   }
 
-  return { allowed, blocked, expiredAllowlist };
+  const unmatchedAllowlist = allowlistEntries.filter(
+    (entry) => !matchedKeys.has(auditKey(entry.package, entry.advisoryId, entry.severity))
+  );
+
+  return { allowed, blocked, expiredAllowlist, unmatchedAllowlist };
 }

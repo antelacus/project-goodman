@@ -23,6 +23,9 @@
 | TD-028 | 代码规范 | **`react-hooks/set-state-in-effect` 暂降为 warn**：eslint-config-next 16 新增此规则，现有 12 处违规（10 个 UI 文件，`npx eslint .` 可列出）。暂缓原因：UI 层缺少可靠的 E2E 安全网（TD-027）。退役条件：修复这 12 处，并在 `eslint.config.mjs` 中恢复为 error。 | 中 | TD-027 删除后，紧接着的 light 版本 |
 | TD-039 | 出处 | **未做法规检索的会计处理回答没有任何标注**：资料库外标注只在本问题做过或请求过法规检索时才加（`src/lib/citations/` `finalizeAnswer` 的 `regulationSearched`）。用户问"按合同第五条的违约金怎么做账"，模型不检索法规、凭自身知识写出会计处理时，回答既无出处也无标注，用户会以为有依据。v4.7.0 起即如此。处理方向（待裁定）：涉及会计处理的问题必须先做法规检索，或对无出处的会计处理同样加标注。 | 中 | v4.8 之后的下一个版本 Phase 0 裁定 |
 | TD-040 | 检索 | **PDF 中的表格解析后丢失结构**：`2024年度财务报告.pdf` 的 135 个切块中没有表格行，表格变成无表头的文字与数字串；按表格中的项目或数字检索，命中的块读不出列的含义。属解析阶段的问题，TD-033（v4.8）只处理 Markdown 表格。 | 中 | v4.8 之后的下一个版本 Phase 0 裁定 |
+| TD-046 | 依赖 | **`package.json` 的 `overrides` 把三个传递依赖强制到上游声明范围之外**，为的是清掉安全公告：`basic-ftp` ^6.2.3（get-uri 声明 ^5）、exceljs 的 `uuid` ^11.1.1（exceljs 4.4.0 声明 ^8，只调用 `v4()`）、`@typescript-eslint/typescript-estree` 的 `minimatch` ^11.0.1（声明 ^10）。npm 不会提示哪条已经不再需要。每条的撤除条件：上游声明的范围已包含修复版本——删掉这条 override，`npm install` 后 `npm audit` 不新增告警即可。 | 低 | 每个版本 Phase 0 逐条核对上游声明的范围 |
+| TD-048 | 可访问性 | **Lighthouse 基线带着已知的可访问性不及格项**：`/` 没有 `<main>` 地标（`landmark-one-main`，lighthouse 13 起计分，此前为不计分的隐藏项），读屏用户无法直接跳到正文；`/` 与 `/chat` 都有文字对比度不足（`color-contrast`）。基线（`tests/quality-baselines/lighthouse/`）按现状生成，所以门不会再报这几项；修好后重新生成基线。 | 低 | 下一个改动界面的版本 |
+| TD-049 | 部署 | **镜像里 `/app/.next` 属 root，服务以 `nextjs` 运行，`next/image` 的优化结果写不进缓存**（日志 `Failed to write image to cache ... EACCES: permission denied, mkdir '/app/.next/cache'`）：图片照常返回，每次请求重新优化。生产与 staging 相同。处理：`Dockerfile` 中让 `nextjs` 拥有 `/app/.next`（或单独建可写的 `cache` 目录）。 | 低 | 发布流水线版本（改 `Dockerfile` 时） |
 
 ## 已接受
 
@@ -39,6 +42,7 @@
 | TD-043 | 出处 | **同一份选中文档内重复的条款号不发编号**（如附件重新从第一条编号），引用它们时被删去；不重复的照常发（`numberDocuments`）。接受理由：重复的条款号无法确定指哪一条，给错出处比删去更糟。 | 用户上传的真实文档中出现带附件重新编号的合同或制度，且被删的引用妨碍使用 |
 | TD-044 | 检索 | **Markdown 表格整块进入一个切块，比切块长度（1000 字）长也不切**，超长表格的切块偏大。接受理由：现有 50 张表最长 568 字；续块带表头要加列、改生成列、重建索引。 | 首次出现超过切块长度的表格 |
 | TD-045 | 出处 | **选中文档中阿拉伯数字的"第1条"不算条款开头**，不发编号（`src/lib/extraction/article-lines.ts` 只认中文数字，与法规拆分共用）。资料库的法规都用中文数字。 | 用户上传以"第1条"编号的文档并要求引用其条款 |
+| TD-047 | 依赖 | **katex 低危公告 GHSA-238p-pmpm-9mq7 未修，Dependabot 上已驳回**：rehype-katex 7.0.1 与 micromark-extension-math 声明 `katex ^0.16`，修复在 0.18.2，强制升级会改变每条回答的公式渲染。katex 渲染的是模型回答，输入可以被用户消息与上传文档左右；挡住这个公告的是它的前提——页面里必须先存在原型污染。 | rehype-katex 与 micromark-extension-math 声明支持 katex ≥0.18.2（正常升级并核对公式渲染），或页面中发现任何原型污染 |
 
 ## 开发注意事项
 
