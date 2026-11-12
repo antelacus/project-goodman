@@ -203,3 +203,20 @@ test('evaluateAuditGate reports allowlist entries that no finding matches', () =
     'foo:critical',
   ]);
 });
+
+test('parseAuditAllowlistJson rejects a second entry for the same package, advisory and severity', () => {
+  const entry = {
+    package: 'foo',
+    advisoryId: '100',
+    severity: 'high',
+    reason: 'Blocked upstream fix.',
+    expiresOn: '2026-02-01',
+    fixPlan: 'Upgrade foo when 2.0.1 ships.',
+  };
+  const allowlist = { entries: [entry, { ...entry, expiresOn: '2026-06-01' }] };
+
+  const result = parseAuditAllowlistJson(JSON.stringify(allowlist));
+
+  expect(result.entries).toHaveLength(1);
+  expect(result.errors).toEqual([expect.stringContaining('entries[1] duplicates')]);
+});

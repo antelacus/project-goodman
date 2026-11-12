@@ -227,6 +227,8 @@ export function parseAuditAllowlistJson(raw: string): AuditAllowlistParseResult 
 
   const entries: AuditAllowlistEntry[] = [];
   const errors: string[] = [];
+  // The gate indexes one entry per key; a second would never be consulted or reported as unmatched.
+  const seenKeys = new Map<string, number>();
 
   entriesValue.forEach((entryValue, index) => {
     if (!isRecord(entryValue)) {
@@ -279,6 +281,14 @@ export function parseAuditAllowlistJson(raw: string): AuditAllowlistParseResult 
       errors.push(`entries[${index}] invalid: ${entryErrors.join(', ')}`);
       return;
     }
+
+    const key = auditKey(packageName, advisoryId, severity);
+    const firstIndex = seenKeys.get(key);
+    if (firstIndex !== undefined) {
+      errors.push(`entries[${index}] duplicates entries[${firstIndex}] (${packageName} ${advisoryId} ${severity}); edit that entry instead`);
+      return;
+    }
+    seenKeys.set(key, index);
 
     entries.push({
       package: packageName,
