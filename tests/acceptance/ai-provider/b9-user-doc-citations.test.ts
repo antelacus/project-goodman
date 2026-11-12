@@ -1,6 +1,6 @@
 // @vitest-environment node
 // Acceptance tests for docs/features/ai-provider/REQ.md §5.4, §5.5, §5.7 as changed in
-// v4.8.0 (docs/features/public-readiness/TRACK.md, batch B4; B5 is in b10-chunks.test.ts).
+// v4.8.0 (docs/features/public-readiness/TRACK_v4.8.0.md, batch B4; B5 is in b10-chunks.test.ts).
 // The deletion marker replacing whole-sentence removal is asserted with the other
 // §citation-text cases in b4-search-citations.test.ts.
 

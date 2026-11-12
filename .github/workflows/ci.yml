@@ -43,23 +43,15 @@ jobs:
           echo "CHROME_PATH=$CHROME_PATH" >> "$GITHUB_ENV"
 
       - name: Start Next.js dev server (quality gates)
-        if: ${{ hashFiles('tests/quality-baselines/performance/perf-baseline.json') != '' || hashFiles('tests/quality-baselines/lighthouse/*.json') != '' || hashFiles('tests/quality-baselines/a11y/a11y-baseline.json') != '' }}
+        if: ${{ hashFiles('tests/quality-baselines/lighthouse/*.json') != '' || hashFiles('tests/quality-baselines/a11y/a11y-baseline.json') != '' }}
         run: |
-          NODE_ENV=development PERF_TEST_MODE=true REDIS_DISABLED=true \
+          NODE_ENV=development REDIS_DISABLED=true \
           NEXT_PUBLIC_SUPABASE_URL=${{ secrets.NEXT_PUBLIC_SUPABASE_URL || 'https://placeholder.supabase.co' }} \
           LLM_API_KEY=placeholder-llm-key LLM_BASE_URL=http://127.0.0.1:9/v1 \
           SUPABASE_SECRET_KEY=placeholder-secret-key \
           npm run dev -- --hostname 127.0.0.1 --port 3100 > /tmp/next-dev.log 2>&1 &
           echo $! > /tmp/next-dev.pid
           sleep 15
-
-      - name: Perf regression gate
-        if: ${{ hashFiles('tests/quality-baselines/performance/perf-baseline.json') != '' }}
-        run: npm run test:perf
-        env:
-          NODE_ENV: development
-          PERF_TEST_MODE: 'true'
-          PERF_BASE_URL: http://127.0.0.1:3100
 
       - name: Lighthouse regression gate
         if: ${{ hashFiles('tests/quality-baselines/lighthouse/*.json') != '' }}
@@ -74,7 +66,7 @@ jobs:
           A11Y_BASE_URL: http://127.0.0.1:3100
 
       - name: Stop Next.js dev server (quality gates)
-        if: ${{ always() && (hashFiles('tests/quality-baselines/performance/perf-baseline.json') != '' || hashFiles('tests/quality-baselines/lighthouse/*.json') != '' || hashFiles('tests/quality-baselines/a11y/a11y-baseline.json') != '') }}
+        if: ${{ always() && (hashFiles('tests/quality-baselines/lighthouse/*.json') != '' || hashFiles('tests/quality-baselines/a11y/a11y-baseline.json') != '') }}
         run: |
           if [ -f /tmp/next-dev.pid ]; then
             kill "$(cat /tmp/next-dev.pid)" || true

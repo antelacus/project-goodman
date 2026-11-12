@@ -21,7 +21,8 @@
 
 ## 2. 认证与授权
 
-- **认证方式**：管理员密码校验（bcrypt hash）。
+- **认证方式**：访客进入即分配访客会话；账户以用户名与密码登录（bcrypt hash），会话按账户角色发放。管理员上传资料库文档另需再次输入管理员密码。
+- **归属**：会话、选中文档与按 ID 读取的文档都核对归属，别人的与不存在的一样返回 404（`src/lib/documents/access.ts`）。
 - **会话存储**：Redis（支持限流与会话状态）。
 - **会话安全**：禁止在 localStorage/sessionStorage 存储敏感信息，使用 HttpOnly Cookie。
 
@@ -30,8 +31,8 @@
 ## 3. 密钥与配置管理
 
 - **环境变量集中管理**：`.env` / `.env.staging`
-- **密钥隔离**：staging 与 production 使用独立密钥与数据源
-- **Service Role Key**：仅 server 模块引用，带运行时环境检查
+- **密钥隔离**：staging 与 production 各用一把 Supabase secret 密钥，但连同一个 Supabase 项目（隔离方案属发布流水线）
+- **数据库密钥**：只有服务端的 `createServerSupabaseClient()` 读 `SUPABASE_SECRET_KEY`，缺失即报错；旧的 anon / service_role 密钥已停用，`anon` 在数据库中没有任何权限（`.claude/rules/code-conventions.md` Database Security）
 - **密钥轮换**：建议在发布前后进行周期轮换，并同步更新部署配置
 
 ---

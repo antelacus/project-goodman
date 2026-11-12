@@ -98,12 +98,21 @@ async function run(): Promise<void> {
     }
   }
 
+  if (evaluation.unmatchedAllowlist.length > 0) {
+    console.error('Allowlist entries matching no finding (remove them):');
+    for (const entry of evaluation.unmatchedAllowlist) {
+      console.error(logAllowlistEntry(entry));
+    }
+  }
+
   if (evaluation.blocked.length > 0) {
     console.error('High/Critical vulnerabilities found:');
     for (const finding of evaluation.blocked) {
       console.error(formatFinding(finding));
     }
+  }
 
+  if (evaluation.blocked.length > 0 || evaluation.unmatchedAllowlist.length > 0) {
     if (STRICT_MODE) {
       throw new Error('Audit gate failed.');
     }
@@ -112,7 +121,10 @@ async function run(): Promise<void> {
     return;
   }
 
-  console.log('Audit gate passed.');
+  console.log(
+    `Audit gate passed: blocked 0 / allowlisted ${evaluation.allowed.length} `
+      + `(allowlist entries: ${allowlistResult.entries.length}).`
+  );
 }
 
 run().catch((error) => {

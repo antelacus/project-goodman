@@ -218,8 +218,7 @@ Migrations are forward-only. For schema changes:
 | `LLM_API_KEY` | Yes | AI relay API key |
 | `LLM_BASE_URL` | Yes | AI relay base URL |
 | `NEXT_PUBLIC_SUPABASE_URL` | Yes | Supabase project URL |
-| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Yes | Supabase anon key |
-| `SUPABASE_SERVICE_ROLE_KEY` | Yes | Supabase service role key |
+| `SUPABASE_SECRET_KEY` | Yes | Supabase secret key (`sb_secret_…`; staging and production each have their own) |
 | `ADMIN_PASSWORD` | Yes | Admin password (plaintext, hashed at runtime) |
 | `REDIS_HOST` | Yes | Redis host |
 | `REDIS_PORT` | Yes | Redis port |
