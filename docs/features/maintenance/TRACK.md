@@ -7,8 +7,9 @@
   1. 开发依赖升级（不需裁定，已在分支上）：`@lhci/cli` 0.15 → 0.16.1（lighthouse 13 → puppeteer-core 25 → `@puppeteer/browsers` 3，依赖链里不再有 extract-zip，告警 2 条 high 消除）；`vitest`、`@vitest/coverage-v8` → 4.1.12（mocker 2 条）；`npm audit fix` 把 qs 升到 6.16.2（1 条）
   2. 升级迫使的代码改动：lhci 0.16 的报告文件名带随机后缀（`lhr-<时间>-<n>.json`），`scripts/quality-gates/lighthouse-gate.ts` 的文件名规则放宽为两种都认；不改则 Lighthouse 门报"找不到报告"而变红
   3. 审计允许清单 `tests/quality-baselines/audit/audit-allowlist.json` 清空：升级后 `npm audit` 已无 high / critical，14 条全部不再匹配任何公告（extract-zip 那几条的 fixPlan 写的正是"升级 @lhci/cli 去掉这条链"）
-  4. 其余 3 条告警的处理（待裁定 R1–R3，见下）
-- 明确不做：发布流水线的内容（分支保护、CI 拦截部署、镜像推广、构建参数中的旧密钥名）；允许清单对"不再匹配的条目"不报警的缺口（见 R4）
+  4. 其余 3 条告警按 R1–R3 处理：uuid、minimatch 用 `overrides` 修复，autocannon 升 9；katex 在 Dependabot 驳回，理由与触发条件见 `docs/TECHNICAL_DEBT.md` TD-047；`overrides` 的撤除条件见 TD-046。`tmp` 的旧 override 删除（exceljs 声明的 `^0.2.0` 已包含修复版本，锁文件不变）
+  5. 审计门对不匹配任何告警的允许清单条目报失败（R4，`[infra]` 提交，范围只限判定逻辑、门的输出与测试）
+- 明确不做：发布流水线的内容（分支保护、CI 拦截部署、镜像推广、构建参数中的旧密钥名）
 - 全局约束：
   - 版本地板：Node → `.nvmrc`；依赖 → `package.json`
   - The Floor：本版不接触生产数据
@@ -19,26 +20,29 @@
   - minimatch（moderate，开发依赖）：来自 `eslint-config-next` → typescript-eslint 8（最新 8.72.2 仍声明 `minimatch ^10.2.2`），修复在 11.0.1，只能 override 到声明范围之外；它只匹配我们自己写的 lint 配置 glob
 - 裁定：
   - 2026-11-12 · 本版为 maintenance v4.8.1，关版 v4.8.0 后单独处理 Dependabot 告警 · Jason（v4.8.0 Q-I，初判 b，终裁 a） · 级联：`docs/versions/v4/v4_DEVELOPMENT_PLAN.md`
-  - R1 uuid：(a) override 修复 (b) 在 Dependabot 驳回为"漏洞代码未被使用"并写明理由 —— 待 Jason 初判
-  - R2 katex：(a) override 到 0.18，staging 上核对公式渲染 (b) 驳回为"漏洞代码未被使用" —— 待 Jason 初判
-  - R3 minimatch：(a) override 到 11 (b) 驳回为"风险可容忍" —— 待 Jason 初判
-  - R4 允许清单缺口：审计门对不再匹配的条目不报警，14 条过期条目一直显示为"通过" —— 本版修（门对不匹配的条目报失败）还是登记技术债 —— 待 Jason 初判
+  - R1 uuid：(a) override 修复 (b) 在 Dependabot 驳回为"漏洞代码未被使用"并写明理由 · Jason（初判 a，终裁 a）
+  - R2 katex：(a) override 到 0.18，staging 上核对公式渲染 (b) 驳回 · Jason（初判 b，终裁 b）· 驳回理由由"漏洞代码未被使用"改为"需要页面先存在原型污染"：katex 的输入是模型回答，可被用户消息与上传文档左右
+  - R3 minimatch：(a) override 到 11 (b) 驳回为"风险可容忍" · Jason（初判 b，终裁 a）· 改判依据：a 的验证完整且免费（override 出问题 lint 当场红），只影响开发依赖；而 R1 的 a 触及运行时路径
+  - R4 允许清单缺口：审计门只对被告警匹配到的条目检查到期日，不匹配任何告警的条目既不报警也不会过期，14 条一直显示为"通过" —— (a) 本版修，门对不匹配的条目报失败 (b) 登记技术债 · Jason（初判 a，终裁 a）· 以 `[infra]` 提交；到期日机制保留（两者拦的是不同的问题）
 
 ## 三、门与发布
 
-**评审发现登记**：本版不触发 Codex（没有新写的输出相关代码）；diff 不触及 `src/`，不跑 `/code-review`。
+**评审发现登记**：本版不触发 Codex（没有新写的输出相关代码）。diff 触及 `src/lib/quality-gates/`（R4），开 PR 前跑一次 `/code-review`，发现登记于此。
 
 **Phase 4 证据**：
 - 本地（`maintenance/v4.8.1`）：`tsc` 通过；全量 82 个文件、398 个测试通过（含覆盖率模式）；lint 16 条警告（基线）；审计门通过（允许清单为空）
+- R1 / R3 之后：`npm audit` 只剩 katex 4 条 low（同一公告的依赖链）；exceljs 带 uuid 11.1.1 写入并读回带数据条条件格式的工作簿（走到它唯一调用 `v4()` 的文件）；lint 16 条警告不变；`tsc` 通过；全量 82 个文件、399 个测试通过（含覆盖率模式）
+- 性能门（autocannon 9）按 CI 的方式在本机运行：4 个场景通过；门在零请求时报错，通过即说明拿到了响应
+- R4 非空转证明：用升级前那份 14 条的允许清单跑真实的门——新门红并列出全部 14 条，旧门在同一输入上绿；当前空清单上新门绿（`blocked 0 / allowlisted 0 (allowlist entries: 0)`）
 - Lighthouse 门按 CI 的方式在本机运行（dev server、placeholder 环境变量、Playwright 的 Chromium）：升级后未改规则时红（找不到报告），放宽文件名规则后绿；判定读到了两份新报告（lighthouse 13.6.0）：`/` 性能 1.00、可访问性 0.93，`/chat` 性能 1.00、可访问性 0.96；基线（lighthouse 11.4.0）两页可访问性均为 0.94
 
 **Phase 6 boxes**：
-- [ ] CHANGELOG 条目
-- [ ] TECHNICAL_DEBT 定稿
-- [ ] 旧值清扫（`@lhci/cli` 0.15、`vitest` 4.0 等版本号在文档中的残留）
+- [x] CHANGELOG 条目（日期按实际 tag 日核对）
+- [x] TECHNICAL_DEBT 定稿（TD-046 overrides、TD-047 katex）
+- [x] 旧值清扫（`@lhci/cli` 0.15、lighthouse 11、`vitest` 4.0、autocannon 8、uuid ^8、minimatch ^10、katex 0.16 在活文档中无残留；冻结的历史文档不改）
 - [ ] staging 演练 + 冒烟 + 一条业务路径端到端（含回答中的公式渲染，若 R2 选 a）
 - [ ] tag `v4.8.1`
 - [ ] 生产部署 + 核对服务的 SHA
-- [ ] Dependabot 告警复查：已修的自动关闭，驳回的写明理由
+- [ ] Dependabot 告警复查：已修的 7 条在合并 `main` 后自动关闭；katex 驳回并注明 TD-047
 - [ ] 各门读数
 - [ ] **关版（最后一项）**：未了事项归位 → `git mv TRACK.md TRACK_v4.8.1.md`
