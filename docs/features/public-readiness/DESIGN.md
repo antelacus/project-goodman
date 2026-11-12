@@ -21,7 +21,7 @@ N/A —— 证据编号沿用 ai-provider 的叫法；`R` 是法规检索结果�
 | `supabase/migrations/`（新迁移） | 收回 anon / authenticated 的授权与 `postgres` 的默认权限；`public` 全部表开 RLS | infra（由验收 SQL 守住） |
 | `src/lib/documents/chunker.ts` | 唯一的切块器：按行、不重叠，表格整块不切；管理员上传路由里的 `chunkDocument` 删除 | core |
 | `src/lib/documents/text.ts` | 由切块读回文档全文（`loadDocumentText`） | IO |
-| `src/lib/documents/extract-text.ts` | 按文件类型提取文本（从管理员上传路由移出，重切脚本以它重新解析原文件） | IO |
+| `src/lib/documents/extract-text.ts` | 按文件类型提取文本（从管理员上传路由移出，两个上传入口共用） | IO |
 | `src/lib/extraction/article-lines.ts`（新） | "什么算条款的开头"：一行是否以条款号开头、条款号是什么。法规拆分与用户文档拆条款共用；遇到重复怎么办不在这里 | core |
 | `src/lib/extraction/regulation-splitter.ts` | 法规拆分：用 `article-lines` 判定，重复条款号仍让上传失败 | core |
 | `src/lib/citations/` | 证据的显示与核对：给用户文档按条发 `D` 编号；`finalizeAnswer` 把有效编号换成出处、把未核实的那一处换成删除标记、计数 | core |
@@ -29,7 +29,7 @@ N/A —— 证据编号沿用 ai-provider 的叫法；`R` 是法规检索结果�
 | `src/app/api/health/route.ts`、`next.config.ts`、`Dockerfile` | 健康接口报出构建时注入的提交 SHA | infra |
 | `src/lib/workflows/core/nodes/finalize-answer.ts`、流式路由 | 把删除次数作为过程事件发出 | IO |
 | `src/app/api/admin/upload-database-document/route.ts` | 非法规知识文档含条款开头的行时，上传结果带提示 | IO |
-| `scripts/rechunk-documents.ts`（一次性） | 还原已入库文档的原文、按新规则重切；本版关版前删除 | IO |
+| `scripts/rechunk-documents.ts` 与 `replace_document_chunks`（一次性，已删除） | 还原已入库文档的原文、按新规则重切；重切完成后脚本与数据库函数一并删除 | IO |
 | `.github/workflows/deploy*.yml`、`docs/` 运维文档 | 路径改读 Secrets / 写成变量名 | infra |
 
 依赖方向：`citations` 与 `chunker` 不依赖数据库，也不依赖工作流；`regulation-splitter` 与 `citations` 都依赖 `article-lines`，`article-lines` 不依赖任何一方。

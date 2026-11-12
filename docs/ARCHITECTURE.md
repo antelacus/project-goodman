@@ -48,7 +48,7 @@
 ### 1.2 关键边界
 
 - **安全边界**：Next.js API routes 是唯一对外入口，所有数据库访问走 server 端。
-- **数据边界**：staging 与 production 使用独立环境与数据源，避免误写。
+- **数据边界**：staging 与 production 各有容器、Redis 与 secret 密钥，但连同一个 Supabase 项目：staging 上运行的代码能读写生产数据。隔离方案属发布流水线（`docs/features/release-pipeline/TRACK.md`）。
 - **可观测性边界**：错误追踪与健康监控通过 SaaS 提供。
 
 ---
