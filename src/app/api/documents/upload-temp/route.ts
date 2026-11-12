@@ -36,7 +36,6 @@ import {
   deleteFileFromStorage
 } from "@/lib/documents/storage";
 import { withSentrySpan } from "@/lib/observability/error-tracking";
-import { isPerfTestRequest } from "@/lib/quality-gates/perf-test";
 import type { WorkflowErrorType } from "@/lib/errors";
 
 
@@ -78,23 +77,6 @@ export async function POST(req: NextRequest) {
   };
 
   return withSentrySpan(spanContext, async () => {
-    if (isPerfTestRequest(req)) {
-      await req.arrayBuffer();
-      return NextResponse.json({
-        success: true,
-        perfTest: true,
-        documentId: "perf-test",
-        textPreview: "perf-test",
-        structureAnalysis: {
-          quality: "basic",
-          hasToc: false,
-          sectionCount: 0,
-          chunkCount: 0,
-          suggestions: [],
-        },
-      });
-    }
-
     const requestId = req.headers.get('x-request-id') || generateRequestId();
     const startTime = Date.now();
     const workflowContext = {

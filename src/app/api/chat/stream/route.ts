@@ -14,7 +14,6 @@ import { logger, logRequest, logWorkflowEvent, logError } from '@/lib/logging';
 import { ChatMessageSchema, validateRequest } from '@/lib/validation/api-schemas';
 import { v4 as uuidv4 } from 'uuid';
 import { withSentrySpan } from '@/lib/observability/error-tracking';
-import { isPerfTestRequest } from '@/lib/quality-gates/perf-test';
 import {
     formatToolCallEvent,
     formatToolResultEvent,
@@ -238,11 +237,6 @@ export async function POST(req: NextRequest) {
     };
 
     return withSentrySpan(spanContext, async () => {
-        if (isPerfTestRequest(req)) {
-            await req.arrayBuffer();
-            return NextResponse.json({ success: true, perfTest: true });
-        }
-
         const requestId = req.headers.get('x-request-id') || generateRequestId();
         const startTime = Date.now();
         const workflowContext = {
