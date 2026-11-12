@@ -73,6 +73,8 @@
   - 2026-11-11 · Q-F 历史中曾入库的业务文档（发票、合同、公司档案、年报、项目文档等）为合成或可公开，保留在历史中 · Jason（初判 a，终裁 a；反驳要点：合成数据之外还要看是否是他人作品，如项目文档的版权——Jason 的"可公开"已涵盖） · 级联：本 TRACK 发布第 6 步
   - 2026-11-11 · Q-G 改写后只推 `main`、`development`、`feat/public-readiness`，删除 10 个 `claude/*` 自动会话残留与 11 个已合并分支 · Jason（初判 b，终裁 b；反驳要点：`claude/*` 中 5 个都在加 Redis 服务，可能指向真问题——生产一直用独立的 Redis 容器、健康检查正常，属自动会话噪声；全部留在镜像备份） · 级联：本 TRACK 发布第 8 步
   - 2026-11-11 · 裸写的 `D` 加数字只在本问题有 `D` 证据（选中了按条编号的文档）时才算编号；`R` 照旧 · Jason（初判 a，终裁 a；反驳要点：没选文档时模型裸写的 D3 会留在页面上——但它指不到任何条款，读者也不会当成条款号；删去单元格引用是更实在的错误） · 级联：`docs/features/ai-provider/REQ.md` §5.4
+  - 2026-11-12 · Q-H 功能分支上写入了 `$DEPLOY_HOME` 实际值的提交：开收尾 PR 之前改写功能分支自 `main` 起的 10 个提交并强推（文件树不变） · Jason（初判 b，终裁 b；反驳要点：同一路径已留在改写前 14 个 PR 的旧提交里，改写不减少暴露——但 §history-internals 要求全部分支与 tag 干净，合并进 `main` 即违反，收尾 PR 的引用也会永久保留这两个提交） · 级联：本 TRACK 发布证据；强推由 Jason 执行（`21ce719` → `35a0745`）
+  - 2026-11-12 · Q-I 公开后 Dependabot 首轮 8 条告警（2 high、5 moderate、1 low）关版后单独开维护版 v4.8.1，不并入本版收尾 · Jason（初判 b 并入收尾，终裁 a；反驳要点：extract-zip 无修复版本，只能去掉 `@lhci/cli`；katex 0.16 → 0.18 改动每条回答的公式渲染；uuid 来自 exceljs；并入会让只改文档的收尾 PR 改动运行依赖、须重做 staging 核对，且混了两种模式；运行依赖的两条按代码核对不受影响：只用 uuid v4、未用 katex 的 trust） · 级联：`docs/versions/v4/v4_DEVELOPMENT_PLAN.md` §2.3、§3.13
 
 ## 二、批次
 
@@ -222,14 +224,25 @@
 - [x] 常新文档扫尾：两份 REQ、DESIGN、`docs/ARCHITECTURE.md`、`docs/DEPLOYMENT_CHECKLIST.md`、`docs/SECURITY.md` 与交付一致；两个迁移文件改名为数据库记录的版本号，`code-conventions.md` 中的引用随之改
 - [x] 删除一次性重切脚本及其测试；它在数据库中的函数 `replace_document_chunks` 一并删除（迁移 `20261112004737`，`access.sql` 在生产库通过）
 - [x] DESIGN §9 第 1–5 步（可回退）：密钥、重切、两环境上线并核对 SHA、权限迁移、停用旧密钥；删除 GitHub Secrets 中的 `NEXT_PUBLIC_SUPABASE_ANON_KEY`
-- [ ] 讲回（teach-back）：PR #13 已于讲回之前合并（`ab6aebe`）；Claude 已讲解四个结构问题，待 Jason 用自己的话讲回问题 2（会话归属的各层）与问题 4（切块重叠为何会删掉正常的引用）
-- [ ] tag `v4.8.0`
+- [x] 讲回（teach-back）：PR #13 已于讲回之前合并（`ab6aebe`）；Claude 讲解四个结构问题。问题 4 一次讲回完整；问题 2 第一次只讲了修复前的漏洞，补讲后讲清了核对位置（加载对话时比对归属）、对不上新开会话、查看别人的会话 404 且不暴露存在与否；"`ownerId` 必须存在"（双方都缺时 `undefined === undefined`）未讲回，由 Claude 再次说明
+- [x] tag `v4.8.0`（annotated，指向 `main` `4007013`，即生产服务的提交）
 - [ ] 收尾 PR 合并后：3 个工作流重新登记且为启用状态；生产服务合并提交；复查密钥扫描与 Dependabot 告警
-- [ ] 功能分支上 `77dc10d`、`ee6bd12` 写入了 `$DEPLOY_HOME` 的实际值（已在工作区改正，§no-internals 恢复为绿）：是否改写这段功能分支历史，待 Jason 裁定
+- [x] 功能分支上两个提交写入了 `$DEPLOY_HOME` 的实际值：按 Q-H 改写并强推（`35a0745`，文件树与改写前相同，三个分支的历史中该值为 0）
 - [x] DESIGN §9 第 6–10 步（不可回退，每步 Jason 确认）：备份、改写前扫描、改写并验收、强推、重新克隆与部署、清空 Actions、PR #12 描述去路径并删编辑历史、公开与公开后设置
-- [ ] FEEDBACK 扫尾 · `v4_DEVELOPMENT_PLAN.md` §3.13 状态
-- [ ] 各门读数：运行次数 / 改变了输出的拦截次数
-- [ ] 文档预算 · 记忆修剪
+- [x] FEEDBACK 扫尾（无未关闭反馈）· `v4_DEVELOPMENT_PLAN.md` §3.13 状态（已发布；v4.8.1 依赖维护排入）
+- [x] 各门读数：运行次数 / 改变了输出的拦截次数（见下）
+- [x] 文档预算 · 记忆修剪：本项目没有文档预算工具（属发布流水线范围）；按行数手查，T1 文档 REQ 168、DESIGN 139、TRACK 约 240 行，ai-provider REQ 239、DESIGN 203。项目记忆 2 条仍然成立；两条教训提升到通用记忆（改动 CI 本身会静默关掉所有门；扫除的记录写变量名、不写值）
 - [ ] **关版（最后一项）**：未了事项归位 → `git mv TRACK.md TRACK_v4.8.0.md`
+
+**门读数**（运行次数 / 改变了输出的拦截次数）：
+- Codex 设计门：1 次触发、2 个任务 / 16（任务一 7、任务二 9，全部改了 REQ / DESIGN，落码时以测试关闭）
+- Codex 上线前审查：1 次触发、3 个任务 / 26（16 MUST、9 SHOULD、1 NICE，每项有修复前失败的回归测试）
+- `/code-review high`：1 次 / 10（其中 1 项为生产在线的缺陷，热修复 v4.7.4）
+- 验收测试 §no-internals：每次本地全量运行 / 1（关版扫尾中拦下 TRACK 里的服务器路径；同期 CI 未运行，见 Q-H）
+- 出处检查的性质测试：每次 CI 与本地全量运行 / 0 次有记录的拦截。退役触发：之后两个改动 `src/lib/citations/` 的版本都没有拦截，则 CI 降为只跑固定种子的少量例子
+- `supabase/tests/access.sql`：3 次（第 3 步迁移前试跑、迁移后、删除 `replace_document_chunks` 后）/ 0。保留：它守的是 `supabase_admin` 的例外，拦截只会在有人新建对象时出现
+- gitleaks（改写前、改写后）：3 遍 / 0（只有已裁定保留的 `setup-storage.js`）
+- staging 冒烟：每次 staging 部署 / 0（2 次失败均为 AI 中转，重跑通过）
+- 不变量 5（CI 构建不提供 secret 密钥）：每次 CI 构建 / 拦截次数未能从记录中核实，不计
 
 ## 四、Session-end pickup
