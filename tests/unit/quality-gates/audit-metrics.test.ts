@@ -157,3 +157,49 @@ test('evaluateAuditGate allows active allowlist entries and blocks expired ones'
     },
   ]);
 });
+
+test('evaluateAuditGate reports allowlist entries that no finding matches', () => {
+  const findings = [
+    {
+      package: 'foo',
+      advisoryId: '100',
+      severity: 'high',
+    },
+  ];
+
+  const allowlistEntries = [
+    {
+      package: 'foo',
+      advisoryId: '100',
+      severity: 'high',
+      reason: 'Blocked upstream fix.',
+      expiresOn: '2026-02-01',
+      fixPlan: 'Upgrade foo when 2.0.1 ships.',
+    },
+    {
+      package: 'gone',
+      advisoryId: '300',
+      severity: 'high',
+      reason: 'Fixed by an upgrade, entry left behind.',
+      expiresOn: '2026-02-01',
+      fixPlan: 'Upgrade gone.',
+    },
+    {
+      package: 'foo',
+      advisoryId: '100',
+      severity: 'critical',
+      reason: 'Severity was re-rated since this entry was written.',
+      expiresOn: '2026-02-01',
+      fixPlan: 'Upgrade foo when 2.0.1 ships.',
+    },
+  ];
+
+  const evaluation = evaluateAuditGate(findings, allowlistEntries, new Date('2026-01-15T00:00:00Z'));
+
+  expect(evaluation.allowed).toHaveLength(1);
+  expect(evaluation.blocked).toEqual([]);
+  expect(evaluation.unmatchedAllowlist.map((entry) => `${entry.package}:${entry.severity}`)).toEqual([
+    'gone:high',
+    'foo:critical',
+  ]);
+});
